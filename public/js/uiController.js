@@ -326,7 +326,9 @@ export class UIController {
             calculateBtn.textContent = 'Fetching driving directions...';
             
             try {
+                console.log('Fetching complete route for:', result.route.map(city => city.name));
                 const drivingRoute = await this.routeCalculator.fetchCompleteRoute(result.route);
+                console.log('Complete route fetched:', drivingRoute);
                 
                 // Merge route data with driving directions
                 result.drivingRoute = drivingRoute;
@@ -411,6 +413,7 @@ export class UIController {
         
         // Draw actual driving routes if available
         if (routeData.drivingRoute && routeData.drivingRoute.segments) {
+            console.log('Drawing driving routes with segments:', routeData.drivingRoute.segments.length);
             const segments = routeData.drivingRoute.segments;
             let allBounds = [];
             

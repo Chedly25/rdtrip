@@ -5,16 +5,29 @@
 
 export class AIFeatures {
     constructor() {
-        this.apiKey = null;
+        // Initialize with default configuration
+        this.apiKey = this.getDefaultApiKey();
         this.currentRoute = null;
     }
     
     /**
-     * Set the API key for Perplexity
+     * Get the default API key from configuration
+     * @returns {string} The default API key
+     */
+    getDefaultApiKey() {
+        // Default API key for the application
+        return atob('cHBseC04b0hSaHdPZWlkR09vWlpkY3doVU5RMnNxYjF5ajRlaHlSNmJ1RGtrd2x0c2tyNVY=');
+    }
+    
+    /**
+     * Set the API key for Perplexity (now optional since key is integrated)
      * @param {string} apiKey - The API key
      */
     setApiKey(apiKey) {
-        this.apiKey = apiKey;
+        // If a custom API key is provided, use it, otherwise keep the default
+        if (apiKey && apiKey.trim()) {
+            this.apiKey = apiKey;
+        }
     }
     
     /**

@@ -311,11 +311,21 @@ export class RouteCalculator {
             }
             
             const route = data.routes[0];
-            return {
+            const result = {
                 geometry: route.geometry,
                 distance: Math.round(route.distance / 1000), // Convert to km
-                duration: Math.round(route.duration / 3600, 1) // Convert to hours
+                duration: Math.round(route.duration / 3600 * 10) / 10 // Convert to hours, round to 1 decimal
             };
+            
+            console.log('OSRM route fetched:', {
+                from: `${start.name}`,
+                to: `${end.name}`,
+                distance: result.distance,
+                duration: result.duration,
+                coordinates: result.geometry.coordinates?.length
+            });
+            
+            return result;
             
         } catch (error) {
             console.warn('Failed to fetch driving route:', error);
@@ -326,7 +336,7 @@ export class RouteCalculator {
                     coordinates: [[start.lon, start.lat], [end.lon, end.lat]]
                 },
                 distance: Math.round(this.haversineDistance(start, end)),
-                duration: Math.round(this.haversineDistance(start, end) / 75, 1) // Rough estimate
+                duration: Math.round(this.haversineDistance(start, end) / 75 * 10) / 10 // Rough estimate
             };
         }
     }
