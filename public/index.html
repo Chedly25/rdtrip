@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aix-en-Provence Road Trip Planner</title>
+    
+    <!-- External Dependencies -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Application Styles -->
+    <link rel="stylesheet" href="css/styles.css">
+    
+    <!-- Leaflet JavaScript -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+<body>
+    <div class="header">
+        <h1>🚗 Aix-en-Provence Road Trip Planner</h1>
+        <p>Discover the perfect route through Provence, the French Riviera, and beyond</p>
+    </div>
+
+    <div class="container">
+        <!-- Sidebar with Controls -->
+        <div class="sidebar">
+            <!-- Destination Selection -->
+            <div class="control-group">
+                <h3>Destination</h3>
+                <div class="input-container">
+                    <input type="text" id="destination" placeholder="Type a city name (e.g., Nice, Venice, Florence)..." autocomplete="off">
+                    <div class="autocomplete-dropdown" id="autocomplete"></div>
+                </div>
+            </div>
+
+            <!-- Trip Theme Selection -->
+            <div class="control-group">
+                <h3>Trip Theme</h3>
+                <div class="theme-selector">
+                    <button class="theme-button" data-theme="balanced">🎯 Balanced</button>
+                    <button class="theme-button" data-theme="adventure">🏔️ Adventure</button>
+                    <button class="theme-button" data-theme="romantic">💕 Romantic</button>
+                    <button class="theme-button" data-theme="cultural">🏛️ Cultural</button>
+                    <button class="theme-button" data-theme="hidden">💎 Hidden Gems</button>
+                    <button class="theme-button" data-theme="family">👨‍👩‍👧‍👦 Family</button>
+                </div>
+            </div>
+
+            <!-- Route Options -->
+            <div class="control-group">
+                <h3>Route Options</h3>
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span>Number of Stops</span>
+                        <span id="stops-value">3</span>
+                    </div>
+                    <input type="range" id="stops-slider" min="1" max="6" value="3">
+                </div>
+                <div class="slider-group">
+                    <div class="slider-label">
+                        <span>Detour Tolerance</span>
+                        <span id="detour-value">20%</span>
+                    </div>
+                    <input type="range" id="detour-slider" min="10" max="50" value="20" step="5">
+                </div>
+            </div>
+
+            <!-- Calculate Button -->
+            <button class="btn btn-primary" id="calculate-btn">🧭 Calculate Route</button>
+
+            <!-- AI Travel Assistant -->
+            <div class="control-group" style="margin-top: 2rem;">
+                <h3>🤖 AI Travel Assistant</h3>
+                <input type="password" id="api-key" placeholder="Enter Perplexity API Key (optional)" style="margin-bottom: 1rem;">
+                <div style="display: flex; flex-wrap: wrap;">
+                    <button class="btn btn-ai" onclick="aiTripNarrator()">📖 Trip Story</button>
+                    <button class="btn btn-ai" onclick="aiLocalFood()">🍽️ Local Food</button>
+                    <button class="btn btn-ai" onclick="aiWeatherAdvice()">🌤️ Weather</button>
+                    <button class="btn btn-ai" onclick="aiHiddenGems()">💎 Secrets</button>
+                    <button class="btn btn-ai" onclick="aiItinerary()">📅 Itinerary</button>
+                </div>
+                <div style="font-size: 0.8rem; color: #666; margin-top: 0.5rem;">
+                    Get AI-powered insights about your route. API key required for enhanced features.
+                </div>
+            </div>
+
+            <!-- AI Results Section -->
+            <div class="ai-results" id="ai-results">
+                <h3 id="ai-title">AI Insights</h3>
+                <div class="ai-result-content" id="ai-content"></div>
+            </div>
+
+            <!-- Route Information -->
+            <div class="route-info" id="route-info" style="display: none;">
+                <div class="route-stats">
+                    <div class="stat">
+                        <div class="stat-value" id="total-distance">0</div>
+                        <div class="stat-label">Kilometers</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value" id="total-time">0</div>
+                        <div class="stat-label">Hours</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-value" id="total-stops">0</div>
+                        <div class="stat-label">Stops</div>
+                    </div>
+                </div>
+
+                <div class="export-buttons">
+                    <button class="btn btn-secondary" onclick="exportToGoogle()">
+                        📍 Open in Google Maps
+                    </button>
+                    <button class="btn btn-secondary" onclick="exportGPX()">
+                        📁 Download GPX File
+                    </button>
+                </div>
+
+                <div class="stops-list" id="stops-list"></div>
+            </div>
+        </div>
+
+        <!-- Map Container -->
+        <div class="map-container">
+            <div id="map"></div>
+        </div>
+    </div>
+
+    <!-- Loading Screen -->
+    <div id="loading-screen" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+                                     background: rgba(255,255,255,0.9); z-index: 9999; 
+                                     justify-content: center; align-items: center; flex-direction: column;">
+        <div class="loading" style="margin-bottom: 1rem;"></div>
+        <p>Loading road trip planner...</p>
+    </div>
+
+    <!-- Application JavaScript Modules -->
+    <script type="module" src="js/app.js"></script>
+    
+    <!-- Additional Meta Information -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Aix-en-Provence Road Trip Planner",
+        "description": "Plan perfect road trips from Aix-en-Provence through Provence, French Riviera, and Italy with AI-powered recommendations",
+        "url": "https://your-domain.com",
+        "applicationCategory": "TravelApplication",
+        "operatingSystem": "Any",
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+        },
+        "featureList": [
+            "Real-time route calculation",
+            "100+ European destinations",
+            "Theme-based trip planning",
+            "AI-powered travel insights",
+            "Google Maps and GPX export",
+            "Interactive map visualization"
+        ]
+    }
+    </script>
+</body>
+</html>
