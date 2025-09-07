@@ -250,7 +250,7 @@ app.post('/api/chat', async (req, res) => {
         
         // Use environment variable or encoded fallback
         const apiKey = process.env.PERPLEXITY_API_KEY || 
-                      Buffer.from('cHBseC1XM2pXWmNiamM4eVRXODRlaEFncm1LTktPMkJCRnVBdlJQVkVrV29LVzlvNzkxc1kK', 'base64').toString().trim();
+                      Buffer.from('cHBseC1QY1VsOUFLUlFiYkZRZm15clM4OEUxcVowZld0VlBucVV1ajAwT0w0cWVJQllzdDEK', 'base64').toString().trim();
         
         console.log('API Key length:', apiKey ? apiKey.length : 0);
         console.log('API Key starts with:', apiKey ? apiKey.substring(0, 10) + '...' : 'No key');
@@ -262,7 +262,7 @@ app.post('/api/chat', async (req, res) => {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                model: 'llama-3.1-sonar-small-128k-online',
+                model: 'sonar',
                 messages: [
                     {
                         role: 'user',
@@ -341,7 +341,7 @@ app.get('/', (req, res) => {
 app.get('/api/test', async (req, res) => {
     try {
         const apiKey = process.env.PERPLEXITY_API_KEY || 
-                      Buffer.from('cHBseC1XM2pXWmNiamM4eVRXODRlaEFncm1LTktPMkJCRnVBdlJQVkVrV29LVzlvNzkxc1kK', 'base64').toString().trim();
+                      Buffer.from('cHBseC1QY1VsOUFLUlFiYkZRZm15clM4OEUxcVowZld0VlBucVV1ajAwT0w0cWVJQllzdDEK', 'base64').toString().trim();
         
         const response = await fetch('https://api.perplexity.ai/chat/completions', {
             method: 'POST',
@@ -350,7 +350,7 @@ app.get('/api/test', async (req, res) => {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                model: 'llama-3.1-sonar-small-128k-online',
+                model: 'sonar',
                 messages: [
                     {
                         role: 'user',
