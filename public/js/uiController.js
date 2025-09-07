@@ -1,5 +1,6 @@
 import { RouteCalculator } from './routeCalculator.js';
 import { aiFeatures } from './aiFeatures.js';
+import { TripTypesManager } from './tripTypes.js';
 
 /**
  * UI Controller - Manages all user interface interactions and map display
@@ -12,6 +13,7 @@ export class UIController {
         this.currentRoute = null;
         this.selectedTheme = 'balanced';
         this.routeCalculator = new RouteCalculator();
+        this.tripTypesManager = new TripTypesManager(this.routeCalculator, aiFeatures);
         
         // Bind methods to maintain context
         this.calculateRoute = this.calculateRoute.bind(this);
@@ -371,6 +373,7 @@ export class UIController {
             
             this.currentRoute = result;
             aiFeatures.setCurrentRoute(result);
+            this.tripTypesManager.setCurrentRoute(result);
             
             // Display results
             this.displayRoute(result);
@@ -615,6 +618,7 @@ export class UIController {
         };
         
         aiFeatures.setCurrentRoute(this.currentRoute);
+        this.tripTypesManager.setCurrentRoute(this.currentRoute);
         
         // Refresh display
         this.displayRoute(this.currentRoute);

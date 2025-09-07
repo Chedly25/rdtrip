@@ -69,6 +69,13 @@
 
             <!-- Calculate Button -->
             <button class="btn btn-primary" id="calculate-btn">🧭 Calculate Route</button>
+            
+            <!-- Trip Types Section -->
+            <div class="control-group" id="trip-types-section" style="display: none;">
+                <h3>✨ Choose Your Adventure</h3>
+                <p style="font-size: 0.9rem; color: #666; margin-bottom: 1rem;">Select a trip style to see your personalized itinerary</p>
+                <button class="btn btn-secondary" id="show-trip-types">🗺️ View All Trip Types</button>
+            </div>
 
             <!-- AI Travel Assistant -->
             <div class="control-group" style="margin-top: 2rem;">
@@ -125,6 +132,45 @@
         <!-- Map Container -->
         <div class="map-container">
             <div id="map"></div>
+        </div>
+    </div>
+
+    <!-- Trip Types Grid Modal -->
+    <div id="trip-types-modal" class="modal" style="display: none;">
+        <div class="modal-content trip-types-grid">
+            <div class="modal-header">
+                <h2>Choose Your Perfect Trip Style</h2>
+                <button class="close-btn" id="close-trip-types">&times;</button>
+            </div>
+            <div class="trip-types-container" id="trip-types-container">
+                <!-- Trip type cards will be dynamically generated -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Detailed Itinerary Modal -->
+    <div id="itinerary-modal" class="modal" style="display: none;">
+        <div class="modal-content itinerary-detail">
+            <div class="itinerary-header">
+                <div class="itinerary-info">
+                    <div class="trip-type-badge" id="selected-trip-type">
+                        <span class="trip-icon">🏔️</span>
+                        <span class="trip-name">Adventure Trip</span>
+                    </div>
+                    <div class="trip-cities" id="trip-cities">Aix-en-Provence → Nice → Cannes</div>
+                </div>
+                <div class="itinerary-map-container">
+                    <div id="itinerary-mini-map" class="mini-map"></div>
+                </div>
+                <button class="close-btn" id="close-itinerary">&times;</button>
+            </div>
+            <div class="itinerary-content" id="itinerary-content">
+                <div class="loading-itinerary" style="display: none;">
+                    <div class="loading"></div>
+                    <p>Creating your personalized itinerary...</p>
+                </div>
+                <div class="itinerary-details" id="itinerary-details"></div>
+            </div>
         </div>
     </div>
 
