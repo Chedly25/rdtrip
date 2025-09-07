@@ -3,6 +3,8 @@ import { cities } from './cities.js';
 export class RouteCalculator {
     constructor() {
         this.cities = cities;
+        this.routeCache = new Map();
+        this.CACHE_SIZE = 50;
     }
     
     /**
@@ -68,38 +70,94 @@ export class RouteCalculator {
      * @returns {Array} Selected optimal stops
      */
     selectOptimalStops(candidates, start, end, numStops, theme) {
-        // Score candidates based on theme and detour
+        // Define theme-specific weights for different city characteristics
+        const themeWeights = {
+            adventure: {
+                themes: { adventure: 0.7, hidden: 0.2, cultural: 0.1 },
+                populationWeight: 0.05,
+                detourWeight: 0.25,
+                minDistance: 40
+            },
+            romantic: {
+                themes: { romantic: 0.6, cultural: 0.2, hidden: 0.2 },
+                populationWeight: 0.1,
+                detourWeight: 0.3,
+                minDistance: 60
+            },
+            cultural: {
+                themes: { cultural: 0.6, adventure: 0.2, hidden: 0.2 },
+                populationWeight: 0.15,
+                detourWeight: 0.25,
+                minDistance: 50
+            },
+            foodie: {
+                themes: { romantic: 0.3, cultural: 0.4, hidden: 0.3 },
+                populationWeight: 0.2,
+                detourWeight: 0.2,
+                minDistance: 45
+            },
+            family: {
+                themes: { family: 0.7, cultural: 0.2, adventure: 0.1 },
+                populationWeight: 0.15,
+                detourWeight: 0.35,
+                minDistance: 55
+            },
+            luxury: {
+                themes: { romantic: 0.4, cultural: 0.3, hidden: 0.3 },
+                populationWeight: 0.25,
+                detourWeight: 0.2,
+                minDistance: 70
+            },
+            balanced: {
+                themes: { adventure: 0.2, romantic: 0.2, cultural: 0.2, hidden: 0.2, family: 0.2 },
+                populationWeight: 0.1,
+                detourWeight: 0.3,
+                minDistance: 50
+            },
+            hidden: {
+                themes: { hidden: 0.8, adventure: 0.1, cultural: 0.1 },
+                populationWeight: 0.02,
+                detourWeight: 0.18,
+                minDistance: 35
+            }
+        };
+        
+        const weights = themeWeights[theme] || themeWeights.balanced;
+        
+        // Score candidates based on theme-specific criteria
         const scored = candidates.map(city => {
-            let themeScore;
-            
-            if (theme === 'balanced') {
-                // For balanced, take average of all themes
-                themeScore = (city.themes.adventure + city.themes.romantic + 
-                             city.themes.cultural + city.themes.hidden + city.themes.family) / 5;
-            } else {
-                themeScore = city.themes[theme] || 0;
+            // Calculate theme score using weighted combination
+            let themeScore = 0;
+            for (const [themeType, weight] of Object.entries(weights.themes)) {
+                themeScore += (city.themes[themeType] || 0) * weight;
             }
             
             const detourFactor = this.calculateDetourFactor(city, start, end);
-            const detourPenalty = Math.max(0, 1 - detourFactor * 2); // Penalty for long detours
+            const detourPenalty = Math.max(0, 1 - detourFactor * 2);
             
-            // Population bonus for larger cities (scaled down)
+            // Population score varies by theme
             const populationScore = Math.log(city.population + 1) / 20;
+            
+            // Calculate final score with theme-specific weights
+            const finalScore = 
+                themeScore * (1 - weights.detourWeight - weights.populationWeight) +
+                detourPenalty * weights.detourWeight +
+                populationScore * weights.populationWeight;
             
             return {
                 city,
-                score: themeScore * 0.6 + detourPenalty * 0.3 + populationScore * 0.1,
+                score: finalScore,
                 themeScore,
                 detourFactor
             };
         });
         
-        // Sort by score descending and select top candidates
+        // Sort by score descending
         scored.sort((a, b) => b.score - a.score);
         
-        // Select diverse stops by avoiding too many similar cities
+        // Select diverse stops with theme-specific minimum distance
         const selected = [];
-        const minDistance = 50; // Minimum distance between stops in km
+        const minDistance = weights.minDistance;
         
         for (const candidate of scored) {
             if (selected.length >= numStops) break;
@@ -114,11 +172,21 @@ export class RouteCalculator {
             }
         }
         
-        // If we don't have enough stops, add the highest scoring remaining ones
+        // If we don't have enough stops, gradually reduce minimum distance
         if (selected.length < numStops) {
+            const reducedMinDistance = minDistance * 0.5;
             const remaining = scored.filter(s => !selected.includes(s.city));
-            for (let i = 0; i < remaining.length && selected.length < numStops; i++) {
-                selected.push(remaining[i].city);
+            
+            for (const candidate of remaining) {
+                if (selected.length >= numStops) break;
+                
+                const tooClose = selected.some(selectedCity => 
+                    this.haversineDistance(candidate.city, selectedCity) < reducedMinDistance
+                );
+                
+                if (!tooClose) {
+                    selected.push(candidate.city);
+                }
             }
         }
         
@@ -196,13 +264,22 @@ export class RouteCalculator {
     }
     
     /**
-     * Main route calculation method
+     * Main route calculation method with caching
      * @param {string} startId - Starting city ID
      * @param {string} destId - Destination city ID
      * @param {Object} options - Route options
      * @returns {Object} Route calculation result
      */
     calculateRoute(startId, destId, options) {
+        // Create cache key from parameters
+        const cacheKey = `${startId}-${destId}-${options.numStops}-${options.detourTolerance}-${options.theme}`;
+        
+        // Check cache first
+        if (this.routeCache.has(cacheKey)) {
+            console.log('Returning cached route for:', cacheKey);
+            return this.routeCache.get(cacheKey);
+        }
+        
         const start = this.cities.find(c => c.id === startId);
         const dest = this.cities.find(c => c.id === destId);
         
@@ -256,13 +333,33 @@ export class RouteCalculator {
         const totalDistance = Math.round(this.calculateTotalDistance(route));
         const totalTime = this.estimateTime(route);
         
-        return {
+        const result = {
             route,
             totalDistance,
             totalTime: totalTime.toFixed(1),
             directDistance: Math.round(directDistance),
             detourFactor: ((totalDistance - directDistance) / directDistance * 100).toFixed(1)
         };
+        
+        // Cache the result
+        this.cacheRoute(cacheKey, result);
+        
+        return result;
+    }
+    
+    /**
+     * Cache a route calculation result
+     * @param {string} key - Cache key
+     * @param {Object} result - Route result to cache
+     */
+    cacheRoute(key, result) {
+        // Limit cache size
+        if (this.routeCache.size >= this.CACHE_SIZE) {
+            // Remove oldest entry (first one)
+            const firstKey = this.routeCache.keys().next().value;
+            this.routeCache.delete(firstKey);
+        }
+        this.routeCache.set(key, result);
     }
     
     /**
@@ -290,12 +387,21 @@ export class RouteCalculator {
     }
     
     /**
-     * Fetch driving route between two points - CSP-friendly approach
+     * Fetch driving route between two points - CSP-friendly approach with caching
      * @param {Object} start - Start city with lat/lon
      * @param {Object} end - End city with lat/lon
      * @returns {Promise<Object>} Route data with geometry and distance
      */
     async fetchDrivingRoute(start, end) {
+        // Create cache key for driving routes
+        const routeCacheKey = `driving-${start.id}-${end.id}`;
+        
+        // Check if we have a cached driving route
+        if (this.routeCache.has(routeCacheKey)) {
+            console.log('Using cached driving route:', start.name, 'to', end.name);
+            return this.routeCache.get(routeCacheKey);
+        }
+        
         try {
             // Try multiple routing services due to CSP restrictions
             const routingServices = [
@@ -360,6 +466,9 @@ export class RouteCalculator {
                         duration: result.duration,
                         coordinates: result.geometry.coordinates?.length
                     });
+                    
+                    // Cache the successful driving route
+                    this.cacheRoute(routeCacheKey, result);
                     
                     return result;
                     

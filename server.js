@@ -7,6 +7,42 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Simple in-memory cache for API responses
+const responseCache = new Map();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache
+const MAX_CACHE_SIZE = 100; // Maximum number of cached responses
+
+// Cache management functions
+function getCacheKey(prompt) {
+    // Create a simple hash of the prompt for caching
+    return prompt.toLowerCase().replace(/\s+/g, ' ').trim().substring(0, 200);
+}
+
+function getCachedResponse(key) {
+    const cached = responseCache.get(key);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+        return cached.data;
+    }
+    // Remove expired cache entry
+    if (cached) {
+        responseCache.delete(key);
+    }
+    return null;
+}
+
+function setCachedResponse(key, data) {
+    // Limit cache size
+    if (responseCache.size >= MAX_CACHE_SIZE) {
+        // Remove oldest entry
+        const firstKey = responseCache.keys().next().value;
+        responseCache.delete(firstKey);
+    }
+    responseCache.set(key, {
+        data,
+        timestamp: Date.now()
+    });
+}
+
 // Parse JSON bodies
 app.use(express.json());
 
@@ -248,6 +284,14 @@ app.post('/api/chat', async (req, res) => {
             return res.status(400).json({ error: 'Prompt is required' });
         }
         
+        // Check cache first
+        const cacheKey = getCacheKey(prompt);
+        const cachedResponse = getCachedResponse(cacheKey);
+        if (cachedResponse) {
+            console.log('Returning cached response for:', cacheKey.substring(0, 50) + '...');
+            return res.json(cachedResponse);
+        }
+        
         // Use environment variable or encoded fallback
         const apiKey = process.env.PERPLEXITY_API_KEY || 
                       Buffer.from('cHBseC1QY1VsOUFLUlFiYkZRZm15clM4OEUxcVowZld0VlBucVV1ajAwT0w0cWVJQllzdDEK', 'base64').toString().trim();
@@ -299,10 +343,15 @@ app.post('/api/chat', async (req, res) => {
                 // Generate a simple fallback based on the prompt
                 const fallbackResponse = generateFallbackResponse(prompt);
                 
-                return res.json({
+                const response = {
                     content: fallbackResponse,
                     fallback: true
-                });
+                };
+                
+                // Cache fallback responses too
+                setCachedResponse(cacheKey, response);
+                
+                return res.json(response);
             }
             
             return res.status(response.status).json({
@@ -319,9 +368,14 @@ app.post('/api/chat', async (req, res) => {
             });
         }
         
-        res.json({
+        const apiResponse = {
             content: data.choices[0].message.content
-        });
+        };
+        
+        // Cache the successful response
+        setCachedResponse(cacheKey, apiResponse);
+        
+        res.json(apiResponse);
         
     } catch (error) {
         console.error('Server error:', error);

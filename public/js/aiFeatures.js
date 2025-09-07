@@ -8,6 +8,9 @@ export class AIFeatures {
         // Initialize with default configuration
         this.apiKey = this.getDefaultApiKey();
         this.currentRoute = null;
+        this.pendingRequests = new Map();
+        this.requestDebounceTimers = new Map();
+        this.DEBOUNCE_DELAY = 500; // 500ms debounce delay
     }
     
     /**
@@ -39,12 +42,30 @@ export class AIFeatures {
     }
     
     /**
-     * Call Perplexity API with a prompt
+     * Call Perplexity API with a prompt (with debouncing and deduplication)
      * @param {string} prompt - The prompt to send to the AI
+     * @param {boolean} skipDebounce - Skip debouncing for immediate execution
      * @returns {Promise<string>} AI response or null on error
      */
-    async callPerplexityAPI(prompt) {        
-        try {
+    async callPerplexityAPI(prompt, skipDebounce = false) {
+        // Create a request key for deduplication
+        const requestKey = prompt.substring(0, 100);
+        
+        // If there's already a pending request for this prompt, return it
+        if (this.pendingRequests.has(requestKey)) {
+            console.log('Returning existing request for:', requestKey.substring(0, 50) + '...');
+            return this.pendingRequests.get(requestKey);
+        }
+        
+        // Clear any existing debounce timer for this request
+        if (this.requestDebounceTimers.has(requestKey)) {
+            clearTimeout(this.requestDebounceTimers.get(requestKey));
+            this.requestDebounceTimers.delete(requestKey);
+        }
+        
+        // Create the actual API call function
+        const makeApiCall = async () => {
+            try {
             // Use the server proxy endpoint to avoid CORS issues
             const response = await fetch('/api/chat', {
                 method: 'POST',
@@ -67,9 +88,14 @@ export class AIFeatures {
                 throw new Error('Invalid response format from server');
             }
             
+            // Remove from pending requests
+            this.pendingRequests.delete(requestKey);
+            
             return data.content;
-        } catch (error) {
-            console.error('Perplexity API Error:', error);
+            } catch (error) {
+                // Remove from pending requests on error
+                this.pendingRequests.delete(requestKey);
+                console.error('Perplexity API Error:', error);
             
             if (error.message.includes('API request failed')) {
                 throw error;
@@ -78,7 +104,32 @@ export class AIFeatures {
             } else {
                 throw new Error('Failed to communicate with AI service: ' + error.message);
             }
+            }
+        };
+        
+        // If we should skip debouncing, execute immediately
+        if (skipDebounce) {
+            const promise = makeApiCall();
+            this.pendingRequests.set(requestKey, promise);
+            return promise;
         }
+        
+        // Otherwise, debounce the request
+        return new Promise((resolve, reject) => {
+            const timer = setTimeout(async () => {
+                this.requestDebounceTimers.delete(requestKey);
+                try {
+                    const promise = makeApiCall();
+                    this.pendingRequests.set(requestKey, promise);
+                    const result = await promise;
+                    resolve(result);
+                } catch (error) {
+                    reject(error);
+                }
+            }, this.DEBOUNCE_DELAY);
+            
+            this.requestDebounceTimers.set(requestKey, timer);
+        });
     }
     
     /**
