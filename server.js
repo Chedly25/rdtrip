@@ -10,8 +10,105 @@ const PORT = process.env.PORT || 3000;
 // Parse JSON bodies
 app.use(express.json());
 
+// Extract cities from prompt text
+function extractCitiesFromPrompt(prompt) {
+    const commonCities = [
+        'Aix-en-Provence', 'Nice', 'Cannes', 'Monaco', 'Monte Carlo', 'Antibes', 'Saint-Tropez',
+        'Marseille', 'Toulon', 'Cassis', 'Avignon', 'Arles', 'Nimes', 'Montpellier',
+        'Venice', 'Verona', 'Milan', 'Florence', 'Rome', 'Bologna', 'Genoa', 'Turin',
+        'La Spezia', 'Cinque Terre', 'Portofino', 'San Remo', 'Finale Ligure',
+        'Lyon', 'Grenoble', 'Sisteron', 'Gap', 'Digne-les-Bains'
+    ];
+    
+    const foundCities = [];
+    for (const city of commonCities) {
+        if (prompt.toLowerCase().includes(city.toLowerCase())) {
+            foundCities.push(city);
+        }
+    }
+    
+    return foundCities;
+}
+
+// Generate route-specific food guide based on detected cities
+function generateRouteSpecificFoodGuide(cities, cityList) {
+    const cityFoodData = {
+        'Aix-en-Provence': {
+            specialties: ['Calissons d\'Aix (almond confection)', 'Provence herbs and lavender honey', 'Local rosé wines'],
+            restaurants: ['Traditional brasseries around Cours Mirabeau', 'Local markets (Tue, Thu, Sat mornings)']
+        },
+        'Nice': {
+            specialties: ['Socca (chickpea pancake)', 'Salade Niçoise', 'Pan bagnat', 'Pissaladière'],
+            restaurants: ['Cours Saleya market', 'Old Town (Vieux Nice) trattorias']
+        },
+        'Cannes': {
+            specialties: ['Fresh Mediterranean seafood', 'Bouillabaisse', 'Local wines from Provence'],
+            restaurants: ['Marché Forville (covered market)', 'Le Suquet (old quarter)']
+        },
+        'Venice': {
+            specialties: ['Cicchetti (small plates)', 'Risotto al nero di seppia', 'Tiramisu', 'Prosecco'],
+            restaurants: ['Bacari (wine bars) in Castello', 'Rialto Market area']
+        },
+        'Verona': {
+            specialties: ['Amarone wine', 'Risotto all\'Amarone', 'Pandoro (Christmas cake)', 'Gnocchi di malga'],
+            restaurants: ['Historic center trattorias', 'Local enotecas (wine bars)']
+        },
+        'Genoa': {
+            specialties: ['Pesto Genovese', 'Farinata (chickpea flatbread)', 'Focaccia col formaggio'],
+            restaurants: ['Via del Campo markets', 'Historic center family restaurants']
+        },
+        'La Spezia': {
+            specialties: ['Fresh seafood', 'Cinque Terre wines', 'Pesto and trofie pasta', 'Anchovies'],
+            restaurants: ['Harbor-front seafood restaurants', 'Local fishing village trattorias']
+        },
+        'Finale Ligure': {
+            specialties: ['Ligurian olive oil', 'Fresh catch of the day', 'Farinata', 'Local white wines'],
+            restaurants: ['Beachfront restaurants', 'Historic center family establishments']
+        }
+    };
+
+    let specificContent = `🍽️ **Culinary Journey: ${cityList}**\n\n`;
+
+    if (cities.length > 0) {
+        cities.forEach(city => {
+            const foodData = cityFoodData[city];
+            if (foodData) {
+                specificContent += `**${city}:**\n`;
+                specificContent += `• Specialties: ${foodData.specialties.join(', ')}\n`;
+                specificContent += `• Where to eat: ${foodData.restaurants.join(', ')}\n\n`;
+            }
+        });
+
+        specificContent += `**General Tips for Your Route:**\n`;
+        specificContent += `• Make reservations for dinner, especially in summer\n`;
+        specificContent += `• Try local markets for fresh ingredients and snacks\n`;
+        specificContent += `• Each region has distinct wine varieties - ask for local recommendations\n`;
+        specificContent += `• Lunch is typically served 12:00-14:30, dinner after 19:30\n\n`;
+    } else {
+        specificContent += `**Regional Specialties to Try:**\n`;
+        specificContent += `• Fresh seafood and Mediterranean cuisine\n`;
+        specificContent += `• Local wines and regional cheese varieties\n`;
+        specificContent += `• Traditional pastries and artisanal breads\n`;
+        specificContent += `• Authentic family-run restaurants in historic centers\n\n`;
+        
+        specificContent += `**Dining Tips:**\n`;
+        specificContent += `• Ask locals for their favorite hidden restaurant gems\n`;
+        specificContent += `• Visit during lunch hours (12-2pm) for the best atmosphere\n`;
+        specificContent += `• Make dinner reservations in advance, especially weekends\n`;
+        specificContent += `• Try regional wines paired with local dishes\n\n`;
+    }
+
+    specificContent += `✨ *Note: For current restaurant recommendations and detailed reviews, please check your API configuration.*`;
+    
+    return specificContent;
+}
+
 // Fallback response generator for when API is unavailable
-function generateFallbackResponse(prompt) {
+function generateFallbackResponse(prompt, routeData = null) {
+    // Extract cities from prompt if available
+    const cities = extractCitiesFromPrompt(prompt);
+    const cityList = cities.length > 0 ? cities.join(', ') : 'your selected destinations';
+    
     const templates = {
         narrative: `🚗 **Your Epic Road Trip Adventure**
 
@@ -23,22 +120,7 @@ This route promises diverse landscapes, rich history, and countless memories wai
 
 ✨ *Note: This is a sample response. For personalized AI insights, please check your API configuration.*`,
 
-        food: `🍽️ **Culinary Delights Along Your Route**
-
-**Regional Specialties to Try:**
-• Fresh seafood and Mediterranean cuisine
-• Local wines and regional cheese varieties  
-• Traditional pastries and artisanal breads
-• Authentic family-run restaurants in historic centers
-• Local markets for fresh produce and specialties
-
-**Dining Tips:**
-• Ask locals for their favorite hidden restaurant gems
-• Visit during lunch hours (12-2pm) for the best atmosphere
-• Make dinner reservations in advance, especially weekends
-• Try regional wines paired with local dishes
-
-✨ *Note: For detailed restaurant recommendations and current information, please check your API configuration.*`,
+        food: generateRouteSpecificFoodGuide(cities, cityList),
 
         weather: `🌤️ **Weather & Travel Information**
 
@@ -168,7 +250,7 @@ app.post('/api/chat', async (req, res) => {
         
         // Use environment variable or encoded fallback
         const apiKey = process.env.PERPLEXITY_API_KEY || 
-                      Buffer.from('cHBseC04b0hSaHdPZWlkR09vWlpkY3doVU5RMnNxYjF5ajRlaHlSNmJ1RGtrd2x0c2tyNVY=', 'base64').toString();
+                      Buffer.from('cHBseC1XM2pXWmNiamM4eVRXODRlaEFncm1LTktPMkJCRnVBdlJQVkVrV29LVzlvNzkxc1kK', 'base64').toString().trim();
         
         console.log('API Key length:', apiKey ? apiKey.length : 0);
         console.log('API Key starts with:', apiKey ? apiKey.substring(0, 10) + '...' : 'No key');
@@ -259,7 +341,7 @@ app.get('/', (req, res) => {
 app.get('/api/test', async (req, res) => {
     try {
         const apiKey = process.env.PERPLEXITY_API_KEY || 
-                      Buffer.from('cHBseC04b0hSaHdPZWlkR09vWlpkY3doVU5RMnNxYjF5ajRlaHlSNmJ1RGtrd2x0c2tyNVY=', 'base64').toString();
+                      Buffer.from('cHBseC1XM2pXWmNiamM4eVRXODRlaEFncm1LTktPMkJCRnVBdlJQVkVrV29LVzlvNzkxc1kK', 'base64').toString().trim();
         
         const response = await fetch('https://api.perplexity.ai/chat/completions', {
             method: 'POST',
