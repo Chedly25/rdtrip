@@ -43,43 +43,31 @@ export class AIFeatures {
      * @param {string} prompt - The prompt to send to the AI
      * @returns {Promise<string>} AI response or null on error
      */
-    async callPerplexityAPI(prompt) {
-        if (!this.apiKey) {
-            throw new Error('Please enter your Perplexity API key');
-        }
-        
+    async callPerplexityAPI(prompt) {        
         try {
-            const response = await fetch('https://api.perplexity.ai/chat/completions', {
+            // Use the server proxy endpoint to avoid CORS issues
+            const response = await fetch('/api/chat', {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${this.apiKey}`,
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    model: 'llama-3.1-sonar-small-128k-online',
-                    messages: [
-                        {
-                            role: 'user',
-                            content: prompt
-                        }
-                    ],
-                    temperature: 0.7,
-                    max_tokens: 1000
+                    prompt: prompt
                 })
             });
             
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                throw new Error(`API request failed: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
+                throw new Error(`API request failed: ${response.status} - ${errorData.error || errorData.details || 'Unknown error'}`);
             }
             
             const data = await response.json();
             
-            if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-                throw new Error('Invalid response format from API');
+            if (!data.content) {
+                throw new Error('Invalid response format from server');
             }
             
-            return data.choices[0].message.content;
+            return data.content;
         } catch (error) {
             console.error('Perplexity API Error:', error);
             
