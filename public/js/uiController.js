@@ -274,21 +274,28 @@ export class UIController {
             aiFeatures.setApiKey(e.target.value.trim());
         });
         
-        // Export buttons are handled by global functions
-        window.exportToGoogle = () => this.exportToGoogle();
-        window.exportGPX = () => this.exportGPX();
+        // Export buttons with proper event listeners
+        document.getElementById('export-google')?.addEventListener('click', () => this.exportToGoogle());
+        document.getElementById('export-gpx')?.addEventListener('click', () => this.exportGPX());
+        
+        // AI feature buttons with proper event listeners
+        document.getElementById('ai-narrator')?.addEventListener('click', () => this.callAIFeature('narrative'));
+        document.getElementById('ai-food')?.addEventListener('click', () => this.callAIFeature('food'));
+        document.getElementById('ai-weather')?.addEventListener('click', () => this.callAIFeature('weather'));
+        document.getElementById('ai-gems')?.addEventListener('click', () => this.callAIFeature('hidden'));
+        document.getElementById('ai-itinerary')?.addEventListener('click', () => this.callAIFeature('itinerary'));
+        
+        // Keep removeStop as global function for dynamic HTML (will fix this separately)
         window.removeStop = (index) => this.removeStop(index);
         
-        // AI feature buttons
-        window.aiTripNarrator = () => this.callAIFeature('narrative');
-        window.aiLocalFood = () => this.callAIFeature('food');
-        window.aiWeatherAdvice = () => this.callAIFeature('weather');
-        window.aiHiddenGems = () => this.callAIFeature('hidden');
-        window.aiItinerary = () => this.callAIFeature('itinerary');
-        
-        console.log('=== AI GLOBAL FUNCTIONS SET ===');
-        console.log('aiTripNarrator available:', typeof window.aiTripNarrator);
-        console.log('aiLocalFood available:', typeof window.aiLocalFood);
+        console.log('=== AI EVENT LISTENERS SET ===');
+        console.log('AI buttons found:', {
+            narrator: !!document.getElementById('ai-narrator'),
+            food: !!document.getElementById('ai-food'),
+            weather: !!document.getElementById('ai-weather'),
+            gems: !!document.getElementById('ai-gems'),
+            itinerary: !!document.getElementById('ai-itinerary')
+        });
     }
     
     /**

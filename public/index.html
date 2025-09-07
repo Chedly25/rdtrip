@@ -75,11 +75,11 @@
                 <h3>🤖 AI Travel Assistant</h3>
                 <input type="password" id="api-key" placeholder="Custom Perplexity API Key (optional)" style="margin-bottom: 1rem;">
                 <div style="display: flex; flex-wrap: wrap;">
-                    <button class="btn btn-ai" onclick="aiTripNarrator()">📖 Trip Story</button>
-                    <button class="btn btn-ai" onclick="aiLocalFood()">🍽️ Local Food</button>
-                    <button class="btn btn-ai" onclick="aiWeatherAdvice()">🌤️ Weather</button>
-                    <button class="btn btn-ai" onclick="aiHiddenGems()">💎 Secrets</button>
-                    <button class="btn btn-ai" onclick="aiItinerary()">📅 Itinerary</button>
+                    <button class="btn btn-ai" id="ai-narrator">📖 Trip Story</button>
+                    <button class="btn btn-ai" id="ai-food">🍽️ Local Food</button>
+                    <button class="btn btn-ai" id="ai-weather">🌤️ Weather</button>
+                    <button class="btn btn-ai" id="ai-gems">💎 Secrets</button>
+                    <button class="btn btn-ai" id="ai-itinerary">📅 Itinerary</button>
                 </div>
                 <div style="font-size: 0.8rem; color: #28a745; margin-top: 0.5rem;">
                     ✅ AI features ready! Leave API key blank to use default, or enter your own for custom usage.
@@ -110,10 +110,10 @@
                 </div>
 
                 <div class="export-buttons">
-                    <button class="btn btn-secondary" onclick="exportToGoogle()">
+                    <button class="btn btn-secondary" id="export-google">
                         📍 Open in Google Maps
                     </button>
-                    <button class="btn btn-secondary" onclick="exportGPX()">
+                    <button class="btn btn-secondary" id="export-gpx">
                         📁 Download GPX File
                     </button>
                 </div>
