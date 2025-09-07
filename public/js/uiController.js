@@ -21,28 +21,91 @@ export class UIController {
     /**
      * Initialize the application
      */
-    init() {
-        this.initializeMap();
-        this.setupEventListeners();
-        this.setupAutocomplete();
-        this.addStartingPointMarker();
-        
-        console.log('Road Trip Planner initialized successfully');
+    async init() {
+        try {
+            // Wait for DOM to be fully ready
+            await this.waitForDOM();
+            
+            this.initializeMap();
+            this.setupEventListeners();
+            this.setupAutocomplete();
+            this.addStartingPointMarker();
+            
+            console.log('Road Trip Planner initialized successfully');
+            
+        } catch (error) {
+            console.error('Initialization error:', error);
+            throw error;
+        }
+    }
+    
+    /**
+     * Wait for DOM elements to be ready
+     */
+    waitForDOM() {
+        return new Promise((resolve) => {
+            if (document.getElementById('map') && document.getElementById('destination')) {
+                resolve();
+            } else {
+                setTimeout(() => resolve(this.waitForDOM()), 50);
+            }
+        });
+    }
+    
+    /**
+     * Cleanup method for proper resource disposal
+     */
+    cleanup() {
+        if (this.map) {
+            this.map.remove();
+            this.map = null;
+        }
+        this.routeLayer = null;
+        this.markersLayer = null;
+        this.currentRoute = null;
     }
     
     /**
      * Initialize Leaflet map
      */
     initializeMap() {
-        this.map = L.map('map').setView([43.5263, 5.4454], 8);
-        
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors',
-            maxZoom: 19
-        }).addTo(this.map);
-        
-        this.routeLayer = L.layerGroup().addTo(this.map);
-        this.markersLayer = L.layerGroup().addTo(this.map);
+        try {
+            // Check if map container exists
+            const mapContainer = document.getElementById('map');
+            if (!mapContainer) {
+                throw new Error('Map container not found');
+            }
+            
+            // Remove existing map if it exists
+            if (this.map) {
+                this.map.remove();
+                this.map = null;
+            }
+            
+            // Clear any existing map instance in the container
+            mapContainer.innerHTML = '';
+            
+            // Initialize new map
+            this.map = L.map('map', {
+                zoomControl: true,
+                attributionControl: true
+            }).setView([43.5263, 5.4454], 8);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 19,
+                minZoom: 3
+            }).addTo(this.map);
+            
+            this.routeLayer = L.layerGroup().addTo(this.map);
+            this.markersLayer = L.layerGroup().addTo(this.map);
+            
+            console.log('Map initialized successfully');
+            
+        } catch (error) {
+            console.error('Map initialization error:', error);
+            throw new Error('Failed to initialize map: ' + error.message);
+        }
     }
     
     /**

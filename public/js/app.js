@@ -17,8 +17,14 @@ class RoadTripApp {
         try {
             console.log('Initializing Road Trip Planner...');
             
+            // Show loading screen
+            this.showLoadingScreen();
+            
             // Check if required dependencies are loaded
             this.checkDependencies();
+            
+            // Wait a bit for all resources to load
+            await this.delay(100);
             
             // Initialize UI controller
             this.uiController = new UIController();
@@ -27,11 +33,42 @@ class RoadTripApp {
             // Setup global error handling
             this.setupErrorHandling();
             
+            // Hide loading screen
+            this.hideLoadingScreen();
+            
             console.log('Road Trip Planner loaded successfully!');
             
         } catch (error) {
             console.error('Failed to initialize application:', error);
+            this.hideLoadingScreen();
             this.showInitializationError(error);
+        }
+    }
+    
+    /**
+     * Simple delay utility
+     */
+    delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+    
+    /**
+     * Show loading screen
+     */
+    showLoadingScreen() {
+        const loadingScreen = document.getElementById('loading-screen');
+        if (loadingScreen) {
+            loadingScreen.style.display = 'flex';
+        }
+    }
+    
+    /**
+     * Hide loading screen
+     */
+    hideLoadingScreen() {
+        const loadingScreen = document.getElementById('loading-screen');
+        if (loadingScreen) {
+            loadingScreen.style.display = 'none';
         }
     }
     
@@ -138,17 +175,34 @@ class RoadTripApp {
     }
 }
 
+// Global app instance for cleanup
+window.roadTripApp = null;
+
+// Cleanup any existing instance
+function cleanupExistingApp() {
+    if (window.roadTripApp && window.roadTripApp.uiController) {
+        window.roadTripApp.uiController.cleanup();
+    }
+}
+
+// Initialize app function
+async function initializeApp() {
+    try {
+        cleanupExistingApp();
+        window.roadTripApp = new RoadTripApp();
+        await window.roadTripApp.init();
+    } catch (error) {
+        console.error('App initialization failed:', error);
+    }
+}
+
 // Initialize app when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    const app = new RoadTripApp();
-    app.init();
-});
+document.addEventListener('DOMContentLoaded', initializeApp);
 
 // Also handle the case where DOM is already loaded
 if (document.readyState === 'loading') {
     // DOM is still loading, event listener will handle it
 } else {
     // DOM is already loaded
-    const app = new RoadTripApp();
-    app.init();
+    initializeApp();
 }
