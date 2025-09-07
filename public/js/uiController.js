@@ -60,6 +60,15 @@ export class UIController {
             this.map.remove();
             this.map = null;
         }
+        
+        // Clear Leaflet's internal references to the container
+        const mapContainer = document.getElementById('map');
+        if (mapContainer) {
+            mapContainer.innerHTML = '';
+            mapContainer._leaflet_id = null;
+            delete mapContainer._leaflet_id;
+        }
+        
         this.routeLayer = null;
         this.markersLayer = null;
         this.currentRoute = null;
@@ -82,8 +91,10 @@ export class UIController {
                 this.map = null;
             }
             
-            // Clear any existing map instance in the container
+            // Clear any existing map instance in the container and reset Leaflet's internal state
             mapContainer.innerHTML = '';
+            mapContainer._leaflet_id = null;
+            delete mapContainer._leaflet_id;
             
             // Initialize new map
             this.map = L.map('map', {
