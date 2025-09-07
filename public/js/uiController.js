@@ -447,13 +447,22 @@ export class UIController {
                     // Convert GeoJSON coordinates to Leaflet format [lat, lng]
                     const leafletCoords = segment.geometry.coordinates.map(coord => [coord[1], coord[0]]);
                     
+                    console.log(`=== DRAWING SEGMENT ${index + 1} ===`);
+                    console.log('Segment from:', segment.from, 'to:', segment.to);
+                    console.log('Coordinates count:', leafletCoords.length);
+                    console.log('Service used:', segment.service || 'Unknown');
+                    console.log('First coords:', leafletCoords[0]);
+                    console.log('Last coords:', leafletCoords[leafletCoords.length - 1]);
+                    
                     // Create polyline for this segment
                     const segmentPolyline = L.polyline(leafletCoords, {
-                        color: '#667eea',
+                        color: segment.service === 'Fallback' ? '#ff6b6b' : '#667eea', // Red for fallback, blue for API
                         weight: 4,
                         opacity: 0.8,
                         smoothFactor: 1
                     }).addTo(this.routeLayer);
+                    
+                    console.log('Polyline added to map:', !!segmentPolyline);
                     
                     // Add to bounds for fitting map
                     allBounds = allBounds.concat(leafletCoords);

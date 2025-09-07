@@ -403,7 +403,7 @@ export class RouteCalculator {
             coordinates.push([curvedLon, curvedLat]);
         }
         
-        return {
+        const result = {
             geometry: {
                 type: 'LineString',
                 coordinates: coordinates
@@ -412,6 +412,14 @@ export class RouteCalculator {
             duration: Math.round(this.haversineDistance(start, end) / 75 * 10) / 10, // Rough estimate
             service: 'Fallback'
         };
+        
+        console.log('=== FALLBACK ROUTE GENERATED ===');
+        console.log('From:', start.name, 'to:', end.name);
+        console.log('Coordinates generated:', coordinates.length);
+        console.log('Sample coordinates:', coordinates.slice(0, 3));
+        console.log('Distance estimate:', result.distance, 'km');
+        
+        return result;
     }
 
     /**
