@@ -135,39 +135,37 @@ export class RouteCalculator {
     orderStopsGeographically(stops, start, end) {
         if (stops.length <= 1) return stops;
         
-        const ordered = [];
-        let current = start;
-        const remaining = [...stops];
+        // Calculate the main direction vector from start to end
+        const mainVector = {
+            lat: end.lat - start.lat,
+            lon: end.lon - start.lon
+        };
         
-        // Greedy algorithm: always pick the nearest city that minimizes total distance
-        while (remaining.length > 0) {
-            let bestStop = null;
-            let bestIndex = -1;
-            let bestCost = Infinity;
+        // Project each stop onto the main route line and sort by progression
+        const stopsWithProgression = stops.map(stop => {
+            // Vector from start to current stop
+            const stopVector = {
+                lat: stop.lat - start.lat,
+                lon: stop.lon - start.lon
+            };
             
-            for (let i = 0; i < remaining.length; i++) {
-                const stop = remaining[i];
-                // Cost = distance to current + distance from stop to end
-                const cost = this.haversineDistance(current, stop) + 
-                           this.haversineDistance(stop, end);
-                
-                if (cost < bestCost) {
-                    bestCost = cost;
-                    bestStop = stop;
-                    bestIndex = i;
-                }
-            }
+            // Calculate dot product to get projection (progression along main route)
+            const dotProduct = (stopVector.lat * mainVector.lat + stopVector.lon * mainVector.lon);
+            const mainVectorLength = Math.sqrt(mainVector.lat * mainVector.lat + mainVector.lon * mainVector.lon);
             
-            if (bestStop) {
-                ordered.push(bestStop);
-                current = bestStop;
-                remaining.splice(bestIndex, 1);
-            } else {
-                break;
-            }
-        }
+            // Progression as a ratio (0 = at start, 1 = at destination)
+            const progression = dotProduct / (mainVectorLength * mainVectorLength);
+            
+            return {
+                stop,
+                progression: Math.max(0, Math.min(1, progression)) // Clamp between 0 and 1
+            };
+        });
         
-        return ordered;
+        // Sort by progression along the route
+        stopsWithProgression.sort((a, b) => a.progression - b.progression);
+        
+        return stopsWithProgression.map(item => item.stop);
     }
     
     /**
