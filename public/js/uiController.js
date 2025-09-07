@@ -285,6 +285,10 @@ export class UIController {
         window.aiWeatherAdvice = () => this.callAIFeature('weather');
         window.aiHiddenGems = () => this.callAIFeature('hidden');
         window.aiItinerary = () => this.callAIFeature('itinerary');
+        
+        console.log('=== AI GLOBAL FUNCTIONS SET ===');
+        console.log('aiTripNarrator available:', typeof window.aiTripNarrator);
+        console.log('aiLocalFood available:', typeof window.aiLocalFood);
     }
     
     /**
@@ -326,9 +330,14 @@ export class UIController {
             calculateBtn.textContent = 'Fetching driving directions...';
             
             try {
-                console.log('Fetching complete route for:', result.route.map(city => city.name));
+                console.log('=== STARTING ROUTE FETCH ===');
+                console.log('Route cities:', result.route.map(city => city.name));
+                console.log('Route length:', result.route.length);
+                
                 const drivingRoute = await this.routeCalculator.fetchCompleteRoute(result.route);
-                console.log('Complete route fetched:', drivingRoute);
+                console.log('=== COMPLETE ROUTE FETCHED ===');
+                console.log('Driving route data:', drivingRoute);
+                console.log('Segments count:', drivingRoute.segments?.length);
                 
                 // Merge route data with driving directions
                 result.drivingRoute = drivingRoute;
@@ -336,8 +345,17 @@ export class UIController {
                 result.actualTime = drivingRoute.totalDuration;
                 result.hasDrivingDirections = true;
                 
+                console.log('=== ROUTE DATA MERGED ===');
+                console.log('Final result:', {
+                    hasDrivingDirections: result.hasDrivingDirections,
+                    segmentCount: result.drivingRoute?.segments?.length,
+                    actualDistance: result.actualDistance
+                });
+                
             } catch (drivingError) {
-                console.warn('Failed to fetch driving directions, using estimated route:', drivingError);
+                console.error('=== DRIVING ROUTE ERROR ===');
+                console.error('Error details:', drivingError);
+                console.error('Stack trace:', drivingError.stack);
                 result.hasDrivingDirections = false;
                 
                 // Show user-friendly message
@@ -649,9 +667,16 @@ export class UIController {
      * Call AI feature and display results
      */
     async callAIFeature(featureType) {
+        console.log('=== AI FEATURE CALLED ===');
+        console.log('Feature type:', featureType);
+        console.log('Current route:', this.currentRoute);
+        console.log('AI Features object:', aiFeatures);
+        
         const aiResults = document.getElementById('ai-results');
         const aiTitle = document.getElementById('ai-title');
         const aiContent = document.getElementById('ai-content');
+        
+        console.log('DOM elements found:', { aiResults: !!aiResults, aiTitle: !!aiTitle, aiContent: !!aiContent });
         
         const featureMap = {
             narrative: { title: 'Trip Narrator', method: 'generateTripNarrative' },
