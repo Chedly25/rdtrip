@@ -1,6 +1,7 @@
 import { RouteCalculator } from './routeCalculator.js';
 import { aiFeatures } from './aiFeatures.js';
 import { TripTypesManager } from './tripTypes.js';
+import { animationController } from './animations.js';
 
 /**
  * UI Controller - Manages all user interface interactions and map display
@@ -69,6 +70,11 @@ export class UIController {
             mapContainer.innerHTML = '';
             mapContainer._leaflet_id = null;
             delete mapContainer._leaflet_id;
+        }
+        
+        // Cleanup animation controller
+        if (animationController) {
+            animationController.cleanup();
         }
         
         this.routeLayer = null;
@@ -313,9 +319,10 @@ export class UIController {
             return;
         }
         
-        // Show loading state
+        // Show enhanced loading state
         calculateBtn.textContent = 'Calculating...';
         calculateBtn.disabled = true;
+        animationController.animateLoading(calculateBtn, true);
         
         try {
             // Find destination city
@@ -386,8 +393,9 @@ export class UIController {
             console.error('Route calculation error:', error);
             this.showError(error.message);
         } finally {
-            // Reset button state
-            calculateBtn.textContent = 'Calculate Route';
+            // Reset enhanced button state
+            animationController.animateLoading(calculateBtn, false);
+            calculateBtn.textContent = '🧭 Calculate Route';
             calculateBtn.disabled = false;
         }
     }
@@ -709,23 +717,26 @@ export class UIController {
         const feature = featureMap[featureType];
         if (!feature) return;
         
-        // Show loading state
+        // Show enhanced loading state
         aiResults.classList.add('active');
         aiTitle.innerHTML = `${feature.title} <span class="loading"></span>`;
         aiContent.textContent = 'Loading AI insights...';
+        animationController.animateLoading(aiContent, true);
         
         try {
             const result = await aiFeatures[feature.method]();
             
-            // Display result
+            // Display result with animation
+            animationController.animateLoading(aiContent, false);
             aiTitle.textContent = feature.title;
             aiContent.textContent = result;
             
-            // Scroll to results
-            aiResults.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            // Smooth scroll to results
+            animationController.smoothScrollTo(aiResults, 100);
             
         } catch (error) {
             console.error('AI Feature Error:', error);
+            animationController.animateLoading(aiContent, false);
             aiTitle.textContent = `${feature.title} - Error`;
             aiContent.textContent = `Error: ${error.message}\n\nPlease check your API key and try again.`;
         }
