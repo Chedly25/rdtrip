@@ -290,6 +290,92 @@ export class RouteCalculator {
     }
     
     /**
+     * Fetch driving route between two points using OSRM
+     * @param {Object} start - Start city with lat/lon
+     * @param {Object} end - End city with lat/lon
+     * @returns {Promise<Object>} Route data with geometry and distance
+     */
+    async fetchDrivingRoute(start, end) {
+        try {
+            const url = `https://router.project-osrm.org/route/v1/driving/${start.lon},${start.lat};${end.lon},${end.lat}?overview=full&geometries=geojson`;
+            
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`OSRM API error: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data.code !== 'Ok' || !data.routes || data.routes.length === 0) {
+                throw new Error('No route found');
+            }
+            
+            const route = data.routes[0];
+            return {
+                geometry: route.geometry,
+                distance: Math.round(route.distance / 1000), // Convert to km
+                duration: Math.round(route.duration / 3600, 1) // Convert to hours
+            };
+            
+        } catch (error) {
+            console.warn('Failed to fetch driving route:', error);
+            // Fallback to straight line
+            return {
+                geometry: {
+                    type: 'LineString',
+                    coordinates: [[start.lon, start.lat], [end.lon, end.lat]]
+                },
+                distance: Math.round(this.haversineDistance(start, end)),
+                duration: Math.round(this.haversineDistance(start, end) / 75, 1) // Rough estimate
+            };
+        }
+    }
+
+    /**
+     * Fetch complete driving route for entire trip
+     * @param {Array} route - Array of cities in order
+     * @returns {Promise<Object>} Complete route data with segments
+     */
+    async fetchCompleteRoute(route) {
+        try {
+            const segments = [];
+            let totalDistance = 0;
+            let totalDuration = 0;
+
+            // Fetch driving directions for each segment
+            for (let i = 0; i < route.length - 1; i++) {
+                const start = route[i];
+                const end = route[i + 1];
+                
+                const segmentRoute = await this.fetchDrivingRoute(start, end);
+                segments.push({
+                    from: start.name,
+                    to: end.name,
+                    geometry: segmentRoute.geometry,
+                    distance: segmentRoute.distance,
+                    duration: segmentRoute.duration
+                });
+                
+                totalDistance += segmentRoute.distance;
+                totalDuration += segmentRoute.duration;
+                
+                // Small delay to avoid overwhelming the API
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            return {
+                segments,
+                totalDistance,
+                totalDuration: Math.round(totalDuration * 10) / 10 // Round to 1 decimal
+            };
+            
+        } catch (error) {
+            console.error('Failed to fetch complete route:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Get suggestions for autocomplete
      * @param {string} query - Search query
      * @param {number} limit - Maximum suggestions to return

@@ -322,6 +322,26 @@ export class UIController {
             // Calculate route
             const result = this.routeCalculator.calculateRoute('aix-en-provence', destCity.id, options);
             
+            // Fetch actual driving directions
+            calculateBtn.textContent = 'Fetching driving directions...';
+            
+            try {
+                const drivingRoute = await this.routeCalculator.fetchCompleteRoute(result.route);
+                
+                // Merge route data with driving directions
+                result.drivingRoute = drivingRoute;
+                result.actualDistance = drivingRoute.totalDistance;
+                result.actualTime = drivingRoute.totalDuration;
+                result.hasDrivingDirections = true;
+                
+            } catch (drivingError) {
+                console.warn('Failed to fetch driving directions, using estimated route:', drivingError);
+                result.hasDrivingDirections = false;
+                
+                // Show user-friendly message
+                this.showWarning('Using estimated route - driving directions temporarily unavailable');
+            }
+            
             this.currentRoute = result;
             aiFeatures.setCurrentRoute(result);
             
@@ -389,52 +409,108 @@ export class UIController {
             marker.bindPopup(popupContent, { maxWidth: 300 });
         });
         
-        // Draw route line
-        const coordinates = route.map(city => [city.lat, city.lon]);
-        const polyline = L.polyline(coordinates, {
-            color: '#667eea',
-            weight: 4,
-            opacity: 0.8,
-            smoothFactor: 1
-        }).addTo(this.routeLayer);
-        
-        // Add distance labels on route segments
-        for (let i = 0; i < route.length - 1; i++) {
-            const dist = Math.round(this.routeCalculator.haversineDistance(route[i], route[i + 1]));
-            const midLat = (route[i].lat + route[i + 1].lat) / 2;
-            const midLon = (route[i].lon + route[i + 1].lon) / 2;
+        // Draw actual driving routes if available
+        if (routeData.drivingRoute && routeData.drivingRoute.segments) {
+            const segments = routeData.drivingRoute.segments;
+            let allBounds = [];
             
-            L.marker([midLat, midLon], {
-                icon: L.divIcon({
-                    className: 'distance-label',
-                    html: `<div style="background: rgba(255,255,255,0.9); padding: 2px 6px; border-radius: 12px; font-size: 12px; font-weight: bold; color: #667eea; border: 1px solid #667eea;">${dist}km</div>`,
-                    iconSize: [50, 20],
-                    iconAnchor: [25, 10]
-                })
+            segments.forEach((segment, index) => {
+                if (segment.geometry && segment.geometry.coordinates) {
+                    // Convert GeoJSON coordinates to Leaflet format [lat, lng]
+                    const leafletCoords = segment.geometry.coordinates.map(coord => [coord[1], coord[0]]);
+                    
+                    // Create polyline for this segment
+                    const segmentPolyline = L.polyline(leafletCoords, {
+                        color: '#667eea',
+                        weight: 4,
+                        opacity: 0.8,
+                        smoothFactor: 1
+                    }).addTo(this.routeLayer);
+                    
+                    // Add to bounds for fitting map
+                    allBounds = allBounds.concat(leafletCoords);
+                    
+                    // Add distance label at midpoint of segment
+                    if (leafletCoords.length > 0) {
+                        const midIndex = Math.floor(leafletCoords.length / 2);
+                        const midPoint = leafletCoords[midIndex];
+                        
+                        L.marker(midPoint, {
+                            icon: L.divIcon({
+                                className: 'distance-label',
+                                html: `<div style="background: rgba(255,255,255,0.9); padding: 2px 6px; border-radius: 12px; font-size: 12px; font-weight: bold; color: #667eea; border: 1px solid #667eea;">${segment.distance}km</div>`,
+                                iconSize: [50, 20],
+                                iconAnchor: [25, 10]
+                            })
+                        }).addTo(this.routeLayer);
+                    }
+                }
+            });
+            
+            // Fit map to all route segments
+            if (allBounds.length > 0) {
+                const bounds = L.latLngBounds(allBounds);
+                this.map.fitBounds(bounds, { padding: [20, 20] });
+            }
+        } else {
+            // Fallback to straight line if no driving route available
+            const coordinates = route.map(city => [city.lat, city.lon]);
+            const polyline = L.polyline(coordinates, {
+                color: '#667eea',
+                weight: 4,
+                opacity: 0.8,
+                smoothFactor: 1
             }).addTo(this.routeLayer);
+            
+            // Add distance labels on route segments
+            for (let i = 0; i < route.length - 1; i++) {
+                const dist = Math.round(this.routeCalculator.haversineDistance(route[i], route[i + 1]));
+                const midLat = (route[i].lat + route[i + 1].lat) / 2;
+                const midLon = (route[i].lon + route[i + 1].lon) / 2;
+                
+                L.marker([midLat, midLon], {
+                    icon: L.divIcon({
+                        className: 'distance-label',
+                        html: `<div style="background: rgba(255,255,255,0.9); padding: 2px 6px; border-radius: 12px; font-size: 12px; font-weight: bold; color: #667eea; border: 1px solid #667eea;">${dist}km</div>`,
+                        iconSize: [50, 20],
+                        iconAnchor: [25, 10]
+                    })
+                }).addTo(this.routeLayer);
+            }
+            
+            // Fit map to route with padding
+            const bounds = polyline.getBounds();
+            this.map.fitBounds(bounds, { padding: [20, 20] });
         }
-        
-        // Fit map to route with padding
-        const bounds = polyline.getBounds();
-        this.map.fitBounds(bounds, { padding: [20, 20] });
     }
     
     /**
      * Update route information panel
      */
     updateRouteInfo(routeData) {
-        const { route, totalDistance, totalTime, directDistance, detourFactor } = routeData;
+        const { route, totalDistance, totalTime, directDistance, detourFactor, actualDistance, actualTime } = routeData;
+        
+        // Use actual driving distances/times if available, otherwise use calculated values
+        const displayDistance = actualDistance || totalDistance;
+        const displayTime = actualTime || totalTime;
         
         // Update statistics
-        document.getElementById('total-distance').textContent = totalDistance;
-        document.getElementById('total-time').textContent = totalTime;
+        document.getElementById('total-distance').textContent = displayDistance;
+        document.getElementById('total-time').textContent = displayTime;
         document.getElementById('total-stops').textContent = route.length - 2;
         
         // Create stops list
         const stopsList = document.getElementById('stops-list');
+        const routeTypeIndicator = routeData.hasDrivingDirections ? 
+            '<span style="color: #28a745; font-size: 0.8rem;">🚗 Driving Route</span>' : 
+            '<span style="color: #ffc107; font-size: 0.8rem;">📏 Estimated Route</span>';
+        
         stopsList.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                <h3 style="margin: 0;">Route Stops</h3>
+                <div>
+                    <h3 style="margin: 0;">Route Stops</h3>
+                    ${routeTypeIndicator}
+                </div>
                 <small style="color: #666;">Direct: ${directDistance}km (+${detourFactor}%)</small>
             </div>
         `;
@@ -629,5 +705,36 @@ export class UIController {
         if (errorDiv) {
             errorDiv.style.display = 'none';
         }
+    }
+    
+    /**
+     * Show warning message
+     */
+    showWarning(message) {
+        let warningDiv = document.querySelector('.warning-message');
+        if (!warningDiv) {
+            warningDiv = document.createElement('div');
+            warningDiv.className = 'warning-message';
+            warningDiv.style.cssText = `
+                background: #fff3cd; 
+                color: #856404; 
+                padding: 0.75rem 1rem; 
+                margin: 1rem 0; 
+                border-left: 4px solid #ffc107; 
+                border-radius: 4px; 
+                font-size: 0.9rem;
+                display: block;
+            `;
+            document.querySelector('.sidebar').insertBefore(warningDiv, document.querySelector('.control-group'));
+        }
+        warningDiv.textContent = message;
+        warningDiv.style.display = 'block';
+        
+        // Auto-hide after 8 seconds
+        setTimeout(() => {
+            if (warningDiv) {
+                warningDiv.style.display = 'none';
+            }
+        }, 8000);
     }
 }
