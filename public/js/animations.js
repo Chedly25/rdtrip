@@ -161,7 +161,7 @@ export class AnimationController {
         });
 
         document.addEventListener('mouseleave', (e) => {
-            if (e.target.matches('.trip-type-card')) {
+            if (e.target && e.target.matches && e.target.matches('.trip-type-card')) {
                 e.target.style.transform = '';
             }
         });

@@ -167,8 +167,13 @@ export class ParallelAgentSystem {
             const cities = route.route.map(c => c.name).join(', ');
             const prompt = this.createAgentPrompt(agent, cities, route.totalDistance);
             
-            // Get AI-powered itinerary from this agent
-            const agentItinerary = await this.aiFeatures.callPerplexityAPI(prompt, false);
+            // Get AI-powered itinerary from this agent with timeout
+            const agentItinerary = await Promise.race([
+                this.aiFeatures.callPerplexityAPI(prompt, false),
+                new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Agent timeout - using fallback')), 30000)
+                )
+            ]);
             
             const duration = Date.now() - startTime;
             console.log(`⚡ ${agent.name} completed in ${duration}ms`);
@@ -186,7 +191,27 @@ export class ParallelAgentSystem {
             
         } catch (error) {
             console.error(`❌ ${agent.name} encountered error:`, error);
-            throw error;
+            
+            // Provide fallback result instead of throwing error
+            const duration = Date.now() - startTime;
+            console.log(`🔄 ${agent.name} using fallback (${duration}ms)`);
+            
+            const fallbackRoute = this.routeCalculator.calculateRoute(startId, destId, {
+                ...baseOptions,
+                theme: agentType
+            });
+            
+            return {
+                agentType,
+                agent,
+                route: fallbackRoute,
+                itinerary: `${agent.name} specializes in ${agent.specialization}. Route includes ${fallbackRoute.route.map(c => c.name).join(' → ')} with ${fallbackRoute.totalDistance}km total distance.`,
+                duration,
+                timestamp: Date.now(),
+                cities: fallbackRoute.route,
+                summary: this.createRouteSummary(agent, fallbackRoute),
+                fallback: true
+            };
         }
     }
     
