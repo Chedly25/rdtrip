@@ -124,7 +124,13 @@ export class UIController {
         // Clear throttlers
         this.updateThrottlers.clear();
         
-        // Main map container was removed, no cleanup needed for it
+        // Clear Leaflet's internal references to the container
+        const mapContainer = document.getElementById('map');
+        if (mapContainer) {
+            mapContainer.innerHTML = '';
+            mapContainer._leaflet_id = null;
+            delete mapContainer._leaflet_id;
+        }
         
         // Cleanup animation controller
         if (animationController) {
@@ -140,19 +146,59 @@ export class UIController {
      * Initialize Leaflet map
      */
     initializeMap() {
-        // Main map was removed for better performance - skip initialization
+        // Main map was removed for better performance
+        // Maps are now only created in spotlight view and agent results
         console.log('Main map initialization skipped - using dedicated maps instead');
         return;
             
-    }
+            // Remove existing map if it exists
+            if (this.map) {
+                this.map.remove();
+                this.map = null;
+            }
+            
+            // Clear any existing map instance in the container and reset Leaflet's internal state
+            mapContainer.innerHTML = '';
+            mapContainer._leaflet_id = null;
+            delete mapContainer._leaflet_id;
+            
+            // Initialize new map
+            this.map = L.map('map', {
+                zoomControl: true,
+                attributionControl: true
+            }).setView([43.5263, 5.4454], 8);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 19,
+                minZoom: 3
+            }).addTo(this.map);
+            
+            this.routeLayer = L.layerGroup().addTo(this.map);
+            this.markersLayer = L.layerGroup().addTo(this.map);
+            
+            console.log('Map initialized successfully');
+            
+        } catch (error) {
+            console.error('Map initialization error:', error);
+            throw new Error('Failed to initialize map: ' + error.message);
+        }
     }
     
     /**
      * Add the starting point marker (Aix-en-Provence)
      */
     addStartingPointMarker() {
-        // No longer needed since main map was removed
-        console.log('Starting point marker not needed - main map removed');
+        const startMarker = L.marker([43.5263, 5.4454], {
+            icon: L.divIcon({
+                className: 'custom-marker',
+                html: `<div style="background: #667eea; color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.3);">A</div>`,
+                iconSize: [32, 32],
+                iconAnchor: [16, 16]
+            })
+        }).addTo(this.markersLayer);
+        
+        startMarker.bindPopup('<b>Aix-en-Provence</b><br>Starting Point<br>Population: 147,933');
     }
     
     /**
