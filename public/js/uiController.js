@@ -1365,8 +1365,10 @@ export class UIController {
             this.showRouteSpotlight(agentType, result);
         });
         
-        // Initialize map after card is added to DOM
-        setTimeout(() => this.initializeAgentMap(mapId, result), 100);
+        // Initialize map after card is added to DOM with proper delay
+        requestAnimationFrame(() => {
+            setTimeout(() => this.initializeAgentMap(mapId, result), 300);
+        });
         
         return card;
     }
@@ -1406,21 +1408,40 @@ export class UIController {
                     weight: 2,
                     opacity: 1,
                     fillOpacity: 0.9
-                }).bindTooltip(city.name).addTo(agentMap);
+                }).bindPopup(city.name).addTo(agentMap);
                 
                 bounds.extend([city.lat, city.lon]);
             });
             
-            // Add route line
-            const routeCoords = route.map(city => [city.lat, city.lon]);
-            L.polyline(routeCoords, {
-                color: result.agent.color,
-                weight: 3,
-                opacity: 0.8
-            }).addTo(agentMap);
+            // Add route line - use driving route if available
+            if (result.route.drivingRoute && result.route.drivingRoute.segments) {
+                // Draw actual driving routes
+                result.route.drivingRoute.segments.forEach(segment => {
+                    if (segment.geometry && segment.geometry.coordinates) {
+                        const leafletCoords = segment.geometry.coordinates.map(coord => [coord[1], coord[0]]);
+                        L.polyline(leafletCoords, {
+                            color: result.agent.color || '#FF8C42',
+                            weight: 3,
+                            opacity: 0.8
+                        }).addTo(agentMap);
+                    }
+                });
+            } else {
+                // Fallback to straight lines
+                const routeCoords = route.map(city => [city.lat, city.lon]);
+                L.polyline(routeCoords, {
+                    color: result.agent.color || '#FF8C42',
+                    weight: 3,
+                    opacity: 0.8,
+                    dashArray: '5, 10' // Dashed line to show it's estimated
+                }).addTo(agentMap);
+            }
             
-            // Fit to bounds
-            agentMap.fitBounds(bounds, { padding: [10, 10] });
+            // Fit to bounds with delay to ensure rendering
+            setTimeout(() => {
+                agentMap.invalidateSize();
+                agentMap.fitBounds(bounds, { padding: [20, 20] });
+            }, 100);
             
         } catch (error) {
             console.error('Error initializing agent map:', error);
