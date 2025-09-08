@@ -1,0 +1,392 @@
+/* Apple-Grade Micro-Interactions & Polish */
+
+/* Enhanced Button Interactions */
+.btn {
+    position: relative;
+    overflow: hidden;
+}
+
+.btn::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.6s ease, height 0.6s ease;
+    pointer-events: none;
+}
+
+.btn:active::after {
+    width: 300px;
+    height: 300px;
+}
+
+/* Enhanced Focus States */
+.btn:focus-visible,
+input:focus-visible,
+.theme-button:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.1);
+}
+
+/* Smooth Hover States */
+.theme-button {
+    transform: translateZ(0); /* Enable hardware acceleration */
+    backface-visibility: hidden;
+    perspective: 1000px;
+}
+
+.theme-button:hover {
+    animation: gentle-bounce 0.6s ease;
+}
+
+@keyframes gentle-bounce {
+    0% { transform: translateY(0) scale(1); }
+    50% { transform: translateY(-3px) scale(1.02); }
+    100% { transform: translateY(-1px) scale(1.01); }
+}
+
+/* Enhanced Card Interactions */
+.agent-results-card,
+.agent-loading-card,
+.stop-card {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    transition: all var(--transition-base) ease;
+}
+
+.agent-results-card:hover {
+    animation: card-lift 0.4s ease forwards;
+}
+
+@keyframes card-lift {
+    0% {
+        transform: translateY(0) scale(1);
+        box-shadow: var(--shadow-lg);
+    }
+    100% {
+        transform: translateY(-8px) scale(1.02);
+        box-shadow: 0 32px 64px -12px rgba(0, 0, 0, 0.3);
+    }
+}
+
+/* Pulse Animation for Loading States */
+.loading-pulse {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}
+
+/* Shimmer Effect for Loading Cards */
+.agent-loading-card.active::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.4),
+        transparent
+    );
+    animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+    0% {
+        left: -100%;
+    }
+    50%, 100% {
+        left: 100%;
+    }
+}
+
+/* Enhanced Modal Animations */
+.modal.fade-in {
+    animation: modal-fade-in 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.modal.fade-out {
+    animation: modal-fade-out 0.3s cubic-bezier(0.755, 0.05, 0.855, 0.06) forwards;
+}
+
+@keyframes modal-fade-in {
+    0% {
+        opacity: 0;
+        backdrop-filter: blur(0px);
+    }
+    100% {
+        opacity: 1;
+        backdrop-filter: blur(20px);
+    }
+}
+
+@keyframes modal-fade-out {
+    0% {
+        opacity: 1;
+        backdrop-filter: blur(20px);
+    }
+    100% {
+        opacity: 0;
+        backdrop-filter: blur(0px);
+    }
+}
+
+/* Slide-up animation for AI results */
+.ai-results.slide-up {
+    animation: slide-up 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+@keyframes slide-up {
+    0% {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Enhanced Input Interactions */
+#destination {
+    transition: all var(--transition-base) ease;
+    transform: translateZ(0);
+}
+
+#destination:focus {
+    animation: input-focus 0.3s ease;
+}
+
+@keyframes input-focus {
+    0% {
+        transform: scale(1);
+        box-shadow: var(--shadow-sm);
+    }
+    50% {
+        transform: scale(1.02);
+    }
+    100% {
+        transform: scale(1.01);
+        box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1), var(--shadow-lg);
+    }
+}
+
+/* Smooth Range Slider Interactions */
+input[type="range"] {
+    transition: all var(--transition-base) ease;
+}
+
+input[type="range"]:hover {
+    cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-thumb:active {
+    animation: thumb-press 0.2s ease;
+}
+
+@keyframes thumb-press {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.3); }
+    100% { transform: scale(1.1); }
+}
+
+/* Floating Action Button Style for Calculate */
+.btn-primary {
+    position: relative;
+    transform: translateZ(0);
+}
+
+.btn-primary::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: inherit;
+    border-radius: inherit;
+    opacity: 0;
+    transform: scale(0.8);
+    transition: all var(--transition-base) ease;
+}
+
+.btn-primary:hover::before {
+    opacity: 0.3;
+    transform: scale(1.1);
+}
+
+/* Progress Bar Enhancements */
+.progress-bar {
+    position: relative;
+    overflow: hidden;
+}
+
+.progress-bar.animate {
+    animation: progress-glow 2s ease-in-out infinite alternate;
+}
+
+@keyframes progress-glow {
+    0% {
+        box-shadow: 0 0 5px rgba(0, 122, 255, 0.3);
+    }
+    100% {
+        box-shadow: 0 0 20px rgba(0, 122, 255, 0.6);
+    }
+}
+
+/* Success Checkmark Animation */
+.success-checkmark {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--success);
+    position: relative;
+    animation: success-pop 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.success-checkmark::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+    animation: checkmark-draw 0.3s ease 0.3s both;
+}
+
+@keyframes success-pop {
+    0% {
+        transform: scale(0);
+        opacity: 0;
+    }
+    80% {
+        transform: scale(1.2);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes checkmark-draw {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0);
+    }
+    100% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+}
+
+/* Subtle Page Transitions */
+.page-transition {
+    animation: page-fade-in 0.6s ease-out;
+}
+
+@keyframes page-fade-in {
+    0% {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Enhanced Backdrop Blur */
+.backdrop-blur-enhanced {
+    backdrop-filter: blur(40px) saturate(180%);
+    -webkit-backdrop-filter: blur(40px) saturate(180%);
+}
+
+/* Smooth Color Transitions */
+* {
+    color-interpolation-filters: sRGB;
+}
+
+/* Enhanced Touch Interactions */
+@media (hover: none) and (pointer: coarse) {
+    .btn:hover {
+        transform: none;
+    }
+    
+    .btn:active {
+        transform: scale(0.98);
+        transition: transform 0.1s ease;
+    }
+    
+    .theme-button:active,
+    .agent-results-card:active {
+        transform: scale(0.98);
+    }
+}
+
+/* Reduced Motion Preferences */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+    
+    .btn::before,
+    .btn::after {
+        display: none;
+    }
+}
+
+/* High Contrast Mode Support */
+@media (prefers-contrast: high) {
+    .btn {
+        border: 2px solid;
+    }
+    
+    .agent-results-card,
+    .sidebar {
+        border: 2px solid;
+    }
+}
+
+/* Dark Mode Preparation */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --surface-primary: #1c1c1e;
+        --surface-secondary: #2c2c2e;
+        --text-primary: #ffffff;
+        --text-secondary: #8e8e93;
+    }
+}
+
+/* Safari-specific optimizations */
+@supports (-webkit-backdrop-filter: blur(20px)) {
+    .sidebar,
+    .modal-content,
+    .agent-results-card {
+        -webkit-backdrop-filter: blur(40px) saturate(180%);
+        backdrop-filter: blur(40px) saturate(180%);
+    }
+}
