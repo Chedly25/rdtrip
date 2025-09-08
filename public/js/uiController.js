@@ -19,6 +19,11 @@ export class UIController {
         this.tripTypesManager = new TripTypesManager(this.routeCalculator, aiFeatures);
         this.agentResults = new Map();
         
+        // Performance optimizations - Cache DOM elements
+        this.domCache = new Map();
+        this.eventListenerCache = new Map();
+        this.updateThrottlers = new Map();
+        
         // Bind methods to maintain context
         this.calculateRoute = this.calculateRoute.bind(this);
         this.removeStop = this.removeStop.bind(this);
@@ -31,6 +36,9 @@ export class UIController {
         try {
             // Wait for DOM to be fully ready
             await this.waitForDOM();
+            
+            // Cache frequently accessed DOM elements
+            this.cacheDOMElements();
             
             this.initializeMap();
             this.setupEventListeners();
@@ -59,6 +67,42 @@ export class UIController {
     }
     
     /**
+     * Cache frequently accessed DOM elements for performance
+     */
+    cacheDOMElements() {
+        const elements = {
+            destination: document.getElementById('destination'),
+            autocomplete: document.getElementById('autocomplete'),
+            calculateBtn: document.getElementById('calculate-btn'),
+            routeInfo: document.getElementById('route-info'),
+            stopsList: document.getElementById('stops-list'),
+            totalDistance: document.getElementById('total-distance'),
+            totalTime: document.getElementById('total-time'),
+            totalStops: document.getElementById('total-stops'),
+            aiResults: document.getElementById('ai-results'),
+            aiTitle: document.getElementById('ai-title'),
+            aiContent: document.getElementById('ai-content'),
+            agentsLoadingModal: document.getElementById('agents-loading-modal'),
+            overallProgressFill: document.getElementById('overall-progress-fill'),
+            overallProgressCount: document.getElementById('overall-progress-count'),
+            agentsResultsPage: document.getElementById('agents-results-page'),
+            agentsResultsGrid: document.getElementById('agents-results-grid'),
+            routeSpotlightPage: document.getElementById('route-spotlight-page')
+        };
+        
+        Object.entries(elements).forEach(([key, element]) => {
+            if (element) this.domCache.set(key, element);
+        });
+    }
+    
+    /**
+     * Get cached DOM element
+     */
+    getCachedElement(key) {
+        return this.domCache.get(key) || document.getElementById(key.replace(/([A-Z])/g, '-$1').toLowerCase());
+    }
+
+    /**
      * Cleanup method for proper resource disposal
      */
     cleanup() {
@@ -66,6 +110,20 @@ export class UIController {
             this.map.remove();
             this.map = null;
         }
+        
+        // Clear cached DOM elements
+        this.domCache.clear();
+        
+        // Clear event listener cache
+        this.eventListenerCache.forEach((listener, element) => {
+            if (element && listener) {
+                element.removeEventListener(listener.type, listener.fn);
+            }
+        });
+        this.eventListenerCache.clear();
+        
+        // Clear throttlers
+        this.updateThrottlers.clear();
         
         // Clear Leaflet's internal references to the container
         const mapContainer = document.getElementById('map');
@@ -875,6 +933,154 @@ export class UIController {
     }
     
     /**
+     * Show route in full-screen spotlight mode
+     */
+    showRouteSpotlight(agentType, result) {
+        console.log(`🎯 Opening route spotlight for ${result.agent.name}`);
+        
+        // Hide results page
+        document.getElementById('agents-results-page').style.display = 'none';
+        
+        // Show spotlight page
+        const spotlightPage = document.getElementById('route-spotlight-page');
+        spotlightPage.style.display = 'block';
+        
+        // Update agent badge
+        const agentBadge = document.getElementById('spotlight-agent-badge');
+        agentBadge.innerHTML = `
+            <span class="agent-icon">${result.agent.icon}</span>
+            <span class="agent-name">${result.agent.name}</span>
+        `;
+        agentBadge.style.background = result.agent.gradient;
+        
+        // Update stats
+        const statsContainer = document.getElementById('spotlight-stats');
+        statsContainer.innerHTML = `
+            <div class="stat-item">
+                <div class="stat-value">${result.route.totalDistance}</div>
+                <div class="stat-label">Kilometers</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">${result.route.totalTime}</div>
+                <div class="stat-label">Hours</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">${result.cities.length - 2}</div>
+                <div class="stat-label">Stops</div>
+            </div>
+        `;
+        
+        // Update cities flow
+        const citiesContainer = document.getElementById('spotlight-cities');
+        citiesContainer.innerHTML = result.cities.map((city, index) => {
+            const isLast = index === result.cities.length - 1;
+            return `
+                <span class="city-badge">${city.name}</span>
+                ${!isLast ? '<span class="arrow-separator">→</span>' : ''}
+            `;
+        }).join('');
+        
+        // Update itinerary with clean HTML (no markdown)
+        const itineraryContainer = document.getElementById('spotlight-itinerary');
+        itineraryContainer.innerHTML = result.itinerary || '<p>Loading specialized recommendations...</p>';
+        
+        // Initialize spotlight map
+        this.initializeSpotlightMap(result);
+        
+        // Add back navigation
+        document.getElementById('back-from-spotlight').onclick = () => this.hideRouteSpotlight();
+    }
+    
+    /**
+     * Hide route spotlight and return to results
+     */
+    hideRouteSpotlight() {
+        document.getElementById('route-spotlight-page').style.display = 'none';
+        document.getElementById('agents-results-page').style.display = 'block';
+    }
+    
+    /**
+     * Initialize the spotlight map
+     */
+    initializeSpotlightMap(result) {
+        const mapContainer = document.getElementById('spotlight-map');
+        
+        // Clear any existing map
+        mapContainer.innerHTML = '';
+        
+        try {
+            const spotlightMap = L.map('spotlight-map').setView([43.5297, 5.4474], 8);
+            
+            // Add tiles
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 18,
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(spotlightMap);
+            
+            // Add route
+            this.displayRouteOnMap(spotlightMap, result.route, result.agent.color);
+            
+        } catch (error) {
+            console.error('Error initializing spotlight map:', error);
+            mapContainer.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: white;">Map loading...</div>';
+        }
+    }
+    
+    /**
+     * Display route on specific map instance
+     */
+    displayRouteOnMap(mapInstance, routeData, color = '#667eea') {
+        const { route } = routeData;
+        
+        // Add markers for each city
+        route.forEach((city, index) => {
+            const isStart = index === 0;
+            const isEnd = index === route.length - 1;
+            
+            const label = isStart ? 'A' : isEnd ? 'B' : index.toString();
+            const markerColor = isStart ? '#28a745' : isEnd ? '#dc3545' : color;
+            
+            const marker = L.marker([city.lat, city.lon], {
+                icon: L.divIcon({
+                    className: 'custom-marker',
+                    html: `<div style="background: ${markerColor}; color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.3);">${label}</div>`,
+                    iconSize: [32, 32],
+                    iconAnchor: [16, 16]
+                })
+            }).addTo(mapInstance);
+            
+            // Add popup
+            marker.bindPopup(`<strong>${city.name}</strong><br>${city.country}`);
+        });
+        
+        // Draw route line (use driving route if available, otherwise straight lines)
+        if (routeData.drivingRoute && routeData.drivingRoute.segments) {
+            routeData.drivingRoute.segments.forEach(segment => {
+                if (segment.geometry && segment.geometry.coordinates) {
+                    const leafletCoords = segment.geometry.coordinates.map(coord => [coord[1], coord[0]]);
+                    L.polyline(leafletCoords, {
+                        color: color,
+                        weight: 4,
+                        opacity: 0.8
+                    }).addTo(mapInstance);
+                }
+            });
+        } else {
+            // Fallback to straight lines
+            const coordinates = route.map(city => [city.lat, city.lon]);
+            L.polyline(coordinates, {
+                color: color,
+                weight: 4,
+                opacity: 0.8
+            }).addTo(mapInstance);
+        }
+        
+        // Fit map to route
+        const bounds = L.latLngBounds(route.map(city => [city.lat, city.lon]));
+        mapInstance.fitBounds(bounds, { padding: [20, 20] });
+    }
+
+    /**
      * Show detailed view of a specific agent's result
      */
     showAgentDetails(agentType, result) {
@@ -1027,34 +1233,57 @@ export class UIController {
      * Update agent progress in loading modal
      */
     updateAgentProgress(agentType, progress, status) {
-        const card = document.querySelector(`[data-agent="${agentType}"]`);
-        if (card) {
-            const progressBar = card.querySelector('.progress-bar');
-            const statusElement = card.querySelector('.loading-status');
-            
-            if (progressBar) progressBar.style.width = `${progress}%`;
-            if (statusElement) statusElement.textContent = status;
-            
-            // Update card state
-            card.classList.add('active');
-            if (progress >= 100) {
-                card.classList.add('completed');
-                card.classList.remove('active');
+        // Throttle updates to prevent excessive DOM manipulation
+        this.throttle(`agent-progress-${agentType}`, () => {
+            const card = document.querySelector(`[data-agent="${agentType}"]`);
+            if (card) {
+                const progressBar = card.querySelector('.progress-bar');
+                const statusElement = card.querySelector('.loading-status');
+                
+                // Use transform instead of width for better performance
+                if (progressBar) {
+                    progressBar.style.transform = `scaleX(${progress / 100})`;
+                    progressBar.style.transformOrigin = 'left center';
+                }
+                if (statusElement) statusElement.textContent = status;
+                
+                // Use requestAnimationFrame for smooth class updates
+                requestAnimationFrame(() => {
+                    card.classList.add('active');
+                    if (progress >= 100) {
+                        card.classList.add('completed');
+                        card.classList.remove('active');
+                    }
+                });
             }
-        }
+        }, 100);
     }
     
     /**
      * Update overall progress
      */
     updateOverallProgress(completed, total) {
-        const overallFill = document.getElementById('overall-progress-fill');
-        const overallCount = document.getElementById('overall-progress-count');
-        
-        const percentage = (completed / total) * 100;
-        
-        if (overallFill) overallFill.style.width = `${percentage}%`;
-        if (overallCount) overallCount.textContent = `${completed}/${total}`;
+        // Throttle updates for better performance
+        this.throttle('overall-progress', () => {
+            const overallFill = this.getCachedElement('overallProgressFill') || document.getElementById('overall-progress-fill');
+            const overallCount = this.getCachedElement('overallProgressCount') || document.getElementById('overall-progress-count');
+            
+            const percentage = (completed / total) * 100;
+            
+            // Use transform instead of width for better performance
+            if (overallFill) {
+                overallFill.style.transform = `scaleX(${percentage / 100})`;
+                overallFill.style.transformOrigin = 'left center';
+            }
+            if (overallCount) overallCount.textContent = `${completed}/${total}`;
+            
+            // Auto-hide modal when complete
+            if (completed === total) {
+                setTimeout(() => {
+                    this.hideAgentsLoadingModal();
+                }, 1000);
+            }
+        }, 100);
     }
     
     /**
@@ -1297,7 +1526,7 @@ export class UIController {
         });
         
         card.querySelector('.view-full-details').addEventListener('click', () => {
-            this.showAgentDetails(agentType, result);
+            this.showRouteSpotlight(agentType, result);
         });
         
         // Initialize map after card is added to DOM

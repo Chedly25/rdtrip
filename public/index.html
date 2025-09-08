@@ -14,6 +14,7 @@
     <!-- Modern Enhanced Styles -->
     <link rel="stylesheet" href="css/modern-styles.css">
     <link rel="stylesheet" href="css/trip-types-modern.css">
+    <link rel="stylesheet" href="css/performance-optimizations.css">
     
     <!-- Leaflet JavaScript -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -130,10 +131,6 @@
             </div>
         </div>
 
-        <!-- Map Container - Hidden by default, only shown when a specific route is selected -->
-        <div class="map-container" id="main-map-container" style="display: none;">
-            <div id="map"></div>
-        </div>
     </div>
 
     <!-- Trip Types Grid Modal -->
@@ -171,6 +168,39 @@
                     <p>Creating your personalized itinerary...</p>
                 </div>
                 <div class="itinerary-details" id="itinerary-details"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Route Spotlight Page -->
+    <div id="route-spotlight-page" class="route-spotlight-page" style="display: none;">
+        <div class="spotlight-header">
+            <button class="back-btn" id="back-from-spotlight">← Back to Results</button>
+            <div class="spotlight-title">
+                <div class="agent-badge" id="spotlight-agent-badge">
+                    <span class="agent-icon">🏔️</span>
+                    <span class="agent-name">Adventure Explorer</span>
+                </div>
+                <h1>Route Spotlight</h1>
+            </div>
+        </div>
+
+        <div class="spotlight-container">
+            <div class="spotlight-map-section">
+                <div id="spotlight-map" class="spotlight-map"></div>
+            </div>
+            
+            <div class="spotlight-content-section">
+                <div class="route-summary-card">
+                    <h3>Route Summary</h3>
+                    <div class="summary-stats" id="spotlight-stats"></div>
+                    <div class="route-cities-flow" id="spotlight-cities"></div>
+                </div>
+                
+                <div class="detailed-itinerary-card">
+                    <h3>Detailed Itinerary</h3>
+                    <div class="itinerary-content" id="spotlight-itinerary"></div>
+                </div>
             </div>
         </div>
     </div>

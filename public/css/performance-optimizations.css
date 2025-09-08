@@ -1,0 +1,333 @@
+/* Performance Optimizations - Load after main CSS */
+
+/* Global performance improvements */
+* {
+    /* Hardware acceleration for transforms */
+    -webkit-transform-style: preserve-3d;
+    transform-style: preserve-3d;
+}
+
+/* Optimize frequently animated elements */
+.control-group,
+.theme-button,
+.btn,
+.stop-card,
+.stat,
+.agent-result-card,
+.progress-bar,
+.overall-progress-fill {
+    /* Force GPU acceleration */
+    will-change: transform;
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+}
+
+/* Reduce backdrop-filter intensity for better performance */
+.control-group {
+    backdrop-filter: blur(8px) !important; /* Reduced from 15px */
+}
+
+.sidebar {
+    backdrop-filter: blur(8px) !important; /* Reduced from 10px */
+}
+
+.autocomplete-dropdown {
+    backdrop-filter: blur(6px) !important; /* Reduced from 20px */
+}
+
+.route-info {
+    backdrop-filter: blur(8px) !important; /* Reduced from 15px */
+}
+
+.stop-card {
+    backdrop-filter: blur(6px) !important; /* Reduced from 15px */
+}
+
+.ai-results {
+    backdrop-filter: blur(6px) !important; /* Reduced from 15px */
+}
+
+.agent-loading-card {
+    backdrop-filter: blur(6px) !important; /* Reduced from 10px */
+}
+
+.route-summary-card,
+.detailed-itinerary-card {
+    backdrop-filter: blur(8px) !important; /* Reduced from 15px */
+}
+
+/* Optimize progress bars for smooth animation */
+.progress-bar {
+    transform: scaleX(0) !important;
+    transform-origin: left center !important;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    will-change: transform !important;
+}
+
+.overall-progress-fill {
+    transform: scaleX(0) !important;
+    transform-origin: left center !important;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    will-change: transform !important;
+}
+
+/* Use translate3d for better performance on all transforms */
+@keyframes floatingBg {
+    0%, 100% { 
+        transform: translate3d(0px, 0px, 0px); 
+        opacity: 0.7;
+    }
+    33% { 
+        transform: translate3d(30px, -30px, 0px); 
+        opacity: 0.5;
+    }
+    66% { 
+        transform: translate3d(-20px, 20px, 0px); 
+        opacity: 0.8;
+    }
+}
+
+@keyframes headerFloat {
+    0%, 100% { transform: translate3d(0px, 0px, 0px); }
+    50% { transform: translate3d(0px, -5px, 0px); }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translate3d(0px, 20px, 0px);
+    }
+    to {
+        opacity: 0.95;
+        transform: translate3d(0px, 0px, 0px);
+    }
+}
+
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translate3d(0px, 30px, 0px);
+    }
+    to {
+        opacity: 1;
+        transform: translate3d(0px, 0px, 0px);
+    }
+}
+
+@keyframes fadeInScale {
+    from {
+        opacity: 0;
+        transform: scale3d(0.95, 0.95, 1);
+    }
+    to {
+        opacity: 1;
+        transform: scale3d(1, 1, 1);
+    }
+}
+
+@keyframes shakeError {
+    0%, 100% { transform: translate3d(0px, 0px, 0px); }
+    25% { transform: translate3d(-5px, 0px, 0px); }
+    75% { transform: translate3d(5px, 0px, 0px); }
+}
+
+@keyframes modernSpin {
+    0% { transform: rotate3d(0, 0, 1, 0deg); }
+    100% { transform: rotate3d(0, 0, 1, 360deg); }
+}
+
+@keyframes dropdownSlideIn {
+    from {
+        opacity: 0;
+        transform: translate3d(0px, -10px, 0px) scale3d(0.95, 0.95, 1);
+    }
+    to {
+        opacity: 1;
+        transform: translate3d(0px, 0px, 0px) scale3d(1, 1, 1);
+    }
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translate3d(0px, -50px, 0px) scale3d(0.9, 0.9, 1);
+    }
+    to {
+        opacity: 1;
+        transform: translate3d(0px, 0px, 0px) scale3d(1, 1, 1);
+    }
+}
+
+@keyframes progressShimmer {
+    0% { transform: translate3d(-100%, 0px, 0px); }
+    100% { transform: translate3d(100%, 0px, 0px); }
+}
+
+@keyframes shimmer {
+    0%, 100% { transform: rotate3d(0, 0, 1, 0deg); }
+    50% { transform: rotate3d(0, 0, 1, 180deg); }
+}
+
+/* Optimize hover effects with translate3d */
+.control-group:hover {
+    transform: translate3d(0px, -2px, 0px) !important;
+}
+
+.input-field:focus {
+    transform: translate3d(0px, -1px, 0px) !important;
+}
+
+.autocomplete-item.selected {
+    transform: translate3d(4px, 0px, 0px) !important;
+}
+
+.theme-button:hover {
+    transform: translate3d(0px, -2px, 0px) scale3d(1.02, 1.02, 1) !important;
+}
+
+.theme-button.active {
+    transform: scale3d(1.05, 1.05, 1) !important;
+}
+
+.btn-primary:hover {
+    transform: translate3d(0px, -3px, 0px) scale3d(1.02, 1.02, 1) !important;
+}
+
+.btn-primary:active {
+    transform: translate3d(0px, -1px, 0px) scale3d(0.98, 0.98, 1) !important;
+}
+
+.btn-secondary:hover {
+    transform: translate3d(0px, -2px, 0px) !important;
+}
+
+.btn-ai:hover {
+    transform: translate3d(0px, -2px, 0px) scale3d(1.05, 1.05, 1) !important;
+}
+
+.stat:hover {
+    transform: translate3d(0px, -3px, 0px) scale3d(1.02, 1.02, 1) !important;
+}
+
+.stop-card:hover {
+    transform: translate3d(8px, -3px, 0px) !important;
+}
+
+.stop-remove:hover {
+    transform: translate3d(0px, -2px, 0px) scale3d(1.05, 1.05, 1) !important;
+}
+
+.agent-result-card:hover {
+    transform: translate3d(0px, -2px, 0px) !important;
+}
+
+.agent-results-card:hover {
+    transform: translate3d(0px, -4px, 0px) !important;
+}
+
+.back-btn:hover {
+    transform: translate3d(-4px, 0px, 0px) !important;
+}
+
+.city-stop:hover {
+    transform: translate3d(8px, 0px, 0px) !important;
+}
+
+.stat-item:hover {
+    transform: translate3d(0px, -2px, 0px) !important;
+}
+
+.recommendation-section:hover {
+    transform: translate3d(8px, 0px, 0px) !important;
+}
+
+.highlight-item:hover {
+    transform: translate3d(4px, 0px, 0px) !important;
+}
+
+/* Optimize range sliders */
+input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale3d(1.2, 1.2, 1) !important;
+}
+
+input[type="range"]::-moz-range-thumb:hover {
+    transform: scale3d(1.2, 1.2, 1) !important;
+}
+
+/* Reduce animation complexity for loading states */
+.loading {
+    animation-duration: 0.8s !important; /* Faster spinning */
+}
+
+/* Optimize animations to run at 60fps */
+.route-info {
+    animation-duration: 0.3s !important; /* Faster slide in */
+}
+
+.autocomplete-dropdown {
+    animation-duration: 0.15s !important; /* Faster dropdown */
+}
+
+.ai-results {
+    animation-duration: 0.3s !important; /* Faster fade in */
+}
+
+/* Optimize modal animations */
+.modal-content {
+    animation-duration: 0.25s !important; /* Faster modal appearance */
+}
+
+/* Use containment for better performance */
+.agent-result-card,
+.agent-results-card,
+.control-group,
+.stop-card {
+    contain: layout style paint;
+}
+
+/* Optimize agents loading cards */
+.agent-loading-card.active {
+    transform: scale3d(1.02, 1.02, 1) !important;
+}
+
+/* Critical performance fix for progress updates */
+.progress-bar[style*="transform"] {
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.overall-progress-fill[style*="transform"] {
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.05ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.05ms !important;
+        scroll-behavior: auto !important;
+    }
+    
+    .header-background::before {
+        animation: none !important;
+    }
+    
+    .header h1 {
+        animation: none !important;
+    }
+}
+
+/* Optimize for smaller screens */
+@media (max-width: 768px) {
+    .backdrop-filter {
+        backdrop-filter: blur(4px) !important; /* Further reduce on mobile */
+    }
+    
+    /* Reduce complexity of animations on mobile */
+    .control-group:hover,
+    .theme-button:hover,
+    .btn:hover,
+    .stop-card:hover {
+        transform: none !important;
+    }
+}

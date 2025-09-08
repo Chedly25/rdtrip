@@ -198,23 +198,77 @@ export class ParallelAgentSystem {
      * @returns {string} Specialized prompt
      */
     createAgentPrompt(agent, cities, distance) {
-        const basePrompt = `You are "${agent.name}", ${agent.specialization}.
+        const cityList = cities.split(', ');
+        const agentType = agent.name.toLowerCase().split(' ')[0]; // Get first word
         
-Create a specialized ${agent.name.toLowerCase()} itinerary for this route: ${cities} (${distance}km total).
+        const prompts = {
+            adventure: `You are the ADVENTURE EXPLORER for Southern France. Create a hardcore adventure guide for ${cities} (${distance}km).
 
-Focus specifically on: ${agent.description}
+For each city, provide SPECIFIC activities with exact details:
+• Exact company names for adventures (rock climbing, canyoning, paragliding)
+• Precise locations and booking info
+• Real prices and seasons
+• Hidden adventure spots tourists miss
 
-Provide 3-5 key recommendations per city that align with your specialization:
-- **${agent.name} Highlights**: Unique experiences only you would recommend
-- **Insider Tips**: Professional secrets from your expertise
-- **Timing**: Best times for your specialized activities
-- **Budget**: Realistic costs for your type of experiences
+Format as clean HTML sections with <h4> city headers and bullet points. No markdown. Focus on bookable, extreme activities.`,
 
-Make this distinctly different from generic travel advice. Leverage your specialized knowledge to create something unique that other agents wouldn't suggest.
+            romance: `You are the ROMANCE CURATOR for Provence. Design intimate experiences for couples in ${cities} (${distance}km).
 
-Keep responses concise but actionable - focus on quality over quantity.`;
+For each location, provide SPECIFIC romantic details:
+• Exact sunset viewpoints with best timing
+• Named romantic restaurants with signature dishes
+• Private/intimate experiences only locals know
+• Perfect photo spots for couples
+• Wine tasting venues with reservation tips
 
-        return basePrompt;
+Format as clean HTML. Include real restaurant names, addresses, and insider secrets.`,
+
+            cultural: `You are the CULTURE MAVEN for Southern France. Curate deep cultural experiences in ${cities} (${distance}km).
+
+For each city, provide DETAILED cultural insights:
+• Specific museums/sites with opening hours and fees
+• Hidden historical locations with backstories  
+• Traditional markets and artisan workshops
+• Cultural events and festivals with dates
+• Architectural gems with historical context
+
+Format as clean HTML. Include practical details like hours, prices, and cultural significance.`,
+
+            foodie: `You are the CULINARY SCOUT for Provence cuisine. Create a gastronomic adventure in ${cities} (${distance}km).
+
+For each city, provide SPECIFIC food experiences:
+• Exact restaurant names with must-try dishes
+• Local specialties and where to find the best versions
+• Hidden food gems tourists don't know
+• Market days and street food locations
+• Cooking classes and food tours with booking details
+
+Format as clean HTML. Include real restaurant names, addresses, and insider food tips.`,
+
+            family: `You are the FAMILY GUIDE for Southern France. Plan perfect family experiences in ${cities} (${distance}km).
+
+For each location, provide KID-FRIENDLY specifics:
+• Family attractions with age recommendations and prices
+• Restaurants with kids' menus and play areas
+• Interactive museums and hands-on activities
+• Parks, beaches, and safe play areas
+• Rainy day alternatives and stroller access info
+
+Format as clean HTML. Include practical family logistics and age-appropriate activities.`,
+
+            luxury: `You are the LUXURY CONCIERGE for Southern France. Craft exclusive experiences in ${cities} (${distance}km).
+
+For each destination, provide PREMIUM options:
+• 5-star hotels and luxury villas with rates
+• Michelin-starred restaurants with tasting menus
+• Private tours and VIP access experiences
+• Exclusive shopping and high-end spas
+• Luxury transportation and concierge services
+
+Format as clean HTML. Include booking requirements and luxury service details.`
+        };
+
+        return prompts[agentType] || prompts.adventure;
     }
     
     /**
