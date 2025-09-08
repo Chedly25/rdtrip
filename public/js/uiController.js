@@ -19,8 +19,9 @@ export class UIController {
         this.tripTypesManager = new TripTypesManager(this.routeCalculator, aiFeatures);
         this.agentResults = new Map();
         
-        // Performance optimizations - Cache DOM elements (simplified)
+        // Performance optimizations - Cache DOM elements
         this.domCache = new Map();
+        this.eventListenerCache = new Map();
         this.updateThrottlers = new Map();
         
         // Bind methods to maintain context
@@ -101,11 +102,15 @@ export class UIController {
     }
 
     /**
-     * Simple throttle function
+     * Throttle function to prevent excessive DOM updates
      */
     throttle(key, fn, delay = 50) {
-        // Simplified - execute immediately to avoid performance issues
-        fn();
+        if (this.updateThrottlers.has(key)) {
+            clearTimeout(this.updateThrottlers.get(key));
+        }
+        
+        const timeoutId = setTimeout(fn, delay);
+        this.updateThrottlers.set(key, timeoutId);
     }
 
     /**
@@ -120,10 +125,19 @@ export class UIController {
         // Clear cached DOM elements
         this.domCache.clear();
         
+        // Clear event listener cache
+        this.eventListenerCache.forEach((listener, element) => {
+            if (element && listener) {
+                element.removeEventListener(listener.type, listener.fn);
+            }
+        });
+        this.eventListenerCache.clear();
+        
         // Clear throttlers
         this.updateThrottlers.clear();
         
-        // Main map container was removed, no cleanup needed for it
+        // Main map container was removed, no cleanup needed
+        console.log('Main map cleanup skipped - container removed');
         
         // Cleanup animation controller
         if (animationController) {
@@ -139,11 +153,10 @@ export class UIController {
      * Initialize Leaflet map
      */
     initializeMap() {
-        // Main map was removed for better performance - skip initialization
+        // Main map was removed for better performance
+        // Maps are now only created in spotlight view and agent results
         console.log('Main map initialization skipped - using dedicated maps instead');
         return;
-            
-    }
     }
     
     /**
@@ -172,7 +185,6 @@ export class UIController {
             }
             
             const suggestions = this.routeCalculator.getSuggestions(value, 8);
-            console.log(`Autocomplete for "${value}": found ${suggestions.length} suggestions`, suggestions);
             
             if (suggestions.length > 0) {
                 dropdown.innerHTML = suggestions.map((city, index) => 
@@ -261,13 +273,9 @@ export class UIController {
      * Setup event listeners for UI elements
      */
     setupEventListeners() {
-        console.log('Setting up event listeners...');
         // Theme selector
-        const themeButtons = document.querySelectorAll('.theme-button');
-        console.log(`Found ${themeButtons.length} theme buttons`);
-        themeButtons.forEach(btn => {
+        document.querySelectorAll('.theme-button').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                console.log('Theme button clicked:', e.target.dataset.theme);
                 document.querySelectorAll('.theme-button').forEach(b => b.classList.remove('active'));
                 e.target.classList.add('active');
                 this.selectedTheme = e.target.dataset.theme;
@@ -363,8 +371,7 @@ export class UIController {
                 this.currentRoute = firstAgentResult.route;
                 aiFeatures.setCurrentRoute(firstAgentResult.route);
                 
-                // Display the first agent route on map
-                this.displayRoute(firstAgentResult.route);
+                // Update route info - main map was removed for performance
                 this.updateRouteInfo(firstAgentResult.route);
             }
             
@@ -390,135 +397,16 @@ export class UIController {
     }
     
     /**
-     * Display route on the map
+     * Display route on the map (main map removed - display route info only)
      */
     displayRoute(routeData) {
-        // Clear existing route and markers (except starting point)
-        this.routeLayer.clearLayers();
-        this.markersLayer.clearLayers();
-        this.addStartingPointMarker();
+        // Main map was removed for performance - route is displayed in spotlight/agent views
+        console.log('Route display called for:', routeData);
         
         const { route } = routeData;
         
-        // Add markers for each city
-        route.forEach((city, index) => {
-            const isStart = index === 0;
-            const isEnd = index === route.length - 1;
-            
-            if (isStart) return; // Starting point already added
-            
-            const label = isEnd ? 'B' : index.toString();
-            const color = isEnd ? '#764ba2' : '#00c9ff';
-            
-            const marker = L.marker([city.lat, city.lon], {
-                icon: L.divIcon({
-                    className: 'custom-marker',
-                    html: `<div style="background: ${color}; color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.3);">${label}</div>`,
-                    iconSize: [32, 32],
-                    iconAnchor: [16, 16]
-                })
-            }).addTo(this.markersLayer);
-            
-            // Create popup content
-            const activities = city.activities.slice(0, 3).join('<br>• ');
-            const popupContent = `
-                <div style="min-width: 200px;">
-                    <h4 style="margin: 0 0 8px 0; color: #333;">${city.name}</h4>
-                    <p style="margin: 0 0 8px 0; color: #666; font-size: 0.9rem;">
-                        ${city.country} • Population: ${city.population.toLocaleString()}
-                    </p>
-                    <div style="font-size: 0.85rem; color: #555;">
-                        <strong>Activities:</strong><br>
-                        • ${activities}
-                    </div>
-                </div>
-            `;
-            marker.bindPopup(popupContent, { maxWidth: 300 });
-        });
-        
-        // Draw actual driving routes if available
-        if (routeData.drivingRoute && routeData.drivingRoute.segments) {
-            console.log('Drawing driving routes with segments:', routeData.drivingRoute.segments.length);
-            const segments = routeData.drivingRoute.segments;
-            let allBounds = [];
-            
-            segments.forEach((segment, index) => {
-                if (segment.geometry && segment.geometry.coordinates) {
-                    // Convert GeoJSON coordinates to Leaflet format [lat, lng]
-                    const leafletCoords = segment.geometry.coordinates.map(coord => [coord[1], coord[0]]);
-                    
-                    console.log(`=== DRAWING SEGMENT ${index + 1} ===`);
-                    console.log('Segment from:', segment.from, 'to:', segment.to);
-                    console.log('Coordinates count:', leafletCoords.length);
-                    console.log('Service used:', segment.service || 'Unknown');
-                    console.log('First coords:', leafletCoords[0]);
-                    console.log('Last coords:', leafletCoords[leafletCoords.length - 1]);
-                    
-                    // Create polyline for this segment
-                    const segmentPolyline = L.polyline(leafletCoords, {
-                        color: segment.service === 'Fallback' ? '#ff6b6b' : '#667eea', // Red for fallback, blue for API
-                        weight: 4,
-                        opacity: 0.8,
-                        smoothFactor: 1
-                    }).addTo(this.routeLayer);
-                    
-                    console.log('Polyline added to map:', !!segmentPolyline);
-                    
-                    // Add to bounds for fitting map
-                    allBounds = allBounds.concat(leafletCoords);
-                    
-                    // Add distance label at midpoint of segment
-                    if (leafletCoords.length > 0) {
-                        const midIndex = Math.floor(leafletCoords.length / 2);
-                        const midPoint = leafletCoords[midIndex];
-                        
-                        L.marker(midPoint, {
-                            icon: L.divIcon({
-                                className: 'distance-label',
-                                html: `<div style="background: rgba(255,255,255,0.9); padding: 2px 6px; border-radius: 12px; font-size: 12px; font-weight: bold; color: #667eea; border: 1px solid #667eea;">${segment.distance}km</div>`,
-                                iconSize: [50, 20],
-                                iconAnchor: [25, 10]
-                            })
-                        }).addTo(this.routeLayer);
-                    }
-                }
-            });
-            
-            // Fit map to all route segments
-            if (allBounds.length > 0) {
-                const bounds = L.latLngBounds(allBounds);
-                this.map.fitBounds(bounds, { padding: [20, 20] });
-            }
-        } else {
-            // Fallback to straight line if no driving route available
-            const coordinates = route.map(city => [city.lat, city.lon]);
-            const polyline = L.polyline(coordinates, {
-                color: '#667eea',
-                weight: 4,
-                opacity: 0.8,
-                smoothFactor: 1
-            }).addTo(this.routeLayer);
-            
-            // Add distance labels on route segments
-            for (let i = 0; i < route.length - 1; i++) {
-                const dist = Math.round(this.routeCalculator.haversineDistance(route[i], route[i + 1]));
-                const midLat = (route[i].lat + route[i + 1].lat) / 2;
-                const midLon = (route[i].lon + route[i + 1].lon) / 2;
-                
-                L.marker([midLat, midLon], {
-                    icon: L.divIcon({
-                        className: 'distance-label',
-                        html: `<div style="background: rgba(255,255,255,0.9); padding: 2px 6px; border-radius: 12px; font-size: 12px; font-weight: bold; color: #667eea; border: 1px solid #667eea;">${dist}km</div>`,
-                        iconSize: [50, 20],
-                        iconAnchor: [25, 10]
-                    })
-                }).addTo(this.routeLayer);
-            }
-            
-            // Fit map to route with padding
-            const bounds = polyline.getBounds();
-            this.map.fitBounds(bounds, { padding: [20, 20] });
-        }
+        // Main map was removed - route visualization is handled in spotlight and agent views
+        console.log('Route visualization skipped - using dedicated maps in spotlight/agent views');
     }
     
     /**
@@ -617,8 +505,7 @@ export class UIController {
         aiFeatures.setCurrentRoute(this.currentRoute);
         this.tripTypesManager.setCurrentRoute(this.currentRoute);
         
-        // Refresh display
-        this.displayRoute(this.currentRoute);
+        // Refresh display - only update route info since main map was removed
         this.updateRouteInfo(this.currentRoute);
     }
     
@@ -1133,14 +1020,10 @@ export class UIController {
         aiFeatures.setCurrentRoute(result.route);
         this.tripTypesManager.setCurrentRoute(result.route);
         
-        // Show the main map container
-        const mainMapContainer = document.getElementById('main-map-container');
-        if (mainMapContainer) {
-            mainMapContainer.style.display = 'block';
-        }
+        // Main map container was removed for performance
+        console.log('Main map container not needed - using dedicated maps only');
         
-        // Update display
-        this.displayRoute(result.route);
+        // Update display - only route info since main map was removed
         this.updateRouteInfo(result.route);
         
         // Show confirmation
@@ -1160,14 +1043,8 @@ export class UIController {
             const overallFill = document.getElementById('overall-progress-fill');
             const overallCount = document.getElementById('overall-progress-count');
             
-            progressBars.forEach(bar => {
-                bar.style.width = '0%';
-                bar.style.transform = '';  // Clear any transforms
-            });
-            if (overallFill) {
-                overallFill.style.width = '0%';
-                overallFill.style.transform = '';  // Clear any transforms
-            }
+            progressBars.forEach(bar => bar.style.width = '0%');
+            if (overallFill) overallFill.style.width = '0%';
             if (overallCount) overallCount.textContent = '0/6';
             
             // Reset all loading cards
@@ -1194,47 +1071,55 @@ export class UIController {
      * Update agent progress in loading modal
      */
     updateAgentProgress(agentType, progress, status) {
-        const card = document.querySelector(`[data-agent="${agentType}"]`);
-        if (card) {
-            const progressBar = card.querySelector('.progress-bar');
-            const statusElement = card.querySelector('.loading-status');
-            
-            // Use standard width property for compatibility
-            if (progressBar) {
-                progressBar.style.width = `${progress}%`;
+        // Throttle updates to prevent excessive DOM manipulation
+        this.throttle(`agent-progress-${agentType}`, () => {
+            const card = document.querySelector(`[data-agent="${agentType}"]`);
+            if (card) {
+                const progressBar = card.querySelector('.progress-bar');
+                const statusElement = card.querySelector('.loading-status');
+                
+                // Use standard width property for progress bars
+                if (progressBar) {
+                    progressBar.style.width = `${progress}%`;
+                }
+                if (statusElement) statusElement.textContent = status;
+                
+                // Use requestAnimationFrame for smooth class updates
+                requestAnimationFrame(() => {
+                    card.classList.add('active');
+                    if (progress >= 100) {
+                        card.classList.add('completed');
+                        card.classList.remove('active');
+                    }
+                });
             }
-            if (statusElement) statusElement.textContent = status;
-            
-            // Update card state
-            card.classList.add('active');
-            if (progress >= 100) {
-                card.classList.add('completed');
-                card.classList.remove('active');
-            }
-        }
+        }, 100);
     }
     
     /**
      * Update overall progress
      */
     updateOverallProgress(completed, total) {
-        const overallFill = document.getElementById('overall-progress-fill');
-        const overallCount = document.getElementById('overall-progress-count');
-        
-        const percentage = (completed / total) * 100;
-        
-        // Use standard width property for compatibility
-        if (overallFill) {
-            overallFill.style.width = `${percentage}%`;
-        }
-        if (overallCount) overallCount.textContent = `${completed}/${total}`;
-        
-        // Auto-hide modal when complete
-        if (completed === total) {
-            setTimeout(() => {
-                this.hideAgentsLoadingModal();
-            }, 1000);
-        }
+        // Throttle updates for better performance
+        this.throttle('overall-progress', () => {
+            const overallFill = this.getCachedElement('overallProgressFill') || document.getElementById('overall-progress-fill');
+            const overallCount = this.getCachedElement('overallProgressCount') || document.getElementById('overall-progress-count');
+            
+            const percentage = (completed / total) * 100;
+            
+            // Use standard width property for progress bars
+            if (overallFill) {
+                overallFill.style.width = `${percentage}%`;
+            }
+            if (overallCount) overallCount.textContent = `${completed}/${total}`;
+            
+            // Auto-hide modal when complete
+            if (completed === total) {
+                setTimeout(() => {
+                    this.hideAgentsLoadingModal();
+                }, 1000);
+            }
+        }, 100);
     }
     
     /**
