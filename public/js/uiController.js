@@ -1274,64 +1274,74 @@ export class UIController {
         const mapId = `agent-map-${agentType}`;
         
         card.innerHTML = `
-            <div class="agent-card-header">
-                <div class="agent-title">
-                    <div class="agent-title-icon">${result.agent.icon}</div>
-                    <div class="agent-title-text">
-                        <h3>${result.agent.name}</h3>
-                        <p>${result.agent.description}</p>
-                    </div>
-                </div>
-                <div class="agent-stats">
-                    <div class="agent-stat">
-                        <span>📏</span>
-                        <span>${result.route.totalDistance}km</span>
-                    </div>
-                    <div class="agent-stat">
-                        <span>⏱️</span>
-                        <span>${result.route.totalTime}h</span>
-                    </div>
-                    <div class="agent-stat">
-                        <span>🏛️</span>
-                        <span>${result.cities.length - 2} stops</span>
-                    </div>
+            <!-- Visual Preview Header -->
+            <div class="agent-visual-preview">
+                <div class="agent-preview-overlay">
+                    <div class="agent-preview-icon">${result.agent.icon}</div>
+                    <div class="agent-preview-title">${result.agent.name}</div>
+                    <div class="agent-preview-subtitle">${cities[0]} → ${cities[cities.length - 1]}</div>
                 </div>
             </div>
             
+            <!-- Compact Map Preview -->
             <div class="agent-map-container">
                 <div id="${mapId}" class="agent-individual-map"></div>
             </div>
             
+            <!-- Enhanced Card Content -->
             <div class="agent-card-body">
                 <div class="agent-route-summary">
-                    <h4>Route Overview</h4>
+                    <h4>📍 Your Journey</h4>
                     <div class="route-cities-list">
-                        ${cities.map(city => `<span class="route-city-tag">${city}</span>`).join('')}
+                        ${cities.map((city, index) => {
+                            const isStart = index === 0;
+                            const isEnd = index === cities.length - 1;
+                            const icon = isStart ? '🏠' : isEnd ? '🏁' : '📍';
+                            return `<span class="route-city-tag ${isStart ? 'start' : isEnd ? 'end' : 'stop'}">${icon} ${city}</span>`;
+                        }).join('')}
                     </div>
                 </div>
                 
-                <div class="agent-itinerary-preview">
-                    ${this.formatItineraryPreview(result.itinerary, result.cities)}
+                <!-- Enhanced Stats Grid -->
+                <div class="agent-route-stats">
+                    <div class="stat-item">
+                        <div class="stat-value">${result.route.totalDistance}</div>
+                        <div class="stat-label">Kilometers</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${result.route.totalTime}</div>
+                        <div class="stat-label">Hours</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${cities.length - 2}</div>
+                        <div class="stat-label">Stops</div>
+                    </div>
                 </div>
                 
-                <div class="agent-card-actions">
-                    <button class="select-agent-route" data-agent="${agentType}">
-                        Use This Route
-                    </button>
-                    <button class="view-full-details" data-agent="${agentType}">
-                        View Details
-                    </button>
+                <!-- Enhanced Preview Highlights -->
+                <div class="agent-itinerary-preview">
+                    ${this.createEnhancedPreview(result.agent, cities)}
                 </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="agent-card-actions">
+                <button class="btn-view-details" data-agent="${agentType}">
+                    View Full Itinerary
+                </button>
+                <button class="btn-use-route" data-agent="${agentType}">
+                    Use Route
+                </button>
             </div>
         `;
         
         // Add event listeners
-        card.querySelector('.select-agent-route').addEventListener('click', () => {
+        card.querySelector('.btn-use-route').addEventListener('click', () => {
             this.switchToAgentRoute(agentType, result);
             this.hideAgentsResultsPage();
         });
         
-        card.querySelector('.view-full-details').addEventListener('click', () => {
+        card.querySelector('.btn-view-details').addEventListener('click', () => {
             this.showRouteSpotlight(agentType, result);
         });
         
@@ -1351,6 +1361,56 @@ export class UIController {
         UIEnhancements.initializeMapProperly(mapId, result);
     }
     
+    /**
+     * Create enhanced preview highlights for agent cards
+     */
+    createEnhancedPreview(agent, cities) {
+        const agentHighlights = {
+            'Adventure Explorer': [
+                'Mountain hiking trails and scenic viewpoints',
+                'Outdoor activities and nature experiences',
+                'Adventure sports and thrilling excursions'
+            ],
+            'Romance Curator': [
+                'Intimate restaurants with sunset views',
+                'Charming boutique accommodations',
+                'Private wine tastings and couples experiences'
+            ],
+            'Culture Maven': [
+                'Historic museums and art galleries',
+                'Architectural landmarks and heritage sites',
+                'Cultural festivals and local traditions'
+            ],
+            'Culinary Scout': [
+                'Local markets and cooking classes',
+                'Award-winning restaurants and bistros',
+                'Wine cellars and gastronomic tours'
+            ],
+            'Family Guide': [
+                'Kid-friendly attractions and activities',
+                'Family restaurants and entertainment',
+                'Parks, playgrounds and interactive museums'
+            ],
+            'Luxury Concierge': [
+                'Premium accommodations and spas',
+                'Michelin-starred dining experiences',
+                'Exclusive tours and VIP services'
+            ]
+        };
+        
+        const highlights = agentHighlights[agent.name] || [
+            'Curated experiences for your journey',
+            'Local recommendations and hidden gems',
+            'Memorable moments along the route'
+        ];
+        
+        return `
+            <ul class="preview-highlights">
+                ${highlights.map(highlight => `<li>${highlight}</li>`).join('')}
+            </ul>
+        `;
+    }
+
     /**
      * Helper function to darken a color
      */

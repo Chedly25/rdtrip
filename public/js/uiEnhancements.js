@@ -83,26 +83,59 @@ export class UIEnhancements {
     static formatItineraryContent(rawContent) {
         if (!rawContent) return this.getDefaultItinerary();
         
-        // Remove markdown code blocks
-        let formatted = rawContent.replace(/```[\s\S]*?```/g, '');
+        let formatted = rawContent;
         
-        // Remove markdown formatting
+        // Remove all code blocks and HTML artifacts
+        formatted = formatted.replace(/```[\s\S]*?```/g, '');
+        formatted = formatted.replace(/`[^`]*`/g, '');
+        
+        // Remove raw HTML tags and the literal word "html"
+        formatted = formatted.replace(/<[^>]*>/g, '');
+        formatted = formatted.replace(/\bhtml\b/gi, '');
+        formatted = formatted.replace(/html/gi, '');
+        
+        // Clean up markdown artifacts
         formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
         formatted = formatted.replace(/\*(.*?)\*/g, '<em>$1</em>');
-        formatted = formatted.replace(/#{1,6}\s+(.*?)$/gm, '<h3>$1</h3>');
-        formatted = formatted.replace(/`(.*?)`/g, '<span style="background: #FFF5F5; padding: 2px 6px; border-radius: 4px;">$1</span>');
+        formatted = formatted.replace(/#{1,6}\s*/g, '');
         
-        // Convert bullet points to proper HTML
-        formatted = formatted.replace(/^[-•]\s+(.*?)$/gm, '<li>$1</li>');
-        formatted = formatted.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
+        // Clean up formatting characters
+        formatted = formatted.replace(/[\\*#`_~]/g, '');
         
-        // Add paragraph tags
-        formatted = formatted.split('\n\n').map(para => {
-            if (!para.startsWith('<') && para.trim()) {
-                return `<p>${para}</p>`;
+        // Convert bullet points to HTML lists
+        const lines = formatted.split('\n').filter(line => line.trim());
+        const processedLines = [];
+        let inList = false;
+        
+        for (let line of lines) {
+            line = line.trim();
+            if (line.match(/^[-•·]/)) {
+                if (!inList) {
+                    processedLines.push('<ul>');
+                    inList = true;
+                }
+                processedLines.push(`<li>${line.replace(/^[-•·]\s*/, '')}</li>`);
+            } else {
+                if (inList) {
+                    processedLines.push('</ul>');
+                    inList = false;
+                }
+                if (line && line.length > 0) {
+                    processedLines.push(`<p>${line}</p>`);
+                }
             }
-            return para;
-        }).join('');
+        }
+        
+        if (inList) {
+            processedLines.push('</ul>');
+        }
+        
+        formatted = processedLines.join('');
+        
+        // If content is too messy or empty, use default
+        if (formatted.length < 50 || formatted.includes('undefined') || formatted.includes('null')) {
+            return this.getDefaultItinerary();
+        }
         
         return `<div class="formatted-itinerary">${formatted}</div>`;
     }
@@ -248,28 +281,36 @@ export class UIEnhancements {
      * Fix agent card to show proper map initialization
      */
     static initializeMapProperly(mapId, result, retryCount = 0) {
-        const maxRetries = 3;
+        const maxRetries = 5;
         const container = document.getElementById(mapId);
         
         if (!container) {
             if (retryCount < maxRetries) {
-                setTimeout(() => this.initializeMapProperly(mapId, result, retryCount + 1), 500);
+                setTimeout(() => this.initializeMapProperly(mapId, result, retryCount + 1), 200);
             }
             return;
         }
         
-        // Clear container
-        container.innerHTML = '';
+        // Clear container and show immediate loading state
+        container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#666;"><span>🗺️</span></div>';
         
-        try {
-            // Create map
-            const map = L.map(mapId, {
-                zoomControl: false,
-                attributionControl: false,
-                dragging: true,
-                scrollWheelZoom: false,
-                doubleClickZoom: false
-            });
+        // Use requestAnimationFrame for better timing
+        requestAnimationFrame(() => {
+            setTimeout(() => {
+                try {
+                    // Clear loading state
+                    container.innerHTML = '';
+                    
+                    // Create map with optimized settings
+                    const map = L.map(mapId, {
+                        zoomControl: false,
+                        attributionControl: false,
+                        dragging: false,
+                        scrollWheelZoom: false,
+                        doubleClickZoom: false,
+                        preferCanvas: true,  // Better performance
+                        renderer: L.canvas() // Use canvas renderer
+                    });
             
             // Add tile layer
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -327,23 +368,25 @@ export class UIEnhancements {
                 }
             }
             
-            // Fit bounds with proper timing
-            setTimeout(() => {
-                map.invalidateSize();
-                map.fitBounds(bounds, { padding: [30, 30] });
-            }, 200);
-            
-        } catch (error) {
-            console.error('Map initialization error:', error);
-            container.innerHTML = `
-                <div style="display: flex; align-items: center; justify-content: center; height: 100%; background: #FFF5F5; color: #FF6B6B;">
-                    <div style="text-align: center;">
-                        <div style="font-size: 32px; margin-bottom: 10px;">🗺️</div>
-                        <div>Route Preview</div>
-                    </div>
-                </div>
-            `;
-        }
+                    // Fit bounds with proper timing
+                    setTimeout(() => {
+                        map.invalidateSize();
+                        map.fitBounds(bounds, { padding: [30, 30] });
+                    }, 100);
+                    
+                } catch (error) {
+                    console.error('Map initialization error:', error);
+                    container.innerHTML = `
+                        <div style="display: flex; align-items: center; justify-content: center; height: 100%; background: #FFF5F5; color: #FF6B6B;">
+                            <div style="text-align: center;">
+                                <div style="font-size: 32px; margin-bottom: 10px;">🗺️</div>
+                                <div>Route Preview</div>
+                            </div>
+                        </div>
+                    `;
+                }
+            }, 300); // Faster initial delay
+        });
     }
     
     /**

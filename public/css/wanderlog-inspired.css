@@ -1,0 +1,451 @@
+/* Wanderlog-Inspired Design Improvements */
+
+/* Enhanced Agents Loading Modal - No Scroll, Perfectly Centered */
+.agents-loading-modal {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(255, 140, 66, 0.95);
+    backdrop-filter: blur(20px);
+    z-index: 10000;
+    overflow: hidden;
+}
+
+.agents-loading-modal .modal-content {
+    background: rgba(255, 255, 255, 0.98);
+    border-radius: 24px;
+    padding: 2rem;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    width: 90vw;
+    max-width: 800px;
+    max-height: 90vh;
+    overflow-y: auto;
+    margin: 0;
+    position: relative;
+    transform: scale(1);
+    transition: all 0.3s ease;
+}
+
+/* Compact Loading Header */
+.loading-header {
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+
+.loading-header h2 {
+    font-size: 1.5rem;
+    color: var(--warm-coral);
+    margin-bottom: 0.5rem;
+}
+
+.loading-header p {
+    font-size: 0.9rem;
+    color: #666;
+    margin: 0;
+}
+
+/* Compact Agent Grid - 2 columns on mobile, 3 on desktop */
+.agents-loading-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+@media (min-width: 768px) {
+    .agents-loading-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* Compact Agent Cards */
+.agent-loading-card {
+    background: white;
+    border: 2px solid var(--warm-peach);
+    border-radius: 16px;
+    padding: 1rem;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(255, 176, 136, 0.15);
+    transition: all 0.3s ease;
+}
+
+.agent-loading-card.active {
+    border-color: var(--warm-coral);
+    background: linear-gradient(135deg, rgba(255, 107, 107, 0.05) 0%, rgba(255, 176, 136, 0.05) 100%);
+    transform: scale(1.02);
+}
+
+.agent-loading-card.completed {
+    border-color: var(--warm-mint);
+    background: linear-gradient(135deg, rgba(149, 225, 211, 0.1) 0%, rgba(78, 205, 196, 0.1) 100%);
+}
+
+.agent-avatar {
+    width: 40px;
+    height: 40px;
+    background: var(--gradient-warm);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 0.5rem auto;
+    font-size: 1.2rem;
+    box-shadow: 0 4px 12px rgba(255, 140, 66, 0.3);
+}
+
+.agent-info h3 {
+    font-size: 0.85rem;
+    margin: 0 0 0.3rem 0;
+    color: #333;
+}
+
+.loading-status {
+    font-size: 0.75rem;
+    color: #666;
+    margin-bottom: 0.5rem;
+}
+
+.loading-progress {
+    height: 4px;
+    background: #f0f0f0;
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    background: var(--gradient-warm);
+    border-radius: 2px;
+    width: 0%;
+    transition: width 0.3s ease;
+}
+
+/* Compact Overall Progress */
+.overall-progress {
+    text-align: center;
+}
+
+.overall-progress-text {
+    font-size: 0.9rem;
+    color: #666;
+    margin-bottom: 0.5rem;
+}
+
+.overall-progress-bar {
+    height: 6px;
+    background: #f0f0f0;
+    border-radius: 3px;
+    overflow: hidden;
+    margin: 0 auto;
+    max-width: 300px;
+}
+
+.overall-progress-fill {
+    height: 100%;
+    background: var(--gradient-ocean);
+    border-radius: 3px;
+    width: 0%;
+    transition: width 0.3s ease;
+}
+
+/* Enhanced Agent Results Cards with Better Previews */
+.agent-results-card {
+    background: white;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    position: relative;
+    border: 1px solid #f0f0f0;
+}
+
+.agent-results-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.15);
+}
+
+/* Visual Preview Section - Wanderlog Style */
+.agent-visual-preview {
+    position: relative;
+    height: 200px;
+    background: linear-gradient(135deg, var(--warm-peach) 0%, var(--warm-coral) 100%);
+    overflow: hidden;
+}
+
+.agent-visual-preview::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&q=60') center/cover;
+    opacity: 0.3;
+    z-index: 1;
+}
+
+.agent-preview-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(255, 107, 107, 0.8) 0%, rgba(255, 176, 136, 0.8) 100%);
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    color: white;
+    text-align: center;
+    padding: 1rem;
+}
+
+.agent-preview-icon {
+    font-size: 3rem;
+    margin-bottom: 0.5rem;
+}
+
+.agent-preview-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.agent-preview-subtitle {
+    font-size: 0.9rem;
+    opacity: 0.9;
+}
+
+/* Enhanced Map Container */
+.agent-map-container {
+    height: 180px;
+    position: relative;
+    background: #f8f9fa;
+    border-radius: 12px;
+    margin: 1rem;
+    overflow: hidden;
+    border: 2px solid #f0f0f0;
+}
+
+.agent-individual-map {
+    width: 100%;
+    height: 100%;
+    border-radius: 10px;
+}
+
+/* Map Loading Placeholder */
+.agent-map-container::after {
+    content: '🗺️';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 2rem;
+    opacity: 0.5;
+    z-index: 1;
+    pointer-events: none;
+}
+
+/* Enhanced Agent Card Content */
+.agent-card-body {
+    padding: 1.5rem;
+}
+
+.agent-route-summary h4 {
+    color: var(--warm-coral);
+    font-size: 1.1rem;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.agent-route-summary h4::before {
+    content: '📍';
+    font-size: 1rem;
+}
+
+/* Visual Route Tags */
+.route-cities-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.route-city-tag {
+    background: var(--warm-peach);
+    color: white;
+    padding: 0.3rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    box-shadow: 0 2px 8px rgba(255, 176, 136, 0.3);
+    transition: all 0.3s ease;
+}
+
+.route-city-tag.start {
+    background: #4ECDC4;
+    box-shadow: 0 2px 8px rgba(78, 205, 196, 0.3);
+}
+
+.route-city-tag.end {
+    background: var(--warm-coral);
+    box-shadow: 0 2px 8px rgba(255, 107, 107, 0.3);
+}
+
+.route-city-tag:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(255, 176, 136, 0.4);
+}
+
+/* Enhanced Stats */
+.agent-route-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.stat-item {
+    text-align: center;
+    background: #f8f9fa;
+    padding: 0.75rem;
+    border-radius: 12px;
+}
+
+.stat-value {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--warm-coral);
+}
+
+.stat-label {
+    font-size: 0.75rem;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Enhanced Preview Text */
+.agent-itinerary-preview {
+    background: #fff5f5;
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-left: 4px solid var(--warm-coral);
+}
+
+.preview-highlights {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.preview-highlights li {
+    padding: 0.25rem 0;
+    font-size: 0.9rem;
+    color: #555;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.preview-highlights li::before {
+    content: '✨';
+    font-size: 0.8rem;
+}
+
+/* Action Buttons */
+.agent-card-actions {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0 1.5rem 1.5rem 1.5rem;
+}
+
+.btn-view-details {
+    flex: 1;
+    background: var(--gradient-warm);
+    color: white;
+    border: none;
+    padding: 0.75rem 1rem;
+    border-radius: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-view-details:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(255, 140, 66, 0.4);
+}
+
+.btn-use-route {
+    background: white;
+    color: var(--warm-coral);
+    border: 2px solid var(--warm-coral);
+    padding: 0.75rem 1rem;
+    border-radius: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-use-route:hover {
+    background: var(--warm-coral);
+    color: white;
+}
+
+/* Responsive Improvements */
+@media (max-width: 768px) {
+    .agents-loading-modal .modal-content {
+        width: 95vw;
+        padding: 1.5rem;
+    }
+    
+    .loading-header h2 {
+        font-size: 1.25rem;
+    }
+    
+    .agent-visual-preview {
+        height: 160px;
+    }
+    
+    .agent-preview-icon {
+        font-size: 2rem;
+    }
+    
+    .agent-preview-title {
+        font-size: 1rem;
+    }
+    
+    .agent-card-actions {
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 480px) {
+    .agents-loading-grid {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+    
+    .agent-route-stats {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.5rem;
+    }
+    
+    .stat-item {
+        padding: 0.5rem;
+    }
+    
+    .stat-value {
+        font-size: 1rem;
+    }
+}
