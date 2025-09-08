@@ -423,7 +423,7 @@ export class RouteCalculator {
                 },
                 {
                     name: 'OSRM',
-                    url: `https://router.project-osrm.org/route/v1/driving/${start.lon},${start.lat};${end.lon},${end.lat}?overview=full&geometries=geojson`,
+                    url: `/api/route/osrm/${start.lon},${start.lat};${end.lon},${end.lat}?overview=full&geometries=geojson`,
                     headers: {}
                 }
             ];
@@ -661,7 +661,9 @@ export class RouteCalculator {
      * @returns {Promise<Object>} Route segment with geometry
      */
     async getOSRMRoute(from, to) {
-        const url = `https://router.project-osrm.org/route/v1/driving/${from.lon},${from.lat};${to.lon},${to.lat}?geometries=geojson&overview=full`;
+        // Use server proxy to avoid CORS issues
+        const coordinates = `${from.lon},${from.lat};${to.lon},${to.lat}`;
+        const url = `/api/route/osrm/${coordinates}?geometries=geojson&overview=full`;
         
         const response = await fetch(url);
         if (!response.ok) {

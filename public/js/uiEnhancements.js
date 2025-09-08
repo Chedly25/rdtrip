@@ -298,8 +298,12 @@ export class UIEnhancements {
         requestAnimationFrame(() => {
             setTimeout(() => {
                 try {
-                    // Clear loading state
+                    // Clear loading state and reset Leaflet internal state
                     container.innerHTML = '';
+                    if (container._leaflet_id) {
+                        container._leaflet_id = null;
+                        delete container._leaflet_id;
+                    }
                     
                     // Create map with optimized settings
                     const map = L.map(mapId, {

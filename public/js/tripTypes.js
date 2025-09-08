@@ -256,6 +256,13 @@ export class TripTypesManager {
         const container = document.getElementById(containerId);
         if (!container || !this.currentRoute) return;
         
+        // Clear container and reset Leaflet internal state
+        container.innerHTML = '';
+        if (container._leaflet_id) {
+            container._leaflet_id = null;
+            delete container._leaflet_id;
+        }
+        
         try {
             const miniMap = L.map(containerId, {
                 zoomControl: false,
@@ -362,8 +369,12 @@ export class TripTypesManager {
         const container = document.getElementById('itinerary-mini-map');
         if (!container || !this.currentRoute) return;
         
-        // Clean up existing map
+        // Clean up existing map and reset Leaflet internal state
         container.innerHTML = '';
+        if (container._leaflet_id) {
+            container._leaflet_id = null;
+            delete container._leaflet_id;
+        }
         
         setTimeout(() => {
             try {

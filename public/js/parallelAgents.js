@@ -179,7 +179,7 @@ export class ParallelAgentSystem {
             
             // Get AI-powered itinerary from this agent with extended timeout
             const agentItinerary = await Promise.race([
-                this.aiFeatures.callPerplexityAPI(prompt, false),
+                this.aiFeatures.callPerplexityAPI(prompt, true), // Skip debounce for parallel agents
                 new Promise((_, reject) => 
                     setTimeout(() => reject(new Error('Agent timeout - using fallback')), 60000)
                 )

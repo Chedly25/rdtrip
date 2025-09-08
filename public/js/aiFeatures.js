@@ -42,14 +42,30 @@ export class AIFeatures {
     }
     
     /**
+     * Simple hash function for creating unique request keys
+     * @param {string} str - String to hash
+     * @returns {string} Hash value
+     */
+    simpleHash(str) {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            const char = str.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash; // Convert to 32-bit integer
+        }
+        return Math.abs(hash).toString(36);
+    }
+    
+    /**
      * Call Perplexity API with a prompt (with debouncing and deduplication)
      * @param {string} prompt - The prompt to send to the AI
      * @param {boolean} skipDebounce - Skip debouncing for immediate execution
      * @returns {Promise<string>} AI response or null on error
      */
     async callPerplexityAPI(prompt, skipDebounce = false) {
-        // Create a request key for deduplication
-        const requestKey = prompt.substring(0, 100);
+        // Create a unique request key including timestamp and hash of full prompt
+        const promptHash = this.simpleHash(prompt);
+        const requestKey = `${promptHash}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         
         // If there's already a pending request for this prompt, return it
         if (this.pendingRequests.has(requestKey)) {

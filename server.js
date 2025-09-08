@@ -262,7 +262,7 @@ app.use(helmet({
                 "https://api.openrouteservice.org"
             ],
             imgSrc: ["'self'", "data:", "https://*.tile.openstreetmap.org"],
-            fontSrc: ["'self'", "https://fonts.gstatic.com"],
+            fontSrc: ["'self'", "https://fonts.gstatic.com", "https://r2cdn.perplexity.ai"],
         },
     },
 }));
@@ -274,6 +274,55 @@ app.use(compression());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // API Routes
+
+// Routing API proxy to avoid CORS issues  
+app.get('/api/route/osrm/:coordinates', async (req, res) => {
+    try {
+        const { coordinates } = req.params;
+        const { geometries = 'geojson', overview = 'full' } = req.query;
+        
+        const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${coordinates}?geometries=${geometries}&overview=${overview}`;
+        console.log('Proxying OSRM request to:', osrmUrl);
+        
+        // Set a 10 second timeout for the OSRM request
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        
+        const response = await fetch(osrmUrl, {
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('OSRM API Error:', response.status, errorText);
+            return res.status(response.status).json({
+                error: `OSRM API error: ${response.status}`,
+                details: errorText
+            });
+        }
+        
+        const data = await response.json();
+        res.json(data);
+        
+    } catch (error) {
+        console.error('OSRM Proxy Error:', error);
+        
+        if (error.name === 'AbortError') {
+            res.status(408).json({
+                error: 'OSRM request timeout',
+                details: 'The routing service is currently unavailable. Please try again later.',
+                fallback: true
+            });
+        } else {
+            res.status(500).json({
+                error: 'Failed to fetch route',
+                details: error.message,
+                fallback: true
+            });
+        }
+    }
+});
 
 // Perplexity API proxy to avoid CORS issues
 app.post('/api/chat', async (req, res) => {

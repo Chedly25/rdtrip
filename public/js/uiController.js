@@ -826,6 +826,10 @@ export class UIController {
         
         // Clear any existing map
         mapContainer.innerHTML = '';
+        if (mapContainer._leaflet_id) {
+            mapContainer._leaflet_id = null;
+            delete mapContainer._leaflet_id;
+        }
         
         try {
             const spotlightMap = L.map('spotlight-map').setView([43.5297, 5.4474], 8);
