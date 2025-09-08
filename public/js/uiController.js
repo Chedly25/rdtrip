@@ -3,6 +3,7 @@ import { aiFeatures } from './aiFeatures.js';
 import { TripTypesManager } from './tripTypes.js';
 import { animationController } from './animations.js';
 import { ParallelAgentSystem } from './parallelAgents.js';
+import { UIEnhancements } from './uiEnhancements.js';
 
 /**
  * UI Controller - Manages all user interface interactions and map display
@@ -412,7 +413,7 @@ export class UIController {
     /**
      * Update route information panel
      */
-    updateRouteInfo(routeData) {
+    updateRouteInfo(routeData, agent = null) {
         const { route, totalDistance, totalTime, directDistance, detourFactor, actualDistance, actualTime } = routeData;
         
         // Use actual driving distances/times if available, otherwise use calculated values
@@ -424,52 +425,28 @@ export class UIController {
         document.getElementById('total-time').textContent = displayTime;
         document.getElementById('total-stops').textContent = route.length - 2;
         
-        // Create stops list
+        // Create enhanced stops list with UIEnhancements
         const stopsList = document.getElementById('stops-list');
         const routeTypeIndicator = routeData.hasDrivingDirections ? 
             '<span style="color: #28a745; font-size: 0.8rem;">🚗 Driving Route</span>' : 
             '<span style="color: #ffc107; font-size: 0.8rem;">📏 Estimated Route</span>';
         
-        stopsList.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                <div>
-                    <h3 style="margin: 0;">Route Stops</h3>
-                    ${routeTypeIndicator}
+        // Use enhanced route summary if agent is provided
+        if (agent) {
+            const enhancedSummary = UIEnhancements.createRouteSummaryCard(routeData, agent);
+            stopsList.innerHTML = enhancedSummary;
+        } else {
+            // Fallback to basic display
+            stopsList.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <div>
+                        <h3 style="margin: 0;">Route Stops</h3>
+                        ${routeTypeIndicator}
+                    </div>
+                    <small style="color: #666;">Direct: ${directDistance}km (+${detourFactor}%)</small>
                 </div>
-                <small style="color: #666;">Direct: ${directDistance}km (+${detourFactor}%)</small>
-            </div>
-        `;
-        
-        // Add stop cards for intermediate stops
-        route.forEach((city, index) => {
-            if (index === 0 || index === route.length - 1) return;
-            
-            const stopCard = document.createElement('div');
-            stopCard.className = 'stop-card';
-            
-            const themeScores = Object.entries(city.themes)
-                .map(([theme, score]) => `${theme}: ${Math.round(score * 100)}%`)
-                .join(' • ');
-            
-            stopCard.innerHTML = `
-                <div class="stop-number">${index}</div>
-                <div class="stop-content">
-                    <div class="stop-name">${city.name}</div>
-                    <div style="font-size: 0.8rem; color: #888; margin-top: 2px;">
-                        Pop: ${city.population.toLocaleString()} • ${city.country}
-                    </div>
-                    <div class="stop-activities">
-                        ${city.activities.slice(0, 2).join(' • ')}
-                    </div>
-                    <div style="font-size: 0.75rem; color: #999; margin-top: 4px;">
-                        ${themeScores}
-                    </div>
-                </div>
-                <button class="stop-remove" onclick="removeStop(${index})">Remove</button>
             `;
-            
-            stopsList.appendChild(stopCard);
-        });
+        }
         
         // Show route info panel
         document.getElementById('route-info').style.display = 'block';
@@ -824,7 +801,7 @@ export class UIController {
         
         // Update itinerary with clean HTML (no markdown)
         const itineraryContainer = document.getElementById('spotlight-itinerary');
-        itineraryContainer.innerHTML = result.itinerary || '<p>Loading specialized recommendations...</p>';
+        itineraryContainer.innerHTML = result.itinerary || UIEnhancements.getDefaultItinerary();
         
         // Initialize spotlight map
         this.initializeSpotlightMap(result);
@@ -985,7 +962,7 @@ export class UIController {
             <div class="agent-itinerary">
                 <h3>🎯 ${result.agent.name} Recommendations</h3>
                 <div class="itinerary-content">
-                    ${this.formatItineraryContent(result.itinerary, result.cities)}
+                    ${UIEnhancements.formatItineraryContent(result.itinerary)}
                 </div>
             </div>
             
@@ -1127,14 +1104,7 @@ export class UIController {
      */
     formatItineraryContent(itinerary, cities) {
         if (!itinerary) {
-            return `
-                <div class="itinerary-placeholder">
-                    <div class="itinerary-loading">
-                        <div class="loading-spinner"></div>
-                        <p>Generating specialized recommendations...</p>
-                    </div>
-                </div>
-            `;
+            return UIEnhancements.getDefaultItinerary();
         }
 
         // Parse the itinerary and create a structured display
@@ -1179,8 +1149,8 @@ export class UIController {
     formatItineraryPreview(itinerary, cities) {
         if (!itinerary) {
             return `
-                <div class="preview-loading">
-                    <span class="loading-dots">Generating recommendations...</span>
+                <div class="preview-enhanced">
+                    <span class="preview-text">✨ Curated experiences awaiting your discovery</span>
                 </div>
             `;
         }
@@ -1365,9 +1335,9 @@ export class UIController {
             this.showRouteSpotlight(agentType, result);
         });
         
-        // Initialize map after card is added to DOM with proper delay
+        // Initialize map with enhanced UI
         requestAnimationFrame(() => {
-            setTimeout(() => this.initializeAgentMap(mapId, result), 300);
+            setTimeout(() => UIEnhancements.initializeMapProperly(mapId, result), 500);
         });
         
         return card;
@@ -1377,76 +1347,8 @@ export class UIController {
      * Initialize individual map for an agent
      */
     initializeAgentMap(mapId, result) {
-        const container = document.getElementById(mapId);
-        if (!container || !result.route) return;
-        
-        try {
-            const agentMap = L.map(mapId, {
-                zoomControl: false,
-                attributionControl: false,
-                dragging: false,
-                scrollWheelZoom: false,
-                doubleClickZoom: false
-            });
-            
-            // Add tiles
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(agentMap);
-            
-            // Add route
-            const route = result.route.route;
-            const bounds = L.latLngBounds();
-            
-            // Add markers
-            route.forEach((city, index) => {
-                const isStart = index === 0;
-                const isEnd = index === route.length - 1;
-                
-                L.circleMarker([city.lat, city.lon], {
-                    radius: isStart || isEnd ? 8 : 6,
-                    fillColor: result.agent.color,
-                    color: 'white',
-                    weight: 2,
-                    opacity: 1,
-                    fillOpacity: 0.9
-                }).bindPopup(city.name).addTo(agentMap);
-                
-                bounds.extend([city.lat, city.lon]);
-            });
-            
-            // Add route line - use driving route if available
-            if (result.route.drivingRoute && result.route.drivingRoute.segments) {
-                // Draw actual driving routes
-                result.route.drivingRoute.segments.forEach(segment => {
-                    if (segment.geometry && segment.geometry.coordinates) {
-                        const leafletCoords = segment.geometry.coordinates.map(coord => [coord[1], coord[0]]);
-                        L.polyline(leafletCoords, {
-                            color: result.agent.color || '#FF8C42',
-                            weight: 3,
-                            opacity: 0.8
-                        }).addTo(agentMap);
-                    }
-                });
-            } else {
-                // Fallback to straight lines
-                const routeCoords = route.map(city => [city.lat, city.lon]);
-                L.polyline(routeCoords, {
-                    color: result.agent.color || '#FF8C42',
-                    weight: 3,
-                    opacity: 0.8,
-                    dashArray: '5, 10' // Dashed line to show it's estimated
-                }).addTo(agentMap);
-            }
-            
-            // Fit to bounds with delay to ensure rendering
-            setTimeout(() => {
-                agentMap.invalidateSize();
-                agentMap.fitBounds(bounds, { padding: [20, 20] });
-            }, 100);
-            
-        } catch (error) {
-            console.error('Error initializing agent map:', error);
-            container.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #666;">🗺️ Map Preview</div>';
-        }
+        // Use enhanced UI method for proper map initialization
+        UIEnhancements.initializeMapProperly(mapId, result);
     }
     
     /**

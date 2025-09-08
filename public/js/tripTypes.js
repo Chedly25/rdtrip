@@ -2,6 +2,7 @@
  * Trip Types Module - Handles 6 different themed itineraries
  * Each trip type has its own color scheme, icon, and specialized content
  */
+import { UIEnhancements } from './uiEnhancements.js';
 
 export class TripTypesManager {
     constructor(routeManager, aiFeatures) {
@@ -493,8 +494,8 @@ export class TripTypesManager {
         const container = document.getElementById('itinerary-details');
         if (!container) return;
         
-        // Format the content with better styling
-        const formattedContent = this.formatItineraryContent(content, tripType);
+        // Format the content with enhanced styling
+        const formattedContent = UIEnhancements.formatItineraryContent(content);
         container.innerHTML = formattedContent;
     }
     
