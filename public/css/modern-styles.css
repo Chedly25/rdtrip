@@ -344,16 +344,17 @@ input[type="text"]::placeholder, input[type="password"]::placeholder {
     top: calc(100% + var(--space-2));
     left: 0;
     right: 0;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(15px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
     border-radius: var(--radius-xl);
-    max-height: 250px;
+    max-height: 280px;
     overflow-y: auto;
-    z-index: var(--z-dropdown);
+    z-index: 9999;
     display: none;
-    box-shadow: var(--shadow-2xl);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1), 0 8px 16px rgba(0, 0, 0, 0.06);
     animation: dropdownSlideIn 0.2s ease-out;
+    min-width: 100%;
 }
 
 @keyframes dropdownSlideIn {
@@ -959,4 +960,232 @@ input[type="range"]::-moz-range-thumb:hover {
         backdrop-filter: none;
         box-shadow: none;
     }
+}
+
+/* Agent Results Display Styles */
+.trip-comparison-section {
+    margin: 2rem 0;
+    padding: 1.5rem;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: var(--radius-xl);
+    backdrop-filter: blur(10px);
+}
+
+.trip-comparison-section h3 {
+    color: var(--primary-600);
+    margin-bottom: 0.5rem;
+    font-size: 1.25rem;
+}
+
+.trip-comparison-section p {
+    color: var(--gray-600);
+    margin-bottom: 1.5rem;
+    font-size: 0.9rem;
+}
+
+.agent-results-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.agent-result-card {
+    border-radius: var(--radius-lg);
+    padding: 1.25rem;
+    color: white;
+    box-shadow: var(--shadow-lg);
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.agent-result-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-2xl);
+}
+
+.agent-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.agent-icon {
+    font-size: 1.5rem;
+}
+
+.agent-info h4 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.agent-duration {
+    font-size: 0.75rem;
+    opacity: 0.8;
+}
+
+.agent-route-preview {
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+.agent-stats {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    font-size: 0.8rem;
+}
+
+.view-agent-details {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+    width: 100%;
+}
+
+.view-agent-details:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-1px);
+}
+
+/* Agent Details Modal */
+.agent-details-modal .modal-content {
+    max-width: 700px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.agent-header-large {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 2rem;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    color: white;
+    margin: -2rem -2rem 2rem -2rem;
+}
+
+.agent-icon-large {
+    font-size: 3rem;
+}
+
+.agent-header-large h2 {
+    margin: 0;
+    font-size: 1.5rem;
+}
+
+.agent-header-large p {
+    margin: 0.5rem 0 0 0;
+    opacity: 0.9;
+    font-size: 0.95rem;
+}
+
+.agent-route-details {
+    margin-bottom: 2rem;
+}
+
+.route-cities {
+    background: var(--gray-50);
+    padding: 1rem;
+    border-radius: var(--radius-lg);
+    margin: 1rem 0;
+}
+
+.city-stop {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.city-stop:last-child {
+    border-bottom: none;
+}
+
+.stop-number {
+    background: var(--primary-500);
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.route-stats-detailed {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.stat-item {
+    background: var(--gray-50);
+    padding: 0.75rem;
+    border-radius: var(--radius-md);
+    font-size: 0.9rem;
+}
+
+.agent-itinerary {
+    margin-bottom: 2rem;
+}
+
+.itinerary-content {
+    background: var(--gray-50);
+    padding: 1.5rem;
+    border-radius: var(--radius-lg);
+    line-height: 1.6;
+    font-size: 0.9rem;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    padding-top: 1rem;
+    border-top: 1px solid var(--gray-200);
+}
+
+.use-this-route {
+    background: var(--primary-600);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.use-this-route:hover {
+    background: var(--primary-700);
+    transform: translateY(-1px);
+}
+
+.close-modal-btn {
+    background: var(--gray-500);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.close-modal-btn:hover {
+    background: var(--gray-600);
 }

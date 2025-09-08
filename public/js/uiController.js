@@ -2,6 +2,7 @@ import { RouteCalculator } from './routeCalculator.js';
 import { aiFeatures } from './aiFeatures.js';
 import { TripTypesManager } from './tripTypes.js';
 import { animationController } from './animations.js';
+import { ParallelAgentSystem } from './parallelAgents.js';
 
 /**
  * UI Controller - Manages all user interface interactions and map display
@@ -14,7 +15,9 @@ export class UIController {
         this.currentRoute = null;
         this.selectedTheme = 'balanced';
         this.routeCalculator = new RouteCalculator();
+        this.parallelAgents = new ParallelAgentSystem(this.routeCalculator, aiFeatures);
         this.tripTypesManager = new TripTypesManager(this.routeCalculator, aiFeatures);
+        this.agentResults = new Map();
         
         // Bind methods to maintain context
         this.calculateRoute = this.calculateRoute.bind(this);
@@ -307,7 +310,7 @@ export class UIController {
     }
     
     /**
-     * Calculate route based on user input
+     * Calculate route using parallel agents system for 6 different trip types
      */
     async calculateRoute() {
         const destInput = document.getElementById('destination');
@@ -319,8 +322,8 @@ export class UIController {
             return;
         }
         
-        // Show enhanced loading state
-        calculateBtn.textContent = 'Calculating...';
+        // Show parallel agents loading state
+        calculateBtn.textContent = 'Launching 6 AI Agents...';
         calculateBtn.disabled = true;
         animationController.animateLoading(calculateBtn, true);
         
@@ -332,68 +335,49 @@ export class UIController {
                 throw new Error('Destination not found. Please select from the suggestions or try a different spelling.');
             }
             
-            // Get route options
-            const options = {
+            // Get base route options
+            const baseOptions = {
                 numStops: document.getElementById('stops-slider').value,
-                detourTolerance: document.getElementById('detour-slider').value,
-                theme: this.selectedTheme
+                detourTolerance: document.getElementById('detour-slider').value
             };
             
-            // Calculate route
-            const result = this.routeCalculator.calculateRoute('aix-en-provence', destCity.id, options);
+            // Show progress updates
+            calculateBtn.textContent = 'Agents calculating routes...';
             
-            // Fetch actual driving directions
-            calculateBtn.textContent = 'Fetching driving directions...';
+            // Launch all 6 parallel agents
+            console.log('🚀 Launching parallel agents for:', destName);
+            this.agentResults = await this.parallelAgents.launchAllAgents('aix-en-provence', destCity.id, baseOptions);
             
-            try {
-                console.log('=== STARTING ROUTE FETCH ===');
-                console.log('Route cities:', result.route.map(city => city.name));
-                console.log('Route length:', result.route.length);
+            calculateBtn.textContent = 'Processing results...';
+            
+            // Use the balanced route as the main display route
+            const balancedResult = this.agentResults.get('balanced');
+            if (balancedResult) {
+                this.currentRoute = balancedResult.route;
+                aiFeatures.setCurrentRoute(balancedResult.route);
                 
-                const drivingRoute = await this.routeCalculator.fetchCompleteRoute(result.route);
-                console.log('=== COMPLETE ROUTE FETCHED ===');
-                console.log('Driving route data:', drivingRoute);
-                console.log('Segments count:', drivingRoute.segments?.length);
-                
-                // Merge route data with driving directions
-                result.drivingRoute = drivingRoute;
-                result.actualDistance = drivingRoute.totalDistance;
-                result.actualTime = drivingRoute.totalDuration;
-                result.hasDrivingDirections = true;
-                
-                console.log('=== ROUTE DATA MERGED ===');
-                console.log('Final result:', {
-                    hasDrivingDirections: result.hasDrivingDirections,
-                    segmentCount: result.drivingRoute?.segments?.length,
-                    actualDistance: result.actualDistance
-                });
-                
-            } catch (drivingError) {
-                console.error('=== DRIVING ROUTE ERROR ===');
-                console.error('Error details:', drivingError);
-                console.error('Stack trace:', drivingError.stack);
-                result.hasDrivingDirections = false;
-                
-                // Show user-friendly message
-                this.showWarning('Using estimated route - driving directions temporarily unavailable');
+                // Display the balanced route on map
+                this.displayRoute(balancedResult.route);
+                this.updateRouteInfo(balancedResult.route);
             }
             
-            this.currentRoute = result;
-            aiFeatures.setCurrentRoute(result);
-            this.tripTypesManager.setCurrentRoute(result);
+            // Show all trip types with their unique routes
+            this.displayAllTripTypes(this.agentResults);
             
-            // Display results
-            this.displayRoute(result);
-            this.updateRouteInfo(result);
+            // Update trip types manager with all results
+            this.tripTypesManager.setAllAgentResults(this.agentResults);
             
             // Hide any previous error messages
             this.hideError();
             
+            // Show success message
+            this.showSuccess(`✨ 6 specialized agents found unique routes to ${destName}!`);
+            
         } catch (error) {
-            console.error('Route calculation error:', error);
-            this.showError(error.message);
+            console.error('Parallel agents calculation error:', error);
+            this.showError('Failed to calculate routes: ' + error.message);
         } finally {
-            // Reset enhanced button state
+            // Reset button state
             animationController.animateLoading(calculateBtn, false);
             calculateBtn.textContent = '🧭 Calculate Route';
             calculateBtn.disabled = false;
@@ -795,5 +779,212 @@ export class UIController {
                 warningDiv.style.display = 'none';
             }
         }, 8000);
+    }
+    
+    /**
+     * Show success message
+     */
+    showSuccess(message) {
+        let successDiv = document.querySelector('.success-message');
+        if (!successDiv) {
+            successDiv = document.createElement('div');
+            successDiv.className = 'success-message';
+            successDiv.style.cssText = `
+                background: #d4edda; 
+                color: #155724; 
+                padding: 0.75rem 1rem; 
+                margin: 1rem 0; 
+                border-left: 4px solid #28a745; 
+                border-radius: 4px; 
+                font-size: 0.9rem;
+                display: block;
+                animation: slideInDown 0.3s ease-out;
+            `;
+            document.querySelector('.sidebar').insertBefore(successDiv, document.querySelector('.control-group'));
+        }
+        successDiv.textContent = message;
+        successDiv.style.display = 'block';
+        
+        // Auto-hide after 5 seconds
+        setTimeout(() => {
+            if (successDiv) {
+                successDiv.style.display = 'none';
+            }
+        }, 5000);
+    }
+    
+    /**
+     * Display all trip types with their unique routes
+     */
+    displayAllTripTypes(agentResults) {
+        console.log('🎨 Displaying all trip types results:', agentResults.size);
+        
+        // Create or update the trip types comparison section
+        let comparisonSection = document.getElementById('trip-comparison-section');
+        if (!comparisonSection) {
+            comparisonSection = document.createElement('div');
+            comparisonSection.id = 'trip-comparison-section';
+            comparisonSection.className = 'trip-comparison-section';
+            comparisonSection.innerHTML = `
+                <h3>🤖 AI Agent Results</h3>
+                <p>6 specialized agents found unique routes for you:</p>
+                <div id="agent-results-grid" class="agent-results-grid"></div>
+            `;
+            
+            // Insert after route info
+            const routeInfo = document.querySelector('.route-info');
+            if (routeInfo) {
+                routeInfo.parentNode.insertBefore(comparisonSection, routeInfo.nextSibling);
+            }
+        }
+        
+        const gridContainer = document.getElementById('agent-results-grid');
+        gridContainer.innerHTML = '';
+        
+        // Display each agent's result
+        agentResults.forEach((result, agentType) => {
+            const agentCard = document.createElement('div');
+            agentCard.className = 'agent-result-card';
+            agentCard.style.background = result.agent.gradient;
+            
+            const cities = result.cities.map(c => c.name).slice(0, 3).join(' → ');
+            const moreText = result.cities.length > 3 ? `... (+${result.cities.length - 3})` : '';
+            
+            agentCard.innerHTML = `
+                <div class="agent-header">
+                    <span class="agent-icon">${result.agent.icon}</span>
+                    <div class="agent-info">
+                        <h4>${result.agent.name}</h4>
+                        <span class="agent-duration">${result.duration}ms</span>
+                    </div>
+                </div>
+                <div class="agent-route-preview">
+                    <strong>${cities}${moreText}</strong>
+                </div>
+                <div class="agent-stats">
+                    <span>📏 ${result.route.totalDistance}km</span>
+                    <span>⏱️ ${result.route.totalTime}h</span>
+                    <span>🏛️ ${result.cities.length - 2} stops</span>
+                </div>
+                <button class="view-agent-details" data-agent="${agentType}">
+                    View Details
+                </button>
+            `;
+            
+            // Add click handler to view details
+            const viewBtn = agentCard.querySelector('.view-agent-details');
+            viewBtn.addEventListener('click', () => this.showAgentDetails(agentType, result));
+            
+            gridContainer.appendChild(agentCard);
+        });
+        
+        // Show the section
+        comparisonSection.style.display = 'block';
+    }
+    
+    /**
+     * Show detailed view of a specific agent's result
+     */
+    showAgentDetails(agentType, result) {
+        console.log(`📱 Showing details for ${result.agent.name}`);
+        
+        // Create modal or expanded view
+        let modal = document.getElementById('agent-details-modal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'agent-details-modal';
+            modal.className = 'modal agent-details-modal';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <span class="close-modal" id="close-agent-details">&times;</span>
+                    <div id="agent-details-content"></div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            
+            // Add close handler
+            document.getElementById('close-agent-details').addEventListener('click', () => {
+                modal.style.display = 'none';
+            });
+        }
+        
+        const content = document.getElementById('agent-details-content');
+        content.innerHTML = `
+            <div class="agent-header-large" style="background: ${result.agent.gradient};">
+                <span class="agent-icon-large">${result.agent.icon}</span>
+                <div>
+                    <h2>${result.agent.name}</h2>
+                    <p>${result.agent.description}</p>
+                </div>
+            </div>
+            
+            <div class="agent-route-details">
+                <h3>🗺️ Route Details</h3>
+                <div class="route-cities">
+                    ${result.cities.map((city, index) => `
+                        <div class="city-stop">
+                            <span class="stop-number">${index + 1}</span>
+                            <span class="city-name">${city.name}, ${city.country}</span>
+                        </div>
+                    `).join('')}
+                </div>
+                
+                <div class="route-stats-detailed">
+                    <div class="stat-item">
+                        <strong>Distance:</strong> ${result.route.totalDistance}km
+                    </div>
+                    <div class="stat-item">
+                        <strong>Time:</strong> ${result.route.totalTime} hours
+                    </div>
+                    <div class="stat-item">
+                        <strong>Stops:</strong> ${result.cities.length - 2} intermediate
+                    </div>
+                </div>
+            </div>
+            
+            <div class="agent-itinerary">
+                <h3>🎯 ${result.agent.name} Recommendations</h3>
+                <div class="itinerary-content">
+                    ${result.itinerary ? result.itinerary.replace(/\n/g, '<br>') : 'Generating recommendations...'}
+                </div>
+            </div>
+            
+            <div class="modal-actions">
+                <button class="use-this-route" data-agent="${agentType}">
+                    Use This Route
+                </button>
+                <button class="close-modal-btn">Close</button>
+            </div>
+        `;
+        
+        // Add action handlers
+        content.querySelector('.use-this-route').addEventListener('click', () => {
+            this.switchToAgentRoute(agentType, result);
+            modal.style.display = 'none';
+        });
+        
+        content.querySelector('.close-modal-btn').addEventListener('click', () => {
+            modal.style.display = 'none';
+        });
+        
+        modal.style.display = 'block';
+    }
+    
+    /**
+     * Switch to using a specific agent's route
+     */
+    switchToAgentRoute(agentType, result) {
+        console.log(`🔄 Switching to ${result.agent.name} route`);
+        
+        this.currentRoute = result.route;
+        aiFeatures.setCurrentRoute(result.route);
+        this.tripTypesManager.setCurrentRoute(result.route);
+        
+        // Update display
+        this.displayRoute(result.route);
+        this.updateRouteInfo(result.route);
+        
+        // Show confirmation
+        this.showSuccess(`Switched to ${result.agent.name} route with ${result.cities.length - 2} stops!`);
     }
 }
