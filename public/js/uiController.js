@@ -322,10 +322,9 @@ export class UIController {
             return;
         }
         
-        // Show parallel agents loading state
-        calculateBtn.textContent = 'Launching 6 AI Agents...';
+        // Show enhanced loading modal
+        this.showAgentsLoadingModal();
         calculateBtn.disabled = true;
-        animationController.animateLoading(calculateBtn, true);
         
         try {
             // Find destination city
@@ -341,14 +340,9 @@ export class UIController {
                 detourTolerance: document.getElementById('detour-slider').value
             };
             
-            // Show progress updates
-            calculateBtn.textContent = 'Agents calculating routes...';
-            
-            // Launch all 6 parallel agents
+            // Launch all 6 parallel agents with progress tracking
             console.log('🚀 Launching parallel agents for:', destName);
-            this.agentResults = await this.parallelAgents.launchAllAgents('aix-en-provence', destCity.id, baseOptions);
-            
-            calculateBtn.textContent = 'Processing results...';
+            this.agentResults = await this.launchAgentsWithProgress('aix-en-provence', destCity.id, baseOptions);
             
             // Use the balanced route as the main display route
             const balancedResult = this.agentResults.get('balanced');
@@ -361,8 +355,9 @@ export class UIController {
                 this.updateRouteInfo(balancedResult.route);
             }
             
-            // Show all trip types with their unique routes
-            this.displayAllTripTypes(this.agentResults);
+            // Hide loading modal and show results page
+            this.hideAgentsLoadingModal();
+            this.showAgentsResultsPage(destName, this.agentResults);
             
             // Update trip types manager with all results
             this.tripTypesManager.setAllAgentResults(this.agentResults);
@@ -370,15 +365,12 @@ export class UIController {
             // Hide any previous error messages
             this.hideError();
             
-            // Show success message
-            this.showSuccess(`✨ 6 specialized agents found unique routes to ${destName}!`);
-            
         } catch (error) {
             console.error('Parallel agents calculation error:', error);
             this.showError('Failed to calculate routes: ' + error.message);
         } finally {
             // Reset button state
-            animationController.animateLoading(calculateBtn, false);
+            this.hideAgentsLoadingModal();
             calculateBtn.textContent = '🧭 Calculate Route';
             calculateBtn.disabled = false;
         }
@@ -986,5 +978,342 @@ export class UIController {
         
         // Show confirmation
         this.showSuccess(`Switched to ${result.agent.name} route with ${result.cities.length - 2} stops!`);
+    }
+    
+    /**
+     * Show the enhanced agents loading modal
+     */
+    showAgentsLoadingModal() {
+        const modal = document.getElementById('agents-loading-modal');
+        if (modal) {
+            modal.style.display = 'block';
+            
+            // Reset all progress bars
+            const progressBars = modal.querySelectorAll('.progress-bar');
+            const overallFill = document.getElementById('overall-progress-fill');
+            const overallCount = document.getElementById('overall-progress-count');
+            
+            progressBars.forEach(bar => bar.style.width = '0%');
+            if (overallFill) overallFill.style.width = '0%';
+            if (overallCount) overallCount.textContent = '0/6';
+            
+            // Reset all loading cards
+            const loadingCards = modal.querySelectorAll('.agent-loading-card');
+            loadingCards.forEach(card => {
+                card.classList.remove('active', 'completed');
+                const status = card.querySelector('.loading-status');
+                if (status) status.textContent = 'Launching...';
+            });
+        }
+    }
+    
+    /**
+     * Hide the agents loading modal
+     */
+    hideAgentsLoadingModal() {
+        const modal = document.getElementById('agents-loading-modal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    }
+    
+    /**
+     * Update agent progress in loading modal
+     */
+    updateAgentProgress(agentType, progress, status) {
+        const card = document.querySelector(`[data-agent="${agentType}"]`);
+        if (card) {
+            const progressBar = card.querySelector('.progress-bar');
+            const statusElement = card.querySelector('.loading-status');
+            
+            if (progressBar) progressBar.style.width = `${progress}%`;
+            if (statusElement) statusElement.textContent = status;
+            
+            // Update card state
+            card.classList.add('active');
+            if (progress >= 100) {
+                card.classList.add('completed');
+                card.classList.remove('active');
+            }
+        }
+    }
+    
+    /**
+     * Update overall progress
+     */
+    updateOverallProgress(completed, total) {
+        const overallFill = document.getElementById('overall-progress-fill');
+        const overallCount = document.getElementById('overall-progress-count');
+        
+        const percentage = (completed / total) * 100;
+        
+        if (overallFill) overallFill.style.width = `${percentage}%`;
+        if (overallCount) overallCount.textContent = `${completed}/${total}`;
+    }
+    
+    /**
+     * Launch agents with progress tracking
+     */
+    async launchAgentsWithProgress(startId, destId, baseOptions) {
+        const agentTypes = ['adventure', 'romantic', 'cultural', 'foodie', 'family', 'luxury'];
+        let completedCount = 0;
+        
+        // Update initial progress for each agent
+        agentTypes.forEach(agentType => {
+            this.updateAgentProgress(agentType, 10, 'Calculating route...');
+        });
+        
+        // Launch all agents with individual progress tracking
+        const agentPromises = agentTypes.map(async (agentType) => {
+            try {
+                this.updateAgentProgress(agentType, 25, 'Calculating route...');
+                
+                // Use the parallel agents system but track progress
+                const agent = this.parallelAgents.agents[agentType];
+                const agentOptions = {
+                    ...baseOptions,
+                    theme: agentType,
+                    numStops: Math.max(agent.routePreferences.minStops, baseOptions.numStops || 2),
+                    detourTolerance: Math.round(agent.routePreferences.detourTolerance * 100)
+                };
+                
+                // Calculate route
+                this.updateAgentProgress(agentType, 50, 'Route calculated, generating itinerary...');
+                const route = this.routeCalculator.calculateRoute(startId, destId, agentOptions);
+                
+                // Generate itinerary
+                this.updateAgentProgress(agentType, 75, 'Generating specialized recommendations...');
+                const cities = route.route.map(c => c.name).join(', ');
+                const prompt = this.parallelAgents.createAgentPrompt(agent, cities, route.totalDistance);
+                
+                const agentItinerary = await this.aiFeatures.callPerplexityAPI(prompt, false);
+                
+                this.updateAgentProgress(agentType, 100, 'Complete!');
+                completedCount++;
+                this.updateOverallProgress(completedCount, agentTypes.length);
+                
+                return {
+                    agentType,
+                    agent,
+                    route,
+                    itinerary: agentItinerary,
+                    duration: Math.random() * 1000 + 500, // Simulated duration
+                    timestamp: Date.now(),
+                    cities: route.route,
+                    summary: this.parallelAgents.createRouteSummary(agent, route)
+                };
+                
+            } catch (error) {
+                console.error(`Agent ${agentType} failed:`, error);
+                this.updateAgentProgress(agentType, 100, 'Error - using fallback');
+                completedCount++;
+                this.updateOverallProgress(completedCount, agentTypes.length);
+                
+                return this.parallelAgents.createFallbackResult(agentType, startId, destId);
+            }
+        });
+        
+        const results = await Promise.all(agentPromises);
+        
+        // Convert to Map format
+        const agentResults = new Map();
+        results.forEach(result => {
+            agentResults.set(result.agentType, result);
+        });
+        
+        return agentResults;
+    }
+    
+    /**
+     * Show the agents results page
+     */
+    showAgentsResultsPage(destination, agentResults) {
+        const resultsPage = document.getElementById('agents-results-page');
+        const destinationSpan = document.getElementById('results-destination');
+        const resultsGrid = document.getElementById('agents-results-grid');
+        
+        if (!resultsPage || !resultsGrid) return;
+        
+        // Update destination
+        if (destinationSpan) destinationSpan.textContent = destination;
+        
+        // Hide main interface and show results page
+        document.querySelector('.container').style.display = 'none';
+        resultsPage.style.display = 'block';
+        
+        // Generate agent results cards
+        resultsGrid.innerHTML = '';
+        
+        agentResults.forEach((result, agentType) => {
+            const card = this.createAgentResultCard(result, agentType);
+            resultsGrid.appendChild(card);
+        });
+        
+        // Setup back button
+        const backBtn = document.getElementById('back-to-planner');
+        if (backBtn) {
+            backBtn.onclick = () => this.hideAgentsResultsPage();
+        }
+    }
+    
+    /**
+     * Hide the agents results page
+     */
+    hideAgentsResultsPage() {
+        const resultsPage = document.getElementById('agents-results-page');
+        const mainContainer = document.querySelector('.container');
+        
+        if (resultsPage) resultsPage.style.display = 'none';
+        if (mainContainer) mainContainer.style.display = 'flex';
+    }
+    
+    /**
+     * Create an agent result card with individual map
+     */
+    createAgentResultCard(result, agentType) {
+        const card = document.createElement('div');
+        card.className = 'agent-results-card';
+        card.style.setProperty('--agent-color', result.agent.color);
+        card.style.setProperty('--agent-color-dark', this.darkenColor(result.agent.color, 0.2));
+        
+        const cities = result.cities.map(c => c.name);
+        const mapId = `agent-map-${agentType}`;
+        
+        card.innerHTML = `
+            <div class="agent-card-header">
+                <div class="agent-title">
+                    <div class="agent-title-icon">${result.agent.icon}</div>
+                    <div class="agent-title-text">
+                        <h3>${result.agent.name}</h3>
+                        <p>${result.agent.description}</p>
+                    </div>
+                </div>
+                <div class="agent-stats">
+                    <div class="agent-stat">
+                        <span>📏</span>
+                        <span>${result.route.totalDistance}km</span>
+                    </div>
+                    <div class="agent-stat">
+                        <span>⏱️</span>
+                        <span>${result.route.totalTime}h</span>
+                    </div>
+                    <div class="agent-stat">
+                        <span>🏛️</span>
+                        <span>${result.cities.length - 2} stops</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="agent-map-container">
+                <div id="${mapId}" class="agent-individual-map"></div>
+            </div>
+            
+            <div class="agent-card-body">
+                <div class="agent-route-summary">
+                    <h4>Route Overview</h4>
+                    <div class="route-cities-list">
+                        ${cities.map(city => `<span class="route-city-tag">${city}</span>`).join('')}
+                    </div>
+                </div>
+                
+                <div class="agent-itinerary-preview">
+                    ${result.itinerary ? result.itinerary.substring(0, 200) + '...' : 'Specialized recommendations for this route...'}
+                </div>
+                
+                <div class="agent-card-actions">
+                    <button class="select-agent-route" data-agent="${agentType}">
+                        Use This Route
+                    </button>
+                    <button class="view-full-details" data-agent="${agentType}">
+                        View Details
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        // Add event listeners
+        card.querySelector('.select-agent-route').addEventListener('click', () => {
+            this.switchToAgentRoute(agentType, result);
+            this.hideAgentsResultsPage();
+        });
+        
+        card.querySelector('.view-full-details').addEventListener('click', () => {
+            this.showAgentDetails(agentType, result);
+        });
+        
+        // Initialize map after card is added to DOM
+        setTimeout(() => this.initializeAgentMap(mapId, result), 100);
+        
+        return card;
+    }
+    
+    /**
+     * Initialize individual map for an agent
+     */
+    initializeAgentMap(mapId, result) {
+        const container = document.getElementById(mapId);
+        if (!container || !result.route) return;
+        
+        try {
+            const agentMap = L.map(mapId, {
+                zoomControl: false,
+                attributionControl: false,
+                dragging: false,
+                scrollWheelZoom: false,
+                doubleClickZoom: false
+            });
+            
+            // Add tiles
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(agentMap);
+            
+            // Add route
+            const route = result.route.route;
+            const bounds = L.latLngBounds();
+            
+            // Add markers
+            route.forEach((city, index) => {
+                const isStart = index === 0;
+                const isEnd = index === route.length - 1;
+                
+                L.circleMarker([city.lat, city.lon], {
+                    radius: isStart || isEnd ? 8 : 6,
+                    fillColor: result.agent.color,
+                    color: 'white',
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 0.9
+                }).bindTooltip(city.name).addTo(agentMap);
+                
+                bounds.extend([city.lat, city.lon]);
+            });
+            
+            // Add route line
+            const routeCoords = route.map(city => [city.lat, city.lon]);
+            L.polyline(routeCoords, {
+                color: result.agent.color,
+                weight: 3,
+                opacity: 0.8
+            }).addTo(agentMap);
+            
+            // Fit to bounds
+            agentMap.fitBounds(bounds, { padding: [10, 10] });
+            
+        } catch (error) {
+            console.error('Error initializing agent map:', error);
+            container.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #666;">🗺️ Map Preview</div>';
+        }
+    }
+    
+    /**
+     * Helper function to darken a color
+     */
+    darkenColor(color, factor) {
+        // Simple color darkening - convert hex to rgb, darken, convert back
+        const hex = color.replace('#', '');
+        const r = Math.max(0, parseInt(hex.substr(0, 2), 16) * (1 - factor));
+        const g = Math.max(0, parseInt(hex.substr(2, 2), 16) * (1 - factor));
+        const b = Math.max(0, parseInt(hex.substr(4, 2), 16) * (1 - factor));
+        
+        return `#${Math.round(r).toString(16).padStart(2, '0')}${Math.round(g).toString(16).padStart(2, '0')}${Math.round(b).toString(16).padStart(2, '0')}`;
     }
 }

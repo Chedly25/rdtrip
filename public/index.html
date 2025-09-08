@@ -175,6 +175,104 @@
         </div>
     </div>
 
+    <!-- AI Agents Results Page -->
+    <div id="agents-results-page" class="agents-results-page" style="display: none;">
+        <div class="results-header">
+            <h1>🤖 AI Agents Results</h1>
+            <p>6 specialized agents found unique routes to <span id="results-destination">your destination</span></p>
+            <button class="back-to-planner-btn" id="back-to-planner">← Back to Planner</button>
+        </div>
+        
+        <div class="agents-grid" id="agents-results-grid">
+            <!-- Agent cards with individual maps will be populated here -->
+        </div>
+    </div>
+
+    <!-- Enhanced Loading Modal for Agents -->
+    <div id="agents-loading-modal" class="modal agents-loading-modal" style="display: none;">
+        <div class="modal-content loading-content">
+            <div class="loading-header">
+                <h2>🚀 Launching AI Agents</h2>
+                <p>6 specialized agents are calculating unique routes for you...</p>
+            </div>
+            
+            <div class="agents-loading-grid">
+                <div class="agent-loading-card" data-agent="adventure">
+                    <div class="agent-avatar">🏔️</div>
+                    <div class="agent-info">
+                        <h3>Adventure Explorer</h3>
+                        <div class="loading-status">Launching...</div>
+                        <div class="loading-progress">
+                            <div class="progress-bar" data-agent="adventure"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="agent-loading-card" data-agent="romantic">
+                    <div class="agent-avatar">💕</div>
+                    <div class="agent-info">
+                        <h3>Romance Curator</h3>
+                        <div class="loading-status">Launching...</div>
+                        <div class="loading-progress">
+                            <div class="progress-bar" data-agent="romantic"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="agent-loading-card" data-agent="cultural">
+                    <div class="agent-avatar">🏛️</div>
+                    <div class="agent-info">
+                        <h3>Culture Maven</h3>
+                        <div class="loading-status">Launching...</div>
+                        <div class="loading-progress">
+                            <div class="progress-bar" data-agent="cultural"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="agent-loading-card" data-agent="foodie">
+                    <div class="agent-avatar">🍽️</div>
+                    <div class="agent-info">
+                        <h3>Culinary Scout</h3>
+                        <div class="loading-status">Launching...</div>
+                        <div class="loading-progress">
+                            <div class="progress-bar" data-agent="foodie"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="agent-loading-card" data-agent="family">
+                    <div class="agent-avatar">👨‍👩‍👧‍👦</div>
+                    <div class="agent-info">
+                        <h3>Family Guide</h3>
+                        <div class="loading-status">Launching...</div>
+                        <div class="loading-progress">
+                            <div class="progress-bar" data-agent="family"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="agent-loading-card" data-agent="luxury">
+                    <div class="agent-avatar">✨</div>
+                    <div class="agent-info">
+                        <h3>Luxury Concierge</h3>
+                        <div class="loading-status">Launching...</div>
+                        <div class="loading-progress">
+                            <div class="progress-bar" data-agent="luxury"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="overall-progress">
+                <div class="overall-progress-text">Overall Progress: <span id="overall-progress-count">0/6</span></div>
+                <div class="overall-progress-bar">
+                    <div class="overall-progress-fill" id="overall-progress-fill"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Loading Screen -->
     <div id="loading-screen" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
                                      background: rgba(255,255,255,0.9); z-index: 9999; 
