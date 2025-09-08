@@ -5,20 +5,23 @@
 
 /* ===== MAIN CONTAINER LAYOUT ===== */
 .container {
-  display: grid;
-  grid-template-columns: 380px 1fr;
-  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: calc(100vh - 200px);
   background: var(--bg-secondary);
-  gap: 0;
+  padding: var(--space-8) var(--space-6);
 }
 
-/* ===== PROFESSIONAL SIDEBAR ===== */
+/* ===== CENTERED MAIN CONTENT ===== */
 .sidebar {
   background: var(--bg-primary);
-  border-right: 1px solid var(--border-primary);
-  padding: var(--space-8) var(--space-6);
-  overflow-y: auto;
-  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-2xl);
+  padding: var(--space-8);
+  width: 100%;
+  max-width: 800px;
+  box-shadow: var(--shadow-lg);
   position: relative;
 }
 
@@ -349,11 +352,11 @@ input[type="text"]::placeholder, input[type="password"]::placeholder {
   right: 0;
   z-index: var(--z-dropdown);
   background: var(--bg-primary);
-  border: 1px solid var(--border-primary);
+  border: 2px solid var(--primary-500);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15), 0 4px 15px rgba(0, 0, 0, 0.1);
   margin-top: var(--space-2);
-  max-height: 280px;
+  max-height: 320px;
   overflow-y: auto;
   animation: dropdownEnter 0.2s ease-out;
 }
@@ -468,11 +471,36 @@ input[type="text"]::placeholder, input[type="password"]::placeholder {
   line-height: 1.6;
 }
 
-/* ===== MAIN CONTENT AREA ===== */
+/* ===== MAIN CONTENT AREA (Map View) ===== */
 .main-content {
+  display: none;
   padding: var(--space-8);
   overflow-y: auto;
   background: var(--bg-secondary);
+}
+
+/* When map is active, switch to side-by-side layout */
+body.map-active .container {
+  display: grid;
+  grid-template-columns: 450px 1fr;
+  padding: 0;
+  gap: 0;
+}
+
+body.map-active .sidebar {
+  max-width: none;
+  width: 100%;
+  border-radius: 0;
+  border: none;
+  border-right: 1px solid var(--border-primary);
+  height: 100vh;
+  overflow-y: auto;
+}
+
+body.map-active .main-content {
+  display: block;
+  padding: 0;
+  height: 100vh;
 }
 
 /* ===== PROFESSIONAL STATUS INDICATORS ===== */
