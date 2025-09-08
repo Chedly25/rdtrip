@@ -40,8 +40,7 @@ body {
 /* Enhanced Header with Hero Image */
 .header {
     position: relative;
-    background: linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)),
-                url('https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1920&q=80') center/cover;
+    background: linear-gradient(135deg, #FF8C42 0%, #FFB088 50%, #FFD93D 100%);
     padding: var(--space-20) var(--space-6);
     text-align: center;
     min-height: 300px;
@@ -392,15 +391,18 @@ body {
     background: var(--gradient-ocean);
 }
 
-/* Add Travel Images as Decorations */
+/* Add Travel Decorations */
 .control-group::after {
-    content: '';
+    content: '✈️';
     position: absolute;
     bottom: 10px;
     right: 10px;
     width: 60px;
     height: 60px;
-    background: url('https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=100&q=60') center/cover;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
     border-radius: var(--radius-lg);
     opacity: 0.3;
 }

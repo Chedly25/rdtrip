@@ -160,18 +160,28 @@ export class ParallelAgentSystem {
                 detourTolerance: Math.round(agent.routePreferences.detourTolerance * 100)
             };
             
-            // Calculate unique route for this agent
-            const route = this.routeCalculator.calculateRoute(startId, destId, agentOptions);
+            // Calculate unique route for this agent with specific preferences
+            const route = this.routeCalculator.calculateRoute(startId, destId, {
+                ...agentOptions,
+                // Make each agent prefer different types of stops/routing
+                priorityType: agent.routePreferences.priorityType || agentType,
+                avoidHighways: agent.routePreferences.avoidHighways || false,
+                preferScenic: agent.routePreferences.preferScenic || (agentType === 'adventure' || agentType === 'romantic'),
+                culturalWeight: agentType === 'cultural' ? 2.0 : 1.0,
+                foodWeight: agentType === 'foodie' ? 2.0 : 1.0,
+                familyFriendly: agentType === 'family',
+                luxuryLevel: agentType === 'luxury' ? 'high' : 'standard'
+            });
             
             // Generate agent-specific itinerary prompt
             const cities = route.route.map(c => c.name).join(', ');
             const prompt = this.createAgentPrompt(agent, cities, route.totalDistance);
             
-            // Get AI-powered itinerary from this agent with timeout
+            // Get AI-powered itinerary from this agent with extended timeout
             const agentItinerary = await Promise.race([
                 this.aiFeatures.callPerplexityAPI(prompt, false),
                 new Promise((_, reject) => 
-                    setTimeout(() => reject(new Error('Agent timeout - using fallback')), 30000)
+                    setTimeout(() => reject(new Error('Agent timeout - using fallback')), 60000)
                 )
             ]);
             
@@ -196,16 +206,28 @@ export class ParallelAgentSystem {
             const duration = Date.now() - startTime;
             console.log(`🔄 ${agent.name} using fallback (${duration}ms)`);
             
-            const fallbackRoute = this.routeCalculator.calculateRoute(startId, destId, {
+            // Generate unique fallback route for this specific agent
+            const agentOptions = {
                 ...baseOptions,
-                theme: agentType
-            });
+                theme: agentType,
+                numStops: Math.max(agent.routePreferences.minStops, baseOptions.numStops || 2),
+                detourTolerance: Math.round(agent.routePreferences.detourTolerance * 100),
+                priorityType: agent.routePreferences.priorityType || agentType,
+                avoidHighways: agent.routePreferences.avoidHighways || false,
+                preferScenic: agent.routePreferences.preferScenic || (agentType === 'adventure' || agentType === 'romantic'),
+                culturalWeight: agentType === 'cultural' ? 2.0 : 1.0,
+                foodWeight: agentType === 'foodie' ? 2.0 : 1.0,
+                familyFriendly: agentType === 'family',
+                luxuryLevel: agentType === 'luxury' ? 'high' : 'standard'
+            };
+            
+            const fallbackRoute = this.routeCalculator.calculateRoute(startId, destId, agentOptions);
             
             return {
                 agentType,
                 agent,
                 route: fallbackRoute,
-                itinerary: `${agent.name} specializes in ${agent.specialization}. Route includes ${fallbackRoute.route.map(c => c.name).join(' → ')} with ${fallbackRoute.totalDistance}km total distance.`,
+                itinerary: this.createFallbackItinerary(agent, fallbackRoute),
                 duration,
                 timestamp: Date.now(),
                 cities: fallbackRoute.route,
@@ -396,6 +418,201 @@ Format as clean HTML. Include booking requirements and luxury service details.`
         return comparison;
     }
     
+    /**
+     * Create realistic fallback itinerary for each agent type
+     */
+    createFallbackItinerary(agent, route) {
+        const cities = route.route.map(c => c.name);
+        const agentItineraries = {
+            'Adventure Explorer': `
+                <h3>🏔️ Adventure Journey: ${cities.join(' → ')}</h3>
+                <p>Experience the thrill of Southern France and Italy with this adventure-packed route covering ${route.totalDistance}km.</p>
+                
+                <h4>Adventure Highlights:</h4>
+                <ul>
+                    <li><strong>Hiking Trails:</strong> Explore scenic mountain paths and coastal cliff walks</li>
+                    <li><strong>Water Sports:</strong> Kayaking, sailing, and diving opportunities along the coast</li>
+                    <li><strong>Rock Climbing:</strong> Challenge yourself on Mediterranean limestone cliffs</li>
+                    <li><strong>Cycling Routes:</strong> Mountain biking through lavender fields and vineyards</li>
+                </ul>
+                
+                <h4>Adventure Activities by Stop:</h4>
+                ${cities.map((city, i) => `
+                    <p><strong>Stop ${i + 1}: ${city}</strong><br>
+                    ${this.getAdventureActivities(city)}</p>
+                `).join('')}
+            `,
+            'Romance Curator': `
+                <h3>💕 Romantic Escape: ${cities.join(' → ')}</h3>
+                <p>Fall in love all over again on this enchanting ${route.totalDistance}km journey through the most romantic destinations in Europe.</p>
+                
+                <h4>Romantic Highlights:</h4>
+                <ul>
+                    <li><strong>Sunset Dinners:</strong> Intimate restaurants with panoramic Mediterranean views</li>
+                    <li><strong>Wine Tastings:</strong> Private cellar tours in historic châteaux</li>
+                    <li><strong>Boutique Hotels:</strong> Charming accommodations in historic palazzos</li>
+                    <li><strong>Couples Experiences:</strong> Cooking classes, art workshops, and spa treatments</li>
+                </ul>
+                
+                <h4>Romance by Destination:</h4>
+                ${cities.map((city, i) => `
+                    <p><strong>${city} Romance</strong><br>
+                    ${this.getRomanticActivities(city)}</p>
+                `).join('')}
+            `,
+            'Culture Maven': `
+                <h3>🏛️ Cultural Discovery: ${cities.join(' → ')}</h3>
+                <p>Immerse yourself in centuries of art, history, and culture on this enriching ${route.totalDistance}km cultural expedition.</p>
+                
+                <h4>Cultural Treasures:</h4>
+                <ul>
+                    <li><strong>Museums & Galleries:</strong> World-class art collections and historical exhibits</li>
+                    <li><strong>Architecture:</strong> Roman ruins, medieval churches, and Renaissance palaces</li>
+                    <li><strong>Local Traditions:</strong> Festivals, markets, and artisan workshops</li>
+                    <li><strong>Historical Sites:</strong> UNESCO World Heritage locations and ancient monuments</li>
+                </ul>
+                
+                <h4>Cultural Highlights by City:</h4>
+                ${cities.map((city, i) => `
+                    <p><strong>${city} Culture</strong><br>
+                    ${this.getCulturalActivities(city)}</p>
+                `).join('')}
+            `,
+            'Culinary Scout': `
+                <h3>🍽️ Gastronomic Journey: ${cities.join(' → ')}</h3>
+                <p>Savor the flavors of France and Italy on this delicious ${route.totalDistance}km culinary adventure.</p>
+                
+                <h4>Culinary Experiences:</h4>
+                <ul>
+                    <li><strong>Local Markets:</strong> Fresh ingredients and regional specialties</li>
+                    <li><strong>Cooking Classes:</strong> Learn from local chefs and home cooks</li>
+                    <li><strong>Wine & Olive Oil:</strong> Tastings at family-owned vineyards and mills</li>
+                    <li><strong>Street Food:</strong> Authentic flavors from local food vendors</li>
+                </ul>
+                
+                <h4>Culinary Highlights:</h4>
+                ${cities.map((city, i) => `
+                    <p><strong>${city} Cuisine</strong><br>
+                    ${this.getCulinaryActivities(city)}</p>
+                `).join('')}
+            `,
+            'Family Guide': `
+                <h3>👨‍👩‍👧‍👦 Family Adventure: ${cities.join(' → ')}</h3>
+                <p>Create lasting memories with the whole family on this ${route.totalDistance}km kid-friendly journey.</p>
+                
+                <h4>Family Fun:</h4>
+                <ul>
+                    <li><strong>Interactive Museums:</strong> Hands-on exhibits perfect for curious minds</li>
+                    <li><strong>Beach Time:</strong> Safe swimming spots and sandcastle building</li>
+                    <li><strong>Parks & Playgrounds:</strong> Green spaces for kids to run and play</li>
+                    <li><strong>Family Restaurants:</strong> Kid-friendly menus and welcoming atmospheres</li>
+                </ul>
+                
+                <h4>Family Activities by Stop:</h4>
+                ${cities.map((city, i) => `
+                    <p><strong>${city} for Families</strong><br>
+                    ${this.getFamilyActivities(city)}</p>
+                `).join('')}
+            `,
+            'Luxury Concierge': `
+                <h3>✨ Luxury Experience: ${cities.join(' → ')}</h3>
+                <p>Indulge in the finest experiences along this ${route.totalDistance}km luxury escape through Europe's most exclusive destinations.</p>
+                
+                <h4>Luxury Highlights:</h4>
+                <ul>
+                    <li><strong>5-Star Accommodations:</strong> World-renowned hotels and private villas</li>
+                    <li><strong>Michelin Dining:</strong> Award-winning restaurants and celebrity chefs</li>
+                    <li><strong>VIP Experiences:</strong> Private tours, exclusive access, and personalized service</li>
+                    <li><strong>Luxury Transport:</strong> Premium vehicles and helicopter transfers</li>
+                </ul>
+                
+                <h4>Luxury by Destination:</h4>
+                ${cities.map((city, i) => `
+                    <p><strong>${city} Luxury</strong><br>
+                    ${this.getLuxuryActivities(city)}</p>
+                `).join('')}
+            `
+        };
+        
+        return agentItineraries[agent.name] || `
+            <h3>${agent.icon} ${agent.name}: ${cities.join(' → ')}</h3>
+            <p>Discover the best of ${cities.join(', ')} with our specialized ${agent.name.toLowerCase()} recommendations.</p>
+            <p>This ${route.totalDistance}km journey offers unique experiences tailored to ${agent.specialization}.</p>
+        `;
+    }
+    
+    getAdventureActivities(city) {
+        const activities = {
+            'Aix-en-Provence': 'Hike Montagne Sainte-Victoire, rock climbing at Calanques, mountain biking through countryside',
+            'Nice': 'Coastal hiking, sea kayaking, paragliding over the Riviera, diving in crystal waters',
+            'Florence': 'Cycling through Tuscan hills, hiking in Chianti region, adventure tours to Cinque Terre',
+            'Venice': 'Stand-up paddleboarding in canals, island hopping adventures, photography walks',
+            'Rome': 'Underground catacombs exploration, Villa Borghese cycling, Appian Way hiking',
+            'Cannes': 'Sailing excursions, scuba diving, coastal cliff walks, jet skiing'
+        };
+        return activities[city] || 'Outdoor adventures and thrilling activities await in this stunning location';
+    }
+    
+    getRomanticActivities(city) {
+        const activities = {
+            'Aix-en-Provence': 'Couples wine tasting, romantic strolls through old town, sunset at Cours Mirabeau',
+            'Nice': 'Private yacht charter, candlelit dinner on Promenade des Anglais, couples spa treatments',
+            'Florence': 'Private Uffizi tour, romantic dinner with Arno views, sunset at Piazzale Michelangelo',
+            'Venice': 'Gondola serenade, intimate osteria dining, sunrise at St. Mark\'s Square',
+            'Rome': 'Private Vatican tour, rooftop dining with city views, romantic villa gardens',
+            'Cannes': 'Beach picnics, luxury hotel spas, private cinema screenings'
+        };
+        return activities[city] || 'Romantic experiences and intimate moments in this enchanting destination';
+    }
+    
+    getCulturalActivities(city) {
+        const activities = {
+            'Aix-en-Provence': 'Cézanne Studio visit, historic walking tour, local art galleries and markets',
+            'Nice': 'Musée Matisse, Old Town architecture, traditional Niçoise culture experiences',
+            'Florence': 'Renaissance masterpieces, historic palazzos, artisan workshops and demonstrations',
+            'Venice': 'Doge\'s Palace, Byzantine art, traditional glassmaking and mask-making',
+            'Rome': 'Ancient Roman sites, Vatican treasures, archaeological wonders and museums',
+            'Cannes': 'Film festival history, Belle Époque architecture, Provence cultural traditions'
+        };
+        return activities[city] || 'Rich cultural heritage and artistic treasures to explore';
+    }
+    
+    getCulinaryActivities(city) {
+        const activities = {
+            'Aix-en-Provence': 'Provençal cooking class, local market tours, olive oil and wine tastings',
+            'Nice': 'Socca making, seafood specialties, local bistros and food markets',
+            'Florence': 'Tuscan cuisine workshops, Chianti wine tours, traditional trattorias',
+            'Venice': 'Cicchetti bar tours, seafood markets, prosecco tastings, cooking classes',
+            'Rome': 'Pasta making classes, street food tours, gelato tastings, local markets',
+            'Cannes': 'Mediterranean gastronomy, rosé wine tastings, coastal seafood specialties'
+        };
+        return activities[city] || 'Delicious local cuisine and culinary traditions to discover';
+    }
+    
+    getFamilyActivities(city) {
+        const activities = {
+            'Aix-en-Provence': 'Interactive science museums, family parks, kid-friendly cafes and ice cream shops',
+            'Nice': 'Beach games, family-friendly museums, parks with playgrounds, aquarium visits',
+            'Florence': 'Interactive history exhibits, gelato tours, family cooking classes, treasure hunts',
+            'Venice': 'Mask-making workshops, family gondola rides, interactive maritime museums',
+            'Rome': 'Gladiator experiences, interactive archaeology, family pizza tours, park adventures',
+            'Cannes': 'Beach activities, family hotels with kids clubs, interactive film exhibits'
+        };
+        return activities[city] || 'Family-friendly attractions and activities for all ages';
+    }
+    
+    getLuxuryActivities(city) {
+        const activities = {
+            'Aix-en-Provence': 'Private château tours, luxury spa treatments, exclusive wine cellars, helicopter tours',
+            'Nice': 'Michelin-starred dining, luxury yacht charters, 5-star hotel suites, private beach clubs',
+            'Florence': 'Private Uffizi after-hours, luxury villa stays, exclusive art collections, personal shoppers',
+            'Venice': 'Private palace tours, luxury hotel suites on Grand Canal, exclusive restaurant access',
+            'Rome': 'Vatican private tours, luxury rooftop dining, 5-star spa treatments, personal guides',
+            'Cannes': 'Film festival VIP access, luxury beachfront suites, private yacht experiences'
+        };
+        return activities[city] || 'Exclusive luxury experiences and premium services await';
+    }
+
     /**
      * Cancel all active agents
      */
