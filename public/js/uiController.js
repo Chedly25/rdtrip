@@ -344,15 +344,15 @@ export class UIController {
             console.log('🚀 Launching parallel agents for:', destName);
             this.agentResults = await this.launchAgentsWithProgress('aix-en-provence', destCity.id, baseOptions);
             
-            // Use the balanced route as the main display route
-            const balancedResult = this.agentResults.get('balanced');
-            if (balancedResult) {
-                this.currentRoute = balancedResult.route;
-                aiFeatures.setCurrentRoute(balancedResult.route);
+            // Use the adventure route as the main display route (first agent result)
+            const firstAgentResult = Array.from(this.agentResults.values())[0];
+            if (firstAgentResult) {
+                this.currentRoute = firstAgentResult.route;
+                aiFeatures.setCurrentRoute(firstAgentResult.route);
                 
-                // Display the balanced route on map
-                this.displayRoute(balancedResult.route);
-                this.updateRouteInfo(balancedResult.route);
+                // Display the first agent route on map
+                this.displayRoute(firstAgentResult.route);
+                this.updateRouteInfo(firstAgentResult.route);
             }
             
             // Hide loading modal and show results page
@@ -1055,71 +1055,42 @@ export class UIController {
      * Launch agents with progress tracking
      */
     async launchAgentsWithProgress(startId, destId, baseOptions) {
-        const agentTypes = ['adventure', 'romantic', 'cultural', 'foodie', 'family', 'luxury'];
-        let completedCount = 0;
         
-        // Update initial progress for each agent
+        // Update initial progress for each agent type
+        const agentTypes = Object.keys(this.parallelAgents.agents);
         agentTypes.forEach(agentType => {
-            this.updateAgentProgress(agentType, 10, 'Calculating route...');
+            this.updateAgentProgress(agentType, 25, 'Launching...');
         });
         
-        // Launch all agents with individual progress tracking
-        const agentPromises = agentTypes.map(async (agentType) => {
+        let completedCount = 0;
+        
+        // Create a modified version that updates progress
+        const originalLaunchAgent = this.parallelAgents.launchAgent.bind(this.parallelAgents);
+        this.parallelAgents.launchAgent = async (agentType, startId, destId, baseOptions, agent) => {
             try {
-                this.updateAgentProgress(agentType, 25, 'Calculating route...');
+                this.updateAgentProgress(agentType, 50, 'Calculating route...');
                 
-                // Use the parallel agents system but track progress
-                const agent = this.parallelAgents.agents[agentType];
-                const agentOptions = {
-                    ...baseOptions,
-                    theme: agentType,
-                    numStops: Math.max(agent.routePreferences.minStops, baseOptions.numStops || 2),
-                    detourTolerance: Math.round(agent.routePreferences.detourTolerance * 100)
-                };
-                
-                // Calculate route
-                this.updateAgentProgress(agentType, 50, 'Route calculated, generating itinerary...');
-                const route = this.routeCalculator.calculateRoute(startId, destId, agentOptions);
-                
-                // Generate itinerary
-                this.updateAgentProgress(agentType, 75, 'Generating specialized recommendations...');
-                const cities = route.route.map(c => c.name).join(', ');
-                const prompt = this.parallelAgents.createAgentPrompt(agent, cities, route.totalDistance);
-                
-                const agentItinerary = await this.aiFeatures.callPerplexityAPI(prompt, false);
+                const result = await originalLaunchAgent(agentType, startId, destId, baseOptions, agent);
                 
                 this.updateAgentProgress(agentType, 100, 'Complete!');
                 completedCount++;
                 this.updateOverallProgress(completedCount, agentTypes.length);
                 
-                return {
-                    agentType,
-                    agent,
-                    route,
-                    itinerary: agentItinerary,
-                    duration: Math.random() * 1000 + 500, // Simulated duration
-                    timestamp: Date.now(),
-                    cities: route.route,
-                    summary: this.parallelAgents.createRouteSummary(agent, route)
-                };
+                return result;
                 
             } catch (error) {
-                console.error(`Agent ${agentType} failed:`, error);
                 this.updateAgentProgress(agentType, 100, 'Error - using fallback');
                 completedCount++;
                 this.updateOverallProgress(completedCount, agentTypes.length);
-                
-                return this.parallelAgents.createFallbackResult(agentType, startId, destId);
+                throw error;
             }
-        });
+        };
         
-        const results = await Promise.all(agentPromises);
+        // Launch all agents using the ParallelAgentSystem
+        const agentResults = await this.parallelAgents.launchAllAgents(startId, destId, baseOptions);
         
-        // Convert to Map format
-        const agentResults = new Map();
-        results.forEach(result => {
-            agentResults.set(result.agentType, result);
-        });
+        // Restore original method
+        this.parallelAgents.launchAgent = originalLaunchAgent;
         
         return agentResults;
     }
