@@ -19,9 +19,8 @@ export class UIController {
         this.tripTypesManager = new TripTypesManager(this.routeCalculator, aiFeatures);
         this.agentResults = new Map();
         
-        // Performance optimizations - Cache DOM elements
+        // Performance optimizations - Cache DOM elements (simplified)
         this.domCache = new Map();
-        this.eventListenerCache = new Map();
         this.updateThrottlers = new Map();
         
         // Bind methods to maintain context
@@ -102,6 +101,14 @@ export class UIController {
     }
 
     /**
+     * Simple throttle function
+     */
+    throttle(key, fn, delay = 50) {
+        // Simplified - execute immediately to avoid performance issues
+        fn();
+    }
+
+    /**
      * Cleanup method for proper resource disposal
      */
     cleanup() {
@@ -112,14 +119,6 @@ export class UIController {
         
         // Clear cached DOM elements
         this.domCache.clear();
-        
-        // Clear event listener cache
-        this.eventListenerCache.forEach((listener, element) => {
-            if (element && listener) {
-                element.removeEventListener(listener.type, listener.fn);
-            }
-        });
-        this.eventListenerCache.clear();
         
         // Clear throttlers
         this.updateThrottlers.clear();
@@ -173,6 +172,7 @@ export class UIController {
             }
             
             const suggestions = this.routeCalculator.getSuggestions(value, 8);
+            console.log(`Autocomplete for "${value}": found ${suggestions.length} suggestions`, suggestions);
             
             if (suggestions.length > 0) {
                 dropdown.innerHTML = suggestions.map((city, index) => 
@@ -261,9 +261,13 @@ export class UIController {
      * Setup event listeners for UI elements
      */
     setupEventListeners() {
+        console.log('Setting up event listeners...');
         // Theme selector
-        document.querySelectorAll('.theme-button').forEach(btn => {
+        const themeButtons = document.querySelectorAll('.theme-button');
+        console.log(`Found ${themeButtons.length} theme buttons`);
+        themeButtons.forEach(btn => {
             btn.addEventListener('click', (e) => {
+                console.log('Theme button clicked:', e.target.dataset.theme);
                 document.querySelectorAll('.theme-button').forEach(b => b.classList.remove('active'));
                 e.target.classList.add('active');
                 this.selectedTheme = e.target.dataset.theme;
@@ -1156,8 +1160,14 @@ export class UIController {
             const overallFill = document.getElementById('overall-progress-fill');
             const overallCount = document.getElementById('overall-progress-count');
             
-            progressBars.forEach(bar => bar.style.width = '0%');
-            if (overallFill) overallFill.style.width = '0%';
+            progressBars.forEach(bar => {
+                bar.style.width = '0%';
+                bar.style.transform = '';  // Clear any transforms
+            });
+            if (overallFill) {
+                overallFill.style.width = '0%';
+                overallFill.style.transform = '';  // Clear any transforms
+            }
             if (overallCount) overallCount.textContent = '0/6';
             
             // Reset all loading cards
@@ -1184,57 +1194,47 @@ export class UIController {
      * Update agent progress in loading modal
      */
     updateAgentProgress(agentType, progress, status) {
-        // Throttle updates to prevent excessive DOM manipulation
-        this.throttle(`agent-progress-${agentType}`, () => {
-            const card = document.querySelector(`[data-agent="${agentType}"]`);
-            if (card) {
-                const progressBar = card.querySelector('.progress-bar');
-                const statusElement = card.querySelector('.loading-status');
-                
-                // Use transform instead of width for better performance
-                if (progressBar) {
-                    progressBar.style.transform = `scaleX(${progress / 100})`;
-                    progressBar.style.transformOrigin = 'left center';
-                }
-                if (statusElement) statusElement.textContent = status;
-                
-                // Use requestAnimationFrame for smooth class updates
-                requestAnimationFrame(() => {
-                    card.classList.add('active');
-                    if (progress >= 100) {
-                        card.classList.add('completed');
-                        card.classList.remove('active');
-                    }
-                });
+        const card = document.querySelector(`[data-agent="${agentType}"]`);
+        if (card) {
+            const progressBar = card.querySelector('.progress-bar');
+            const statusElement = card.querySelector('.loading-status');
+            
+            // Use standard width property for compatibility
+            if (progressBar) {
+                progressBar.style.width = `${progress}%`;
             }
-        }, 100);
+            if (statusElement) statusElement.textContent = status;
+            
+            // Update card state
+            card.classList.add('active');
+            if (progress >= 100) {
+                card.classList.add('completed');
+                card.classList.remove('active');
+            }
+        }
     }
     
     /**
      * Update overall progress
      */
     updateOverallProgress(completed, total) {
-        // Throttle updates for better performance
-        this.throttle('overall-progress', () => {
-            const overallFill = this.getCachedElement('overallProgressFill') || document.getElementById('overall-progress-fill');
-            const overallCount = this.getCachedElement('overallProgressCount') || document.getElementById('overall-progress-count');
-            
-            const percentage = (completed / total) * 100;
-            
-            // Use transform instead of width for better performance
-            if (overallFill) {
-                overallFill.style.transform = `scaleX(${percentage / 100})`;
-                overallFill.style.transformOrigin = 'left center';
-            }
-            if (overallCount) overallCount.textContent = `${completed}/${total}`;
-            
-            // Auto-hide modal when complete
-            if (completed === total) {
-                setTimeout(() => {
-                    this.hideAgentsLoadingModal();
-                }, 1000);
-            }
-        }, 100);
+        const overallFill = document.getElementById('overall-progress-fill');
+        const overallCount = document.getElementById('overall-progress-count');
+        
+        const percentage = (completed / total) * 100;
+        
+        // Use standard width property for compatibility
+        if (overallFill) {
+            overallFill.style.width = `${percentage}%`;
+        }
+        if (overallCount) overallCount.textContent = `${completed}/${total}`;
+        
+        // Auto-hide modal when complete
+        if (completed === total) {
+            setTimeout(() => {
+                this.hideAgentsLoadingModal();
+            }, 1000);
+        }
     }
     
     /**
