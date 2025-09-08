@@ -341,6 +341,17 @@ export class RouteCalculator {
             detourFactor: ((totalDistance - directDistance) / directDistance * 100).toFixed(1)
         };
         
+        // Add driving route geometry asynchronously
+        this.calculateDrivingRoute(route)
+            .then(drivingRoute => {
+                result.drivingRoute = drivingRoute;
+                console.log('✅ Driving route calculated for', route.map(c => c.name).join(' → '));
+            })
+            .catch(error => {
+                console.warn('⚠️ Failed to get driving route, using fallback:', error.message);
+                // Route will display as straight lines
+            });
+        
         // Cache the result
         this.cacheRoute(cacheKey, result);
         
@@ -604,5 +615,71 @@ export class RouteCalculator {
         });
         
         return matches.slice(0, limit);
+    }
+
+    /**
+     * Calculate driving route with actual road geometry
+     * @param {Array} route - Array of cities in order
+     * @returns {Promise<Object>} Driving route with segments
+     */
+    async calculateDrivingRoute(route) {
+        const segments = [];
+        
+        for (let i = 0; i < route.length - 1; i++) {
+            const from = route[i];
+            const to = route[i + 1];
+            
+            try {
+                // Use OSRM (OpenStreetMap Routing Machine) for free routing
+                const segment = await this.getOSRMRoute(from, to);
+                segment.from = from.name;
+                segment.to = to.name;
+                segment.service = 'OSRM';
+                segments.push(segment);
+            } catch (error) {
+                console.warn(`Failed to get OSRM route from ${from.name} to ${to.name}, using fallback`);
+                // Fallback to curved line
+                const fallbackSegment = this.generateCurvedFallbackRoute(from, to);
+                fallbackSegment.from = from.name;
+                fallbackSegment.to = to.name;
+                fallbackSegment.service = 'Fallback';
+                segments.push(fallbackSegment);
+            }
+        }
+        
+        return {
+            segments,
+            totalDistance: segments.reduce((sum, seg) => sum + seg.distance, 0),
+            totalDuration: segments.reduce((sum, seg) => sum + seg.duration, 0)
+        };
+    }
+    
+    /**
+     * Get route from OSRM service
+     * @param {Object} from - Starting city with lat/lon
+     * @param {Object} to - Ending city with lat/lon
+     * @returns {Promise<Object>} Route segment with geometry
+     */
+    async getOSRMRoute(from, to) {
+        const url = `https://router.project-osrm.org/route/v1/driving/${from.lon},${from.lat};${to.lon},${to.lat}?geometries=geojson&overview=full`;
+        
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`OSRM API error: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (!data.routes || data.routes.length === 0) {
+            throw new Error('No route found');
+        }
+        
+        const route = data.routes[0];
+        
+        return {
+            geometry: route.geometry,
+            distance: Math.round(route.distance / 1000), // Convert to km
+            duration: Math.round(route.duration / 3600 * 10) / 10 // Convert to hours
+        };
     }
 }

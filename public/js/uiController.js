@@ -937,7 +937,7 @@ export class UIController {
             <div class="agent-itinerary">
                 <h3>🎯 ${result.agent.name} Recommendations</h3>
                 <div class="itinerary-content">
-                    ${result.itinerary ? result.itinerary.replace(/\n/g, '<br>') : 'Generating recommendations...'}
+                    ${this.formatItineraryContent(result.itinerary, result.cities)}
                 </div>
             </div>
             
@@ -971,6 +971,12 @@ export class UIController {
         this.currentRoute = result.route;
         aiFeatures.setCurrentRoute(result.route);
         this.tripTypesManager.setCurrentRoute(result.route);
+        
+        // Show the main map container
+        const mainMapContainer = document.getElementById('main-map-container');
+        if (mainMapContainer) {
+            mainMapContainer.style.display = 'block';
+        }
         
         // Update display
         this.displayRoute(result.route);
@@ -1051,6 +1057,88 @@ export class UIController {
         if (overallCount) overallCount.textContent = `${completed}/${total}`;
     }
     
+    /**
+     * Format itinerary content for better display
+     */
+    formatItineraryContent(itinerary, cities) {
+        if (!itinerary) {
+            return `
+                <div class="itinerary-placeholder">
+                    <div class="itinerary-loading">
+                        <div class="loading-spinner"></div>
+                        <p>Generating specialized recommendations...</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Parse the itinerary and create a structured display
+        const sections = itinerary.split(/\n\n|\*\*|\##/).filter(section => section.trim());
+        
+        return `
+            <div class="itinerary-structured">
+                <div class="itinerary-overview">
+                    <div class="route-timeline">
+                        ${cities.map((city, index) => `
+                            <div class="timeline-item ${index === 0 ? 'start' : index === cities.length - 1 ? 'end' : 'stop'}">
+                                <div class="timeline-marker">
+                                    <span>${index === 0 ? '🏁' : index === cities.length - 1 ? '🏆' : '📍'}</span>
+                                </div>
+                                <div class="timeline-content">
+                                    <h4>${city.name}</h4>
+                                    <span class="city-type">${index === 0 ? 'Starting Point' : index === cities.length - 1 ? 'Destination' : `Stop ${index}`}</span>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                
+                <div class="itinerary-recommendations">
+                    <div class="recommendations-content">
+                        ${sections.map((section, index) => `
+                            <div class="recommendation-section">
+                                <div class="section-content">
+                                    ${section.trim().replace(/\n/g, '<br>')}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * Format itinerary preview for cards
+     */
+    formatItineraryPreview(itinerary, cities) {
+        if (!itinerary) {
+            return `
+                <div class="preview-loading">
+                    <span class="loading-dots">Generating recommendations...</span>
+                </div>
+            `;
+        }
+
+        // Extract first few key points
+        const lines = itinerary.split('\n').filter(line => line.trim());
+        const highlights = lines.slice(0, 3).map(line => line.trim().substring(0, 80) + '...');
+        
+        return `
+            <div class="itinerary-highlights">
+                ${highlights.map(highlight => `
+                    <div class="highlight-item">
+                        <span class="highlight-bullet">•</span>
+                        <span class="highlight-text">${highlight}</span>
+                    </div>
+                `).join('')}
+                <div class="preview-more">
+                    <span>Click 'View Details' for full recommendations</span>
+                </div>
+            </div>
+        `;
+    }
+
     /**
      * Launch agents with progress tracking
      */
@@ -1188,7 +1276,7 @@ export class UIController {
                 </div>
                 
                 <div class="agent-itinerary-preview">
-                    ${result.itinerary ? result.itinerary.substring(0, 200) + '...' : 'Specialized recommendations for this route...'}
+                    ${this.formatItineraryPreview(result.itinerary, result.cities)}
                 </div>
                 
                 <div class="agent-card-actions">
