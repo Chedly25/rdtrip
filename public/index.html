@@ -248,8 +248,50 @@
                         </div>
                         
                         <div class="highlights-card">
-                            <h3>✨ Trip Highlights</h3>
+                            <div class="card-header">
+                                <h3>✨ Trip Highlights</h3>
+                                <div class="highlight-actions">
+                                    <button class="action-btn" id="add-highlight" title="Add Custom Highlight">+</button>
+                                    <button class="action-btn" id="share-highlights" title="Share Highlights">📤</button>
+                                </div>
+                            </div>
                             <div class="highlights-grid" id="trip-highlights"></div>
+                        </div>
+                        
+                        <div class="export-actions-card">
+                            <div class="card-header">
+                                <h3>🚀 Export & Share</h3>
+                            </div>
+                            <div class="export-buttons-grid">
+                                <button class="export-btn google-maps" id="export-google-maps">
+                                    <span class="export-icon">🗺️</span>
+                                    <div class="export-text">
+                                        <strong>Google Maps</strong>
+                                        <small>Send to mobile app</small>
+                                    </div>
+                                </button>
+                                <button class="export-btn pdf-export" id="export-pdf">
+                                    <span class="export-icon">📄</span>
+                                    <div class="export-text">
+                                        <strong>PDF Itinerary</strong>
+                                        <small>Print-friendly format</small>
+                                    </div>
+                                </button>
+                                <button class="export-btn email-share" id="export-email">
+                                    <span class="export-icon">✉️</span>
+                                    <div class="export-text">
+                                        <strong>Email Trip</strong>
+                                        <small>Share with others</small>
+                                    </div>
+                                </button>
+                                <button class="export-btn save-route" id="save-route">
+                                    <span class="export-icon">💾</span>
+                                    <div class="export-text">
+                                        <strong>Save Route</strong>
+                                        <small>Your favorites</small>
+                                    </div>
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -258,9 +300,47 @@
                         <div class="detailed-itinerary-card">
                             <div class="card-header">
                                 <h3>📅 Day-by-Day Itinerary</h3>
-                                <button class="customize-btn" id="customize-itinerary">Customize</button>
+                                <div class="itinerary-controls">
+                                    <button class="control-btn" id="add-stop" title="Add Stop">
+                                        <span>+</span> Add Stop
+                                    </button>
+                                    <button class="control-btn" id="optimize-route" title="Optimize Route">
+                                        <span>⚡</span> Optimize
+                                    </button>
+                                    <div class="toggle-switch">
+                                        <input type="checkbox" id="drag-mode" class="toggle-input">
+                                        <label for="drag-mode" class="toggle-label">
+                                            <span class="toggle-slider"></span>
+                                            <span class="toggle-text">Reorder Mode</span>
+                                        </label>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="itinerary-content" id="spotlight-itinerary"></div>
+                            <div class="itinerary-content sortable" id="spotlight-itinerary"></div>
+                        </div>
+                        
+                        <div class="itinerary-stats-card">
+                            <div class="card-header">
+                                <h3>📊 Trip Statistics</h3>
+                            </div>
+                            <div class="stats-grid">
+                                <div class="stat-item">
+                                    <div class="stat-value" id="total-driving-time">4.5h</div>
+                                    <div class="stat-label">Driving Time</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-value" id="total-activities">12</div>
+                                    <div class="stat-label">Activities</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-value" id="estimated-cost">€245</div>
+                                    <div class="stat-label">Est. Cost</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-value" id="best-season">Spring</div>
+                                    <div class="stat-label">Best Season</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
