@@ -554,15 +554,27 @@ app.post('/api/chat', async (req, res) => {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                model: 'sonar',
+                model: 'llama-3.1-sonar-large-128k-online',
                 messages: [
+                    {
+                        role: 'system',
+                        content: 'You are a knowledgeable travel expert with real-time access to current information. Provide detailed, accurate, and up-to-date travel advice with specific names, places, prices, and practical details.'
+                    },
                     {
                         role: 'user',
                         content: prompt
                     }
                 ],
-                temperature: 0.7,
-                max_tokens: 1000
+                temperature: 0.3,
+                max_tokens: 2000,
+                top_p: 0.9,
+                search_domain_filter: ["tripadvisor.com", "booking.com", "timeout.com", "lonelyplanet.com"],
+                return_related_questions: false,
+                search_recency_filter: "month",
+                top_k: 0,
+                stream: false,
+                presence_penalty: 0,
+                frequency_penalty: 1
             })
         });
         
@@ -584,22 +596,54 @@ app.post('/api/chat', async (req, res) => {
                 console.error('Could not parse error response as JSON');
             }
             
-            // For any API error (401, 503, etc.), return a fallback response instead of throwing error
+            // Log detailed error information and retry with different model
             if (response.status >= 400) {
-                console.log(`Perplexity API error ${response.status}, returning fallback response`);
+                console.error(`Perplexity API error ${response.status}: ${response.statusText}`);
+                console.error('Error details:', errorText);
+                console.error('Full prompt:', prompt.substring(0, 200) + '...');
                 
-                // Generate a simple fallback based on the prompt
-                const fallbackResponse = generateFallbackResponse(prompt);
+                // Try with a simpler model as backup
+                console.log('Retrying with llama-3.1-sonar-small-128k-online...');
+                const retryResponse = await fetch('https://api.perplexity.ai/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${apiKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: 'llama-3.1-sonar-small-128k-online',
+                        messages: [
+                            {
+                                role: 'system',
+                                content: 'You are a travel expert. Provide detailed, specific travel information with real places, prices, and practical details.'
+                            },
+                            {
+                                role: 'user',
+                                content: prompt
+                            }
+                        ],
+                        temperature: 0.3,
+                        max_tokens: 1500
+                    })
+                });
                 
-                const responseObj = {
-                    content: fallbackResponse,
-                    fallback: true
-                };
+                if (retryResponse.ok) {
+                    const retryData = await retryResponse.json();
+                    if (retryData.choices && retryData.choices[0] && retryData.choices[0].message) {
+                        console.log('Retry successful with small model');
+                        const apiResponse = {
+                            content: retryData.choices[0].message.content
+                        };
+                        setCachedResponse(cacheKey, apiResponse);
+                        return res.json(apiResponse);
+                    }
+                }
                 
-                // Cache fallback responses too
-                setCachedResponse(cacheKey, responseObj);
-                
-                return res.json(responseObj);
+                // If both attempts fail, return error instead of fallback
+                return res.status(response.status).json({
+                    error: `API request failed: ${response.status}`,
+                    details: errorData.error?.message || errorText || 'Unknown error'
+                });
             }
         }
         
@@ -623,16 +667,10 @@ app.post('/api/chat', async (req, res) => {
     } catch (error) {
         console.error('Server error:', error);
         
-        // Generate fallback response even for server errors
-        const fallbackResponse = generateFallbackResponse(req.body.prompt || 'general travel advice');
-        
-        const responseObj = {
-            content: fallbackResponse,
-            fallback: true,
-            error: 'Service temporarily unavailable'
-        };
-        
-        res.json(responseObj);
+        res.status(500).json({
+            error: 'Internal server error',
+            details: error.message
+        });
     }
 });
 
@@ -654,14 +692,14 @@ app.get('/api/test', async (req, res) => {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                model: 'sonar',
+                model: 'llama-3.1-sonar-large-128k-online',
                 messages: [
                     {
                         role: 'user',
                         content: 'Hello, this is a test. Please respond with "API is working".'
                     }
                 ],
-                temperature: 0.7,
+                temperature: 0.3,
                 max_tokens: 50
             })
         });

@@ -195,27 +195,15 @@ export class AIFeatures {
                 })
             });
             
-            // Always try to get JSON data, even if response is not ok
-            const data = await response.json().catch(() => ({}));
-            
             if (!response.ok) {
-                // If server returned fallback content, use it instead of throwing error
-                if (data.content && data.fallback) {
-                    console.log('Using fallback response from server');
-                    this.pendingRequests.delete(requestKey);
-                    return data.content;
-                }
-                
-                // If no fallback content, create our own fallback
-                console.log('Creating client-side fallback response');
-                this.pendingRequests.delete(requestKey);
-                return this.generateClientFallback(prompt);
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(`API request failed: ${response.status} - ${errorData.error || errorData.details || 'Unknown error'}`);
             }
             
+            const data = await response.json();
+            
             if (!data.content) {
-                console.log('No content in response, generating fallback');
-                this.pendingRequests.delete(requestKey);
-                return this.generateClientFallback(prompt);
+                throw new Error('Invalid response format from server');
             }
             
             // Remove from pending requests
@@ -225,10 +213,15 @@ export class AIFeatures {
             } catch (error) {
                 // Remove from pending requests on error
                 this.pendingRequests.delete(requestKey);
-                console.error('API Error (handled):', error);
-                
-                // Always return fallback content instead of throwing errors
-                return this.generateClientFallback(prompt);
+                console.error('Perplexity API Error:', error);
+            
+                if (error.message.includes('API request failed')) {
+                    throw error;
+                } else if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                    throw new Error('Network error: Please check your internet connection');
+                } else {
+                    throw new Error('Failed to communicate with AI service: ' + error.message);
+                }
             }
         };
         

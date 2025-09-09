@@ -42,7 +42,7 @@ class SpotlightController {
         this.switchTab('overview', 0, tabButtons, tabPanels, tabIndicator);
     }
 
-    switchTab(tabName, index, buttons, panels, indicator) {
+    async switchTab(tabName, index, buttons, panels, indicator) {
         // Update current tab
         this.currentTab = tabName;
 
@@ -65,19 +65,19 @@ class SpotlightController {
         }
 
         // Load tab content
-        this.loadTabContent(tabName);
+        await this.loadTabContent(tabName);
 
         // Trigger animation
         this.triggerTabAnimation(targetPanel);
     }
 
-    loadTabContent(tabName) {
+    async loadTabContent(tabName) {
         switch (tabName) {
             case 'overview':
                 this.loadOverviewContent();
                 break;
             case 'day-by-day':
-                this.loadItineraryContent();
+                await this.loadItineraryContent();
                 break;
             case 'food-wine':
                 this.loadCulinaryContent();
@@ -152,11 +152,31 @@ class SpotlightController {
         this.setupExportFunctions();
     }
 
-    loadItineraryContent() {
+    async loadItineraryContent() {
         // Load day-by-day itinerary
         const itineraryContainer = document.getElementById('itinerary-container');
         if (itineraryContainer && !itineraryContainer.hasChildNodes()) {
-            const itinerary = `
+            // Show loading state
+            itineraryContainer.innerHTML = `
+                <div class="loading-content">
+                    <div class="spinner"></div>
+                    <p>Creating your personalized day-by-day itinerary...</p>
+                </div>
+            `;
+            
+            try {
+                // Get real AI-generated itinerary
+                const aiFeatures = (await import('./aiFeatures.js')).aiFeatures;
+                const aiContent = await aiFeatures.generateFullItinerary();
+                
+                // Parse and format the AI content into structured HTML
+                const formattedItinerary = this.formatItineraryContent(aiContent);
+                itineraryContainer.innerHTML = formattedItinerary;
+                
+            } catch (error) {
+                console.error('Failed to load AI itinerary:', error);
+                // Fallback to static content only if AI completely fails
+                const itinerary = `
                 <div class="itinerary-header">
                     <h3>📅 Your 3-Day Journey</h3>
                 </div>
@@ -361,10 +381,37 @@ class SpotlightController {
                         </div>
                     </div>
                 </div>
-            `;
-            
-            itineraryContainer.innerHTML = itinerary;
+                `;
+                
+                itineraryContainer.innerHTML = itinerary;
+            }
         }
+    }
+
+    formatItineraryContent(aiContent) {
+        // Convert AI text content into structured HTML
+        // This method processes the AI response and formats it nicely
+        
+        // Simple formatting - convert markdown-style content to HTML
+        let formattedContent = aiContent
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/## (.*$)/gm, '<h3>$1</h3>')
+            .replace(/### (.*$)/gm, '<h4>$1</h4>')
+            .replace(/- (.*$)/gm, '<p>• $1</p>')
+            .replace(/\n\n/g, '</div><div class="day-section">')
+            .replace(/\n/g, '<br>');
+            
+        return `
+            <div class="ai-generated-itinerary">
+                <div class="itinerary-header">
+                    <h3>🤖 Your AI-Generated Itinerary</h3>
+                    <p class="ai-note">Generated with real-time travel data</p>
+                </div>
+                <div class="day-section">
+                    ${formattedContent}
+                </div>
+            </div>
+        `;
     }
 
     loadCulinaryContent() {
