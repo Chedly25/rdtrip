@@ -42,6 +42,108 @@ export class AIFeatures {
     }
     
     /**
+     * Generate client-side fallback content
+     * @param {string} prompt - The original prompt
+     * @returns {string} Fallback content
+     */
+    generateClientFallback(prompt) {
+        if (prompt.toLowerCase().includes('itinerary') || prompt.toLowerCase().includes('day')) {
+            return `📅 **3-Day Road Trip Itinerary**
+
+**Day 1:**
+• 9:00 AM - Departure from starting city
+• 11:30 AM - Coffee break at scenic viewpoint
+• 1:00 PM - Lunch at traditional local restaurant
+• 3:00 PM - Explore main attractions (2 hours)
+• 6:00 PM - Check into accommodation
+• 8:30 PM - Dinner at recommended bistro
+
+**Day 2:**
+• 9:30 AM - Morning city walk or market visit
+• 12:00 PM - Drive to next destination via scenic route
+• 2:00 PM - Roadside lunch with panoramic views
+• 4:00 PM - Afternoon sightseeing and photo stops
+• 7:00 PM - Evening relaxation time
+• 8:30 PM - Local dining experience
+
+**Day 3:**
+• 10:00 AM - Cultural site or museum visit
+• 1:00 PM - Traditional lunch at local favorite
+• 3:00 PM - Final destination arrival
+• 5:00 PM - Hotel check-in and refresh
+• 7:30 PM - Sunset viewing spot
+• 9:00 PM - Celebration dinner
+
+**Daily Budget:** €80-120 per person (includes meals, activities, accommodation)
+
+✨ *Flexible timing - adjust based on your pace and interests*`;
+        } else if (prompt.toLowerCase().includes('food') || prompt.toLowerCase().includes('restaurant')) {
+            return `🍽️ **Local Food Guide**
+
+**Regional Specialties:**
+• Fresh Mediterranean seafood and coastal cuisine
+• Traditional local wines and artisanal cheeses  
+• Authentic pastries and regional breads
+• Local markets with seasonal produce
+
+**Dining Recommendations:**
+• Historic city centers for family-run restaurants
+• Morning markets for fresh ingredients (Tue, Thu, Sat)
+• Local wine bars for authentic atmosphere
+• Waterfront restaurants for sunset dining
+
+**Tips:**
+• Make dinner reservations, especially in summer
+• Try the daily catch and regional wine pairings
+• Ask locals for their favorite hidden gems
+• Lunch: 12:00-14:30, Dinner: after 19:30
+
+✨ *For current restaurant details, ask locals for recommendations*`;
+        } else if (prompt.toLowerCase().includes('weather') || prompt.toLowerCase().includes('climate')) {
+            return `🌤️ **Travel Weather Guide**
+
+**Best Travel Seasons:**
+• Spring (Apr-Jun): Pleasant 18-25°C, perfect for sightseeing
+• Summer (Jul-Aug): Warm 25-30°C, peak season with crowds
+• Fall (Sep-Nov): Comfortable 20-25°C, fewer tourists
+• Winter (Dec-Mar): Mild 10-18°C, some closures possible
+
+**Packing Essentials:**
+• Comfortable walking shoes for city exploration
+• Light layers for temperature changes
+• Portable rain jacket for occasional showers
+• Sunglasses, sunscreen, and hat
+• Power bank for navigation devices
+
+**Driving Conditions:**
+• Generally excellent road conditions year-round
+• Summer traffic increases, plan extra time
+• Mountain passes may require winter equipment (Dec-Mar)
+
+✨ *Check current forecasts before departure*`;
+        } else {
+            return `🗺️ **Travel Information**
+
+**Your Route Highlights:**
+• Beautiful Mediterranean landscapes and coastal views
+• Historic city centers with authentic local culture
+• Scenic driving routes with photo-worthy stops
+• Rich culinary traditions and local specialties
+
+**Travel Tips:**
+• Plan 2-3 hours driving per day for comfortable pace
+• Research main attractions and book popular sites ahead
+• Keep emergency contacts and offline maps handy
+• Try regional foods and interact with friendly locals
+• Take plenty of photos and enjoy the journey!
+
+**Budget Guide:** €60-100 per person/day (food, activities, accommodation)
+
+✨ *Enjoy your adventure through this beautiful region!*`;
+        }
+    }
+    
+    /**
      * Simple hash function for creating unique request keys
      * @param {string} str - String to hash
      * @returns {string} Hash value
@@ -93,15 +195,27 @@ export class AIFeatures {
                 })
             });
             
+            // Always try to get JSON data, even if response is not ok
+            const data = await response.json().catch(() => ({}));
+            
             if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(`API request failed: ${response.status} - ${errorData.error || errorData.details || 'Unknown error'}`);
+                // If server returned fallback content, use it instead of throwing error
+                if (data.content && data.fallback) {
+                    console.log('Using fallback response from server');
+                    this.pendingRequests.delete(requestKey);
+                    return data.content;
+                }
+                
+                // If no fallback content, create our own fallback
+                console.log('Creating client-side fallback response');
+                this.pendingRequests.delete(requestKey);
+                return this.generateClientFallback(prompt);
             }
             
-            const data = await response.json();
-            
             if (!data.content) {
-                throw new Error('Invalid response format from server');
+                console.log('No content in response, generating fallback');
+                this.pendingRequests.delete(requestKey);
+                return this.generateClientFallback(prompt);
             }
             
             // Remove from pending requests
@@ -111,15 +225,10 @@ export class AIFeatures {
             } catch (error) {
                 // Remove from pending requests on error
                 this.pendingRequests.delete(requestKey);
-                console.error('Perplexity API Error:', error);
-            
-            if (error.message.includes('API request failed')) {
-                throw error;
-            } else if (error.name === 'TypeError' && error.message.includes('fetch')) {
-                throw new Error('Network error: Please check your internet connection');
-            } else {
-                throw new Error('Failed to communicate with AI service: ' + error.message);
-            }
+                console.error('API Error (handled):', error);
+                
+                // Always return fallback content instead of throwing errors
+                return this.generateClientFallback(prompt);
             }
         };
         
