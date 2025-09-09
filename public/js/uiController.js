@@ -1017,7 +1017,7 @@ export class UIController {
     showAgentsLoadingModal() {
         const modal = document.getElementById('agents-loading-modal');
         if (modal) {
-            modal.style.display = 'block';
+            modal.style.display = 'flex';
             
             // Reset all progress bars
             const progressBars = modal.querySelectorAll('.progress-bar');

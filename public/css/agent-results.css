@@ -1,44 +1,11 @@
 /*
  * Agent Results and Loading Screens CSS
- * Restores functionality for loading modals, agent cards, and trip results
+ * ONLY missing styles that complement existing enterprise CSS
  */
 
-/* ===== AGENTS LOADING MODAL ===== */
-.agents-loading-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(8px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10000;
-  padding: var(--space-6);
-}
-
+/* ===== AGENTS LOADING MODAL SPECIFIC STYLES ===== */
 .agents-loading-modal .modal-content {
-  background: var(--bg-primary);
-  border-radius: var(--radius-2xl);
-  box-shadow: var(--shadow-xl);
-  width: 100%;
   max-width: 600px;
-  max-height: 80vh;
-  overflow: auto;
-  animation: modalSlideIn 0.3s ease-out;
-}
-
-@keyframes modalSlideIn {
-  from {
-    opacity: 0;
-    transform: translateY(30px) scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
 }
 
 .loading-header {
@@ -162,6 +129,37 @@
 .agent-loading-card.completed .progress-bar {
   background: var(--success-500);
   width: 100% !important;
+}
+
+/* Overall Progress Styles */
+.overall-progress {
+  padding: var(--space-4) var(--space-6) var(--space-6);
+  border-top: 1px solid var(--border-primary);
+  background: var(--bg-secondary);
+}
+
+.overall-progress-text {
+  text-align: center;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-3);
+}
+
+.overall-progress-bar {
+  width: 100%;
+  height: 8px;
+  background: var(--gray-200);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.overall-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary-500), var(--primary-400));
+  border-radius: var(--radius-full);
+  width: 0%;
+  transition: width 0.3s ease;
 }
 
 /* ===== AGENT RESULT CARDS ===== */
@@ -351,148 +349,6 @@
   box-shadow: var(--shadow-primary);
 }
 
-/* ===== TRIP TYPES MODAL ===== */
-.trip-types-grid {
-  max-width: 900px;
-  padding: var(--space-8);
-}
-
-.trip-types-container {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: var(--space-4);
-  margin-top: var(--space-6);
-}
-
-.trip-type-card {
-  background: var(--bg-primary);
-  border: 2px solid var(--border-primary);
-  border-radius: var(--radius-xl);
-  padding: var(--space-6);
-  cursor: pointer;
-  transition: all var(--transition-base);
-  text-align: center;
-}
-
-.trip-type-card:hover {
-  border-color: var(--primary-300);
-  background: var(--primary-50);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-}
-
-.trip-type-card.selected {
-  border-color: var(--primary-500);
-  background: var(--primary-50);
-  box-shadow: var(--shadow-primary);
-}
-
-.trip-type-icon {
-  font-size: 3rem;
-  margin-bottom: var(--space-4);
-}
-
-.trip-type-name {
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: var(--space-2);
-}
-
-.trip-type-description {
-  font-size: 0.875rem;
-  color: var(--text-secondary);
-  line-height: 1.5;
-}
-
-.trip-type-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-4);
-  background: var(--primary-100);
-  color: var(--primary-700);
-  border-radius: var(--radius-full);
-  font-size: 0.875rem;
-  font-weight: 600;
-}
-
-/* ===== MODAL BASICS ===== */
-.modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-  padding: var(--space-6);
-}
-
-.modal-content {
-  background: var(--bg-primary);
-  border-radius: var(--radius-2xl);
-  box-shadow: var(--shadow-xl);
-  position: relative;
-  max-height: 90vh;
-  overflow: auto;
-}
-
-.modal-header {
-  padding: var(--space-6);
-  border-bottom: 1px solid var(--border-primary);
-  position: relative;
-}
-
-.modal-header h2 {
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.close-btn {
-  position: absolute;
-  top: var(--space-4);
-  right: var(--space-4);
-  width: 32px;
-  height: 32px;
-  border: none;
-  background: var(--gray-100);
-  border-radius: var(--radius-lg);
-  font-size: 1.25rem;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.close-btn:hover {
-  background: var(--gray-200);
-  color: var(--text-primary);
-}
-
-/* ===== LOADING SPINNER ===== */
-.loading-spinner {
-  display: inline-block;
-  width: 20px;
-  height: 20px;
-  border: 3px solid var(--gray-200);
-  border-top: 3px solid var(--primary-500);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
 /* ===== RESPONSIVE DESIGN ===== */
 @media (max-width: 768px) {
   .agents-grid {
@@ -502,10 +358,6 @@
   .agents-loading-modal .modal-content {
     max-width: 100%;
     margin: var(--space-4);
-  }
-  
-  .trip-types-container {
-    grid-template-columns: 1fr;
   }
   
   .agents-loading-grid {
