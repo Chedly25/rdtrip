@@ -554,7 +554,7 @@ app.post('/api/chat', async (req, res) => {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                model: 'sonar',
+                model: 'llama-3.1-sonar-small-128k-online',
                 messages: [
                     {
                         role: 'system',
@@ -603,7 +603,7 @@ app.post('/api/chat', async (req, res) => {
                 console.error('Full prompt:', prompt.substring(0, 200) + '...');
                 
                 // Try with a simpler model as backup
-                console.log('Retrying with sonar model...');
+                console.log('Retrying with llama-3.1-sonar-small-128k-online...');
                 const retryResponse = await fetch('https://api.perplexity.ai/chat/completions', {
                     method: 'POST',
                     headers: {
@@ -611,7 +611,7 @@ app.post('/api/chat', async (req, res) => {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        model: 'sonar',
+                        model: 'llama-3.1-sonar-small-128k-online',
                         messages: [
                             {
                                 role: 'system',
@@ -695,7 +695,7 @@ app.get('/api/test', async (req, res) => {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                model: 'sonar',
+                model: 'llama-3.1-sonar-small-128k-online',
                 messages: [
                     {
                         role: 'user',
