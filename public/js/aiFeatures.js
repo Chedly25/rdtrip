@@ -267,21 +267,23 @@ export class AIFeatures {
         
         const prompt = `Create a detailed ${totalDays}-day road trip itinerary for this route: ${cityNames} (${distance}km total).
         
-        For each day, provide:
-        - Morning: Where to start, what to see/do (with times)
-        - Afternoon: Activities, lunch recommendations
-        - Evening: Dinner suggestions, where to stay
-        - Driving segments: Duration and scenic stops
-        - Daily budget estimate (meals, activities, accommodation)
+        Format with clear bullet points and specific times:
         
-        Balance driving time with sightseeing. Include:
-        - Specific activity names and locations
-        - Recommended visit durations
-        - Meal times and restaurant suggestions
-        - Accommodation recommendations
-        - Total daily cost estimates
+        **Day X:**
+        • 9:00 AM - Activity with location
+        • 12:30 PM - Lunch recommendation
+        • 3:00 PM - Afternoon activity
+        • 6:00 PM - Check-in/relax time
+        • 8:00 PM - Dinner suggestion
         
-        Make it practical and actionable.`;
+        For each day include:
+        - Specific times and durations for activities
+        - Exact restaurant and attraction names
+        - Realistic driving segments between cities
+        - Daily budget breakdown (meals €X, activities €X, accommodation €X)
+        - Must-see highlights and photo spots
+        
+        Keep descriptions concise - use bullet points, not paragraphs. Focus on actionable schedule with real places and times.`;
         
         return await this.callPerplexityAPI(prompt);
     }

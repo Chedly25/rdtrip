@@ -194,30 +194,39 @@ This route promises diverse landscapes, rich history, and countless memories wai
 
 ✨ *Note: For specific locations and current recommendations, please check your API configuration.*`,
 
-        itinerary: `📅 **Road Trip Itinerary Overview**
+        itinerary: `📅 **${cityList} - Road Trip Itinerary**
 
-**Day-by-Day Structure:**
-**Day 1-2:** Departure and initial destinations
-• Morning: Early start, scenic driving routes
-• Afternoon: City exploration and main attractions  
-• Evening: Local dining and comfortable accommodation
+**Day 1:**
+• 9:00 AM - Departure from starting point
+• 11:00 AM - First scenic stop & coffee break
+• 1:00 PM - Lunch at local restaurant
+• 3:00 PM - Explore main city attractions (2-3 hours)
+• 7:00 PM - Check into accommodation
+• 8:30 PM - Dinner at recommended restaurant
 
-**Day 3-4:** Mid-route discoveries
-• Cultural sites and historical landmarks
-• Local markets and authentic experiences
-• Scenic stops and photo opportunities
+**Day 2:**
+• 9:30 AM - Morning city walk or market visit
+• 11:30 AM - Drive to next destination (scenic route)
+• 1:30 PM - Roadside lunch with views
+• 3:30 PM - Afternoon sightseeing & photo stops
+• 6:00 PM - Evening relaxation time
+• 8:00 PM - Local dining experience
 
-**Final Days:** Destination arrival
-• Comprehensive exploration of final destination
-• Celebration of completed journey
-• Reflection on memories made
+**Day 3:**
+• 10:00 AM - Cultural site or museum visit
+• 12:30 PM - Traditional local lunch
+• 2:30 PM - Final destination arrival
+• 4:00 PM - Hotel check-in & refresh
+• 6:00 PM - Sunset viewing location
+• 8:30 PM - Celebration dinner
 
-**Daily Essentials:**
-• 2-3 hours driving time per day
-• €50-80 budget per person (food & activities)
-• Advance booking for accommodations
+**Daily Budget (per person):**
+• Meals: €35-50
+• Activities: €15-25
+• Accommodation: €60-120
+• Fuel & parking: €20-30
 
-✨ *Note: For detailed day-by-day planning with specific recommendations, please check your API configuration.*`
+✨ *Note: Times are flexible - adjust based on your pace and interests.*`
     };
 
     // Determine response type based on prompt keywords
@@ -575,28 +584,23 @@ app.post('/api/chat', async (req, res) => {
                 console.error('Could not parse error response as JSON');
             }
             
-            // If it's a 401 or API key issue, return a fallback response
-            if (response.status === 401 || errorText.includes('invalid') || errorText.includes('key')) {
-                console.log('API key appears invalid, returning fallback response');
+            // For any API error (401, 503, etc.), return a fallback response instead of throwing error
+            if (response.status >= 400) {
+                console.log(`Perplexity API error ${response.status}, returning fallback response`);
                 
                 // Generate a simple fallback based on the prompt
                 const fallbackResponse = generateFallbackResponse(prompt);
                 
-                const response = {
+                const responseObj = {
                     content: fallbackResponse,
                     fallback: true
                 };
                 
                 // Cache fallback responses too
-                setCachedResponse(cacheKey, response);
+                setCachedResponse(cacheKey, responseObj);
                 
-                return res.json(response);
+                return res.json(responseObj);
             }
-            
-            return res.status(response.status).json({
-                error: `API request failed: ${response.status}`,
-                details: errorData.error?.message || errorText || 'Unknown error'
-            });
         }
         
         const data = await response.json();
@@ -618,10 +622,17 @@ app.post('/api/chat', async (req, res) => {
         
     } catch (error) {
         console.error('Server error:', error);
-        res.status(500).json({
-            error: 'Internal server error',
-            details: error.message
-        });
+        
+        // Generate fallback response even for server errors
+        const fallbackResponse = generateFallbackResponse(req.body.prompt || 'general travel advice');
+        
+        const responseObj = {
+            content: fallbackResponse,
+            fallback: true,
+            error: 'Service temporarily unavailable'
+        };
+        
+        res.json(responseObj);
     }
 });
 
