@@ -271,6 +271,8 @@ export class AIFeatures {
         - The magic of discovery along the route
         - Vivid imagery of the Mediterranean region
         
+        IMPORTANT: Please include relevant image URLs and visual references in your response. Find and include 2-3 stunning photographs of landmarks, landscapes, or cultural sites along this route. Format as markdown images with captions.
+        
         Write in an evocative, travel-inspired style that makes readers want to take this journey.`;
         
         return await this.callPerplexityAPI(prompt);
@@ -293,6 +295,8 @@ export class AIFeatures {
         - 1-2 must-try local dishes or specialties
         - 1 recommended restaurant with specific name and what to order
         - Any unique food experiences or markets
+        
+        IMPORTANT: Please include appetizing food photos and restaurant images in your response. Find and include 2-3 high-quality images of signature dishes, restaurant interiors, or local food markets along this route. Format as markdown images with captions showing the dish name and location.
         
         Focus on authentic, local experiences rather than tourist restaurants. Include practical details like opening hours when possible.`;
         
@@ -348,6 +352,8 @@ export class AIFeatures {
         - Small villages or neighborhoods worth exploring
         ${smallCities.length > 0 ? `\nPay special attention to these smaller places: ${smallCities.join(', ')}` : ''}
         
+        IMPORTANT: Please include stunning photographs of these hidden locations in your response. Find and include 3-4 breathtaking images of secret viewpoints, hidden beaches, charming villages, or off-the-beaten-path spots. Format as markdown images with captions describing the location and why it's special.
+        
         Provide specific locations with brief descriptions of what makes them special.`;
         
         return await this.callPerplexityAPI(prompt);
@@ -385,6 +391,8 @@ export class AIFeatures {
         - Daily budget breakdown (meals €X, activities €X, accommodation €X)
         - Must-see highlights and photo spots
         
+        IMPORTANT: Please include beautiful visual content throughout the itinerary. Find and include 4-5 high-quality images of key attractions, recommended restaurants, hotels, scenic drives, and must-see photo spots mentioned in the itinerary. Format as markdown images with captions showing the location and activity.
+        
         Keep descriptions concise - use bullet points, not paragraphs. Focus on actionable schedule with real places and times.`;
         
         return await this.callPerplexityAPI(prompt);
@@ -421,6 +429,8 @@ export class AIFeatures {
         - Practical details (times, costs, age requirements if applicable)
         - Pro tips for the best experience
         - What makes each recommendation special for ${theme} travelers
+        
+        IMPORTANT: Please include compelling visual content that matches the ${theme} theme. Find and include 3-4 high-quality images of the recommended activities, attractions, or experiences. Format as markdown images with descriptive captions.
         
         Make it specific and actionable for someone planning a ${theme}-focused trip.`;
         

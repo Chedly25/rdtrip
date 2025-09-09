@@ -388,30 +388,54 @@ class SpotlightController {
         }
     }
 
-    formatItineraryContent(aiContent) {
-        // Convert AI text content into structured HTML
-        // This method processes the AI response and formats it nicely
+    formatAIContent(aiContent, options = {}) {
+        // Generic method to convert AI text content into structured HTML with image support
+        const { 
+            containerClass = 'ai-content-with-images', 
+            headerTitle = '🤖 AI-Generated Content', 
+            headerSubtitle = 'Generated with real-time travel data and images',
+            sectionClass = 'content-section'
+        } = options;
         
-        // Simple formatting - convert markdown-style content to HTML
+        // Enhanced formatting - convert markdown-style content to HTML including images
         let formattedContent = aiContent
+            // Convert markdown images to HTML
+            .replace(/!\[(.*?)\]\((.*?)\)/g, '<img src="$2" alt="$1" title="$1">')
+            // Convert bold text
             .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            // Convert italic text
+            .replace(/\*(.*?)\*/g, '<em>$1</em>')
+            // Convert headers
             .replace(/## (.*$)/gm, '<h3>$1</h3>')
             .replace(/### (.*$)/gm, '<h4>$1</h4>')
+            // Convert bullet points
             .replace(/- (.*$)/gm, '<p>• $1</p>')
-            .replace(/\n\n/g, '</div><div class="day-section">')
+            // Convert numbered lists
+            .replace(/^\d+\. (.*$)/gm, '<p>$1</p>')
+            // Convert line breaks
+            .replace(/\n\n/g, `</div><div class="${sectionClass}">`)
             .replace(/\n/g, '<br>');
             
         return `
-            <div class="ai-generated-itinerary">
-                <div class="itinerary-header">
-                    <h3>🤖 Your AI-Generated Itinerary</h3>
-                    <p class="ai-note">Generated with real-time travel data</p>
-                </div>
-                <div class="day-section">
+            <div class="${containerClass}">
+                ${headerTitle ? `<div class="content-header">
+                    <h3>${headerTitle}</h3>
+                    ${headerSubtitle ? `<p class="ai-note">${headerSubtitle}</p>` : ''}
+                </div>` : ''}
+                <div class="${sectionClass}">
                     ${formattedContent}
                 </div>
             </div>
         `;
+    }
+
+    formatItineraryContent(aiContent) {
+        return this.formatAIContent(aiContent, {
+            containerClass: 'ai-generated-itinerary ai-content-with-images',
+            headerTitle: '🤖 Your AI-Generated Itinerary',
+            headerSubtitle: 'Generated with real-time travel data and images',
+            sectionClass: 'day-section'
+        });
     }
 
     loadCulinaryContent() {
