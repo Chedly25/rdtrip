@@ -1018,6 +1018,7 @@ export class UIController {
         const modal = document.getElementById('agents-loading-modal');
         if (modal) {
             modal.style.display = 'flex';
+            modal.classList.add('show');
             
             // Reset all progress bars
             const progressBars = modal.querySelectorAll('.progress-bar');
@@ -1044,6 +1045,7 @@ export class UIController {
     hideAgentsLoadingModal() {
         const modal = document.getElementById('agents-loading-modal');
         if (modal) {
+            modal.classList.remove('show');
             modal.style.display = 'none';
         }
     }
