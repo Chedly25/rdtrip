@@ -5,7 +5,9 @@
 
 /* ===== AGENTS LOADING MODAL SPECIFIC STYLES ===== */
 .agents-loading-modal .modal-content {
-  max-width: 600px;
+  max-width: 800px;
+  max-height: 90vh;
+  width: 100%;
 }
 
 .loading-header {
@@ -27,10 +29,12 @@
 }
 
 .agents-loading-grid {
-  padding: var(--space-6);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
+  padding: var(--space-4);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  max-height: 60vh;
+  overflow-y: auto;
 }
 
 .agent-loading-card {
@@ -579,6 +583,102 @@
   box-shadow: var(--shadow-primary);
 }
 
+/* ===== AGENT CARD ACTIONS BUTTONS ===== */
+
+.agent-card-actions {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-primary);
+}
+
+.btn-view-details,
+.btn-use-route {
+  flex: 1;
+  padding: var(--space-3) var(--space-4);
+  border: none;
+  border-radius: var(--radius-lg);
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+.btn-view-details {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 2px solid var(--border-primary);
+}
+
+.btn-view-details:hover {
+  background: var(--primary-50);
+  border-color: var(--primary-300);
+  color: var(--primary-700);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-use-route {
+  background: var(--primary-600);
+  color: var(--text-inverse);
+  border: 2px solid var(--primary-600);
+}
+
+.btn-use-route:hover {
+  background: var(--primary-700);
+  border-color: var(--primary-700);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-primary);
+}
+
+/* Also style the modal buttons */
+.use-this-route,
+.close-modal-btn {
+  padding: var(--space-3) var(--space-6);
+  border: none;
+  border-radius: var(--radius-lg);
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.use-this-route {
+  background: var(--primary-600);
+  color: var(--text-inverse);
+}
+
+.use-this-route:hover {
+  background: var(--primary-700);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-primary);
+}
+
+.close-modal-btn {
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-primary);
+}
+
+.close-modal-btn:hover {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border-color: var(--border-secondary);
+}
+
+.modal-actions {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-primary);
+}
+
 /* ===== RESPONSIVE DESIGN ===== */
 @media (max-width: 768px) {
   .agents-grid {
@@ -592,6 +692,8 @@
   
   .agents-loading-grid {
     padding: var(--space-4);
+    grid-template-columns: 1fr;
+    max-height: 70vh;
   }
   
   .agent-loading-card {
