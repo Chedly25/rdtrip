@@ -185,23 +185,141 @@
                 </div>
                 <h1>Route Spotlight</h1>
             </div>
+            <div class="header-controls">
+                <button class="dark-mode-toggle" id="dark-mode-toggle" title="Toggle Dark Mode">🌙</button>
+                <button class="ai-assistant-toggle" id="ai-assistant-toggle" title="AI Assistant">🤖</button>
+            </div>
+        </div>
+
+        <!-- Progress Timeline -->
+        <div class="journey-progress-bar">
+            <div class="progress-track">
+                <div class="progress-fill" id="journey-progress-fill"></div>
+                <div class="progress-stops" id="journey-progress-stops"></div>
+            </div>
         </div>
 
         <div class="spotlight-container">
             <div class="spotlight-map-section">
+                <div class="map-controls">
+                    <button class="map-control-btn" id="fullscreen-map" title="Fullscreen">⛶</button>
+                    <button class="map-control-btn" id="reset-map-view" title="Reset View">🎯</button>
+                </div>
                 <div id="spotlight-map" class="spotlight-map"></div>
             </div>
             
             <div class="spotlight-content-section">
-                <div class="route-summary-card">
-                    <h3>Route Summary</h3>
-                    <div class="summary-stats" id="spotlight-stats"></div>
-                    <div class="route-cities-flow" id="spotlight-cities"></div>
+                <!-- Enhanced Tab Navigation -->
+                <div class="spotlight-tabs">
+                    <div class="tab-nav">
+                        <button class="tab-btn active" data-tab="overview">
+                            <span class="tab-icon">📋</span>
+                            <span class="tab-text">Overview</span>
+                        </button>
+                        <button class="tab-btn" data-tab="day-by-day">
+                            <span class="tab-icon">📅</span>
+                            <span class="tab-text">Day-by-Day</span>
+                        </button>
+                        <button class="tab-btn" data-tab="food-wine">
+                            <span class="tab-icon">🍽️</span>
+                            <span class="tab-text">Food & Wine</span>
+                        </button>
+                        <button class="tab-btn" data-tab="photo-spots">
+                            <span class="tab-icon">📸</span>
+                            <span class="tab-text">Photo Spots</span>
+                        </button>
+                    </div>
+                    <div class="tab-indicator"></div>
                 </div>
-                
-                <div class="detailed-itinerary-card">
-                    <h3>Detailed Itinerary</h3>
-                    <div class="itinerary-content" id="spotlight-itinerary"></div>
+
+                <!-- Tab Content Panels -->
+                <div class="tab-content">
+                    <!-- Overview Tab -->
+                    <div class="tab-panel active" id="tab-overview">
+                        <div class="route-summary-card gradient-card">
+                            <div class="card-header">
+                                <h3>🗺️ Route Summary</h3>
+                                <div class="completion-badge">
+                                    <span class="completion-text">Ready to Explore</span>
+                                </div>
+                            </div>
+                            <div class="summary-stats" id="spotlight-stats"></div>
+                            <div class="route-cities-flow" id="spotlight-cities"></div>
+                        </div>
+                        
+                        <div class="highlights-card">
+                            <h3>✨ Trip Highlights</h3>
+                            <div class="highlights-grid" id="trip-highlights"></div>
+                        </div>
+                    </div>
+
+                    <!-- Day by Day Tab -->
+                    <div class="tab-panel" id="tab-day-by-day">
+                        <div class="detailed-itinerary-card">
+                            <div class="card-header">
+                                <h3>📅 Day-by-Day Itinerary</h3>
+                                <button class="customize-btn" id="customize-itinerary">Customize</button>
+                            </div>
+                            <div class="itinerary-content" id="spotlight-itinerary"></div>
+                        </div>
+                    </div>
+
+                    <!-- Food & Wine Tab -->
+                    <div class="tab-panel" id="tab-food-wine">
+                        <div class="culinary-card">
+                            <div class="card-header">
+                                <h3>🍽️ Culinary Journey</h3>
+                                <div class="cuisine-filter">
+                                    <button class="filter-btn active" data-cuisine="all">All</button>
+                                    <button class="filter-btn" data-cuisine="french">French</button>
+                                    <button class="filter-btn" data-cuisine="italian">Italian</button>
+                                    <button class="filter-btn" data-cuisine="mediterranean">Med</button>
+                                </div>
+                            </div>
+                            <div class="restaurants-grid" id="restaurants-list"></div>
+                        </div>
+                    </div>
+
+                    <!-- Photo Spots Tab -->
+                    <div class="tab-panel" id="tab-photo-spots">
+                        <div class="photography-card">
+                            <div class="card-header">
+                                <h3>📸 Photo Opportunities</h3>
+                                <div class="photo-time-filter">
+                                    <button class="time-btn active" data-time="all">All Day</button>
+                                    <button class="time-btn" data-time="golden">Golden Hour</button>
+                                    <button class="time-btn" data-time="blue">Blue Hour</button>
+                                </div>
+                            </div>
+                            <div class="photo-spots-grid" id="photo-spots-list"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Assistant Sidebar -->
+        <div class="ai-assistant-sidebar" id="ai-assistant-sidebar">
+            <div class="assistant-header">
+                <div class="assistant-avatar">🤖</div>
+                <div class="assistant-info">
+                    <h4>Travel Assistant</h4>
+                    <p class="assistant-status">Online</p>
+                </div>
+                <button class="close-assistant" id="close-assistant">×</button>
+            </div>
+            <div class="assistant-content">
+                <div class="chat-messages" id="chat-messages"></div>
+                <div class="quick-suggestions">
+                    <h5>Quick Actions</h5>
+                    <button class="suggestion-btn" data-action="weather">🌤️ Check Weather</button>
+                    <button class="suggestion-btn" data-action="traffic">🚗 Traffic Updates</button>
+                    <button class="suggestion-btn" data-action="nearby">📍 Nearby POIs</button>
+                    <button class="suggestion-btn" data-action="tips">💡 Local Tips</button>
+                </div>
+                <div class="chat-input-container">
+                    <input type="text" class="chat-input" placeholder="Ask me anything about your trip..." id="chat-input">
+                    <button class="send-btn" id="send-chat">→</button>
                 </div>
             </div>
         </div>
@@ -316,6 +434,7 @@
     <!-- Application JavaScript Modules -->
     <script type="module" src="js/uiEnhancements.js"></script>
     <script type="module" src="js/app.js"></script>
+    <script src="js/spotlightController.js"></script>
     
     <!-- Additional Meta Information -->
     <script type="application/ld+json">
