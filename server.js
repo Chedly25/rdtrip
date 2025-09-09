@@ -615,7 +615,7 @@ app.post('/api/chat', async (req, res) => {
                         messages: [
                             {
                                 role: 'system',
-                                content: 'You are a travel expert. Provide detailed, specific travel information with real places, prices, and practical details.'
+                                content: 'You are a knowledgeable travel expert with real-time access to current information and image search capabilities. Always include relevant, high-quality images in markdown format when requested. Provide detailed, accurate, and up-to-date travel advice with specific names, places, prices, and practical details. When asked for images, search for and include real photographs from reliable sources with proper captions.'
                             },
                             {
                                 role: 'user',
@@ -623,7 +623,10 @@ app.post('/api/chat', async (req, res) => {
                             }
                         ],
                         temperature: 0.3,
-                        max_tokens: 1500
+                        max_tokens: 2500,
+                        search_domain_filter: ["tripadvisor.com", "booking.com", "timeout.com", "lonelyplanet.com", "unsplash.com", "flickr.com", "wikimedia.org", "travel.com", "atlasobscura.com"],
+                        return_related_questions: false,
+                        search_recency_filter: "month"
                     })
                 });
                 
