@@ -152,6 +152,221 @@ class SpotlightController {
         this.setupExportFunctions();
     }
 
+    loadItineraryContent() {
+        // Load day-by-day itinerary
+        const itineraryContainer = document.getElementById('itinerary-container');
+        if (itineraryContainer && !itineraryContainer.hasChildNodes()) {
+            const itinerary = `
+                <div class="itinerary-header">
+                    <h3>📅 Your 3-Day Journey</h3>
+                </div>
+                
+                <div class="day-card">
+                    <div class="day-header">
+                        <h4>Day 1: Aix-en-Provence to Avignon</h4>
+                        <span class="day-distance">85 km • 1h 15min drive</span>
+                    </div>
+                    <div class="day-timeline">
+                        <div class="timeline-item">
+                            <span class="time">9:00 AM</span>
+                            <div class="activity">
+                                <strong>Depart from Aix-en-Provence</strong>
+                                <p>• Start with coffee at Cours Mirabeau</p>
+                                <p>• Stock up on local pastries for the road</p>
+                            </div>
+                        </div>
+                        <div class="timeline-item">
+                            <span class="time">11:00 AM</span>
+                            <div class="activity">
+                                <strong>Stop at Châteauneuf-du-Pape</strong>
+                                <p>• Wine tasting at historic vineyard</p>
+                                <p>• Explore medieval village (45 min)</p>
+                            </div>
+                        </div>
+                        <div class="timeline-item">
+                            <span class="time">1:00 PM</span>
+                            <div class="activity">
+                                <strong>Lunch in Avignon</strong>
+                                <p>• Restaurant Les Halles</p>
+                                <p>• Traditional Provençal cuisine</p>
+                            </div>
+                        </div>
+                        <div class="timeline-item">
+                            <span class="time">3:00 PM</span>
+                            <div class="activity">
+                                <strong>Palace of the Popes</strong>
+                                <p>• UNESCO World Heritage site tour</p>
+                                <p>• Explore medieval architecture (2 hours)</p>
+                            </div>
+                        </div>
+                        <div class="timeline-item">
+                            <span class="time">6:00 PM</span>
+                            <div class="activity">
+                                <strong>Check-in & Relax</strong>
+                                <p>• Hotel d'Europe check-in</p>
+                                <p>• Evening stroll on Pont d'Avignon</p>
+                            </div>
+                        </div>
+                        <div class="timeline-item">
+                            <span class="time">8:30 PM</span>
+                            <div class="activity">
+                                <strong>Dinner</strong>
+                                <p>• La Mirande restaurant</p>
+                                <p>• Michelin-starred dining experience</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="day-budget">
+                        <strong>Daily Budget:</strong> €120-150 per person
+                        <span class="budget-breakdown">(Meals: €60 • Activities: €30 • Accommodation: €60)</span>
+                    </div>
+                </div>
+
+                <div class="day-card">
+                    <div class="day-header">
+                        <h4>Day 2: Avignon to Cassis</h4>
+                        <span class="day-distance">110 km • 1h 45min drive</span>
+                    </div>
+                    <div class="day-timeline">
+                        <div class="timeline-item">
+                            <span class="time">9:30 AM</span>
+                            <div class="activity">
+                                <strong>Morning Market Visit</strong>
+                                <p>• Les Halles d'Avignon</p>
+                                <p>• Pick up picnic supplies</p>
+                            </div>
+                        </div>
+                        <div class="timeline-item">
+                            <span class="time">11:00 AM</span>
+                            <div class="activity">
+                                <strong>Drive via Scenic Route</strong>
+                                <p>• D7N through Alpilles mountains</p>
+                                <p>• Photo stop at Les Baux-de-Provence</p>
+                            </div>
+                        </div>
+                        <div class="timeline-item">
+                            <span class="time">1:30 PM</span>
+                            <div class="activity">
+                                <strong>Arrival in Cassis</strong>
+                                <p>• Waterfront lunch at Le Grand Bleu</p>
+                                <p>• Fresh seafood with harbor views</p>
+                            </div>
+                        </div>
+                        <div class="timeline-item">
+                            <span class="time">3:30 PM</span>
+                            <div class="activity">
+                                <strong>Calanques Boat Tour</strong>
+                                <p>• 2-hour cruise through limestone cliffs</p>
+                                <p>• Swimming stop in turquoise coves</p>
+                            </div>
+                        </div>
+                        <div class="timeline-item">
+                            <span class="time">6:30 PM</span>
+                            <div class="activity">
+                                <strong>Beach Time</strong>
+                                <p>• Relax at Plage de la Grande Mer</p>
+                                <p>• Sunset aperitif at beach bar</p>
+                            </div>
+                        </div>
+                        <div class="timeline-item">
+                            <span class="time">8:00 PM</span>
+                            <div class="activity">
+                                <strong>Dinner</strong>
+                                <p>• La Villa Madie (2 Michelin stars)</p>
+                                <p>• Spectacular cliff-top dining</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="day-budget">
+                        <strong>Daily Budget:</strong> €140-180 per person
+                        <span class="budget-breakdown">(Meals: €70 • Boat tour: €40 • Accommodation: €70)</span>
+                    </div>
+                </div>
+
+                <div class="day-card">
+                    <div class="day-header">
+                        <h4>Day 3: Cassis to Nice</h4>
+                        <span class="day-distance">195 km • 2h 30min drive</span>
+                    </div>
+                    <div class="day-timeline">
+                        <div class="timeline-item">
+                            <span class="time">10:00 AM</span>
+                            <div class="activity">
+                                <strong>Depart Cassis</strong>
+                                <p>• Coastal drive along Corniche roads</p>
+                                <p>• Stop for coffee in Bandol</p>
+                            </div>
+                        </div>
+                        <div class="timeline-item">
+                            <span class="time">12:30 PM</span>
+                            <div class="activity">
+                                <strong>Lunch in Saint-Tropez</strong>
+                                <p>• Club 55 beach restaurant</p>
+                                <p>• Celebrity-watching optional</p>
+                            </div>
+                        </div>
+                        <div class="timeline-item">
+                            <span class="time">3:00 PM</span>
+                            <div class="activity">
+                                <strong>Arrive in Nice</strong>
+                                <p>• Check into Hotel Negresco</p>
+                                <p>• Promenade des Anglais walk</p>
+                            </div>
+                        </div>
+                        <div class="timeline-item">
+                            <span class="time">5:00 PM</span>
+                            <div class="activity">
+                                <strong>Old Town Exploration</strong>
+                                <p>• Vieux Nice walking tour</p>
+                                <p>• Cours Saleya flower market</p>
+                            </div>
+                        </div>
+                        <div class="timeline-item">
+                            <span class="time">7:30 PM</span>
+                            <div class="activity">
+                                <strong>Sunset at Castle Hill</strong>
+                                <p>• Panoramic views of Baie des Anges</p>
+                                <p>• Perfect photo opportunity</p>
+                            </div>
+                        </div>
+                        <div class="timeline-item">
+                            <span class="time">9:00 PM</span>
+                            <div class="activity">
+                                <strong>Farewell Dinner</strong>
+                                <p>• La Petite Maison</p>
+                                <p>• Mediterranean fine dining</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="day-budget">
+                        <strong>Daily Budget:</strong> €160-200 per person
+                        <span class="budget-breakdown">(Meals: €80 • Activities: €20 • Accommodation: €100)</span>
+                    </div>
+                </div>
+
+                <div class="itinerary-summary">
+                    <h4>Trip Summary</h4>
+                    <div class="summary-stats">
+                        <div class="stat">
+                            <span class="stat-label">Total Distance:</span>
+                            <span class="stat-value">390 km</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">Driving Time:</span>
+                            <span class="stat-value">5h 30min</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">Average Daily Budget:</span>
+                            <span class="stat-value">€140-180 per person</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            itineraryContainer.innerHTML = itinerary;
+        }
+    }
+
     loadCulinaryContent() {
         const restaurantsGrid = document.getElementById('restaurants-list');
         if (restaurantsGrid && !restaurantsGrid.hasChildNodes()) {
@@ -192,14 +407,14 @@ class SpotlightController {
             ];
 
             restaurantsGrid.innerHTML = restaurants.map((restaurant, index) => `
-                <div class="restaurant-item" onclick="spotlightController.restaurantClicked('${restaurant.title}', ${index})"
+                <div class="restaurant-item" data-restaurant="${restaurant.title}" data-index="${index}"
                      tabindex="0" role="button" aria-label="View ${restaurant.title}">
                     <div class="item-actions">
-                        <button class="item-action-btn" onclick="event.stopPropagation(); spotlightController.callRestaurant('${restaurant.phone}')" 
+                        <button class="item-action-btn call-btn" data-phone="${restaurant.phone}" 
                                 title="Call restaurant" aria-label="Call ${restaurant.title}">📞</button>
-                        <button class="item-action-btn" onclick="event.stopPropagation(); spotlightController.visitWebsite('${restaurant.website}')" 
+                        <button class="item-action-btn website-btn" data-website="${restaurant.website}" 
                                 title="Visit website" aria-label="Visit ${restaurant.title} website">🌐</button>
-                        <button class="item-action-btn" onclick="event.stopPropagation(); spotlightController.getDirections('${restaurant.location}')" 
+                        <button class="item-action-btn directions-btn" data-location="${restaurant.location}" 
                                 title="Get directions" aria-label="Get directions to ${restaurant.title}">🗺️</button>
                     </div>
                     <div class="item-image">${restaurant.image}</div>
@@ -217,6 +432,36 @@ class SpotlightController {
                     </div>
                 </div>
             `).join('');
+            
+            // Add event listeners after creating elements
+            restaurantsGrid.querySelectorAll('.restaurant-item').forEach((item, index) => {
+                item.addEventListener('click', () => {
+                    const title = item.dataset.restaurant;
+                    const idx = item.dataset.index;
+                    this.restaurantClicked(title, parseInt(idx));
+                });
+            });
+            
+            restaurantsGrid.querySelectorAll('.call-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.callRestaurant(btn.dataset.phone);
+                });
+            });
+            
+            restaurantsGrid.querySelectorAll('.website-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.visitWebsite(btn.dataset.website);
+                });
+            });
+            
+            restaurantsGrid.querySelectorAll('.directions-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.getDirections(btn.dataset.location);
+                });
+            });
         }
     }
 
