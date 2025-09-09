@@ -571,7 +571,6 @@ app.post('/api/chat', async (req, res) => {
                 search_domain_filter: ["tripadvisor.com", "booking.com", "timeout.com", "lonelyplanet.com", "unsplash.com", "flickr.com", "wikimedia.org", "travel.com", "atlasobscura.com"],
                 return_related_questions: false,
                 search_recency_filter: "month",
-                return_images: true,
                 top_k: 0,
                 stream: false,
                 presence_penalty: 0,
