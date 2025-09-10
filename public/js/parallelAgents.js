@@ -113,9 +113,14 @@ export class ParallelAgentSystem {
         this.agentResults.clear();
         this.activeAgents.clear();
         
-        // Create agent-specific options and launch all agents in parallel
-        const agentPromises = Object.entries(this.agents).map(([agentType, agent]) => {
-            return this.launchAgent(agentType, startId, destId, baseOptions, agent);
+        // Create agent-specific options and launch agents with staggered timing to reduce API pressure
+        const agentPromises = Object.entries(this.agents).map(([agentType, agent], index) => {
+            // Stagger launches by 2 seconds each to reduce concurrent API load
+            return new Promise(resolve => {
+                setTimeout(() => {
+                    resolve(this.launchAgent(agentType, startId, destId, baseOptions, agent));
+                }, index * 2000);
+            });
         });
         
         // Wait for all agents to complete
