@@ -218,7 +218,12 @@ app.post('/api/chat', async (req, res) => {
         
         try {
             // Use the queue to ensure proper rate limiting
-            const content = await perplexityQueue.add(() => makePerplexityRequest(prompt, apiKey));
+            const content = await Promise.race([
+                perplexityQueue.add(() => makePerplexityRequest(prompt, apiKey)),
+                new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Server timeout - using fallback')), 8000)
+                )
+            ]);
             
             // Cache successful response
             const response = { content };
