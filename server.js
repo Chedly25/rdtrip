@@ -554,7 +554,7 @@ app.post('/api/chat', async (req, res) => {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                model: 'llama-3.1-sonar-small-128k-online',
+                model: 'sonar-pro',
                 messages: [
                     {
                         role: 'system',
@@ -568,11 +568,8 @@ app.post('/api/chat', async (req, res) => {
                 temperature: 0.3,
                 max_tokens: 3000,
                 top_p: 0.9,
-                search_domain_filter: ["tripadvisor.com", "booking.com", "timeout.com", "lonelyplanet.com", "unsplash.com", "flickr.com", "wikimedia.org", "travel.com", "atlasobscura.com"],
                 search_recency_filter: "month",
-                stream: false,
-                presence_penalty: 0,
-                frequency_penalty: 1
+                stream: false
             })
         });
         
@@ -609,7 +606,7 @@ app.post('/api/chat', async (req, res) => {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        model: 'llama-3.1-sonar-small-128k-online',
+                        model: 'sonar-pro',
                         messages: [
                             {
                                 role: 'system',
@@ -622,11 +619,8 @@ app.post('/api/chat', async (req, res) => {
                         ],
                         temperature: 0.3,
                         max_tokens: 2500,
-                        search_domain_filter: ["tripadvisor.com", "booking.com", "timeout.com", "lonelyplanet.com", "unsplash.com", "flickr.com", "wikimedia.org", "travel.com", "atlasobscura.com"],
                         search_recency_filter: "month",
-                        stream: false,
-                        presence_penalty: 0,
-                        frequency_penalty: 1
+                        stream: false
                     })
                 });
                 
