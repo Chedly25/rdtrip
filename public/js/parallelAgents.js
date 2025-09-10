@@ -257,9 +257,7 @@ For each city, provide SPECIFIC activities with exact details:
 • Real prices and seasons
 • Hidden adventure spots tourists miss
 
-IMPORTANT: Please include compelling adventure photos in your response. Find and include 2-3 high-quality images of adventure activities, scenic viewpoints, and outdoor sports. Format as markdown images with descriptive captions.
-
-Format as clean HTML sections with <h4> city headers and bullet points. Focus on bookable, extreme activities.`,
+Format as clean HTML sections with <h4> city headers and bullet points. Focus on bookable, extreme activities. Do not include any images.`,
 
             romance: `You are the ROMANCE CURATOR for Provence. Design intimate experiences for couples in ${cities} (${distance}km).
 
@@ -270,9 +268,7 @@ For each location, provide SPECIFIC romantic details:
 • Perfect photo spots for couples
 • Wine tasting venues with reservation tips
 
-IMPORTANT: Please include romantic photographs in your response. Find and include 2-3 high-quality images of romantic restaurants, sunset viewpoints, couples activities, and intimate settings. Format as markdown images with captions.
-
-Format as clean HTML. Include real restaurant names, addresses, and insider secrets.`,
+Format as clean HTML. Include real restaurant names, addresses, and insider secrets. Do not include any images.`,
 
             cultural: `You are the CULTURE MAVEN for Southern France. Curate deep cultural experiences in ${cities} (${distance}km).
 
@@ -283,9 +279,7 @@ For each city, provide DETAILED cultural insights:
 • Cultural events and festivals with dates
 • Architectural gems with historical context
 
-IMPORTANT: Please include cultural heritage photographs in your response. Find and include 2-3 high-quality images of museums, historical sites, architectural gems, and cultural activities. Format as markdown images with captions.
-
-Format as clean HTML. Include practical details like hours, prices, and cultural significance.`,
+Format as clean HTML. Include practical details like hours, prices, and cultural significance. Do not include any images.`,
 
             foodie: `You are the CULINARY SCOUT for Provence cuisine. Create a gastronomic adventure in ${cities} (${distance}km).
 
@@ -296,9 +290,7 @@ For each city, provide SPECIFIC food experiences:
 • Market days and street food locations
 • Cooking classes and food tours with booking details
 
-IMPORTANT: Please include appetizing food photos and restaurant images in your response. Find and include 2-3 high-quality images of signature dishes, restaurant interiors, or local food markets. Format as markdown images with captions.
-
-Format as clean HTML. Include real restaurant names, addresses, and insider food tips.`,
+Format as clean HTML. Include real restaurant names, addresses, and insider food tips. Do not include any images.`,
 
             family: `You are the FAMILY GUIDE for Southern France. Plan perfect family experiences in ${cities} (${distance}km).
 
@@ -309,9 +301,7 @@ For each location, provide KID-FRIENDLY specifics:
 • Parks, beaches, and safe play areas
 • Rainy day alternatives and stroller access info
 
-IMPORTANT: Please include family-friendly photos in your response. Find and include 2-3 high-quality images of family attractions, kid-friendly restaurants, playgrounds, and family activities. Format as markdown images with captions.
-
-Format as clean HTML. Include practical family logistics and age-appropriate activities.`,
+Format as clean HTML. Include practical family logistics and age-appropriate activities. Do not include any images.`,
 
             luxury: `You are the LUXURY CONCIERGE for Southern France. Craft exclusive experiences in ${cities} (${distance}km).
 
@@ -322,9 +312,7 @@ For each destination, provide PREMIUM options:
 • Exclusive shopping and high-end spas
 • Luxury transportation and concierge services
 
-IMPORTANT: Please include luxury lifestyle photos in your response. Find and include 2-3 high-quality images of 5-star hotels, Michelin restaurants, luxury spas, and exclusive experiences. Format as markdown images with captions.
-
-Format as clean HTML. Include booking requirements and luxury service details.`
+Format as clean HTML. Include booking requirements and luxury service details. Do not include any images.`
         };
 
         return prompts[agentType] || prompts.adventure;

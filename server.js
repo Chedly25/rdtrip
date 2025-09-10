@@ -36,7 +36,7 @@ class RequestQueue {
         this.queue = [];
         this.processing = false;
         this.lastRequestTime = 0;
-        this.minDelay = 2000; // 2 seconds between requests
+        this.minDelay = 1000; // 1 second between requests (reduced from 2)
     }
     
     async add(requestFn) {
@@ -76,10 +76,10 @@ class RequestQueue {
 
 const perplexityQueue = new RequestQueue();
 
-// Enhanced API call with retry logic
+// Simplified API call with basic retry logic
 async function makePerplexityRequest(prompt, apiKey, retryCount = 0) {
-    const maxRetries = 3;
-    const baseDelay = 2000;
+    const maxRetries = 2; // Reduced retries
+    const baseDelay = 1000; // Reduced delay
     
     console.log(`Making Perplexity request (attempt ${retryCount + 1})`);
     
@@ -95,17 +95,16 @@ async function makePerplexityRequest(prompt, apiKey, retryCount = 0) {
                 messages: [
                     {
                         role: 'system',
-                        content: 'You are a knowledgeable travel expert with real-time access to current information. Provide detailed, accurate, and up-to-date travel advice with specific names, places, prices, and practical details.'
+                        content: 'You are a knowledgeable travel expert. Provide detailed and accurate travel advice.'
                     },
                     {
                         role: 'user',
                         content: prompt
                     }
                 ],
-                temperature: 0.3,
-                max_tokens: 2500,
+                temperature: 0.5,
+                max_tokens: 1500, // Reduced token count
                 top_p: 0.9,
-                search_recency_filter: "month",
                 stream: false
             })
         });
@@ -116,9 +115,9 @@ async function makePerplexityRequest(prompt, apiKey, retryCount = 0) {
             const errorText = await response.text();
             console.error(`Perplexity API Error ${response.status}:`, errorText);
             
-            // If it's a rate limit or server error, retry with exponential backoff
+            // If it's a rate limit or server error, retry with simpler backoff
             if ((response.status === 503 || response.status === 429 || response.status >= 500) && retryCount < maxRetries) {
-                const delay = baseDelay * Math.pow(2, retryCount);
+                const delay = baseDelay * (retryCount + 1);
                 console.log(`Retrying in ${delay}ms (attempt ${retryCount + 1}/${maxRetries})`);
                 await new Promise(r => setTimeout(r, delay));
                 return makePerplexityRequest(prompt, apiKey, retryCount + 1);
@@ -139,9 +138,9 @@ async function makePerplexityRequest(prompt, apiKey, retryCount = 0) {
     } catch (error) {
         console.error('Error in makePerplexityRequest:', error.message);
         
-        if (retryCount < maxRetries && (error.code === 'ECONNRESET' || error.code === 'ETIMEDOUT' || error.name === 'FetchError')) {
-            const delay = baseDelay * Math.pow(2, retryCount);
-            console.log(`Network error, retrying in ${delay}ms (attempt ${retryCount + 1}/${maxRetries})`);
+        if (retryCount < maxRetries) {
+            const delay = baseDelay * (retryCount + 1);
+            console.log(`Retrying in ${delay}ms (attempt ${retryCount + 1}/${maxRetries})`);
             await new Promise(r => setTimeout(r, delay));
             return makePerplexityRequest(prompt, apiKey, retryCount + 1);
         }
@@ -149,20 +148,20 @@ async function makePerplexityRequest(prompt, apiKey, retryCount = 0) {
     }
 }
 
-// Fallback response generator
+// Simplified fallback response generator
 function generateFallbackResponse(prompt) {
     const fallbackResponses = {
-        adventure: "🏔️ **Adventure Route: Aix-en-Provence to Venice**\\n\\nThis scenic route takes you through the French Riviera and Italian Riviera, offering breathtaking mountain views, coastal drives, and charming medieval villages. Expect diverse landscapes from lavender fields to Alpine passes.\\n\\n**Highlights:**\\n• Dramatic mountain passes with panoramic views\\n• Coastal roads along the Mediterranean\\n• Historic villages and local markets\\n• Outdoor activities: hiking, cycling, water sports\\n\\n*Note: This is a fallback response. For real-time AI insights, please try again.*",
+        adventure: "🏔️ Adventure Route: Aix-en-Provence to Venice\n\nThis scenic route takes you through the French Riviera and Italian Riviera, offering breathtaking mountain views, coastal drives, and charming medieval villages. Expect diverse landscapes from lavender fields to Alpine passes.\n\nHighlights:\n• Dramatic mountain passes with panoramic views\n• Coastal roads along the Mediterranean\n• Historic villages and local markets\n• Outdoor activities: hiking, cycling, water sports\n\nNote: This is a fallback response. For real-time AI insights, please try again.",
         
-        romantic: "💕 **Romantic Journey: Aix-en-Provence to Venice**\\n\\nA perfect route for couples, combining the charm of Provence with the magic of Venice. Enjoy intimate dinners, sunset views, and romantic walks through historic city centers.\\n\\n**Perfect for:**\\n• Candlelit dinners with local wine\\n• Sunset views over the Mediterranean\\n• Romantic gondola rides in Venice\\n• Cozy boutique hotels and B&Bs\\n\\n*Note: This is a fallback response. For personalized recommendations, please try again.*",
+        romantic: "💕 Romantic Journey: Aix-en-Provence to Venice\n\nA perfect route for couples, combining the charm of Provence with the magic of Venice. Enjoy intimate dinners, sunset views, and romantic walks through historic city centers.\n\nPerfect for:\n• Candlelit dinners with local wine\n• Sunset views over the Mediterranean\n• Romantic gondola rides in Venice\n• Cozy boutique hotels and B&Bs\n\nNote: This is a fallback response. For personalized recommendations, please try again.",
         
-        cultural: "🏛️ **Cultural Discovery: Aix-en-Provence to Venice**\\n\\nA journey through centuries of art, architecture, and history. From Roman ruins to Renaissance masterpieces, this route offers rich cultural experiences at every stop.\\n\\n**Cultural Highlights:**\\n• Museums and art galleries\\n• Historical architecture and monuments\\n• Local festivals and traditions\\n• Artisan workshops and cultural sites\\n\\n*Note: This is a fallback response. For detailed cultural insights, please try again.*",
+        cultural: "🏛️ Cultural Discovery: Aix-en-Provence to Venice\n\nA journey through centuries of art, architecture, and history. From Roman ruins to Renaissance masterpieces, this route offers rich cultural experiences at every stop.\n\nCultural Highlights:\n• Museums and art galleries\n• Historical architecture and monuments\n• Local festivals and traditions\n• Artisan workshops and cultural sites\n\nNote: This is a fallback response. For detailed cultural insights, please try again.",
         
-        foodie: "🍽️ **Culinary Adventure: Aix-en-Provence to Venice**\\n\\nExperience the finest flavors of Southern France and Northern Italy. From Provençal markets to Venetian cicchetti, discover regional specialties and hidden culinary gems.\\n\\n**Culinary Experiences:**\\n• Local markets and food tours\\n• Wine tastings in renowned regions\\n• Traditional restaurants and local specialties\\n• Cooking classes with local chefs\\n\\n*Note: This is a fallback response. For current restaurant recommendations, please try again.*",
+        foodie: "🍽️ Culinary Adventure: Aix-en-Provence to Venice\n\nExperience the finest flavors of Southern France and Northern Italy. From Provençal markets to Venetian cicchetti, discover regional specialties and hidden culinary gems.\n\nCulinary Experiences:\n• Local markets and food tours\n• Wine tastings in renowned regions\n• Traditional restaurants and local specialties\n• Cooking classes with local chefs\n\nNote: This is a fallback response. For current restaurant recommendations, please try again.",
         
-        family: "👨‍👩‍👧‍👦 **Family-Friendly Route: Aix-en-Provence to Venice**\\n\\nDesigned for families with children, featuring activities and attractions suitable for all ages, comfortable accommodations, and manageable driving distances.\\n\\n**Family Features:**\\n• Kid-friendly attractions and activities\\n• Safe, family-oriented accommodations\\n• Interactive museums and parks\\n• Beach access and outdoor activities\\n\\n*Note: This is a fallback response. For current family activities, please try again.*",
+        family: "👨‍👩‍👧‍👦 Family-Friendly Route: Aix-en-Provence to Venice\n\nDesigned for families with children, featuring activities and attractions suitable for all ages, comfortable accommodations, and manageable driving distances.\n\nFamily Features:\n• Kid-friendly attractions and activities\n• Safe, family-oriented accommodations\n• Interactive museums and parks\n• Beach access and outdoor activities\n\nNote: This is a fallback response. For current family activities, please try again.",
         
-        luxury: "✨ **Luxury Experience: Aix-en-Provence to Venice**\\n\\nIndulge in the finest accommodations, exclusive experiences, and personalized services. From 5-star hotels to private tours, enjoy the ultimate in comfort and elegance.\\n\\n**Luxury Elements:**\\n• Premium hotels and resorts\\n• Private tours and exclusive access\\n• Fine dining at Michelin-starred restaurants\\n• Luxury transportation and concierge services\\n\\n*Note: This is a fallback response. For exclusive luxury recommendations, please try again.*"
+        luxury: "✨ Luxury Experience: Aix-en-Provence to Venice\n\nIndulge in the finest accommodations, exclusive experiences, and personalized services. From 5-star hotels to private tours, enjoy the ultimate in comfort and elegance.\n\nLuxury Elements:\n• Premium hotels and resorts\n• Private tours and exclusive access\n• Fine dining at Michelin-starred restaurants\n• Luxury transportation and concierge services\n\nNote: This is a fallback response. For exclusive luxury recommendations, please try again."
     };
     
     // Determine response type based on prompt keywords
