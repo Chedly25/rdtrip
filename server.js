@@ -76,19 +76,21 @@ class RequestQueue {
 
 const perplexityQueue = new RequestQueue();
 
-// Simplified API call with basic retry logic
+// Enhanced API call with better error handling and logging
 async function makePerplexityRequest(prompt, apiKey, retryCount = 0) {
-    const maxRetries = 2; // Reduced retries
-    const baseDelay = 1000; // Reduced delay
+    const maxRetries = 3;
+    const baseDelay = 1500;
     
-    console.log(`Making Perplexity request (attempt ${retryCount + 1})`);
+    console.log(`Making Perplexity request (attempt ${retryCount + 1}/${maxRetries + 1})`);
+    console.log(`Prompt length: ${prompt.length} characters`);
     
     try {
         const response = await fetch('https://api.perplexity.ai/chat/completions', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${apiKey}`,
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'User-Agent': 'RoadTripPlanner/1.0'
             },
             body: JSON.stringify({
                 model: 'sonar',
@@ -102,8 +104,8 @@ async function makePerplexityRequest(prompt, apiKey, retryCount = 0) {
                         content: prompt
                     }
                 ],
-                temperature: 0.5,
-                max_tokens: 1500, // Reduced token count
+                temperature: 0.7,
+                max_tokens: 2000,
                 top_p: 0.9,
                 stream: false
             })
@@ -112,12 +114,18 @@ async function makePerplexityRequest(prompt, apiKey, retryCount = 0) {
         console.log(`Perplexity response status: ${response.status}`);
         
         if (!response.ok) {
-            const errorText = await response.text();
+            const errorText = await response.text().catch(() => 'Unknown error');
             console.error(`Perplexity API Error ${response.status}:`, errorText);
             
-            // If it's a rate limit or server error, retry with simpler backoff
+            // Log more details about the error
+            console.error(`Request headers:`, {
+                'Authorization': `Bearer ${apiKey.substring(0, 10)}...`,
+                'Content-Type': 'application/json'
+            });
+            
+            // If it's a rate limit or server error, retry with exponential backoff
             if ((response.status === 503 || response.status === 429 || response.status >= 500) && retryCount < maxRetries) {
-                const delay = baseDelay * (retryCount + 1);
+                const delay = baseDelay * Math.pow(2, retryCount);
                 console.log(`Retrying in ${delay}ms (attempt ${retryCount + 1}/${maxRetries})`);
                 await new Promise(r => setTimeout(r, delay));
                 return makePerplexityRequest(prompt, apiKey, retryCount + 1);
@@ -133,13 +141,15 @@ async function makePerplexityRequest(prompt, apiKey, retryCount = 0) {
         }
         
         console.log('Perplexity request successful!');
+        console.log(`Response length: ${data.choices[0].message.content.length} characters`);
         return data.choices[0].message.content;
         
     } catch (error) {
         console.error('Error in makePerplexityRequest:', error.message);
+        console.error('Error stack:', error.stack);
         
         if (retryCount < maxRetries) {
-            const delay = baseDelay * (retryCount + 1);
+            const delay = baseDelay * Math.pow(2, retryCount);
             console.log(`Retrying in ${delay}ms (attempt ${retryCount + 1}/${maxRetries})`);
             await new Promise(r => setTimeout(r, delay));
             return makePerplexityRequest(prompt, apiKey, retryCount + 1);
@@ -221,7 +231,7 @@ app.post('/api/chat', async (req, res) => {
             const content = await Promise.race([
                 perplexityQueue.add(() => makePerplexityRequest(prompt, apiKey)),
                 new Promise((_, reject) => 
-                    setTimeout(() => reject(new Error('Server timeout - using fallback')), 8000)
+                    setTimeout(() => reject(new Error('Server timeout - using fallback')), 12000)
                 )
             ]);
             
