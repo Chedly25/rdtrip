@@ -36,7 +36,7 @@ class RequestQueue {
         this.queue = [];
         this.processing = false;
         this.lastRequestTime = 0;
-        this.minDelay = 5000; // 5 seconds between requests
+        this.minDelay = 2000; // 2 seconds between requests
     }
     
     async add(requestFn) {
