@@ -221,24 +221,47 @@ app.post('/api/chat', async (req, res) => {
         }
         
         // Use environment variable or encoded fallback
-        const apiKey = process.env.PERPLEXITY_API_KEY || 
-                      Buffer.from('cHBseC1QY1VsOUFLUlFiYkZRZm15clM4OEUxcVowZld0VlBucVV1ajAwT0w0cWVJQllzdDEK', 'base64').toString().trim();
+        let apiKey = process.env.PERPLEXITY_API_KEY;
+        
+        // If no environment variable, use the encoded fallback
+        if (!apiKey || apiKey.trim() === '') {
+            console.log('Using fallback API key');
+            apiKey = Buffer.from('cHBseC1QY1VsOUFLUlFiYkZRZm15clM4OEUxcVowZld0VlBucVV1ajAwT0w0cWVJQllzdDEK', 'base64').toString().trim();
+        } else {
+            console.log('Using environment API key');
+        }
+        
+        // Validate API key format
+        if (!apiKey || apiKey.length < 10) {
+            console.error('Invalid API key format');
+            return res.status(500).json({ error: 'Invalid API key configuration' });
+        }
+        
+        console.log(`API key length: ${apiKey.length}`);
+        console.log(`Making queued API request for prompt: ${prompt.substring(0, 100)}...`);
         
         console.log(`Making queued API request for prompt: ${prompt.substring(0, 100)}...`);
         
         try {
+            console.log('Starting API request processing');
             // Use the queue to ensure proper rate limiting
             const content = await Promise.race([
                 perplexityQueue.add(() => makePerplexityRequest(prompt, apiKey)),
-                new Promise((_, reject) => 
-                    setTimeout(() => reject(new Error('Server timeout - using fallback')), 12000)
-                )
+                new Promise((_, reject) => {
+                    console.log('Setting up timeout for API request');
+                    return setTimeout(() => {
+                        console.log('API request timeout reached');
+                        reject(new Error('Server timeout - using fallback'));
+                    }, 12000);
+                })
             ]);
             
+            console.log('API request completed successfully');
             // Cache successful response
             const response = { content };
             cacheResponse(cacheKey, response);
             console.log('API request successful, returning response');
+            console.log(`Response length: ${content ? content.length : 0} characters`);
             res.json(response);
             
         } catch (apiError) {
