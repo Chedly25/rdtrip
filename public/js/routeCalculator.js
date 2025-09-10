@@ -655,33 +655,41 @@ export class RouteCalculator {
     }
     
     /**
-     * Get route from OSRM service
+     * Get route from OSRM service with fallback
      * @param {Object} from - Starting city with lat/lon
      * @param {Object} to - Ending city with lat/lon
      * @returns {Promise<Object>} Route segment with geometry
      */
     async getOSRMRoute(from, to) {
-        // Use server proxy to avoid CORS issues
-        const coordinates = `${from.lon},${from.lat};${to.lon},${to.lat}`;
-        const url = `/api/route/osrm/${coordinates}?geometries=geojson&overview=full`;
-        
-        const response = await fetch(url);
-        if (!response.ok) {
-            throw new Error(`OSRM API error: ${response.status}`);
+        try {
+            // Use server proxy to avoid CORS issues
+            const coordinates = `${from.lon},${from.lat};${to.lon},${to.lat}`;
+            const url = `/api/route/osrm/${coordinates}?geometries=geojson&overview=full`;
+            
+            const response = await fetch(url);
+            if (!response.ok) {
+                console.warn(`OSRM API error: ${response.status}, using fallback`);
+                throw new Error(`OSRM API error: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (!data.routes || data.routes.length === 0) {
+                console.warn('No route found, using fallback');
+                throw new Error('No route found');
+            }
+            
+            const route = data.routes[0];
+            
+            return {
+                geometry: route.geometry,
+                distance: Math.round(route.distance / 1000), // Convert to km
+                duration: Math.round(route.duration / 3600 * 10) / 10 // Convert to hours
+            };
+        } catch (error) {
+            console.warn('OSRM route failed, generating fallback route:', error.message);
+            // Generate curved fallback route instead of throwing error
+            return this.generateCurvedFallbackRoute(from, to);
         }
-        
-        const data = await response.json();
-        
-        if (!data.routes || data.routes.length === 0) {
-            throw new Error('No route found');
-        }
-        
-        const route = data.routes[0];
-        
-        return {
-            geometry: route.geometry,
-            distance: Math.round(route.distance / 1000), // Convert to km
-            duration: Math.round(route.duration / 3600 * 10) / 10 // Convert to hours
-        };
     }
 }
