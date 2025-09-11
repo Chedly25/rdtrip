@@ -79,7 +79,7 @@ const perplexityQueue = new RequestQueue();
 // Enhanced API call with better error handling and logging
 async function makePerplexityRequest(prompt, apiKey, retryCount = 0) {
     const maxRetries = 3;
-    const baseDelay = 1500;
+    const baseDelay = 2000;
     
     console.log(`Making Perplexity request (attempt ${retryCount + 1}/${maxRetries + 1})`);
     console.log(`Prompt length: ${prompt.length} characters`);
@@ -105,7 +105,7 @@ async function makePerplexityRequest(prompt, apiKey, retryCount = 0) {
                     }
                 ],
                 temperature: 0.7,
-                max_tokens: 2000,
+                max_tokens: 2500,
                 top_p: 0.9,
                 stream: false
             })
@@ -240,8 +240,6 @@ app.post('/api/chat', async (req, res) => {
         console.log(`API key length: ${apiKey.length}`);
         console.log(`Making queued API request for prompt: ${prompt.substring(0, 100)}...`);
         
-        console.log(`Making queued API request for prompt: ${prompt.substring(0, 100)}...`);
-        
         try {
             console.log('Starting API request processing');
             // Use the queue to ensure proper rate limiting
@@ -252,7 +250,7 @@ app.post('/api/chat', async (req, res) => {
                     return setTimeout(() => {
                         console.log('API request timeout reached');
                         reject(new Error('Server timeout - using fallback'));
-                    }, 12000);
+                    }, 20000);
                 })
             ]);
             
@@ -303,5 +301,4 @@ app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
     console.log('Request queue initialized');
     console.log('Cache system active');
-});  
-} 
+});
