@@ -275,9 +275,13 @@ app.post('/api/chat', async (req, res) => {
     } catch (error) {
         console.error('Server error:', error);
         
-        // Return fallback even for server errors
-        const fallbackContent = generateFallbackResponse(req.body?.prompt || '');
-        res.json({ content: fallbackContent });
+        // Only return fallback for specific server errors, otherwise return error
+        if (error.message.includes('timeout') || error.message.includes('503') || error.message.includes('API request failed')) {
+            const fallbackContent = generateFallbackResponse(req.body?.prompt || '');
+            res.json({ content: fallbackContent });
+        } else {
+            res.status(500).json({ error: error.message });
+        }
     }
 });
 
