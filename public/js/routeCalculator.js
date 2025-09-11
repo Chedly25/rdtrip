@@ -325,12 +325,14 @@ export class RouteCalculator {
             }
         }
         
+        // Calculate direct distance (needed for later calculations)
+        const directDistance = this.haversineDistance(start, dest);
+        
         // If we don't have enough stops from AI suggestions, use the original algorithm
         if (selectedStops.length < numStops) {
             console.log(`📍 Need ${numStops - selectedStops.length} more stops, using theme-based selection`);
             
             // Stage 1: Bounding box filter
-            const directDistance = this.haversineDistance(start, dest);
             const bufferKm = Math.max(100, directDistance * 0.4); // Dynamic buffer based on distance
             const bbox = this.getBoundingBox(start, dest, bufferKm);
             

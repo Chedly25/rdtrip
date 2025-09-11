@@ -159,9 +159,13 @@ export class ParallelAgentSystem {
             const numStops = Math.max(agent.routePreferences.minStops, baseOptions.numStops || 2);
             
             // Create a prompt to get city suggestions from the API
-            const citySuggestionPrompt = `Suggest ${numStops} intermediate cities for a ${agentType} road trip from ${startCity} to ${destCity}. 
-                Focus on: ${agent.description}.
-                List ONLY the city names separated by commas, nothing else.`;
+            const citySuggestionPrompt = `You are a travel expert. I need exactly ${numStops} city names for intermediate stops on a road trip from ${startCity} to ${destCity}.
+                
+                Trip focus: ${agentType} travel (${agent.description}).
+                
+                Please respond with ONLY the city names separated by commas. Do not include any other text, explanations, or formatting. Just the city names.
+                
+                Example format: Nice, Cannes, Monaco`;
             
             console.log(`🔍 ${agent.name} requesting city suggestions from AI...`);
             
@@ -238,6 +242,19 @@ export class ParallelAgentSystem {
             // Try one more time with a simpler approach before using fallback
             try {
                 console.log(`🔄 ${agent.name} retrying with simplified approach`);
+                
+                // Try to calculate route again in case it was the route calculation that failed
+                const retryRoute = this.routeCalculator.calculateRoute(startId, destId, {
+                    ...agentOptions,
+                    priorityType: agent.routePreferences.priorityType || agentType,
+                    avoidHighways: agent.routePreferences.avoidHighways || false,
+                    preferScenic: agent.routePreferences.preferScenic || (agentType === 'adventure' || agentType === 'romantic'),
+                    culturalWeight: agentType === 'cultural' ? 2.0 : 1.0,
+                    foodWeight: agentType === 'foodie' ? 2.0 : 1.0,
+                    familyFriendly: agentType === 'family',
+                    luxuryLevel: agentType === 'luxury' ? 'high' : 'standard'
+                });
+                
                 const simplifiedPrompt = `Create a brief travel itinerary for a route from ${startId} to ${destId} focusing on ${agent.description.toLowerCase()}. Keep it concise and practical.`;
                 const retryItinerary = await this.aiFeatures.callPerplexityAPI(simplifiedPrompt, true);
                 
@@ -247,12 +264,12 @@ export class ParallelAgentSystem {
                 return {
                     agentType,
                     agent,
-                    route,
+                    route: retryRoute,
                     itinerary: retryItinerary,
                     duration,
                     timestamp: Date.now(),
-                    cities: route.route,
-                    summary: this.createRouteSummary(agent, route)
+                    cities: retryRoute.route,
+                    summary: this.createRouteSummary(agent, retryRoute)
                 };
             } catch (retryError) {
                 console.error(`❌ ${agent.name} retry failed:`, retryError);
