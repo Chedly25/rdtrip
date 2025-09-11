@@ -1343,62 +1343,137 @@ class SpotlightController {
     // ===== NEW FUNCTIONAL METHODS =====
 
     setupExportFunctions() {
+        console.log('🔧 Setting up export functions and button listeners');
+        
+        // Remove existing event listeners first
+        this.removeExistingListeners();
+        
         // Export to Google Maps
-        document.getElementById('export-google-maps')?.addEventListener('click', () => {
-            this.exportToGoogleMaps();
-        });
+        const googleMapsBtn = document.getElementById('export-google-maps');
+        if (googleMapsBtn) {
+            googleMapsBtn.removeEventListener('click', this.exportToGoogleMaps);
+            googleMapsBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                console.log('🗺️ Export to Google Maps clicked');
+                this.exportToGoogleMaps();
+            });
+        }
 
         // Export to PDF
-        document.getElementById('export-pdf')?.addEventListener('click', () => {
-            this.exportToPDF();
-        });
+        const pdfBtn = document.getElementById('export-pdf');
+        if (pdfBtn) {
+            pdfBtn.removeEventListener('click', this.exportToPDF);
+            pdfBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                console.log('📄 Export to PDF clicked');
+                this.exportToPDF();
+            });
+        }
 
         // Email sharing
-        document.getElementById('export-email')?.addEventListener('click', () => {
-            this.shareViaEmail();
-        });
+        const emailBtn = document.getElementById('export-email');
+        if (emailBtn) {
+            emailBtn.removeEventListener('click', this.shareViaEmail);
+            emailBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                console.log('✉️ Share via email clicked');
+                this.shareViaEmail();
+            });
+        }
 
         // Save route
-        document.getElementById('save-route')?.addEventListener('click', () => {
-            this.saveRoute();
-        });
+        const saveBtn = document.getElementById('save-route');
+        if (saveBtn) {
+            saveBtn.removeEventListener('click', this.saveRoute);
+            saveBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                console.log('💾 Save route clicked');
+                this.saveRoute();
+            });
+        }
 
         // Add highlight
-        document.getElementById('add-highlight')?.addEventListener('click', () => {
-            this.addCustomHighlight();
-        });
+        const addHighlightBtn = document.getElementById('add-highlight');
+        if (addHighlightBtn) {
+            addHighlightBtn.removeEventListener('click', this.addCustomHighlight);
+            addHighlightBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                console.log('⭐ Add highlight clicked');
+                this.addCustomHighlight();
+            });
+        }
 
         // Setup drag and drop
         this.setupDragAndDrop();
 
         // Setup itinerary controls
         this.setupItineraryControls();
+        
+        console.log('✓ Export functions setup complete');
+    }
+    
+    removeExistingListeners() {
+        // Remove any existing listeners to prevent duplicates
+        const buttons = [
+            'export-google-maps', 'export-pdf', 'export-email', 'save-route', 'add-highlight'
+        ];
+        
+        buttons.forEach(btnId => {
+            const btn = document.getElementById(btnId);
+            if (btn) {
+                btn.replaceWith(btn.cloneNode(true));
+            }
+        });
     }
 
     exportToGoogleMaps() {
-        const waypoints = [
-            'Aix-en-Provence, France',
-            'Avignon, France',
-            'Châteauneuf-du-Pape, France',
-            'Cassis, France',
-            'Nice, France'
-        ];
+        console.log('🗺️ Exporting route to Google Maps');
+        
+        let waypoints = [];
+        
+        // Use actual route data if available
+        if (this.currentAgentResult && this.currentAgentResult.cities) {
+            waypoints = this.currentAgentResult.cities.map(city => {
+                const name = city.name || city;
+                return `${name}, ${this.getCityCountry(name)}`;
+            });
+        } else {
+            // Fallback waypoints
+            waypoints = [
+                'Aix-en-Provence, France',
+                'Nice, France'
+            ];
+        }
+        
+        console.log('Waypoints for Google Maps:', waypoints);
 
         const googleMapsUrl = `https://www.google.com/maps/dir/${waypoints.join('/')}/`;
         
         // Create a shareable link
         if (navigator.share) {
             navigator.share({
-                title: 'My Provence Road Trip',
+                title: `My ${this.currentAgentResult?.agent?.name || 'Road Trip'} Route`,
                 text: 'Check out this amazing road trip route!',
                 url: googleMapsUrl
+            }).catch(err => {
+                console.log('Share failed, opening in new tab instead');
+                window.open(googleMapsUrl, '_blank');
             });
         } else {
             window.open(googleMapsUrl, '_blank');
         }
 
-        this.showNotification('Route opened in Google Maps!', 'success');
+        this.showNotification('Route opened in Google Maps!', 'info');
         this.triggerConfetti();
+    }
+    
+    getCityCountry(cityName) {
+        const cityCountries = {
+            'Nice': 'France', 'Cannes': 'France', 'Monaco': 'Monaco', 'Marseille': 'France',
+            'Avignon': 'France', 'Aix-en-Provence': 'France', 'Turin': 'Italy', 
+            'Florence': 'Italy', 'Venice': 'Italy', 'Rome': 'Italy', 'Genoa': 'Italy'
+        };
+        return cityCountries[cityName] || 'France';
     }
 
     async exportToPDF() {

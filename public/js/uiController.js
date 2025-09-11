@@ -776,50 +776,76 @@ export class UIController {
         const spotlightPage = document.getElementById('route-spotlight-page');
         spotlightPage.style.display = 'block';
         
-        // Update agent badge
-        const agentBadge = document.getElementById('spotlight-agent-badge');
-        agentBadge.innerHTML = `
-            <span class="agent-icon">${result.agent.icon}</span>
-            <span class="agent-name">${result.agent.name}</span>
-        `;
-        agentBadge.style.background = result.agent.gradient;
+        // Initialize spotlight controller with route data FIRST
+        console.log('🗺️ Initializing spotlight controller with route data');
+        setTimeout(() => {
+            if (window.spotlightController) {
+                console.log('✓ Spotlight controller found, initializing...');
+                window.spotlightController.initializeWithRoute(result);
+            } else {
+                console.warn('⚠️ Spotlight controller not available, using manual initialization');
+                this.manualSpotlightInit(result);
+            }
+        }, 50); // Small delay to ensure DOM is ready
         
-        // Update stats
-        const statsContainer = document.getElementById('spotlight-stats');
-        statsContainer.innerHTML = `
-            <div class="stat-item">
-                <div class="stat-value">${result.route.totalDistance}</div>
-                <div class="stat-label">Kilometers</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-value">${result.route.totalTime}</div>
-                <div class="stat-label">Hours</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-value">${result.cities.length - 2}</div>
-                <div class="stat-label">Stops</div>
-            </div>
-        `;
-        
-        // Update cities flow
-        const citiesContainer = document.getElementById('spotlight-cities');
-        citiesContainer.innerHTML = result.cities.map((city, index) => {
-            const isLast = index === result.cities.length - 1;
-            return `
-                <span class="city-badge">${city.name}</span>
-                ${!isLast ? '<span class="arrow-separator">→</span>' : ''}
-            `;
-        }).join('');
-        
-        // Update itinerary with clean HTML (no markdown)
-        const itineraryContainer = document.getElementById('spotlight-itinerary');
-        itineraryContainer.innerHTML = result.itinerary || UIEnhancements.getDefaultItinerary();
-        
-        // Initialize spotlight map
+        // Initialize spotlight map with the selected route
         this.initializeSpotlightMap(result);
         
         // Add back navigation
         document.getElementById('back-from-spotlight').onclick = () => this.hideRouteSpotlight();
+    }
+    
+    manualSpotlightInit(result) {
+        console.log('🔧 Manual spotlight initialization');
+        
+        // Update agent badge
+        const agentBadge = document.getElementById('spotlight-agent-badge');
+        if (agentBadge) {
+            agentBadge.innerHTML = `
+                <span class="agent-icon">${result.agent.icon}</span>
+                <span class="agent-name">${result.agent.name}</span>
+            `;
+            agentBadge.style.background = result.agent.gradient;
+        }
+        
+        // Update stats
+        const statsContainer = document.getElementById('spotlight-stats');
+        if (statsContainer) {
+            statsContainer.innerHTML = `
+                <div class="stat-item">
+                    <div class="stat-value">${result.route.totalDistance}</div>
+                    <div class="stat-label">Kilometers</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${result.route.totalTime}</div>
+                    <div class="stat-label">Hours</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${result.cities.length - 2}</div>
+                    <div class="stat-label">Stops</div>
+                </div>
+            `;
+        }
+        
+        // Update cities flow
+        const citiesContainer = document.getElementById('spotlight-cities');
+        if (citiesContainer && result.cities) {
+            citiesContainer.innerHTML = result.cities.map((city, index) => {
+                const isLast = index === result.cities.length - 1;
+                return `
+                    <span class="city-badge">${city.name}</span>
+                    ${!isLast ? '<span class="arrow-separator">→</span>' : ''}
+                `;
+            }).join('');
+        }
+        
+        // Update itinerary with clean HTML (no markdown)
+        const itineraryContainer = document.getElementById('spotlight-itinerary');
+        if (itineraryContainer) {
+            itineraryContainer.innerHTML = result.itinerary || UIEnhancements.getDefaultItinerary();
+        }
+        
+        console.log('✓ Manual spotlight initialization complete');
     }
     
     /**
@@ -867,15 +893,31 @@ export class UIController {
     displayRouteOnMap(mapInstance, routeData, color = '#667eea') {
         const { route } = routeData;
         
+        if (!route || route.length < 2) {
+            console.warn('Insufficient route data for map display');
+            return;
+        }
+        
+        const waypoints = [];
+        
         // Add markers for each city
         route.forEach((city, index) => {
             const isStart = index === 0;
             const isEnd = index === route.length - 1;
             
+            // Handle different coordinate formats
+            const lat = city.lat || city.latitude;
+            const lng = city.lon || city.lng || city.longitude;
+            
+            if (!lat || !lng) {
+                console.warn('Missing coordinates for city:', city);
+                return;
+            }
+            
             const label = isStart ? 'A' : isEnd ? 'B' : index.toString();
             const markerColor = isStart ? '#28a745' : isEnd ? '#dc3545' : color;
             
-            const marker = L.marker([city.lat, city.lon], {
+            const marker = L.marker([lat, lng], {
                 icon: L.divIcon({
                     className: 'custom-marker',
                     html: `<div style="background: ${markerColor}; color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 3px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.3);">${label}</div>`,
@@ -885,8 +927,19 @@ export class UIController {
             }).addTo(mapInstance);
             
             // Add popup
-            marker.bindPopup(`<strong>${city.name}</strong><br>${city.country}`);
+            marker.bindPopup(`<strong>${city.name}</strong><br>${city.country || 'Unknown'}`);
+            
+            waypoints.push([lat, lng]);
         });
+        
+        // Draw route line
+        if (waypoints.length > 1) {
+            L.polyline(waypoints, { color, weight: 4, opacity: 0.7 }).addTo(mapInstance);
+            
+            // Fit map to show all waypoints
+            const bounds = L.latLngBounds(waypoints);
+            mapInstance.fitBounds(bounds, { padding: [20, 20] });
+        }
         
         // Draw route line (use driving route if available, otherwise straight lines)
         if (routeData.drivingRoute && routeData.drivingRoute.segments) {
