@@ -294,33 +294,23 @@ export class RouteCalculator {
         
         let selectedStops = [];
         
-        // If we have AI-suggested cities, try to use them first
+        // If we have AI-suggested cities, use them directly without database matching
         if (suggestedCities.length > 0) {
-            console.log('🎯 Using AI-suggested cities:', suggestedCities);
+            console.log('🎯 Using AI-suggested cities directly:', suggestedCities);
             
-            // Try to match suggested city names to our city database
+            // Use AI suggestions directly - create city objects on the fly
             for (const suggestedName of suggestedCities) {
-                // Try exact match first
-                let matchedCity = this.cities.find(city => 
-                    city.name.toLowerCase() === suggestedName.toLowerCase() &&
-                    city.id !== startId && 
-                    city.id !== destId
-                );
+                if (selectedStops.length >= numStops) break;
                 
-                // If no exact match, try partial match
-                if (!matchedCity) {
-                    matchedCity = this.cities.find(city => 
-                        city.name.toLowerCase().includes(suggestedName.toLowerCase()) &&
-                        city.id !== startId && 
-                        city.id !== destId
-                    );
-                }
+                // Create a city object for the AI suggestion
+                // We'll use estimated coordinates based on the route
+                const cityObj = await this.createCityFromSuggestion(suggestedName, start, dest, selectedStops.length, numStops);
                 
-                if (matchedCity && selectedStops.length < numStops) {
-                    selectedStops.push(matchedCity);
-                    console.log(`✅ Matched AI suggestion "${suggestedName}" to ${matchedCity.name}`);
-                } else if (!matchedCity) {
-                    console.log(`❌ Could not match AI suggestion "${suggestedName}" to database`);
+                if (cityObj) {
+                    selectedStops.push(cityObj);
+                    console.log(`✅ Using AI suggestion: "${suggestedName}"`);
+                } else {
+                    console.log(`⚠️ Could not process AI suggestion: "${suggestedName}"`);
                 }
             }
         }
@@ -741,5 +731,81 @@ export class RouteCalculator {
             // Generate curved fallback route instead of throwing error
             return this.generateCurvedFallbackRoute(from, to);
         }
+    }
+    
+    /**
+     * Create a city object from an AI suggestion
+     * Uses geocoding or estimates coordinates based on route position
+     * @param {string} cityName - Name of the suggested city
+     * @param {Object} start - Starting city
+     * @param {Object} dest - Destination city  
+     * @param {number} index - Index of this stop in the route
+     * @param {number} totalStops - Total number of stops
+     * @returns {Object} City object with estimated coordinates
+     */
+    async createCityFromSuggestion(cityName, start, dest, index, totalStops) {
+        try {
+            // First, try to geocode the city using Mapbox Geocoding API
+            const geocodeUrl = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(cityName)}.json?access_token=pk.eyJ1IjoiY2hlZGx5MjUiLCJhIjoiY21lbW1qeHRoMHB5azJsc2VuMWJld2tlYSJ9.0jfOiOXCh0VN5ZjJ5ab7MQ&limit=1&bbox=${Math.min(start.lon, dest.lon)},${Math.min(start.lat, dest.lat)},${Math.max(start.lon, dest.lon)},${Math.max(start.lat, dest.lat)}`;
+            
+            const response = await fetch(geocodeUrl);
+            if (response.ok) {
+                const data = await response.json();
+                if (data.features && data.features.length > 0) {
+                    const feature = data.features[0];
+                    console.log(`📍 Geocoded "${cityName}" to coordinates:`, feature.center);
+                    
+                    return {
+                        id: cityName.toLowerCase().replace(/\s+/g, '-'),
+                        name: cityName,
+                        lat: feature.center[1],
+                        lon: feature.center[0],
+                        country: feature.context?.find(c => c.id.startsWith('country'))?.short_code?.toUpperCase() || 'XX',
+                        population: 50000, // Default estimate
+                        themes: {
+                            adventure: 0.5,
+                            romantic: 0.5,
+                            cultural: 0.5,
+                            hidden: 0.3,
+                            family: 0.5
+                        },
+                        activities: [`Visit ${cityName}`, 'Explore local attractions'],
+                        isAISuggested: true
+                    };
+                }
+            }
+        } catch (error) {
+            console.warn(`Could not geocode "${cityName}":`, error.message);
+        }
+        
+        // Fallback: Estimate coordinates based on linear interpolation
+        const progress = (index + 1) / (totalStops + 1);
+        const estimatedLat = start.lat + (dest.lat - start.lat) * progress;
+        const estimatedLon = start.lon + (dest.lon - start.lon) * progress;
+        
+        // Add some random offset to avoid straight line
+        const latOffset = (Math.random() - 0.5) * 0.5;
+        const lonOffset = (Math.random() - 0.5) * 0.5;
+        
+        console.log(`📍 Using estimated coordinates for "${cityName}"`);
+        
+        return {
+            id: cityName.toLowerCase().replace(/\s+/g, '-'),
+            name: cityName,
+            lat: estimatedLat + latOffset,
+            lon: estimatedLon + lonOffset,
+            country: 'XX',
+            population: 50000,
+            themes: {
+                adventure: 0.5,
+                romantic: 0.5,
+                cultural: 0.5,
+                hidden: 0.3,
+                family: 0.5
+            },
+            activities: [`Visit ${cityName}`, 'Explore local attractions'],
+            isAISuggested: true,
+            isEstimated: true
+        };
     }
 }

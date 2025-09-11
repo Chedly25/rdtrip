@@ -163,25 +163,25 @@ export class ParallelAgentSystem {
             
             switch(agentType) {
                 case 'adventure':
-                    citySuggestionPrompt = `As an adventure travel expert, suggest ${numStops} thrilling intermediate stops for a road trip from ${startCity} to ${destId}. Focus on places with outdoor activities, hiking, climbing, mountain towns, natural parks, or adventure sports. Respond with ONLY city names separated by commas. Examples: Chamonix, Interlaken, Zermatt`;
+                    citySuggestionPrompt = `As an adventure travel expert, suggest ${numStops} thrilling intermediate stops for a road trip from ${startCity} to ${destCity}. Focus on places with outdoor activities, hiking, climbing, mountain towns, natural parks, or adventure sports. Respond with ONLY city names separated by commas. Examples: Chamonix, Interlaken, Zermatt`;
                     break;
                 case 'romantic':
-                    citySuggestionPrompt = `As a romantic travel specialist, suggest ${numStops} enchanting intermediate stops for a couples' road trip from ${startCity} to ${destId}. Focus on romantic lakeside towns, vineyard regions, scenic coastal villages, or historic romantic cities. Respond with ONLY city names separated by commas. Examples: Annecy, Bellagio, Portofino`;
+                    citySuggestionPrompt = `As a romantic travel specialist, suggest ${numStops} enchanting intermediate stops for a couples' road trip from ${startCity} to ${destCity}. Focus on romantic lakeside towns, vineyard regions, scenic coastal villages, or historic romantic cities. Respond with ONLY city names separated by commas. Examples: Annecy, Bellagio, Portofino`;
                     break;
                 case 'cultural':
-                    citySuggestionPrompt = `As a cultural heritage expert, suggest ${numStops} culturally rich intermediate stops for a road trip from ${startCity} to ${destId}. Focus on UNESCO sites, historic cities, art centers, medieval towns, or places with significant cultural heritage. Respond with ONLY city names separated by commas. Examples: Avignon, Florence, Siena`;
+                    citySuggestionPrompt = `As a cultural heritage expert, suggest ${numStops} culturally rich intermediate stops for a road trip from ${startCity} to ${destCity}. Focus on UNESCO sites, historic cities, art centers, medieval towns, or places with significant cultural heritage. Respond with ONLY city names separated by commas. Examples: Avignon, Florence, Siena`;
                     break;
                 case 'foodie':
-                    citySuggestionPrompt = `As a culinary travel expert, suggest ${numStops} gastronomic intermediate stops for a food-focused road trip from ${startCity} to ${destId}. Focus on renowned food destinations, wine regions, markets, or cities famous for specific cuisines. Respond with ONLY city names separated by commas. Examples: Lyon, Bologna, Modena`;
+                    citySuggestionPrompt = `As a culinary travel expert, suggest ${numStops} gastronomic intermediate stops for a food-focused road trip from ${startCity} to ${destCity}. Focus on renowned food destinations, wine regions, markets, or cities famous for specific cuisines. Respond with ONLY city names separated by commas. Examples: Lyon, Bologna, Modena`;
                     break;
                 case 'family':
-                    citySuggestionPrompt = `As a family travel specialist, suggest ${numStops} family-friendly intermediate stops for a road trip from ${startCity} to ${destId}. Focus on cities with theme parks, family attractions, safe beaches, interactive museums, or child-friendly activities. Respond with ONLY city names separated by commas. Examples: Monaco, Sanremo, Rimini`;
+                    citySuggestionPrompt = `As a family travel specialist, suggest ${numStops} family-friendly intermediate stops for a road trip from ${startCity} to ${destCity}. Focus on cities with theme parks, family attractions, safe beaches, interactive museums, or child-friendly activities. Respond with ONLY city names separated by commas. Examples: Monaco, Sanremo, Rimini`;
                     break;
                 case 'luxury':
-                    citySuggestionPrompt = `As a luxury travel consultant, suggest ${numStops} upscale intermediate stops for a luxury road trip from ${startCity} to ${destId}. Focus on exclusive resorts, high-end shopping destinations, luxury spas, prestigious wine regions, or glamorous coastal towns. Respond with ONLY city names separated by commas. Examples: Cannes, Saint-Tropez, Portofino`;
+                    citySuggestionPrompt = `As a luxury travel consultant, suggest ${numStops} upscale intermediate stops for a luxury road trip from ${startCity} to ${destCity}. Focus on exclusive resorts, high-end shopping destinations, luxury spas, prestigious wine regions, or glamorous coastal towns. Respond with ONLY city names separated by commas. Examples: Cannes, Saint-Tropez, Portofino`;
                     break;
                 default:
-                    citySuggestionPrompt = `Suggest ${numStops} interesting intermediate stops for a road trip from ${startCity} to ${destId}. Respond with ONLY city names separated by commas.`;
+                    citySuggestionPrompt = `Suggest ${numStops} interesting intermediate stops for a road trip from ${startCity} to ${destCity}. Respond with ONLY city names separated by commas.`;
             }
             
             console.log(`🔍 ${agent.name} requesting city suggestions from AI...`);
