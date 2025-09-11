@@ -270,7 +270,7 @@ export class RouteCalculator {
      * @param {Object} options - Route options
      * @returns {Object} Route calculation result
      */
-    calculateRoute(startId, destId, options) {
+    async calculateRoute(startId, destId, options) {
         // Create cache key from parameters
         const cacheKey = `${startId}-${destId}-${options.numStops}-${options.detourTolerance}-${options.theme}`;
         

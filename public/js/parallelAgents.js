@@ -215,7 +215,7 @@ export class ParallelAgentSystem {
             };
             
             // Calculate unique route for this agent with specific preferences
-            const route = this.routeCalculator.calculateRoute(startId, destId, {
+            const route = await this.routeCalculator.calculateRoute(startId, destId, {
                 ...agentOptions,
                 // Make each agent prefer different types of stops/routing
                 priorityType: agent.routePreferences.priorityType || agentType,
@@ -261,7 +261,7 @@ export class ParallelAgentSystem {
                 console.log(`🔄 ${agent.name} retrying with simplified approach`);
                 
                 // Try to calculate route again in case it was the route calculation that failed
-                const retryRoute = this.routeCalculator.calculateRoute(startId, destId, {
+                const retryRoute = await this.routeCalculator.calculateRoute(startId, destId, {
                     ...agentOptions,
                     priorityType: agent.routePreferences.priorityType || agentType,
                     avoidHighways: agent.routePreferences.avoidHighways || false,
@@ -310,7 +310,7 @@ export class ParallelAgentSystem {
                     luxuryLevel: agentType === 'luxury' ? 'high' : 'standard'
                 };
                 
-                const fallbackRoute = this.routeCalculator.calculateRoute(startId, destId, agentOptions);
+                const fallbackRoute = await this.routeCalculator.calculateRoute(startId, destId, agentOptions);
                 
                 return {
                     agentType,
