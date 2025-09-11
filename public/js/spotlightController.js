@@ -10,6 +10,8 @@ class SpotlightController {
         this.assistantOpen = false;
         this.journeyProgress = 0;
         this.currentRoute = null;
+        this.currentAgentResult = null;
+        this.routeData = null;
         
         this.init();
     }
@@ -24,6 +26,39 @@ class SpotlightController {
         this.setupAnimations();
         
         console.log('🚀 Premium Spotlight Controller initialized');
+    }
+    
+    /**
+     * Initialize spotlight with route data from agent result
+     * @param {Object} agentResult - Result from selected agent
+     */
+    initializeWithRoute(agentResult) {
+        console.log('🗺️ Initializing spotlight with route data:', agentResult);
+        this.currentAgentResult = agentResult;
+        this.routeData = agentResult.route;
+        
+        // Update agent badge
+        this.updateAgentBadge(agentResult);
+        
+        // Refresh all tab content with new data
+        this.loadOverviewContent();
+        this.loadRouteBasedItinerary();
+        this.loadRouteBasedRestaurants();
+        this.loadRouteBasedPhotoSpots();
+        
+        // Update progress bar with actual cities
+        this.updateProgressWithRoute();
+    }
+    
+    updateAgentBadge(agentResult) {
+        const badge = document.getElementById('spotlight-agent-badge');
+        if (badge && agentResult.agent) {
+            const iconSpan = badge.querySelector('.agent-icon');
+            const nameSpan = badge.querySelector('.agent-name');
+            
+            if (iconSpan) iconSpan.textContent = agentResult.agent.icon;
+            if (nameSpan) nameSpan.textContent = agentResult.agent.name;
+        }
     }
 
     // ===== TAB NAVIGATION SYSTEM =====
@@ -89,94 +124,295 @@ class SpotlightController {
     }
 
     loadOverviewContent() {
-        // Load trip highlights
+        this.loadRouteBasedHighlights();
+        this.loadRouteStatistics();
+        this.setupExportFunctions();
+    }
+    
+    loadRouteBasedHighlights() {
         const highlightsGrid = document.getElementById('trip-highlights');
-        if (highlightsGrid && !highlightsGrid.hasChildNodes()) {
-            const highlights = [
-                {
-                    icon: '🏛️',
-                    title: 'Palace of the Popes',
-                    description: 'Gothic palace in Avignon, UNESCO World Heritage site',
-                    location: 'Avignon',
-                    price: '€12',
-                    rating: 4.5
-                },
-                {
-                    icon: '🍷',
-                    title: 'Châteauneuf-du-Pape',
-                    description: 'Famous wine region with cellar tours and tastings',
-                    location: 'Châteauneuf-du-Pape',
-                    price: '€25',
-                    rating: 4.8
-                },
-                {
-                    icon: '🌅',
-                    title: 'Calanques National Park',
-                    description: 'Stunning limestone cliffs and turquoise waters',
-                    location: 'Cassis',
-                    price: 'Free',
-                    rating: 4.9
-                },
-                {
-                    icon: '🎨',
-                    title: 'Musée Granet',
-                    description: 'Fine arts museum with Cézanne collection',
-                    location: 'Aix-en-Provence',
-                    price: '€5',
-                    rating: 4.3
-                }
-            ];
-
-            highlightsGrid.innerHTML = highlights.map((highlight, index) => `
-                <div class="highlight-item" onclick="spotlightController.highlightClicked('${highlight.title}', ${index})" 
-                     tabindex="0" role="button" aria-label="View ${highlight.title}">
-                    <div class="item-actions">
-                        <button class="item-action-btn" onclick="event.stopPropagation(); spotlightController.bookHighlight(${index})" 
-                                title="Book now" aria-label="Book ${highlight.title}">📅</button>
-                        <button class="item-action-btn" onclick="event.stopPropagation(); spotlightController.shareHighlight(${index})" 
-                                title="Share" aria-label="Share ${highlight.title}">📤</button>
-                    </div>
-                    <div class="highlight-icon">${highlight.icon}</div>
-                    <div class="highlight-title">${highlight.title}</div>
-                    <div class="highlight-description">${highlight.description}</div>
-                    <div class="highlight-meta">
-                        <span class="location">📍 ${highlight.location}</span>
-                        <span class="price">💰 ${highlight.price}</span>
-                        <span class="rating">⭐ ${highlight.rating}</span>
-                    </div>
-                </div>
-            `).join('');
+        if (!highlightsGrid) return;
+        
+        // Clear existing content
+        highlightsGrid.innerHTML = '';
+        
+        // Get highlights from current route data
+        let highlights = [];
+        
+        if (this.currentAgentResult && this.currentAgentResult.cities) {
+            // Generate highlights based on the agent's route cities
+            highlights = this.generateHighlightsFromRoute(this.currentAgentResult);
+        } else {
+            // Fallback highlights that are more generic
+            highlights = this.getGenericHighlights();
         }
         
-        // Setup export functionality
-        this.setupExportFunctions();
+        highlightsGrid.innerHTML = highlights.map((highlight, index) => `
+            <div class="highlight-item" onclick="spotlightController.highlightClicked('${highlight.title}', ${index})" 
+                 tabindex="0" role="button" aria-label="View ${highlight.title}">
+                <div class="item-actions">
+                    <button class="item-action-btn" onclick="event.stopPropagation(); spotlightController.bookHighlight(${index})" 
+                            title="Book now" aria-label="Book ${highlight.title}">📅</button>
+                    <button class="item-action-btn" onclick="event.stopPropagation(); spotlightController.shareHighlight(${index})" 
+                            title="Share" aria-label="Share ${highlight.title}">📤</button>
+                </div>
+                <div class="highlight-icon">${highlight.icon}</div>
+                <div class="highlight-title">${highlight.title}</div>
+                <div class="highlight-description">${highlight.description}</div>
+                <div class="highlight-meta">
+                    <span class="location">📍 ${highlight.location}</span>
+                    <span class="price">💰 ${highlight.price}</span>
+                    <span class="rating">⭐ ${highlight.rating}</span>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    generateHighlightsFromRoute(agentResult) {
+        const highlights = [];
+        const cities = agentResult.cities || [];
+        const agentType = agentResult.agentType;
+        
+        cities.forEach((city, index) => {
+            if (index === 0 || index === cities.length - 1) return; // Skip start/end cities
+            
+            const highlight = this.createCityHighlight(city, agentType, index);
+            if (highlight) highlights.push(highlight);
+        });
+        
+        return highlights.length > 0 ? highlights : this.getGenericHighlights();
+    }
+    
+    createCityHighlight(city, agentType, index) {
+        const cityName = city.name || city;
+        const agentTypeIcons = {
+            adventure: '🏔️',
+            romantic: '💕', 
+            cultural: '🏛️',
+            foodie: '🍽️',
+            family: '👨‍👩‍👧‍👦',
+            luxury: '✨'
+        };
+        
+        const cityAttractions = {
+            'Nice': { icon: '🌅', attraction: 'Promenade des Anglais', description: 'Iconic waterfront promenade with stunning views', price: 'Free' },
+            'Cannes': { icon: '🎬', attraction: 'Film Festival Palace', description: 'Walk the famous red carpet steps', price: 'Free' },
+            'Monaco': { icon: '🏁', attraction: 'Monte Carlo Casino', description: 'Legendary gambling destination', price: '€17' },
+            'Avignon': { icon: '🏛️', attraction: 'Palace of the Popes', description: 'Gothic palace, UNESCO World Heritage site', price: '€12' },
+            'Marseille': { icon: '🌊', attraction: 'Calanques National Park', description: 'Stunning limestone cliffs and waters', price: 'Free' },
+            'Turin': { icon: '🏛️', attraction: 'Mole Antonelliana', description: 'Iconic tower with panoramic views', price: '€8' },
+            'Florence': { icon: '🎨', attraction: 'Uffizi Gallery', description: 'Renaissance masterpieces collection', price: '€25' },
+            'Venice': { icon: '🚤', attraction: 'Gondola Ride', description: 'Classic Venetian experience', price: '€80' },
+            'Genoa': { icon: '🏰', attraction: 'Historic Center', description: 'UNESCO World Heritage medieval streets', price: 'Free' },
+            'Aix-en-Provence': { icon: '🎨', attraction: 'Cézanne Studio', description: 'Artist\'s preserved workspace', price: '€5' }
+        };
+        
+        const cityData = cityAttractions[cityName] || {
+            icon: agentTypeIcons[agentType] || '📍',
+            attraction: `${cityName} Experience`,
+            description: `Discover the best of ${cityName}`,
+            price: '€15'
+        };
+        
+        return {
+            icon: cityData.icon,
+            title: cityData.attraction,
+            description: cityData.description,
+            location: cityName,
+            price: cityData.price,
+            rating: (4.2 + Math.random() * 0.7).toFixed(1)
+        };
+    }
+    
+    getGenericHighlights() {
+        return [
+            {
+                icon: '🗺️',
+                title: 'Scenic Route',
+                description: 'Beautiful landscapes and views along your journey',
+                location: 'Along the route',
+                price: 'Free',
+                rating: 4.5
+            },
+            {
+                icon: '🍽️',
+                title: 'Local Cuisine',
+                description: 'Taste authentic regional specialties',
+                location: 'Various stops',
+                price: '€25-45',
+                rating: 4.3
+            },
+            {
+                icon: '📸',
+                title: 'Photo Opportunities',
+                description: 'Capture memorable moments at scenic spots',
+                location: 'Throughout journey',
+                price: 'Free',
+                rating: 4.8
+            }
+        ];
+    }
+    
+    loadRouteStatistics() {
+        const statsContainer = document.getElementById('spotlight-stats');
+        const citiesContainer = document.getElementById('spotlight-cities');
+        
+        if (this.currentAgentResult && this.currentAgentResult.route) {
+            const route = this.currentAgentResult.route;
+            const cities = route.route || [];
+            
+            if (statsContainer) {
+                statsContainer.innerHTML = `
+                    <div class="stat-item">
+                        <div class="stat-value">${route.totalDistance} km</div>
+                        <div class="stat-label">Total Distance</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${route.totalTime}h</div>
+                        <div class="stat-label">Driving Time</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${cities.length - 2}</div>
+                        <div class="stat-label">Stops</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${route.detourFactor}%</div>
+                        <div class="stat-label">Scenic Factor</div>
+                    </div>
+                `;
+            }
+            
+            if (citiesContainer) {
+                citiesContainer.innerHTML = cities.map((city, index) => {
+                    const isLast = index === cities.length - 1;
+                    return `
+                        <div class="route-city">
+                            <div class="city-name">${city.name}</div>
+                            ${!isLast ? '<div class="city-arrow">→</div>' : ''}
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
     }
 
     async loadItineraryContent() {
-        // Load day-by-day itinerary
+        // Load day-by-day itinerary - this is for the old system
         const itineraryContainer = document.getElementById('itinerary-container');
         if (itineraryContainer && !itineraryContainer.hasChildNodes()) {
-            // Show loading state
-            itineraryContainer.innerHTML = `
-                <div class="loading-content">
-                    <div class="spinner"></div>
-                    <p>Creating your personalized day-by-day itinerary...</p>
+            this.loadRouteBasedItinerary();
+        }
+    }
+    
+    async loadRouteBasedItinerary() {
+        const itineraryContainer = document.getElementById('spotlight-itinerary') || document.getElementById('itinerary-container');
+        if (!itineraryContainer) return;
+        
+        // Clear existing content
+        itineraryContainer.innerHTML = '';
+        
+        if (this.currentAgentResult && this.currentAgentResult.itinerary) {
+            // Use AI-generated itinerary if available
+            itineraryContainer.innerHTML = this.formatItineraryContent(this.currentAgentResult.itinerary);
+        } else if (this.currentAgentResult && this.currentAgentResult.cities) {
+            // Generate itinerary from route cities
+            this.generateItineraryFromRoute(itineraryContainer);
+        } else {
+            // Show loading and then fallback
+            this.loadFallbackItinerary(itineraryContainer);
+        }
+    }
+    
+    generateItineraryFromRoute(container) {
+        const cities = this.currentAgentResult.cities || [];
+        const agentType = this.currentAgentResult.agentType;
+        
+        if (cities.length < 2) {
+            this.loadFallbackItinerary(container);
+            return;
+        }
+        
+        const days = this.createDayPlan(cities, agentType);
+        
+        container.innerHTML = `
+            <div class="itinerary-header">
+                <h3>📅 Your ${days.length}-Day ${this.currentAgentResult.agent?.name || 'Adventure'}</h3>
+                <p>Personalized itinerary based on your ${agentType} preferences</p>
+            </div>
+            ${days.map((day, index) => `
+                <div class="day-card" data-day="${index + 1}">
+                    <div class="day-header">
+                        <h4>Day ${index + 1}: ${day.title}</h4>
+                        <span class="day-distance">${day.distance} • ${day.duration}</span>
+                    </div>
+                    <div class="day-timeline">
+                        ${day.activities.map(activity => `
+                            <div class="timeline-item">
+                                <span class="time">${activity.time}</span>
+                                <div class="activity">
+                                    <strong>${activity.title}</strong>
+                                    ${activity.details.map(detail => `<p>• ${detail}</p>`).join('')}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="day-budget">
+                        <strong>Daily Budget:</strong> ${day.budget} per person
+                        <span class="budget-breakdown">${day.budgetBreakdown}</span>
+                    </div>
                 </div>
-            `;
+            `).join('')}
             
-            try {
-                // Get real AI-generated itinerary
-                const aiFeatures = (await import('./aiFeatures.js')).aiFeatures;
-                const aiContent = await aiFeatures.generateFullItinerary();
-                
-                // Parse and format the AI content into structured HTML
-                const formattedItinerary = this.formatItineraryContent(aiContent);
-                itineraryContainer.innerHTML = formattedItinerary;
-                
-            } catch (error) {
-                console.error('Failed to load AI itinerary:', error);
-                // Fallback to static content only if AI completely fails
-                const itinerary = `
+            <div class="itinerary-summary">
+                <h4>Trip Summary</h4>
+                <div class="summary-stats">
+                    <div class="stat">
+                        <span class="stat-label">Total Distance:</span>
+                        <span class="stat-value">${this.routeData?.totalDistance || 0} km</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Driving Time:</span>
+                        <span class="stat-value">${this.routeData?.totalTime || '0'}h</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Theme Focus:</span>
+                        <span class="stat-value">${this.getThemeFocus(agentType)}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    createDayPlan(cities, agentType) {
+        const days = [];
+        const cityPairs = [];
+        
+        // Create city pairs for each day
+        for (let i = 0; i < cities.length - 1; i++) {
+            cityPairs.push({
+                from: cities[i],
+                to: cities[i + 1],
+                dayIndex: i
+            });
+        }
+        
+        cityPairs.forEach((pair, index) => {
+            const day = {
+                title: `${pair.from.name} to ${pair.to.name}`,
+                distance: this.calculateSegmentDistance(pair.from, pair.to),
+                duration: this.calculateSegmentDuration(pair.from, pair.to),
+                activities: this.generateActivitiesForDay(pair, agentType, index),
+                budget: this.calculateDayBudget(agentType),
+                budgetBreakdown: this.getBudgetBreakdown(agentType)
+            };
+            days.push(day);
+        });
+        
+        return days;
+    }
+    
+    loadFallbackItinerary(container) {
+        container.innerHTML = `
                 <div class="itinerary-header">
                     <h3>📅 Your 3-Day Journey</h3>
                 </div>
@@ -537,42 +773,156 @@ class SpotlightController {
     }
 
     loadPhotographyContent() {
+        this.loadRouteBasedPhotoSpots();
+    }
+    
+    loadRouteBasedPhotoSpots() {
         const photoSpotsGrid = document.getElementById('photo-spots-list');
-        if (photoSpotsGrid && !photoSpotsGrid.hasChildNodes()) {
-            const photoSpots = [
-                {
-                    image: '📸',
-                    title: 'Golden Hour at the Harbor',
-                    description: 'Perfect lighting for coastal photography during sunset',
-                    tags: ['Sunset', 'Coast', 'Harbor']
-                },
-                {
-                    image: '🏛️',
-                    title: 'Ancient Architecture',
-                    description: 'Historic buildings with stunning architectural details',
-                    tags: ['Architecture', 'History', 'Culture']
-                },
-                {
-                    image: '🌸',
-                    title: 'Lavender Fields',
-                    description: 'Iconic purple landscapes perfect for nature photography',
-                    tags: ['Nature', 'Lavender', 'Countryside']
-                }
-            ];
-
-            photoSpotsGrid.innerHTML = photoSpots.map(spot => `
-                <div class="photo-spot-item" onclick="spotlightController.photoSpotClicked('${spot.title}')">
-                    <div class="item-image">${spot.image}</div>
-                    <div class="item-content">
-                        <div class="item-title">${spot.title}</div>
-                        <div class="item-description">${spot.description}</div>
-                        <div class="item-tags">
-                            ${spot.tags.map(tag => `<span class="item-tag">${tag}</span>`).join('')}
-                        </div>
+        if (!photoSpotsGrid) return;
+        
+        // Clear existing content
+        photoSpotsGrid.innerHTML = '';
+        
+        let photoSpots = [];
+        
+        if (this.currentAgentResult && this.currentAgentResult.cities) {
+            photoSpots = this.generatePhotoSpotsFromRoute();
+        } else {
+            photoSpots = this.getGenericPhotoSpots();
+        }
+        
+        if (photoSpots.length === 0) {
+            photoSpotsGrid.innerHTML = '<div class="no-content">No photo spots found for this route.</div>';
+            return;
+        }
+        
+        photoSpotsGrid.innerHTML = photoSpots.map(spot => `
+            <div class="photo-spot-item" onclick="spotlightController.photoSpotClicked('${spot.title}')">
+                <div class="item-image">${spot.image}</div>
+                <div class="item-content">
+                    <div class="item-title">${spot.title}</div>
+                    <div class="item-description">${spot.description}</div>
+                    <div class="item-location">📍 ${spot.location}</div>
+                    <div class="item-tags">
+                        ${spot.tags.map(tag => `<span class="item-tag">${tag}</span>`).join('')}
                     </div>
                 </div>
-            `).join('');
-        }
+            </div>
+        `).join('');
+    }
+    
+    generatePhotoSpotsFromRoute() {
+        const cities = this.currentAgentResult.cities || [];
+        const agentType = this.currentAgentResult.agentType;
+        const photoSpots = [];
+        
+        cities.forEach(city => {
+            const citySpots = this.getCityPhotoSpots(city.name, agentType);
+            photoSpots.push(...citySpots);
+        });
+        
+        return photoSpots.length > 0 ? photoSpots : this.getGenericPhotoSpots();
+    }
+    
+    getCityPhotoSpots(cityName, agentType) {
+        const cityPhotoSpots = {
+            'Nice': [
+                { type: 'golden', title: 'Promenade des Anglais Sunset', image: '🌅', description: 'Golden hour along the famous waterfront' },
+                { type: 'blue', title: 'Castle Hill Blue Hour', image: '🌆', description: 'Panoramic city views during blue hour' },
+                { type: 'architecture', title: 'Old Town Colors', image: '🏠', description: 'Colorful buildings in Vieux Nice' }
+            ],
+            'Cannes': [
+                { type: 'golden', title: 'La Croisette Golden Hour', image: '🌅', description: 'Luxury hotels and palm trees at sunset' },
+                { type: 'architecture', title: 'Film Festival Palace', image: '🎬', description: 'Iconic red carpet steps' },
+                { type: 'blue', title: 'Old Port Blue Hour', image: '🚤', description: 'Luxury yachts and harbor lights' }
+            ],
+            'Monaco': [
+                { type: 'golden', title: 'Monte Carlo Casino', image: '🎰', description: 'Luxury and glamour in golden light' },
+                { type: 'architecture', title: 'Prince\'s Palace', image: '🏰', description: 'Royal architecture and gardens' },
+                { type: 'blue', title: 'Monaco Harbor', image: '🚤', description: 'Superyachts and city lights at dusk' }
+            ],
+            'Marseille': [
+                { type: 'golden', title: 'Old Port Sunset', image: '🌅', description: 'Historic harbor with fishing boats' },
+                { type: 'architecture', title: 'Notre-Dame de la Garde', image: '⛪', description: 'Basilica overlooking the city' },
+                { type: 'nature', title: 'Calanques Views', image: '🏔️', description: 'Dramatic limestone cliffs and turquoise water' }
+            ],
+            'Avignon': [
+                { type: 'golden', title: 'Palace of the Popes', image: '🏛️', description: 'Gothic architecture in warm light' },
+                { type: 'architecture', title: 'Pont d\'Avignon', image: '🌉', description: 'Famous medieval bridge over the Rhône' },
+                { type: 'blue', title: 'Ramparts Walk', image: '🌆', description: 'Medieval city walls at twilight' }
+            ],
+            'Turin': [
+                { type: 'architecture', title: 'Mole Antonelliana', image: '🏛️', description: 'Iconic tower and city symbol' },
+                { type: 'golden', title: 'Piazza Castello', image: '🌅', description: 'Royal architecture in golden hour' },
+                { type: 'blue', title: 'Po River Views', image: '🌊', description: 'River and Alps backdrop at dusk' }
+            ],
+            'Florence': [
+                { type: 'golden', title: 'Piazzale Michelangelo', image: '🌅', description: 'Classic Florence skyline at sunset' },
+                { type: 'architecture', title: 'Duomo Cathedral', image: '⛪', description: 'Renaissance dome and facade details' },
+                { type: 'blue', title: 'Ponte Vecchio', image: '🌉', description: 'Medieval bridge over the Arno at twilight' }
+            ],
+            'Venice': [
+                { type: 'golden', title: 'St. Mark\'s Square Sunrise', image: '🌅', description: 'Iconic square without crowds' },
+                { type: 'blue', title: 'Grand Canal Blue Hour', image: '🚤', description: 'Gondolas and palazzi in evening light' },
+                { type: 'architecture', title: 'Rialto Bridge', image: '🌉', description: 'Famous bridge and canal views' }
+            ]
+        };
+        
+        const spots = cityPhotoSpots[cityName] || [];
+        
+        return spots.map(spot => ({
+            image: spot.image,
+            title: `${spot.title} - ${cityName}`,
+            description: spot.description,
+            location: cityName,
+            tags: this.getPhotoSpotTags(spot.type, agentType)
+        }));
+    }
+    
+    getPhotoSpotTags(spotType, agentType) {
+        const baseTags = {
+            golden: ['Golden Hour', 'Sunset', 'Warm Light'],
+            blue: ['Blue Hour', 'Twilight', 'Night'],
+            architecture: ['Architecture', 'Historic', 'Urban'],
+            nature: ['Nature', 'Landscape', 'Scenic']
+        };
+        
+        const agentTags = {
+            adventure: ['Outdoor', 'Active'],
+            romantic: ['Romantic', 'Intimate'],
+            cultural: ['Cultural', 'Historic'],
+            foodie: ['Local', 'Authentic'],
+            family: ['Family-Friendly', 'Accessible'],
+            luxury: ['Premium', 'Exclusive']
+        };
+        
+        return [...(baseTags[spotType] || []), ...(agentTags[agentType] || [])];
+    }
+    
+    getGenericPhotoSpots() {
+        return [
+            {
+                image: '📸',
+                title: 'Scenic Viewpoints',
+                description: 'Beautiful landscapes and panoramic views along your route',
+                location: 'Various locations',
+                tags: ['Scenic', 'Landscape', 'Views']
+            },
+            {
+                image: '🏛️',
+                title: 'Historic Architecture',
+                description: 'Architectural gems and historic buildings',
+                location: 'City centers',
+                tags: ['Architecture', 'Historic', 'Culture']
+            },
+            {
+                image: '🌅',
+                title: 'Golden Hour Spots',
+                description: 'Perfect locations for sunset and sunrise photography',
+                location: 'Elevated areas',
+                tags: ['Golden Hour', 'Sunset', 'Photography']
+            }
+        ];
     }
 
     // ===== DARK MODE FUNCTIONALITY =====
@@ -662,25 +1012,84 @@ class SpotlightController {
         }
     }
 
-    sendChatMessage() {
+    async sendChatMessage() {
         const chatInput = document.getElementById('chat-input');
         if (chatInput && chatInput.value.trim()) {
             const message = chatInput.value.trim();
             this.addChatMessage('user', message);
             chatInput.value = '';
             
-            // Simulate AI response
-            setTimeout(() => {
-                const responses = [
-                    'Great question! Let me help you with that.',
-                    'Based on your route, I recommend checking out the local markets.',
-                    'The weather looks perfect for your trip! ☀️',
-                    'That\'s a fantastic spot for photography!',
-                    'I can provide more detailed information about that location.'
-                ];
-                const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-                this.addChatMessage('assistant', randomResponse);
-            }, 1000);
+            // Show typing indicator
+            this.showTypingIndicator();
+            
+            try {
+                // Use actual AI to respond to the message
+                const aiFeatures = (await import('./aiFeatures.js')).aiFeatures;
+                const contextualPrompt = this.createContextualPrompt(message);
+                const response = await aiFeatures.callPerplexityAPI(contextualPrompt, true);
+                
+                this.hideTypingIndicator();
+                this.addChatMessage('assistant', response || 'I\'m having trouble processing that right now. Please try again!');
+            } catch (error) {
+                console.error('AI chat error:', error);
+                this.hideTypingIndicator();
+                
+                // Fallback to contextual responses based on route data
+                const contextualResponse = this.getContextualResponse(message);
+                this.addChatMessage('assistant', contextualResponse);
+            }
+        }
+    }
+    
+    createContextualPrompt(message) {
+        const routeContext = this.getRouteContext();
+        return `You are a travel assistant helping with a road trip. Current route context: ${routeContext}. User question: "${message}". Provide a helpful, concise response about this specific trip.`;
+    }
+    
+    getRouteContext() {
+        if (this.currentAgentResult) {
+            const cities = this.currentAgentResult.cities?.map(c => c.name).join(' → ') || 'various destinations';
+            const agentType = this.currentAgentResult.agentType || 'general';
+            return `${agentType} trip from ${cities}`;
+        }
+        return 'road trip through France and Italy';
+    }
+    
+    getContextualResponse(message) {
+        const messageLower = message.toLowerCase();
+        
+        if (messageLower.includes('weather')) {
+            return 'Perfect weather for your trip! ☀️ Expect sunny skies in most locations. Pack layers for evening temperatures.';
+        } else if (messageLower.includes('traffic') || messageLower.includes('road')) {
+            return '🚗 Traffic is generally light on your route. Avoid major cities during rush hours (7-9 AM, 5-7 PM).';
+        } else if (messageLower.includes('food') || messageLower.includes('restaurant')) {
+            return '🍽️ Your route has excellent dining options! Each city offers unique specialties. Check the Food & Wine tab for recommendations.';
+        } else if (messageLower.includes('photo') || messageLower.includes('picture')) {
+            return '📸 Great photo opportunities along your route! Check the Photo Spots tab for the best locations and timing.';
+        } else if (messageLower.includes('time') || messageLower.includes('long')) {
+            const totalTime = this.routeData?.totalTime || '4-6';
+            return `⏱️ Your trip will take approximately ${totalTime} hours of driving time, plus stops and activities.`;
+        } else {
+            return 'I\'m here to help with your trip! Ask me about weather, traffic, restaurants, photo spots, or anything else about your route.';
+        }
+    }
+    
+    showTypingIndicator() {
+        const chatMessages = document.getElementById('chat-messages');
+        if (chatMessages) {
+            const indicator = document.createElement('div');
+            indicator.className = 'chat-message assistant typing-indicator';
+            indicator.id = 'typing-indicator';
+            indicator.innerHTML = '<span class="typing-dots">...</span>';
+            chatMessages.appendChild(indicator);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+    }
+    
+    hideTypingIndicator() {
+        const indicator = document.getElementById('typing-indicator');
+        if (indicator) {
+            indicator.remove();
         }
     }
 
@@ -761,19 +1170,36 @@ class SpotlightController {
             progressFill.style.width = `${percentage}%`;
         }
 
-        // Update progress stops
-        if (progressStops && !progressStops.hasChildNodes()) {
-            const stops = ['Aix-en-Provence', 'Marseille', 'Cassis', 'Nice'];
-            progressStops.innerHTML = stops.map((stop, index) => {
-                const stopPercentage = (index / (stops.length - 1)) * 100;
-                const isCompleted = percentage >= stopPercentage;
-                const isCurrent = percentage >= stopPercentage - 25 && percentage < stopPercentage + 25;
-                
-                return `<div class="progress-stop ${isCompleted ? 'completed' : ''} ${isCurrent ? 'current' : ''}" 
-                             title="${stop}" 
-                             style="left: ${stopPercentage}%"></div>`;
-            }).join('');
+        this.updateProgressWithRoute(percentage);
+    }
+    
+    updateProgressWithRoute(percentage = 0) {
+        const progressStops = document.getElementById('journey-progress-stops');
+        if (!progressStops) return;
+        
+        let stops = [];
+        
+        if (this.currentAgentResult && this.currentAgentResult.cities) {
+            stops = this.currentAgentResult.cities.map(city => city.name || city);
+        } else {
+            stops = ['Start', 'Destination'];
         }
+        
+        if (stops.length < 2) {
+            stops = ['Start', 'Destination'];
+        }
+        
+        progressStops.innerHTML = stops.map((stop, index) => {
+            const stopPercentage = stops.length > 1 ? (index / (stops.length - 1)) * 100 : 50;
+            const isCompleted = percentage >= stopPercentage;
+            const isCurrent = percentage >= stopPercentage - 15 && percentage < stopPercentage + 15;
+            
+            return `<div class="progress-stop ${isCompleted ? 'completed' : ''} ${isCurrent ? 'current' : ''}" 
+                         title="${stop}" 
+                         style="left: ${stopPercentage}%">
+                        <div class="stop-label">${stop}</div>
+                    </div>`;
+        }).join('');
     }
 
     // ===== FILTER FUNCTIONALITY =====
@@ -1225,37 +1651,44 @@ Happy travels! ✈️
         }
     }
 
-    // Enhanced AI Assistant with real suggestions
+    // Enhanced AI Assistant with route-specific suggestions
     handleQuickSuggestion(action) {
-        const routeSpecificSuggestions = {
-            weather: {
-                message: 'Perfect weather for your trip! ☀️ Expect sunny skies (22-26°C) in Provence. Pack light layers for evenings in Nice. Best months: April-October.',
-                followUp: 'Would you like specific weather for each stop?'
-            },
-            traffic: {
-                message: '🚗 Current traffic: A7 highway is clear. Avoid Marseille during rush hours (7-9 AM, 5-7 PM). Weekend traffic is lighter on coastal roads.',
-                followUp: 'Need alternative routes for any segment?'
-            },
-            nearby: {
-                message: '📍 Based on your route: Lavender fields (Valensole), Roman theater (Orange), local markets (Sat mornings), hidden beaches (Calanque d\'En-Vau).',
-                followUp: 'Want detailed info on any of these?'
-            },
-            tips: {
-                message: '💡 Local tips: Book restaurants early in Cassis, parking is limited. Try the local rosé wine. Many museums close on Tuesdays. Bring comfortable walking shoes!',
-                followUp: 'Need more specific advice for any location?'
-            }
-        };
-
+        const routeSpecificSuggestions = this.getRouteSpecificSuggestions();
         const suggestion = routeSpecificSuggestions[action];
+        
         if (suggestion) {
-            const chatInput = document.getElementById('chat-input');
-            if (chatInput) {
-                this.addChatMessage('assistant', suggestion.message);
+            this.addChatMessage('assistant', suggestion.message);
+            if (suggestion.followUp) {
                 setTimeout(() => {
                     this.addChatMessage('assistant', suggestion.followUp);
                 }, 1000);
             }
         }
+    }
+    
+    getRouteSpecificSuggestions() {
+        const cities = this.currentAgentResult?.cities?.map(c => c.name).join(', ') || 'your destinations';
+        const agentType = this.currentAgentResult?.agentType || 'general';
+        const distance = this.routeData?.totalDistance || 'estimated';
+        
+        return {
+            weather: {
+                message: `Perfect weather for your ${agentType} trip! ☀️ Expect sunny skies along your ${distance}km route through ${cities}. Pack layers for elevation changes.`,
+                followUp: 'Would you like specific weather for each stop?'
+            },
+            traffic: {
+                message: `🚗 Traffic update for your route through ${cities}: Main highways are clear. Avoid city centers during rush hours (7-9 AM, 5-7 PM).`,
+                followUp: 'Need alternative routes for any segment?'
+            },
+            nearby: {
+                message: `📍 Hidden gems near ${cities}: Local markets (Saturday mornings), scenic viewpoints, artisan workshops, and off-the-beaten-path attractions.`,
+                followUp: 'Want detailed info on any of these locations?'
+            },
+            tips: {
+                message: `💡 Expert tips for ${cities}: Book restaurants in advance, parking can be limited in historic centers. Try regional specialties and respect local customs!`,
+                followUp: 'Need more specific advice for any location?'
+            }
+        };
     }
 }
 
