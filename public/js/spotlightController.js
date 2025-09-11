@@ -40,6 +40,12 @@ class SpotlightController {
         // Update agent badge
         this.updateAgentBadge(agentResult);
         
+        // Re-initialize tab navigation to ensure buttons work
+        setTimeout(() => {
+            console.log('🔄 Re-initializing tab navigation...');
+            this.reinitializeTabNavigation();
+        }, 100);
+        
         // Refresh all tab content with new data
         this.loadOverviewContent();
         this.loadRouteBasedItinerary();
@@ -48,6 +54,39 @@ class SpotlightController {
         
         // Update progress bar with actual cities
         this.updateProgressWithRoute();
+    }
+    
+    /**
+     * Re-initialize tab navigation with fresh event listeners
+     */
+    reinitializeTabNavigation() {
+        console.log('🔧 Setting up fresh tab navigation...');
+        
+        const tabButtons = document.querySelectorAll('.tab-btn');
+        const tabPanels = document.querySelectorAll('.tab-panel');
+        const tabIndicator = document.querySelector('.tab-indicator');
+        
+        console.log(`Found ${tabButtons.length} tab buttons, ${tabPanels.length} tab panels`);
+        
+        // Remove existing listeners and add fresh ones
+        tabButtons.forEach((button, index) => {
+            // Clone button to remove all existing event listeners
+            const newButton = button.cloneNode(true);
+            button.parentNode.replaceChild(newButton, button);
+            
+            // Add fresh event listener
+            newButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                const tabName = newButton.dataset.tab;
+                console.log(`📋 Tab clicked: ${tabName}`);
+                this.switchTab(tabName, index, document.querySelectorAll('.tab-btn'), tabPanels, tabIndicator);
+            });
+            
+            console.log(`✓ Tab button ${index + 1} (${newButton.dataset.tab}) initialized`);
+        });
+        
+        // Initialize first tab
+        this.switchTab('overview', 0, document.querySelectorAll('.tab-btn'), tabPanels, tabIndicator);
     }
     
     updateAgentBadge(agentResult) {
@@ -63,13 +102,19 @@ class SpotlightController {
 
     // ===== TAB NAVIGATION SYSTEM =====
     setupTabNavigation() {
+        console.log('🔄 Initial tab navigation setup...');
         const tabButtons = document.querySelectorAll('.tab-btn');
         const tabPanels = document.querySelectorAll('.tab-panel');
         const tabIndicator = document.querySelector('.tab-indicator');
 
+        console.log(`Found ${tabButtons.length} tab buttons for initial setup`);
+
         tabButtons.forEach((button, index) => {
-            button.addEventListener('click', () => {
-                this.switchTab(button.dataset.tab, index, tabButtons, tabPanels, tabIndicator);
+            button.addEventListener('click', (e) => {
+                e.preventDefault();
+                const tabName = button.dataset.tab;
+                console.log(`📋 Initial tab clicked: ${tabName}`);
+                this.switchTab(tabName, index, tabButtons, tabPanels, tabIndicator);
             });
         });
 
@@ -78,18 +123,33 @@ class SpotlightController {
     }
 
     async switchTab(tabName, index, buttons, panels, indicator) {
+        console.log(`🔄 Switching to tab: ${tabName} (index: ${index})`);
+        
         // Update current tab
         this.currentTab = tabName;
 
         // Remove active classes
-        buttons.forEach(btn => btn.classList.remove('active'));
-        panels.forEach(panel => panel.classList.remove('active'));
+        buttons.forEach((btn, i) => {
+            btn.classList.remove('active');
+            console.log(`❌ Removed active from button ${i} (${btn.dataset?.tab || 'unknown'})`);
+        });
+        panels.forEach((panel, i) => {
+            panel.classList.remove('active');
+            console.log(`❌ Removed active from panel ${i} (${panel.id})`);
+        });
 
         // Add active classes
-        buttons[index].classList.add('active');
+        if (buttons[index]) {
+            buttons[index].classList.add('active');
+            console.log(`✓ Added active to button ${index} (${buttons[index].dataset?.tab || 'unknown'})`);
+        }
+        
         const targetPanel = document.getElementById(`tab-${tabName}`);
         if (targetPanel) {
             targetPanel.classList.add('active');
+            console.log(`✓ Added active to panel: tab-${tabName}`);
+        } else {
+            console.warn(`⚠️ Panel not found: tab-${tabName}`);
         }
 
         // Move indicator
@@ -97,6 +157,7 @@ class SpotlightController {
             const indicatorWidth = 100 / buttons.length;
             indicator.style.width = `${indicatorWidth}%`;
             indicator.style.left = `${index * indicatorWidth}%`;
+            console.log(`🎨 Moved indicator to position ${index}`);
         }
 
         // Load tab content
