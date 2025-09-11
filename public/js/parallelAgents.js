@@ -202,38 +202,61 @@ export class ParallelAgentSystem {
         } catch (error) {
             console.error(`❌ ${agent.name} encountered error:`, error);
             
-            // Provide fallback result instead of throwing error
-            const duration = Date.now() - startTime;
-            console.log(`🔄 ${agent.name} using fallback (${duration}ms)`);
-            
-            // Generate unique fallback route for this specific agent
-            const agentOptions = {
-                ...baseOptions,
-                theme: agentType,
-                numStops: Math.max(agent.routePreferences.minStops, baseOptions.numStops || 2),
-                detourTolerance: Math.round(agent.routePreferences.detourTolerance * 100),
-                priorityType: agent.routePreferences.priorityType || agentType,
-                avoidHighways: agent.routePreferences.avoidHighways || false,
-                preferScenic: agent.routePreferences.preferScenic || (agentType === 'adventure' || agentType === 'romantic'),
-                culturalWeight: agentType === 'cultural' ? 2.0 : 1.0,
-                foodWeight: agentType === 'foodie' ? 2.0 : 1.0,
-                familyFriendly: agentType === 'family',
-                luxuryLevel: agentType === 'luxury' ? 'high' : 'standard'
-            };
-            
-            const fallbackRoute = this.routeCalculator.calculateRoute(startId, destId, agentOptions);
-            
-            return {
-                agentType,
-                agent,
-                route: fallbackRoute,
-                itinerary: this.createFallbackItinerary(agent, fallbackRoute),
-                duration,
-                timestamp: Date.now(),
-                cities: fallbackRoute.route,
-                summary: this.createRouteSummary(agent, fallbackRoute),
-                fallback: true
-            };
+            // Try one more time with a simpler approach before using fallback
+            try {
+                console.log(`🔄 ${agent.name} retrying with simplified approach`);
+                const simplifiedPrompt = `Create a brief travel itinerary for a route from ${startId} to ${destId} focusing on ${agent.description.toLowerCase()}. Keep it concise and practical.`;
+                const retryItinerary = await this.aiFeatures.callPerplexityAPI(simplifiedPrompt, true);
+                
+                const duration = Date.now() - startTime;
+                console.log(`✅ ${agent.name} retry successful (${duration}ms)`);
+                
+                return {
+                    agentType,
+                    agent,
+                    route,
+                    itinerary: retryItinerary,
+                    duration,
+                    timestamp: Date.now(),
+                    cities: route.route,
+                    summary: this.createRouteSummary(agent, route)
+                };
+            } catch (retryError) {
+                console.error(`❌ ${agent.name} retry failed:`, retryError);
+                
+                // Provide fallback result only after retry fails
+                const duration = Date.now() - startTime;
+                console.log(`🔄 ${agent.name} using fallback (${duration}ms)`);
+                
+                // Generate unique fallback route for this specific agent
+                const agentOptions = {
+                    ...baseOptions,
+                    theme: agentType,
+                    numStops: Math.max(agent.routePreferences.minStops, baseOptions.numStops || 2),
+                    detourTolerance: Math.round(agent.routePreferences.detourTolerance * 100),
+                    priorityType: agent.routePreferences.priorityType || agentType,
+                    avoidHighways: agent.routePreferences.avoidHighways || false,
+                    preferScenic: agent.routePreferences.preferScenic || (agentType === 'adventure' || agentType === 'romantic'),
+                    culturalWeight: agentType === 'cultural' ? 2.0 : 1.0,
+                    foodWeight: agentType === 'foodie' ? 2.0 : 1.0,
+                    familyFriendly: agentType === 'family',
+                    luxuryLevel: agentType === 'luxury' ? 'high' : 'standard'
+                };
+                
+                const fallbackRoute = this.routeCalculator.calculateRoute(startId, destId, agentOptions);
+                
+                return {
+                    agentType,
+                    agent,
+                    route: fallbackRoute,
+                    itinerary: this.createFallbackItinerary(agent, fallbackRoute),
+                    duration,
+                    timestamp: Date.now(),
+                    cities: fallbackRoute.route,
+                    summary: this.createRouteSummary(agent, fallbackRoute),
+                    fallback: true
+                };
+            }
         }
     }
     

@@ -224,12 +224,14 @@ export class AIFeatures {
                 this.pendingRequests.delete(requestKey);
                 console.error('Perplexity API Error:', error);
             
-                // Return client fallback for any API errors
-                if (error.message.includes('API request failed') || error.name === 'TypeError') {
-                    return this.generateClientFallback(prompt);
-                } else {
+                // Only return client fallback for specific errors, otherwise re-throw
+                if (error.message.includes('503') || error.message.includes('Network error')) {
+                    console.log('Using client fallback due to server/network issues');
                     return this.generateClientFallback(prompt);
                 }
+                
+                // Re-throw the error to allow proper error handling upstream
+                throw error;
             }
         };
         
