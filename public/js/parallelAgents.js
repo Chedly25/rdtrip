@@ -7,6 +7,7 @@ export class ParallelAgentSystem {
     constructor(routeCalculator, aiFeatures) {
         this.routeCalculator = routeCalculator;
         this.aiFeatures = aiFeatures;
+        this.cities = routeCalculator.cities; // Access to cities data
         this.activeAgents = new Map();
         this.agentResults = new Map();
         
@@ -152,12 +153,44 @@ export class ParallelAgentSystem {
         console.log(`🤖 ${agent.name} starting route calculation...`);
         
         try {
+            // First, ask the API for city suggestions based on agent type
+            const startCity = this.cities.find(c => c.id === startId)?.name || startId;
+            const destCity = this.cities.find(c => c.id === destId)?.name || destId;
+            const numStops = Math.max(agent.routePreferences.minStops, baseOptions.numStops || 2);
+            
+            // Create a prompt to get city suggestions from the API
+            const citySuggestionPrompt = `Suggest ${numStops} intermediate cities for a ${agentType} road trip from ${startCity} to ${destCity}. 
+                Focus on: ${agent.description}.
+                List ONLY the city names separated by commas, nothing else.`;
+            
+            console.log(`🔍 ${agent.name} requesting city suggestions from AI...`);
+            
+            // Get city suggestions from AI with extended timeout
+            let suggestedCities = [];
+            try {
+                const citySuggestions = await Promise.race([
+                    this.aiFeatures.callPerplexityAPI(citySuggestionPrompt, true),
+                    new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error('City suggestion timeout')), 30000)
+                    )
+                ]);
+                
+                // Parse the city suggestions
+                if (citySuggestions && typeof citySuggestions === 'string') {
+                    suggestedCities = citySuggestions.split(',').map(city => city.trim()).filter(c => c.length > 0);
+                    console.log(`✨ ${agent.name} received AI city suggestions:`, suggestedCities);
+                }
+            } catch (suggestionError) {
+                console.warn(`⚠️ ${agent.name} couldn't get AI city suggestions:`, suggestionError.message);
+            }
+            
             // Create agent-specific route options
             const agentOptions = {
                 ...baseOptions,
                 theme: agentType,
-                numStops: Math.max(agent.routePreferences.minStops, baseOptions.numStops || 2),
-                detourTolerance: Math.round(agent.routePreferences.detourTolerance * 100)
+                numStops: numStops,
+                detourTolerance: Math.round(agent.routePreferences.detourTolerance * 100),
+                suggestedCities: suggestedCities // Pass AI suggestions to route calculator
             };
             
             // Calculate unique route for this agent with specific preferences

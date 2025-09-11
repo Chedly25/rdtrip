@@ -290,38 +290,87 @@ export class RouteCalculator {
         const numStops = parseInt(options.numStops);
         const detourTolerance = parseInt(options.detourTolerance) / 100;
         const theme = options.theme;
+        const suggestedCities = options.suggestedCities || [];
         
-        // Stage 1: Bounding box filter
-        const directDistance = this.haversineDistance(start, dest);
-        const bufferKm = Math.max(100, directDistance * 0.4); // Dynamic buffer based on distance
-        const bbox = this.getBoundingBox(start, dest, bufferKm);
+        let selectedStops = [];
         
-        let candidates = this.cities.filter(city => 
-            city.id !== startId && 
-            city.id !== destId &&
-            city.lat >= bbox.latMin && 
-            city.lat <= bbox.latMax &&
-            city.lon >= bbox.lonMin && 
-            city.lon <= bbox.lonMax
-        );
-        
-        // Stage 2: Ellipse filter based on detour tolerance
-        candidates = candidates.filter(city => {
-            const detour = this.calculateDetourFactor(city, start, dest);
-            return detour <= detourTolerance;
-        });
-        
-        if (candidates.length === 0 && numStops > 0) {
-            // Fallback: if no candidates in tolerance, expand search
-            candidates = this.cities.filter(city => 
-                city.id !== startId && 
-                city.id !== destId &&
-                this.calculateDetourFactor(city, start, dest) <= detourTolerance * 2
-            );
+        // If we have AI-suggested cities, try to use them first
+        if (suggestedCities.length > 0) {
+            console.log('🎯 Using AI-suggested cities:', suggestedCities);
+            
+            // Try to match suggested city names to our city database
+            for (const suggestedName of suggestedCities) {
+                // Try exact match first
+                let matchedCity = this.cities.find(city => 
+                    city.name.toLowerCase() === suggestedName.toLowerCase() &&
+                    city.id !== startId && 
+                    city.id !== destId
+                );
+                
+                // If no exact match, try partial match
+                if (!matchedCity) {
+                    matchedCity = this.cities.find(city => 
+                        city.name.toLowerCase().includes(suggestedName.toLowerCase()) &&
+                        city.id !== startId && 
+                        city.id !== destId
+                    );
+                }
+                
+                if (matchedCity && selectedStops.length < numStops) {
+                    selectedStops.push(matchedCity);
+                    console.log(`✅ Matched AI suggestion "${suggestedName}" to ${matchedCity.name}`);
+                } else if (!matchedCity) {
+                    console.log(`❌ Could not match AI suggestion "${suggestedName}" to database`);
+                }
+            }
         }
         
-        // Stage 3: Theme-based scoring and selection
-        const selectedStops = this.selectOptimalStops(candidates, start, dest, numStops, theme);
+        // If we don't have enough stops from AI suggestions, use the original algorithm
+        if (selectedStops.length < numStops) {
+            console.log(`📍 Need ${numStops - selectedStops.length} more stops, using theme-based selection`);
+            
+            // Stage 1: Bounding box filter
+            const directDistance = this.haversineDistance(start, dest);
+            const bufferKm = Math.max(100, directDistance * 0.4); // Dynamic buffer based on distance
+            const bbox = this.getBoundingBox(start, dest, bufferKm);
+            
+            let candidates = this.cities.filter(city => 
+                city.id !== startId && 
+                city.id !== destId &&
+                !selectedStops.some(s => s.id === city.id) && // Exclude already selected stops
+                city.lat >= bbox.latMin && 
+                city.lat <= bbox.latMax &&
+                city.lon >= bbox.lonMin && 
+                city.lon <= bbox.lonMax
+            );
+            
+            // Stage 2: Ellipse filter based on detour tolerance
+            candidates = candidates.filter(city => {
+                const detour = this.calculateDetourFactor(city, start, dest);
+                return detour <= detourTolerance;
+            });
+            
+            if (candidates.length === 0 && numStops > 0) {
+                // Fallback: if no candidates in tolerance, expand search
+                candidates = this.cities.filter(city => 
+                    city.id !== startId && 
+                    city.id !== destId &&
+                    !selectedStops.some(s => s.id === city.id) &&
+                    this.calculateDetourFactor(city, start, dest) <= detourTolerance * 2
+                );
+            }
+            
+            // Stage 3: Theme-based scoring and selection for remaining stops
+            const additionalStops = this.selectOptimalStops(
+                candidates, 
+                start, 
+                dest, 
+                numStops - selectedStops.length, 
+                theme
+            );
+            
+            selectedStops = [...selectedStops, ...additionalStops];
+        }
         
         // Order stops geographically
         const orderedStops = this.orderStopsGeographically(selectedStops, start, dest);
