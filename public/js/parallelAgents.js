@@ -163,46 +163,79 @@ export class ParallelAgentSystem {
             
             switch(agentType) {
                 case 'adventure':
-                    citySuggestionPrompt = `As an adventure travel expert, suggest ${numStops} thrilling intermediate stops for a road trip from ${startCity} to ${destCity}. Focus on places with outdoor activities, hiking, climbing, mountain towns, natural parks, or adventure sports. Respond with ONLY city names separated by commas. Examples: Chamonix, Interlaken, Zermatt`;
+                    citySuggestionPrompt = `ONLY return ${numStops} city names for adventure stops between ${startCity} and ${destCity}. NO descriptions, NO emojis, NO explanations. Format: City1, City2, City3. Focus on: mountain towns, adventure sports destinations, hiking areas. Examples of valid responses: "Chamonix, Interlaken, Zermatt" or "Grenoble, Turin, Cortina d'Ampezzo"`;
                     break;
                 case 'romantic':
-                    citySuggestionPrompt = `As a romantic travel specialist, suggest ${numStops} enchanting intermediate stops for a couples' road trip from ${startCity} to ${destCity}. Focus on romantic lakeside towns, vineyard regions, scenic coastal villages, or historic romantic cities. Respond with ONLY city names separated by commas. Examples: Annecy, Bellagio, Portofino`;
+                    citySuggestionPrompt = `ONLY return ${numStops} city names for romantic stops between ${startCity} and ${destCity}. NO descriptions, NO emojis, NO explanations. Format: City1, City2, City3. Focus on: lakeside towns, vineyard cities, coastal villages. Examples of valid responses: "Annecy, Bellagio, Portofino" or "Saint-Paul-de-Vence, Portofino, Verona"`;
                     break;
                 case 'cultural':
-                    citySuggestionPrompt = `As a cultural heritage expert, suggest ${numStops} culturally rich intermediate stops for a road trip from ${startCity} to ${destCity}. Focus on UNESCO sites, historic cities, art centers, medieval towns, or places with significant cultural heritage. Respond with ONLY city names separated by commas. Examples: Avignon, Florence, Siena`;
+                    citySuggestionPrompt = `ONLY return ${numStops} city names for cultural stops between ${startCity} and ${destCity}. NO descriptions, NO emojis, NO explanations. Format: City1, City2, City3. Focus on: historic cities, UNESCO sites, art centers. Examples of valid responses: "Avignon, Florence, Siena" or "Arles, Pisa, Bologna"`;
                     break;
                 case 'foodie':
-                    citySuggestionPrompt = `As a culinary travel expert, suggest ${numStops} gastronomic intermediate stops for a food-focused road trip from ${startCity} to ${destCity}. Focus on renowned food destinations, wine regions, markets, or cities famous for specific cuisines. Respond with ONLY city names separated by commas. Examples: Lyon, Bologna, Modena`;
+                    citySuggestionPrompt = `ONLY return ${numStops} city names for culinary stops between ${startCity} and ${destCity}. NO descriptions, NO emojis, NO explanations. Format: City1, City2, City3. Focus on: food destinations, wine regions, culinary cities. Examples of valid responses: "Lyon, Bologna, Modena" or "Nice, Genoa, Parma"`;
                     break;
                 case 'family':
-                    citySuggestionPrompt = `As a family travel specialist, suggest ${numStops} family-friendly intermediate stops for a road trip from ${startCity} to ${destCity}. Focus on cities with theme parks, family attractions, safe beaches, interactive museums, or child-friendly activities. Respond with ONLY city names separated by commas. Examples: Monaco, Sanremo, Rimini`;
+                    citySuggestionPrompt = `ONLY return ${numStops} city names for family stops between ${startCity} and ${destCity}. NO descriptions, NO emojis, NO explanations. Format: City1, City2, City3. Focus on: family-friendly cities, beach towns, theme park areas. Examples of valid responses: "Monaco, Sanremo, Rimini" or "Antibes, La Spezia, Pisa"`;
                     break;
                 case 'luxury':
-                    citySuggestionPrompt = `As a luxury travel consultant, suggest ${numStops} upscale intermediate stops for a luxury road trip from ${startCity} to ${destCity}. Focus on exclusive resorts, high-end shopping destinations, luxury spas, prestigious wine regions, or glamorous coastal towns. Respond with ONLY city names separated by commas. Examples: Cannes, Saint-Tropez, Portofino`;
+                    citySuggestionPrompt = `ONLY return ${numStops} city names for luxury stops between ${startCity} and ${destCity}. NO descriptions, NO emojis, NO explanations. Format: City1, City2, City3. Focus on: luxury destinations, upscale resorts, glamorous towns. Examples of valid responses: "Cannes, Saint-Tropez, Portofino" or "Monte-Carlo, Saint-Jean-Cap-Ferrat, Cernobbio"`;
                     break;
                 default:
-                    citySuggestionPrompt = `Suggest ${numStops} interesting intermediate stops for a road trip from ${startCity} to ${destCity}. Respond with ONLY city names separated by commas.`;
+                    citySuggestionPrompt = `ONLY return ${numStops} city names between ${startCity} and ${destCity}. NO descriptions, NO emojis, NO explanations. Format: City1, City2, City3.`;
             }
             
-            console.log(`🔍 ${agent.name} requesting city suggestions from AI...`);
             
-            // Get city suggestions from AI with extended timeout
+            // Get city suggestions from AI with extended timeout and retry logic
             let suggestedCities = [];
-            try {
-                const citySuggestions = await Promise.race([
-                    this.aiFeatures.callPerplexityAPI(citySuggestionPrompt, true),
-                    new Promise((_, reject) => 
-                        setTimeout(() => reject(new Error('City suggestion timeout')), 30000)
-                    )
-                ]);
-                
-                // Parse the city suggestions
-                if (citySuggestions && typeof citySuggestions === 'string') {
-                    suggestedCities = citySuggestions.split(',').map(city => city.trim()).filter(c => c.length > 0);
-                    console.log(`✨ ${agent.name} received AI city suggestions:`, suggestedCities);
+            let retryCount = 0;
+            const maxRetries = 2;
+            
+            while (retryCount <= maxRetries && suggestedCities.length === 0) {
+                try {
+                    console.log(`🔍 ${agent.name} requesting city suggestions (attempt ${retryCount + 1}/${maxRetries + 1})...`);
+                    
+                    const citySuggestions = await Promise.race([
+                        this.aiFeatures.callPerplexityAPI(citySuggestionPrompt, true),
+                        new Promise((_, reject) => 
+                            setTimeout(() => reject(new Error('City suggestion timeout')), 30000)
+                        )
+                    ]);
+                    
+                    // Parse and validate the city suggestions
+                    if (citySuggestions && typeof citySuggestions === 'string') {
+                        // Check if response is a fallback/description instead of city names
+                        if (this.isFallbackResponse(citySuggestions)) {
+                            console.warn(`⚠️ ${agent.name} received fallback response: "${citySuggestions.substring(0, 100)}..."`);
+                            if (retryCount < maxRetries) {
+                                console.log(`🔄 ${agent.name} retrying with simplified prompt...`);
+                                // Use a more direct prompt for retry
+                                citySuggestionPrompt = `List ${numStops} city names between ${startCity} and ${destCity}. Answer with ONLY city names separated by commas. No other text.`;
+                            }
+                        } else {
+                            const rawCities = citySuggestions.split(',').map(city => city.trim()).filter(c => c.length > 0);
+                            const validCities = this.validateCityNames(rawCities);
+                            
+                            if (validCities.length > 0) {
+                                suggestedCities = validCities;
+                                console.log(`✨ ${agent.name} received valid AI city suggestions:`, suggestedCities);
+                                break;
+                            } else {
+                                console.warn(`⚠️ ${agent.name} received invalid city names: ${rawCities.join(', ')}`);
+                                if (retryCount < maxRetries) {
+                                    console.log(`🔄 ${agent.name} retrying with different approach...`);
+                                }
+                            }
+                        }
+                    }
+                } catch (suggestionError) {
+                    console.warn(`⚠️ ${agent.name} city suggestion error (attempt ${retryCount + 1}):`, suggestionError.message);
                 }
-            } catch (suggestionError) {
-                console.warn(`⚠️ ${agent.name} couldn't get AI city suggestions:`, suggestionError.message);
+                
+                retryCount++;
+            }
+            
+            if (suggestedCities.length === 0) {
+                console.log(`🔄 ${agent.name} falling back to route calculation without AI city suggestions`);
             }
             
             // Create agent-specific route options
@@ -703,6 +736,91 @@ Format as clean HTML. Include booking requirements and luxury service details. D
         return activities[city] || 'Exclusive luxury experiences and premium services await';
     }
 
+    /**
+     * Check if response is a fallback/description instead of city names
+     * @param {string} response - AI response to validate
+     * @returns {boolean} True if it's a fallback response
+     */
+    isFallbackResponse(response) {
+        const fallbackIndicators = [
+            '🏔️ Adventure Route:', '💕 Romantic Journey:', '🏛️ Cultural Discovery:',
+            '🍽️ Culinary Adventure:', '👨‍👩‍👧‍👦 Family-Friendly Route:', '✨ Luxury Experience:',
+            'This is a fallback response', 'please try again', 'Note: This is a fallback',
+            'Adventure Route:', 'Romantic Journey:', 'Cultural Discovery:',
+            'Culinary Adventure:', 'Family-Friendly Route:', 'Luxury Experience:',
+            'sunset views', 'For real-time AI insights', 'For personalized recommendations',
+            'For detailed cultural insights', 'For current restaurant recommendations',
+            'For current family activities', 'For exclusive luxury recommendations'
+        ];
+        
+        const responseLower = response.toLowerCase();
+        return fallbackIndicators.some(indicator => 
+            responseLower.includes(indicator.toLowerCase())
+        ) || response.length > 200; // Fallback responses are typically long descriptions
+    }
+    
+    /**
+     * Validate and filter city names from AI response
+     * @param {Array} rawCities - Raw city names from AI
+     * @returns {Array} Validated city names
+     */
+    validateCityNames(rawCities) {
+        const validCities = [];
+        
+        for (const city of rawCities) {
+            // Skip if it looks like a description or fallback text
+            if (this.isValidCityName(city)) {
+                validCities.push(city);
+            } else {
+                console.warn(`⚠️ Filtered out invalid city suggestion: "${city}"`);
+            }
+        }
+        
+        return validCities;
+    }
+    
+    /**
+     * Check if a string looks like a valid city name
+     * @param {string} cityName - City name to validate
+     * @returns {boolean} True if it looks like a valid city name
+     */
+    isValidCityName(cityName) {
+        if (!cityName || typeof cityName !== 'string') return false;
+        
+        const name = cityName.trim();
+        
+        // Basic validation rules for city names
+        const invalidPatterns = [
+            /^\d+\s*km/, // Distance patterns like "500 km"
+            /hours?\s*(drive|away)/, // Time patterns
+            /\b(route|journey|adventure|experience|highlights?)\b/i,
+            /\b(activities?|attractions?|restaurants?|hotels?)\b/i,
+            /\b(please|try|again|note|fallback)\b/i,
+            /[🏔️💕🏛️🍽️👨‍👩‍👧‍👦✨]/, // Emoji indicators
+            /^(this|that|the|and|or|but|with|for|in|on|at)\s+/i, // Articles/prepositions
+            /\b(sunset|views?|dining|cuisine|culture)\b/i,
+            /:/, // Colon indicates description
+            /\n|\r/, // Multi-line text
+        ];
+        
+        // Check against invalid patterns
+        if (invalidPatterns.some(pattern => pattern.test(name))) {
+            return false;
+        }
+        
+        // Valid city names should be reasonably short and not contain excessive punctuation
+        if (name.length > 50 || name.split(' ').length > 4) {
+            return false;
+        }
+        
+        // Should contain at least one letter
+        if (!/[a-zA-Z]/.test(name)) {
+            return false;
+        }
+        
+        return true;
+    }
+    
     /**
      * Cancel all active agents
      */
