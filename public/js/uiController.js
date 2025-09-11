@@ -299,7 +299,16 @@ export class UIController {
         });
         
         // Calculate button
-        document.getElementById('calculate-btn').addEventListener('click', this.calculateRoute);
+        const calculateBtn = document.getElementById('calculate-btn');
+        if (calculateBtn) {
+            calculateBtn.addEventListener('click', (e) => {
+                console.log('Calculate button clicked');
+                e.preventDefault();
+                this.calculateRoute();
+            });
+        } else {
+            console.error('Calculate button not found!');
+        }
         
         // API key input for AI features
         const apiKeyInput = document.getElementById('api-key');
@@ -335,9 +344,12 @@ export class UIController {
      * Calculate route using parallel agents system for 6 different trip types
      */
     async calculateRoute() {
+        console.log('calculateRoute function called');
         const destInput = document.getElementById('destination');
         const destName = destInput.value.trim();
         const calculateBtn = document.getElementById('calculate-btn');
+        
+        console.log('Destination:', destName);
         
         if (!destName) {
             this.showError('Please enter a destination city');
