@@ -193,7 +193,7 @@ app.use(helmet({
             defaultSrc: ["'self'"],
             styleSrc: ["'self'", "'unsafe-inline'", "https://unpkg.com", "https://fonts.googleapis.com"],
             scriptSrc: ["'self'", "https://unpkg.com"],
-            connectSrc: ["'self'", "https://api.perplexity.ai"],
+            connectSrc: ["'self'", "https://api.perplexity.ai", "https://api.mapbox.com"],
             imgSrc: ["'self'", "data:", "https://*"],
             fontSrc: ["'self'", "https://fonts.gstatic.com", "https://r2cdn.perplexity.ai"],
         },

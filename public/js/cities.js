@@ -1550,5 +1550,111 @@ export const cities = [
             "Medieval chapel ruins",
             "Nature trail hiking"
         ]
+    },
+    // Additional adventure cities frequently suggested by AI
+    {
+        id: "aosta",
+        name: "Aosta",
+        lat: 45.7369,
+        lon: 7.3199,
+        country: "IT",
+        population: 34048,
+        themes: {
+            adventure: 0.9,
+            romantic: 0.6,
+            cultural: 0.8,
+            hidden: 0.3,
+            family: 0.7
+        },
+        activities: [
+            "Roman Theatre ruins",
+            "Skyway cable car Mont Blanc",
+            "Alpine hiking trails",
+            "Medieval city walls walk"
+        ]
+    },
+    {
+        id: "cortina-ampezzo",
+        name: "Cortina d'Ampezzo",
+        lat: 46.5407,
+        lon: 12.1356,
+        country: "IT",
+        population: 5916,
+        themes: {
+            adventure: 1.0,
+            romantic: 0.8,
+            cultural: 0.5,
+            hidden: 0.2,
+            family: 0.8
+        },
+        activities: [
+            "Dolomites hiking and skiing",
+            "Via Ferrata climbing routes",
+            "Lake Misurina scenic views",
+            "Faloria cable car rides"
+        ]
+    },
+    {
+        id: "moustiers-sainte-marie",
+        name: "Moustiers-Sainte-Marie",
+        lat: 43.8478,
+        lon: 6.2198,
+        country: "FR",
+        population: 693,
+        themes: {
+            adventure: 0.7,
+            romantic: 0.9,
+            cultural: 0.8,
+            hidden: 0.6,
+            family: 0.6
+        },
+        activities: [
+            "Verdon Gorge gateway",
+            "Famous faience pottery",
+            "Notre-Dame chapel hike",
+            "Golden star legend site"
+        ]
+    },
+    {
+        id: "chamonix",
+        name: "Chamonix",
+        lat: 45.9237,
+        lon: 6.8694,
+        country: "FR",
+        population: 8906,
+        themes: {
+            adventure: 1.0,
+            romantic: 0.7,
+            cultural: 0.6,
+            hidden: 0.1,
+            family: 0.8
+        },
+        activities: [
+            "Mont Blanc cable car",
+            "Aiguille du Midi glacier visit",
+            "Alpine skiing and hiking",
+            "Mountaineering center"
+        ]
+    },
+    {
+        id: "annecy",
+        name: "Annecy",
+        lat: 45.8992,
+        lon: 6.1294,
+        country: "FR",
+        population: 128199,
+        themes: {
+            adventure: 0.7,
+            romantic: 1.0,
+            cultural: 0.8,
+            hidden: 0.2,
+            family: 0.9
+        },
+        activities: [
+            "Lake Annecy boat tours",
+            "Venice of the Alps canals",
+            "Château d'Annecy museum",
+            "Cycling around the lake"
+        ]
     }
 ];
