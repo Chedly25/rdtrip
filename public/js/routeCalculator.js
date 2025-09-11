@@ -473,8 +473,8 @@ export class RouteCalculator {
                     headers: {} // Free tier, no API key needed for basic requests
                 },
                 {
-                    name: 'OSRM',
-                    url: `/api/route/osrm/${start.lon},${start.lat};${end.lon},${end.lat}?overview=full&geometries=geojson`,
+                    name: 'Mapbox',
+                    url: `https://api.mapbox.com/directions/v5/mapbox/driving/${start.lon},${start.lat};${end.lon},${end.lat}?geometries=geojson&overview=full&access_token=pk.eyJ1IjoiY2hlZGx5MjUiLCJhIjoiY21lbW1qeHRoMHB5azJsc2VuMWJld2tlYSJ9.0jfOiOXCh0VN5ZjJ5ab7MQ`,
                     headers: {}
                 }
             ];
@@ -496,7 +496,7 @@ export class RouteCalculator {
                     // Handle different response formats
                     let route, geometry, distance, duration;
                     
-                    if (service.name === 'OSRM') {
+                    if (service.name === 'Mapbox') {
                         if (data.code !== 'Ok' || !data.routes || data.routes.length === 0) {
                             throw new Error('No route found');
                         }
@@ -681,14 +681,14 @@ export class RouteCalculator {
             const to = route[i + 1];
             
             try {
-                // Use OSRM (OpenStreetMap Routing Machine) for free routing
-                const segment = await this.getOSRMRoute(from, to);
+                // Use Mapbox routing for reliable routing
+                const segment = await this.getMapboxRoute(from, to);
                 segment.from = from.name;
                 segment.to = to.name;
-                segment.service = 'OSRM';
+                segment.service = 'Mapbox';
                 segments.push(segment);
             } catch (error) {
-                console.warn(`Failed to get OSRM route from ${from.name} to ${to.name}, using fallback`);
+                console.warn(`Failed to get Mapbox route from ${from.name} to ${to.name}, using fallback`);
                 // Fallback to curved line
                 const fallbackSegment = this.generateCurvedFallbackRoute(from, to);
                 fallbackSegment.from = from.name;
@@ -706,26 +706,25 @@ export class RouteCalculator {
     }
     
     /**
-     * Get route from OSRM service with fallback
+     * Get route from Mapbox service with fallback
      * @param {Object} from - Starting city with lat/lon
      * @param {Object} to - Ending city with lat/lon
      * @returns {Promise<Object>} Route segment with geometry
      */
-    async getOSRMRoute(from, to) {
+    async getMapboxRoute(from, to) {
         try {
-            // Use server proxy to avoid CORS issues
             const coordinates = `${from.lon},${from.lat};${to.lon},${to.lat}`;
-            const url = `/api/route/osrm/${coordinates}?geometries=geojson&overview=full`;
+            const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${coordinates}?geometries=geojson&overview=full&access_token=pk.eyJ1IjoiY2hlZGx5MjUiLCJhIjoiY21lbW1qeHRoMHB5azJsc2VuMWJld2tlYSJ9.0jfOiOXCh0VN5ZjJ5ab7MQ`;
             
             const response = await fetch(url);
             if (!response.ok) {
-                console.warn(`OSRM API error: ${response.status}, using fallback`);
-                throw new Error(`OSRM API error: ${response.status}`);
+                console.warn(`Mapbox API error: ${response.status}, using fallback`);
+                throw new Error(`Mapbox API error: ${response.status}`);
             }
             
             const data = await response.json();
             
-            if (!data.routes || data.routes.length === 0) {
+            if (data.code !== 'Ok' || !data.routes || data.routes.length === 0) {
                 console.warn('No route found, using fallback');
                 throw new Error('No route found');
             }
@@ -738,7 +737,7 @@ export class RouteCalculator {
                 duration: Math.round(route.duration / 3600 * 10) / 10 // Convert to hours
             };
         } catch (error) {
-            console.warn('OSRM route failed, generating fallback route:', error.message);
+            console.warn('Mapbox route failed, generating fallback route:', error.message);
             // Generate curved fallback route instead of throwing error
             return this.generateCurvedFallbackRoute(from, to);
         }
