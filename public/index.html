@@ -11,58 +11,58 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- Modern UI Design System -->
-    <link rel="stylesheet" href="css/modern-ui-overhaul.css">
+    <!-- Apple-Grade Design System -->
+    <link rel="stylesheet" href="css/apple-design-system.css">
     <link rel="stylesheet" href="css/agent-results.css">
     
     <!-- Leaflet JavaScript -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
-    <div class="modern-header glass-card">
+    <div class="apple-header">
         <div class="hero-content">
             <h1 class="hero-title">🚗 Aix-en-Provence Road Trip Planner</h1>
             <p class="hero-subtitle">Discover the perfect route through Provence, the French Riviera, and beyond</p>
         </div>
     </div>
 
-    <div class="modern-container">
+    <div class="apple-container">
         <!-- Sidebar with Controls -->
-        <div class="modern-sidebar glass-card">
+        <div class="apple-sidebar">
             <!-- Destination Selection -->
-            <div class="modern-control-group">
+            <div class="apple-control-group">
                 <h3>Destination</h3>
-                <div class="modern-input-container">
-                    <input type="text" id="destination" class="modern-input" placeholder="Type a city name (e.g., Nice, Venice, Florence)..." autocomplete="off">
-                    <div class="modern-autocomplete-dropdown" id="autocomplete"></div>
+                <div style="position: relative;">
+                    <input type="text" id="destination" class="apple-input" placeholder="Type a city name (e.g., Nice, Venice, Florence)..." autocomplete="off">
+                    <div class="apple-autocomplete-dropdown" id="autocomplete"></div>
                 </div>
             </div>
 
             <!-- Trip Theme Selection -->
-            <div class="modern-control-group">
+            <div class="apple-control-group">
                 <h3>Trip Theme</h3>
-                <div class="modern-theme-grid">
-                    <button class="modern-btn theme-button" data-theme="balanced">🎯 Balanced</button>
-                    <button class="modern-btn theme-button" data-theme="adventure">🏔️ Adventure</button>
-                    <button class="modern-btn theme-button" data-theme="romantic">💕 Romantic</button>
-                    <button class="modern-btn theme-button" data-theme="cultural">🏛️ Cultural</button>
-                    <button class="modern-btn theme-button" data-theme="hidden">💎 Hidden Gems</button>
-                    <button class="modern-btn theme-button" data-theme="family">👨‍👩‍👧‍👦 Family</button>
+                <div class="apple-theme-grid">
+                    <button class="apple-btn apple-btn-theme theme-button" data-theme="balanced">🎯 Balanced</button>
+                    <button class="apple-btn apple-btn-theme theme-button" data-theme="adventure">🏔️ Adventure</button>
+                    <button class="apple-btn apple-btn-theme theme-button" data-theme="romantic">💕 Romantic</button>
+                    <button class="apple-btn apple-btn-theme theme-button" data-theme="cultural">🏛️ Cultural</button>
+                    <button class="apple-btn apple-btn-theme theme-button" data-theme="hidden">💎 Hidden Gems</button>
+                    <button class="apple-btn apple-btn-theme theme-button" data-theme="family">👨‍👩‍👧‍👦 Family</button>
                 </div>
             </div>
 
             <!-- Route Options -->
-            <div class="modern-control-group">
+            <div class="apple-control-group">
                 <h3>Route Options</h3>
-                <div class="slider-group">
-                    <div class="slider-label">
+                <div class="apple-slider-group">
+                    <div class="apple-slider-label">
                         <span>Number of Stops</span>
                         <span id="stops-value">3</span>
                     </div>
                     <input type="range" id="stops-slider" min="1" max="6" value="3">
                 </div>
-                <div class="slider-group">
-                    <div class="slider-label">
+                <div class="apple-slider-group">
+                    <div class="apple-slider-label">
                         <span>Detour Tolerance</span>
                         <span id="detour-value">20%</span>
                     </div>
@@ -71,7 +71,7 @@
             </div>
 
             <!-- Calculate Button -->
-            <button class="modern-btn modern-btn-primary" id="calculate-btn">🧭 Calculate Route</button>
+            <button class="apple-btn apple-btn-primary" id="calculate-btn">🧭 Calculate Route</button>
             
             <!-- Trip Types Section -->
             <div class="modern-control-group" id="trip-types-section" style="display: none;">
@@ -145,6 +145,26 @@
             </div>
         </div>
 
+    </div>
+
+    <!-- Apple-Style AI Agents Loading Modal -->
+    <div id="apple-agents-modal" class="apple-modal-overlay">
+        <div class="apple-modal">
+            <div class="apple-modal-header">
+                <h2 class="apple-modal-title">🤖 AI Travel Agents</h2>
+                <p class="apple-modal-subtitle">Our specialized agents are crafting your perfect route</p>
+            </div>
+            
+            <div class="apple-agents-grid" id="apple-agents-grid">
+                <!-- Agent cards will be populated dynamically -->
+            </div>
+            
+            <div style="text-align: center; margin-top: 32px;">
+                <div style="color: var(--secondary-label); font-size: 14px; margin-bottom: 16px;">
+                    This may take up to 2 minutes for the best results
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Trip Types Grid Modal -->

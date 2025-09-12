@@ -1112,41 +1112,81 @@ export class UIController {
     }
     
     /**
-     * Show the enhanced agents loading modal
+     * Show the Apple-style AI agents loading modal
      */
     showAgentsLoadingModal() {
-        const modal = document.getElementById('agents-loading-modal');
+        const modal = document.getElementById('apple-agents-modal');
         if (modal) {
-            modal.style.display = 'flex';
+            // Create agent cards
+            this.createAppleAgentCards();
+            
+            // Show modal with Apple animation
             modal.classList.add('show');
             
-            // Reset all progress bars
-            const progressBars = modal.querySelectorAll('.progress-bar');
-            const overallFill = document.getElementById('overall-progress-fill');
-            const overallCount = document.getElementById('overall-progress-count');
-            
-            progressBars.forEach(bar => bar.style.width = '0%');
-            if (overallFill) overallFill.style.width = '0%';
-            if (overallCount) overallCount.textContent = '0/6';
-            
-            // Reset all loading cards
-            const loadingCards = modal.querySelectorAll('.agent-loading-card');
-            loadingCards.forEach(card => {
-                card.classList.remove('active', 'completed');
-                const status = card.querySelector('.loading-status');
-                if (status) status.textContent = 'Launching...';
-            });
+            // Initialize all agents as loading
+            this.resetAppleAgentCards();
         }
     }
     
     /**
-     * Hide the agents loading modal
+     * Create Apple-style agent cards
+     */
+    createAppleAgentCards() {
+        const agentsGrid = document.getElementById('apple-agents-grid');
+        if (!agentsGrid) return;
+        
+        const agents = [
+            { type: 'adventure', name: 'Adventure Explorer', emoji: '🏔️', description: 'Finding thrilling experiences' },
+            { type: 'romantic', name: 'Romance Guide', emoji: '💕', description: 'Crafting romantic moments' },
+            { type: 'cultural', name: 'Culture Expert', emoji: '🏛️', description: 'Discovering heritage sites' },
+            { type: 'foodie', name: 'Food Connoisseur', emoji: '🍷', description: 'Locating culinary gems' },
+            { type: 'family', name: 'Family Planner', emoji: '👨‍👩‍👧‍👦', description: 'Planning family fun' },
+            { type: 'luxury', name: 'Luxury Curator', emoji: '✨', description: 'Selecting premium experiences' }
+        ];
+        
+        agentsGrid.innerHTML = agents.map(agent => `
+            <div class="apple-agent-card" data-agent="${agent.type}">
+                <div class="apple-agent-info">
+                    <div class="apple-agent-avatar">${agent.emoji}</div>
+                    <div class="apple-agent-details">
+                        <h4>${agent.name}</h4>
+                        <div class="apple-agent-status">${agent.description}</div>
+                    </div>
+                </div>
+                <div class="apple-progress-bar">
+                    <div class="apple-progress-fill" style="width: 0%"></div>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    /**
+     * Reset all Apple agent cards to loading state
+     */
+    resetAppleAgentCards() {
+        const cards = document.querySelectorAll('.apple-agent-card');
+        cards.forEach(card => {
+            card.classList.remove('loading', 'completed');
+            const progressFill = card.querySelector('.apple-progress-fill');
+            if (progressFill) progressFill.style.width = '0%';
+        });
+    }
+    
+    /**
+     * Hide the Apple-style agents loading modal
      */
     hideAgentsLoadingModal() {
-        const modal = document.getElementById('agents-loading-modal');
+        const modal = document.getElementById('apple-agents-modal');
         if (modal) {
             modal.classList.remove('show');
-            modal.style.display = 'none';
+            
+            // Clean up after animation
+            setTimeout(() => {
+                if (!modal.classList.contains('show')) {
+                    const agentsGrid = document.getElementById('apple-agents-grid');
+                    if (agentsGrid) agentsGrid.innerHTML = '';
+                }
+            }, 300);
         }
     }
     
@@ -1154,29 +1194,36 @@ export class UIController {
      * Update agent progress in loading modal
      */
     updateAgentProgress(agentType, progress, status) {
-        // Throttle updates to prevent excessive DOM manipulation
-        this.throttle(`agent-progress-${agentType}`, () => {
-            const card = document.querySelector(`[data-agent="${agentType}"]`);
-            if (card) {
-                const progressBar = card.querySelector('.progress-bar');
-                const statusElement = card.querySelector('.loading-status');
-                
-                // Use standard width property for progress bars
-                if (progressBar) {
-                    progressBar.style.width = `${progress}%`;
-                }
-                if (statusElement) statusElement.textContent = status;
-                
-                // Use requestAnimationFrame for smooth class updates
-                requestAnimationFrame(() => {
-                    card.classList.add('active');
-                    if (progress >= 100) {
-                        card.classList.add('completed');
-                        card.classList.remove('active');
-                    }
-                });
+        // Update Apple-style agent cards
+        const card = document.querySelector(`.apple-agent-card[data-agent="${agentType}"]`);
+        if (card) {
+            const progressFill = card.querySelector('.apple-progress-fill');
+            const statusElement = card.querySelector('.apple-agent-status');
+            
+            // Update progress bar
+            if (progressFill) {
+                progressFill.style.width = `${progress}%`;
             }
-        }, 100);
+            
+            // Update status text
+            if (statusElement) {
+                statusElement.textContent = status;
+            }
+            
+            // Update card state
+            requestAnimationFrame(() => {
+                if (progress > 0 && progress < 100) {
+                    card.classList.add('loading');
+                    card.classList.remove('completed');
+                } else if (progress >= 100) {
+                    card.classList.remove('loading');
+                    card.classList.add('completed');
+                    if (statusElement) {
+                        statusElement.textContent = 'Complete! ✅';
+                    }
+                }
+            });
+        }
     }
     
     /**
