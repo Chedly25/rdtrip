@@ -11,49 +11,48 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- Enterprise SaaS Design System - Professional Quality -->
-    <link rel="stylesheet" href="css/enterprise-saas-design.css">
-    <link rel="stylesheet" href="css/enterprise-components.css">
-    <link rel="stylesheet" href="css/enterprise-layout.css">
-    <link rel="stylesheet" href="css/enterprise-microinteractions.css">
+    <!-- Modern UI Design System -->
+    <link rel="stylesheet" href="css/modern-ui-overhaul.css">
     <link rel="stylesheet" href="css/agent-results.css">
     
     <!-- Leaflet JavaScript -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
-    <div class="header">
-        <h1>🚗 Aix-en-Provence Road Trip Planner</h1>
-        <p>Discover the perfect route through Provence, the French Riviera, and beyond</p>
+    <div class="modern-header glass-card">
+        <div class="hero-content">
+            <h1 class="hero-title">🚗 Aix-en-Provence Road Trip Planner</h1>
+            <p class="hero-subtitle">Discover the perfect route through Provence, the French Riviera, and beyond</p>
+        </div>
     </div>
 
-    <div class="container">
+    <div class="modern-container">
         <!-- Sidebar with Controls -->
-        <div class="sidebar">
+        <div class="modern-sidebar glass-card">
             <!-- Destination Selection -->
-            <div class="control-group">
+            <div class="modern-control-group">
                 <h3>Destination</h3>
-                <div class="input-container">
-                    <input type="text" id="destination" placeholder="Type a city name (e.g., Nice, Venice, Florence)..." autocomplete="off">
-                    <div class="autocomplete-dropdown" id="autocomplete"></div>
+                <div class="modern-input-container">
+                    <input type="text" id="destination" class="modern-input" placeholder="Type a city name (e.g., Nice, Venice, Florence)..." autocomplete="off">
+                    <div class="modern-autocomplete-dropdown" id="autocomplete"></div>
                 </div>
             </div>
 
             <!-- Trip Theme Selection -->
-            <div class="control-group">
+            <div class="modern-control-group">
                 <h3>Trip Theme</h3>
-                <div class="theme-selector">
-                    <button class="theme-button" data-theme="balanced">🎯 Balanced</button>
-                    <button class="theme-button" data-theme="adventure">🏔️ Adventure</button>
-                    <button class="theme-button" data-theme="romantic">💕 Romantic</button>
-                    <button class="theme-button" data-theme="cultural">🏛️ Cultural</button>
-                    <button class="theme-button" data-theme="hidden">💎 Hidden Gems</button>
-                    <button class="theme-button" data-theme="family">👨‍👩‍👧‍👦 Family</button>
+                <div class="modern-theme-grid">
+                    <button class="modern-btn theme-button" data-theme="balanced">🎯 Balanced</button>
+                    <button class="modern-btn theme-button" data-theme="adventure">🏔️ Adventure</button>
+                    <button class="modern-btn theme-button" data-theme="romantic">💕 Romantic</button>
+                    <button class="modern-btn theme-button" data-theme="cultural">🏛️ Cultural</button>
+                    <button class="modern-btn theme-button" data-theme="hidden">💎 Hidden Gems</button>
+                    <button class="modern-btn theme-button" data-theme="family">👨‍👩‍👧‍👦 Family</button>
                 </div>
             </div>
 
             <!-- Route Options -->
-            <div class="control-group">
+            <div class="modern-control-group">
                 <h3>Route Options</h3>
                 <div class="slider-group">
                     <div class="slider-label">
@@ -72,64 +71,77 @@
             </div>
 
             <!-- Calculate Button -->
-            <button class="btn btn-primary" id="calculate-btn">🧭 Calculate Route</button>
+            <button class="modern-btn modern-btn-primary" id="calculate-btn">🧭 Calculate Route</button>
             
             <!-- Trip Types Section -->
-            <div class="control-group" id="trip-types-section" style="display: none;">
+            <div class="modern-control-group" id="trip-types-section" style="display: none;">
                 <h3>✨ Choose Your Adventure</h3>
-                <p style="font-size: 0.9rem; color: #666; margin-bottom: 1rem;">Select a trip style to see your personalized itinerary</p>
-                <button class="btn btn-secondary" id="show-trip-types">🗺️ View All Trip Types</button>
+                <p class="modern-subtitle">Select a trip style to see your personalized itinerary</p>
+                <button class="modern-btn modern-btn-secondary" id="show-trip-types">🗺️ View All Trip Types</button>
             </div>
 
             <!-- AI Travel Assistant -->
-            <div class="control-group" style="margin-top: 2rem;">
+            <div class="modern-control-group ai-assistant-section">
                 <h3>🤖 AI Travel Assistant</h3>
-                <input type="password" id="api-key" placeholder="Custom Perplexity API Key (optional)" style="margin-bottom: 1rem;">
-                <div style="display: flex; flex-wrap: wrap;">
-                    <button class="btn btn-ai" id="ai-narrator">📖 Trip Story</button>
-                    <button class="btn btn-ai" id="ai-food">🍽️ Local Food</button>
-                    <button class="btn btn-ai" id="ai-weather">🌤️ Weather</button>
-                    <button class="btn btn-ai" id="ai-gems">💎 Secrets</button>
-                    <button class="btn btn-ai" id="ai-itinerary">📅 Itinerary</button>
+                <input type="password" id="api-key" class="modern-input" placeholder="Custom Perplexity API Key (optional)" style="margin-bottom: 1rem;">
+                <div class="modern-ai-grid">
+                    <button class="modern-btn modern-btn-ai" id="ai-narrator">📖 Trip Story</button>
+                    <button class="modern-btn modern-btn-ai" id="ai-food">🍽️ Local Food</button>
+                    <button class="modern-btn modern-btn-ai" id="ai-weather">🌤️ Weather</button>
+                    <button class="modern-btn modern-btn-ai" id="ai-gems">💎 Secrets</button>
+                    <button class="modern-btn modern-btn-ai" id="ai-itinerary">📅 Itinerary</button>
                 </div>
-                <div style="font-size: 0.8rem; color: #28a745; margin-top: 0.5rem;">
+                <div class="modern-status-text">
                     ✅ AI features ready! Leave API key blank to use default, or enter your own for custom usage.
                 </div>
             </div>
 
             <!-- AI Results Section -->
-            <div class="ai-results" id="ai-results">
+            <div class="modern-ai-results glass-card" id="ai-results">
                 <h3 id="ai-title">AI Insights</h3>
-                <div class="ai-result-content" id="ai-content"></div>
+                <div class="modern-ai-content" id="ai-content"></div>
             </div>
 
             <!-- Route Information -->
-            <div class="route-info" id="route-info" style="display: none;">
-                <div class="route-stats">
-                    <div class="stat">
+            <div class="modern-route-info glass-card" id="route-info" style="display: none;">
+                <div class="modern-stats-grid">
+                    <div class="modern-stat-card">
                         <div class="stat-value" id="total-distance">0</div>
                         <div class="stat-label">Kilometers</div>
                     </div>
-                    <div class="stat">
+                    <div class="modern-stat-card">
                         <div class="stat-value" id="total-time">0</div>
                         <div class="stat-label">Hours</div>
                     </div>
-                    <div class="stat">
+                    <div class="modern-stat-card">
                         <div class="stat-value" id="total-stops">0</div>
                         <div class="stat-label">Stops</div>
                     </div>
                 </div>
 
-                <div class="export-buttons">
-                    <button class="btn btn-secondary" id="export-google">
+                <div class="modern-export-grid">
+                    <button class="modern-btn modern-btn-secondary" id="export-google">
                         📍 Open in Google Maps
                     </button>
-                    <button class="btn btn-secondary" id="export-gpx">
+                    <button class="modern-btn modern-btn-secondary" id="export-gpx">
                         📁 Download GPX File
                     </button>
                 </div>
 
                 <div class="stops-list" id="stops-list"></div>
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="modern-main-content">
+            <div class="modern-map-container glass-card">
+                <div id="map" class="modern-map"></div>
+                <div class="modern-map-overlay">
+                    <div class="map-info-card glass-card">
+                        <h3>Your Journey</h3>
+                        <p>Plan your route and discover amazing places</p>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -175,40 +187,40 @@
     </div>
 
     <!-- Route Spotlight Page -->
-    <div id="route-spotlight-page" class="route-spotlight-page" style="display: none;">
-        <div class="spotlight-header">
-            <button class="back-btn" id="back-from-spotlight">← Back to Results</button>
-            <div class="spotlight-title">
-                <div class="agent-badge" id="spotlight-agent-badge">
+    <div id="route-spotlight-page" class="modern-spotlight-page" style="display: none;">
+        <div class="modern-spotlight-header glass-card">
+            <button class="modern-btn modern-back-btn" id="back-from-spotlight">← Back to Results</button>
+            <div class="modern-spotlight-title">
+                <div class="modern-agent-badge glass-card" id="spotlight-agent-badge">
                     <span class="agent-icon">🏔️</span>
                     <span class="agent-name">Adventure Explorer</span>
                 </div>
                 <h1>Route Spotlight</h1>
             </div>
-            <div class="header-controls">
-                <button class="dark-mode-toggle" id="dark-mode-toggle" title="Toggle Dark Mode">🌙</button>
-                <button class="ai-assistant-toggle" id="ai-assistant-toggle" title="AI Assistant">🤖</button>
+            <div class="modern-header-controls">
+                <button class="modern-btn modern-icon-btn" id="dark-mode-toggle" title="Toggle Dark Mode">🌙</button>
+                <button class="modern-btn modern-icon-btn" id="ai-assistant-toggle" title="AI Assistant">🤖</button>
             </div>
         </div>
 
         <!-- Progress Timeline -->
-        <div class="journey-progress-bar">
+        <div class="modern-progress-container glass-card">
             <div class="progress-track">
                 <div class="progress-fill" id="journey-progress-fill"></div>
                 <div class="progress-stops" id="journey-progress-stops"></div>
             </div>
         </div>
 
-        <div class="spotlight-container">
-            <div class="spotlight-map-section">
-                <div class="map-controls">
-                    <button class="map-control-btn" id="fullscreen-map" title="Fullscreen">⛶</button>
-                    <button class="map-control-btn" id="reset-map-view" title="Reset View">🎯</button>
+        <div class="modern-spotlight-container">
+            <div class="modern-map-section glass-card">
+                <div class="modern-map-controls">
+                    <button class="modern-btn modern-icon-btn" id="fullscreen-map" title="Fullscreen">⛶</button>
+                    <button class="modern-btn modern-icon-btn" id="reset-map-view" title="Reset View">🎯</button>
                 </div>
-                <div id="spotlight-map" class="spotlight-map"></div>
+                <div id="spotlight-map" class="modern-spotlight-map"></div>
             </div>
             
-            <div class="spotlight-content-section">
+            <div class="modern-content-section glass-card">
                 <!-- Enhanced Tab Navigation -->
                 <div class="spotlight-tabs">
                     <div class="tab-nav">
