@@ -200,12 +200,26 @@ export class UIController {
                 
                 // Add click handlers
                 dropdown.querySelectorAll('.dropdown-item').forEach((item, index) => {
-                    item.addEventListener('click', () => {
+                    console.log('Adding click handler to:', item.dataset.name);
+                    
+                    item.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('Dropdown item clicked:', item.dataset.name);
                         this.selectDestination(item.dataset.name, item.dataset.id);
                     });
                     
                     item.addEventListener('mouseenter', () => {
                         this.highlightSuggestion(index);
+                    });
+                    
+                    // Add visual feedback on mousedown
+                    item.addEventListener('mousedown', () => {
+                        item.style.transform = 'scale(0.98)';
+                    });
+                    
+                    item.addEventListener('mouseup', () => {
+                        item.style.transform = '';
                     });
                 });
             } else {
@@ -262,12 +276,24 @@ export class UIController {
      * Select a destination from autocomplete
      */
     selectDestination(name, id) {
+        console.log('selectDestination called with:', name, id);
         const input = document.getElementById('destination');
         const dropdown = document.getElementById('autocomplete');
         
-        input.value = name;
-        input.dataset.cityId = id;
-        dropdown.classList.remove('show');
+        if (input) {
+            input.value = name;
+            input.dataset.cityId = id;
+            console.log('Set input value to:', name);
+        } else {
+            console.error('Destination input not found!');
+        }
+        
+        if (dropdown) {
+            dropdown.classList.remove('show');
+            console.log('Hid dropdown');
+        } else {
+            console.error('Dropdown not found!');
+        }
     }
     
     /**
