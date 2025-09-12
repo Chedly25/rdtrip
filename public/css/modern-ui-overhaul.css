@@ -627,6 +627,137 @@ body {
   background: rgba(255, 255, 255, 0.9);
 }
 
+/* Modern Autocomplete Dropdown */
+.modern-autocomplete-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background: var(--bg-glass);
+  backdrop-filter: blur(var(--glass-blur));
+  border: var(--glass-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-premium);
+  max-height: 300px;
+  overflow-y: auto;
+  margin-top: var(--space-2);
+  opacity: 0;
+  transform: translateY(-10px);
+  visibility: hidden;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+
+.modern-autocomplete-dropdown.show {
+  opacity: 1;
+  transform: translateY(0);
+  visibility: visible;
+}
+
+.modern-autocomplete-dropdown .dropdown-item {
+  padding: var(--space-3) var(--space-4);
+  cursor: pointer;
+  color: var(--text-primary);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all var(--duration-fast) var(--ease-out);
+  font-size: var(--text-base);
+}
+
+.modern-autocomplete-dropdown .dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: var(--primary-600);
+  transform: translateX(5px);
+}
+
+.modern-autocomplete-dropdown .dropdown-item:first-child {
+  border-top-left-radius: var(--radius-xl);
+  border-top-right-radius: var(--radius-xl);
+}
+
+.modern-autocomplete-dropdown .dropdown-item:last-child {
+  border-bottom: none;
+  border-bottom-left-radius: var(--radius-xl);
+  border-bottom-right-radius: var(--radius-xl);
+}
+
+/* Enhanced Button Feedback */
+.modern-btn {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+.modern-btn:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: var(--shadow-premium);
+}
+
+.modern-btn:active {
+  transform: translateY(0) scale(0.98);
+  box-shadow: var(--shadow-sm);
+  transition: all 0.1s ease-out;
+}
+
+/* Ripple effect for buttons */
+.modern-btn::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.3s, height 0.3s, opacity 0.3s;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.modern-btn:active::after {
+  width: 200px;
+  height: 200px;
+  opacity: 0.4;
+  transition: width 0.1s, height 0.1s, opacity 0.1s;
+}
+
+/* Loading state for buttons */
+.modern-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.modern-btn.loading {
+  position: relative;
+  color: transparent;
+}
+
+.modern-btn.loading::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid white;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  animation: spin 1s linear infinite;
+}
+
+/* Special feedback for primary buttons */
+.modern-btn-primary:hover {
+  filter: brightness(1.1) saturate(1.1);
+  box-shadow: 0 8px 25px rgba(139, 92, 246, 0.4);
+}
+
+.modern-btn-primary:active {
+  filter: brightness(0.95);
+  box-shadow: 0 2px 10px rgba(139, 92, 246, 0.6);
+}
+
 /* ===== 🎭 ANIMATIONS & MICRO-INTERACTIONS ===== */
 
 @keyframes fadeInUp {

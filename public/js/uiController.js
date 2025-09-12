@@ -181,7 +181,7 @@ export class UIController {
             selectedIndex = -1;
             
             if (value.length < 2) {
-                dropdown.style.display = 'none';
+                dropdown.classList.remove('show');
                 return;
             }
             
@@ -189,17 +189,17 @@ export class UIController {
             
             if (suggestions.length > 0) {
                 dropdown.innerHTML = suggestions.map((city, index) => 
-                    `<div class="autocomplete-item" data-id="${city.id}" data-name="${city.name}" data-index="${index}">
+                    `<div class="dropdown-item" data-id="${city.id}" data-name="${city.name}" data-index="${index}">
                         <strong>${city.name}</strong>
                         <span style="color: #999; font-size: 0.85rem; margin-left: 8px;">
                             (${city.country}) - ${city.population.toLocaleString()} inhabitants
                         </span>
                     </div>`
                 ).join('');
-                dropdown.style.display = 'block';
+                dropdown.classList.add('show');
                 
                 // Add click handlers
-                dropdown.querySelectorAll('.autocomplete-item').forEach((item, index) => {
+                dropdown.querySelectorAll('.dropdown-item').forEach((item, index) => {
                     item.addEventListener('click', () => {
                         this.selectDestination(item.dataset.name, item.dataset.id);
                     });
@@ -209,13 +209,13 @@ export class UIController {
                     });
                 });
             } else {
-                dropdown.style.display = 'none';
+                dropdown.classList.remove('show');
             }
         });
         
         // Keyboard navigation for autocomplete
         input.addEventListener('keydown', (e) => {
-            const items = dropdown.querySelectorAll('.autocomplete-item');
+            const items = dropdown.querySelectorAll('.dropdown-item');
             
             if (e.key === 'ArrowDown') {
                 e.preventDefault();
@@ -234,7 +234,7 @@ export class UIController {
                     this.calculateRoute();
                 }
             } else if (e.key === 'Escape') {
-                dropdown.style.display = 'none';
+                dropdown.classList.remove('show');
                 selectedIndex = -1;
             }
         });
@@ -242,7 +242,7 @@ export class UIController {
         // Hide dropdown when clicking outside
         document.addEventListener('click', (e) => {
             if (!input.contains(e.target) && !dropdown.contains(e.target)) {
-                dropdown.style.display = 'none';
+                dropdown.classList.remove('show');
                 selectedIndex = -1;
             }
         });
@@ -252,7 +252,7 @@ export class UIController {
      * Highlight a suggestion in the dropdown
      */
     highlightSuggestion(index) {
-        const items = document.querySelectorAll('.autocomplete-item');
+        const items = document.querySelectorAll('.dropdown-item');
         items.forEach((item, i) => {
             item.classList.toggle('selected', i === index);
         });
@@ -267,7 +267,7 @@ export class UIController {
         
         input.value = name;
         input.dataset.cityId = id;
-        dropdown.style.display = 'none';
+        dropdown.classList.remove('show');
     }
     
     /**
@@ -304,7 +304,15 @@ export class UIController {
             calculateBtn.addEventListener('click', (e) => {
                 console.log('Calculate button clicked');
                 e.preventDefault();
-                this.calculateRoute();
+                
+                // Add visual feedback
+                calculateBtn.classList.add('loading');
+                
+                this.calculateRoute().catch(error => {
+                    console.error('Route calculation error:', error);
+                    calculateBtn.classList.remove('loading');
+                    this.showError('Failed to calculate route: ' + error.message);
+                });
             });
         } else {
             console.error('Calculate button not found!');
@@ -406,6 +414,7 @@ export class UIController {
             this.hideAgentsLoadingModal();
             calculateBtn.textContent = '🧭 Calculate Route';
             calculateBtn.disabled = false;
+            calculateBtn.classList.remove('loading');
         }
     }
     
