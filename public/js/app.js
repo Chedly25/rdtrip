@@ -149,15 +149,32 @@ class RoadTripPlanner {
             }
         });
 
+        // Extract all waypoints from AI responses
+        const allWaypoints = this.extractWaypoints(routeData);
+        
+        // Add waypoint markers to map
+        allWaypoints.forEach((waypoint, index) => {
+            new mapboxgl.Marker({ color: '#34C759' })
+                .setLngLat([waypoint.lng, waypoint.lat])
+                .setPopup(new mapboxgl.Popup().setHTML(`
+                    <h3>📍 ${waypoint.name}</h3>
+                    <p>${waypoint.description || ''}</p>
+                `))
+                .addTo(this.map);
+        });
+
         // Add destination marker
         new mapboxgl.Marker({ color: '#FF3B30' })
             .setLngLat([destinationCoords.lng, destinationCoords.lat])
             .setPopup(new mapboxgl.Popup().setHTML(`<h3>🎯 ${destinationCoords.name}</h3><p>Your destination</p>`))
             .addTo(this.map);
 
-        // Fit map to show origin and destination
+        // Fit map to show all points
         const bounds = new mapboxgl.LngLatBounds();
         bounds.extend([5.4474, 43.5297]); // Aix-en-Provence
+        allWaypoints.forEach(waypoint => {
+            bounds.extend([waypoint.lng, waypoint.lat]);
+        });
         bounds.extend([destinationCoords.lng, destinationCoords.lat]); // Destination
         
         this.map.fitBounds(bounds, {
@@ -165,8 +182,102 @@ class RoadTripPlanner {
             maxZoom: 8
         });
 
+        // Add route line if we have waypoints
+        if (allWaypoints.length > 0) {
+            this.addRouteToMap(allWaypoints, destinationCoords);
+        }
+
         // Display results
         this.displayResults(routeData);
+    }
+
+    extractWaypoints(routeData) {
+        const waypoints = [];
+        
+        routeData.agentResults.forEach(result => {
+            try {
+                let jsonData = null;
+                
+                // Try to extract JSON from the result
+                const jsonMatch = result.recommendations.match(/```json\s*([\s\S]*?)\s*```/);
+                if (jsonMatch) {
+                    jsonData = JSON.parse(jsonMatch[1]);
+                } else {
+                    // Fallback: look for JSON without code blocks
+                    const jsonStart = result.recommendations.indexOf('{');
+                    const jsonEnd = result.recommendations.lastIndexOf('}');
+                    if (jsonStart !== -1 && jsonEnd !== -1) {
+                        const jsonString = result.recommendations.substring(jsonStart, jsonEnd + 1);
+                        jsonData = JSON.parse(jsonString);
+                    }
+                }
+                
+                if (jsonData && jsonData.waypoints) {
+                    jsonData.waypoints.forEach(waypoint => {
+                        if (waypoint.coordinates && waypoint.coordinates.length === 2) {
+                            waypoints.push({
+                                name: waypoint.name,
+                                description: waypoint.description,
+                                lng: waypoint.coordinates[1], // Note: Mapbox uses [lng, lat]
+                                lat: waypoint.coordinates[0],
+                                agent: result.agent
+                            });
+                        }
+                    });
+                }
+            } catch (e) {
+                console.log('Could not parse waypoints from', result.agent);
+            }
+        });
+        
+        // Remove duplicates based on name
+        const uniqueWaypoints = waypoints.filter((waypoint, index, self) => 
+            index === self.findIndex(w => w.name === waypoint.name)
+        );
+        
+        return uniqueWaypoints;
+    }
+
+    addRouteToMap(waypoints, destinationCoords) {
+        // Create route coordinates array
+        const routeCoords = [
+            [5.4474, 43.5297], // Aix-en-Provence (start)
+            ...waypoints.map(w => [w.lng, w.lat]),
+            [destinationCoords.lng, destinationCoords.lat] // Destination
+        ];
+
+        // Add route line to map
+        if (this.map.getSource('route')) {
+            this.map.removeLayer('route');
+            this.map.removeSource('route');
+        }
+
+        this.map.addSource('route', {
+            'type': 'geojson',
+            'data': {
+                'type': 'Feature',
+                'properties': {},
+                'geometry': {
+                    'type': 'LineString',
+                    'coordinates': routeCoords
+                }
+            }
+        });
+
+        this.map.addLayer({
+            'id': 'route',
+            'type': 'line',
+            'source': 'route',
+            'layout': {
+                'line-join': 'round',
+                'line-cap': 'round'
+            },
+            'paint': {
+                'line-color': '#007AFF',
+                'line-width': 4,
+                'line-opacity': 0.8
+            }
+        });
     }
 
     displayResults(routeData) {
@@ -208,12 +319,54 @@ class RoadTripPlanner {
     }
 
     formatAgentResult(result) {
-        // Basic text formatting for AI results
         if (typeof result === 'string') {
-            // Clean up the result and make it more readable
+            try {
+                // Try to extract JSON from the result
+                const jsonMatch = result.match(/```json\s*([\s\S]*?)\s*```/);
+                if (jsonMatch) {
+                    const jsonData = JSON.parse(jsonMatch[1]);
+                    return this.formatWaypoints(jsonData.waypoints || []);
+                }
+                
+                // Fallback: look for JSON without code blocks
+                const jsonStart = result.indexOf('{');
+                const jsonEnd = result.lastIndexOf('}');
+                if (jsonStart !== -1 && jsonEnd !== -1) {
+                    const jsonString = result.substring(jsonStart, jsonEnd + 1);
+                    const jsonData = JSON.parse(jsonString);
+                    return this.formatWaypoints(jsonData.waypoints || []);
+                }
+            } catch (e) {
+                console.log('Could not parse JSON, showing raw text');
+            }
+            
+            // Fallback to truncated text
             return result.replace(/\n\n/g, '<br><br>').slice(0, 300) + '...';
         }
         return 'Processing recommendations...';
+    }
+
+    formatWaypoints(waypoints) {
+        if (!waypoints || waypoints.length === 0) {
+            return 'No waypoints found';
+        }
+        
+        let html = '';
+        waypoints.forEach((waypoint, index) => {
+            html += `
+                <div class="waypoint-item">
+                    <h5>${index + 1}. ${waypoint.name}</h5>
+                    <p class="waypoint-description">${waypoint.description || ''}</p>
+                    ${waypoint.activities ? `
+                        <ul class="waypoint-activities">
+                            ${waypoint.activities.map(activity => `<li>${activity}</li>`).join('')}
+                        </ul>
+                    ` : ''}
+                    ${waypoint.duration ? `<p class="waypoint-duration"><strong>Duration:</strong> ${waypoint.duration}</p>` : ''}
+                </div>
+            `;
+        });
+        return html;
     }
 
     setLoading(isLoading) {

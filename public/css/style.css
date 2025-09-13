@@ -279,6 +279,48 @@ body {
     min-height: 500px;
 }
 
+/* Waypoint Styling */
+.waypoint-item {
+    margin-bottom: var(--spacing-lg);
+    padding: var(--spacing-md);
+    background-color: var(--background-secondary);
+    border-radius: var(--radius-sm);
+    border-left: 4px solid var(--primary-blue);
+}
+
+.waypoint-item h5 {
+    font-size: var(--font-size-body);
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-sm);
+}
+
+.waypoint-description {
+    font-size: var(--font-size-caption);
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-sm);
+    line-height: 1.4;
+}
+
+.waypoint-activities {
+    margin: var(--spacing-sm) 0;
+    padding-left: var(--spacing-lg);
+}
+
+.waypoint-activities li {
+    font-size: var(--font-size-small);
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-xs);
+    line-height: 1.3;
+}
+
+.waypoint-duration {
+    font-size: var(--font-size-small);
+    color: var(--primary-blue);
+    font-weight: 500;
+    margin-top: var(--spacing-sm);
+}
+
 /* Utility Classes */
 .hidden {
     display: none !important;
