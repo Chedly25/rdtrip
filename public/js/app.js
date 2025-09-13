@@ -229,6 +229,7 @@ class RoadTripPlanner {
                             waypoints.push({
                                 name: waypoint.name,
                                 description: waypoint.description,
+                                imageUrl: waypoint.imageUrl,
                                 lng: waypoint.coordinates[1], // Note: Mapbox uses [lng, lat]
                                 lat: waypoint.coordinates[0],
                                 agent: result.agent
@@ -247,6 +248,46 @@ class RoadTripPlanner {
         );
         
         return uniqueWaypoints;
+    }
+
+    extractSingleWaypoints(recommendations) {
+        const waypoints = [];
+        
+        try {
+            let jsonData = null;
+            
+            // Try to extract JSON from the result
+            const jsonMatch = recommendations.match(/```json\s*([\s\S]*?)\s*```/);
+            if (jsonMatch) {
+                jsonData = JSON.parse(jsonMatch[1]);
+            } else {
+                // Fallback: look for JSON without code blocks
+                const jsonStart = recommendations.indexOf('{');
+                const jsonEnd = recommendations.lastIndexOf('}');
+                if (jsonStart !== -1 && jsonEnd !== -1) {
+                    const jsonString = recommendations.substring(jsonStart, jsonEnd + 1);
+                    jsonData = JSON.parse(jsonString);
+                }
+            }
+            
+            if (jsonData && jsonData.waypoints) {
+                jsonData.waypoints.forEach(waypoint => {
+                    if (waypoint.coordinates && waypoint.coordinates.length === 2) {
+                        waypoints.push({
+                            name: waypoint.name,
+                            description: waypoint.description,
+                            imageUrl: waypoint.imageUrl,
+                            lng: waypoint.coordinates[1], // Note: Mapbox uses [lng, lat]
+                            lat: waypoint.coordinates[0]
+                        });
+                    }
+                });
+            }
+        } catch (e) {
+            console.log('Could not parse waypoints from recommendations');
+        }
+        
+        return waypoints;
     }
 
     async addRouteToMap(waypoints, destinationCoords) {
@@ -410,6 +451,9 @@ class RoadTripPlanner {
 
         routeData.agentResults.forEach(result => {
             const agentEmoji = this.getAgentEmoji(result.agent);
+            const waypoints = this.extractSingleWaypoints(result.recommendations);
+            const firstImageUrl = waypoints.length > 0 ? waypoints[0].imageUrl : null;
+            
             html += `<div class="route-item">
                 <div class="route-item-header">
                     <h4>${agentEmoji} ${this.capitalizeFirst(result.agent)} Recommendations</h4>
@@ -417,6 +461,13 @@ class RoadTripPlanner {
                         View Details →
                     </button>
                 </div>
+                ${firstImageUrl ? `
+                    <div class="route-image-container">
+                        <img src="${firstImageUrl}" alt="${waypoints[0].name || 'Route destination'}" class="route-image" 
+                             onerror="this.style.display='none'" 
+                             onload="this.classList.add('loaded')">
+                    </div>
+                ` : ''}
                 <p>${this.formatAgentResult(result.recommendations)}</p>
             </div>`;
         });

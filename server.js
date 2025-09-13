@@ -104,12 +104,15 @@ Provide a JSON response with:
 - each day should have:
   - day: day number
   - location: main city/area for the day
-  - activities: array of timed activities (with time, title, description)
+  - imageUrl: representative image URL for the day's main location
+  - activities: array of timed activities (with time, title, description, and optional imageUrl for major activities)
   - accommodation: suggested place to stay
   - meals: breakfast, lunch, dinner recommendations
   - travel: driving details if moving to next location
 
-Make it detailed and practical with specific times and recommendations based on your ${agent.name.toLowerCase()} expertise.`;
+For imageUrl fields, please search for and provide direct URLs to high-quality images that represent each location or activity. Include landscape photos, landmark images, or activity photos relevant to your ${agent.name.toLowerCase()} expertise.
+
+Make it detailed and practical with specific times and recommendations.`;
 
     const response = await axios.post('https://api.perplexity.ai/chat/completions', {
       model: 'sonar',
@@ -144,9 +147,11 @@ Create a UNIQUE road trip route from Aix-en-Provence, France to ${destination} w
 IMPORTANT: Create a route that is completely DIFFERENT from what adventure/culture/food agents would recommend. Focus exclusively on your specialty and avoid popular tourist cities that other agents might choose.
 
 Provide a JSON response with:
-- waypoints: array of ${stops} recommended stops with name, exact coordinates [latitude, longitude], and brief description focused on your specialty
+- waypoints: array of ${stops} recommended stops with name, exact coordinates [latitude, longitude], brief description focused on your specialty, and imageUrl (find a representative image URL for each location)
 - activities: 2-3 activities for each waypoint related to your expertise
 - duration: estimated time at each stop
+
+For imageUrl, please search for and provide direct URLs to high-quality images that represent each waypoint. Include landscape photos, landmark images, or activity photos relevant to your specialty.
 
 Make this route unique to your travel style and avoid mainstream destinations.`;
 
@@ -173,6 +178,66 @@ Make this route unique to your travel style and avoid mainstream destinations.`;
     return `Error generating recommendations for ${agent.name}`;
   }
 }
+
+// Image validation and proxy endpoint
+app.get('/api/image-proxy', async (req, res) => {
+  try {
+    const { url } = req.query;
+    
+    if (!url) {
+      return res.status(400).json({ error: 'Image URL is required' });
+    }
+
+    // Validate URL format
+    try {
+      new URL(url);
+    } catch {
+      return res.status(400).json({ error: 'Invalid URL format' });
+    }
+
+    // Check if the URL returns a valid image
+    const response = await axios.head(url, {
+      timeout: 5000,
+      validateStatus: (status) => status < 400
+    });
+
+    const contentType = response.headers['content-type'];
+    if (!contentType || !contentType.startsWith('image/')) {
+      return res.status(400).json({ error: 'URL does not point to an image' });
+    }
+
+    // Return validated image URL
+    res.json({ 
+      valid: true, 
+      url: url,
+      contentType: contentType,
+      size: response.headers['content-length']
+    });
+
+  } catch (error) {
+    console.error('Image validation error:', error.message);
+    res.status(400).json({ 
+      valid: false, 
+      error: 'Image not accessible or invalid',
+      originalUrl: req.query.url
+    });
+  }
+});
+
+// Fallback image service - returns placeholder images
+app.get('/api/placeholder-image', (req, res) => {
+  const { type = 'location', width = 400, height = 300 } = req.query;
+  
+  // Use a reliable placeholder service
+  const placeholderUrl = `https://picsum.photos/${width}/${height}?random=${Math.floor(Math.random() * 1000)}`;
+  
+  res.json({
+    url: placeholderUrl,
+    type: type,
+    width: parseInt(width),
+    height: parseInt(height)
+  });
+});
 
 app.listen(PORT, () => {
   console.log(`🚗 Road Trip Planner MVP running on port ${PORT}`);

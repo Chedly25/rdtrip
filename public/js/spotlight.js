@@ -286,14 +286,23 @@ class SpotlightController {
         waypoints.forEach((waypoint, index) => {
             html += `
                 <div class="city-card">
-                    <h3>${index + 1}. ${waypoint.name}</h3>
-                    <p class="city-description">${waypoint.description || ''}</p>
-                    ${waypoint.activities && waypoint.activities.length > 0 ? `
-                        <ul class="city-activities">
-                            ${waypoint.activities.map(activity => `<li>${activity}</li>`).join('')}
-                        </ul>
+                    ${waypoint.imageUrl ? `
+                        <div class="city-image-container">
+                            <img src="${waypoint.imageUrl}" alt="${waypoint.name}" class="city-image" 
+                                 onerror="this.style.display='none'" 
+                                 onload="this.classList.add('loaded')">
+                        </div>
                     ` : ''}
-                    ${waypoint.duration ? `<p><strong>Suggested duration:</strong> ${waypoint.duration}</p>` : ''}
+                    <div class="city-content">
+                        <h3>${index + 1}. ${waypoint.name}</h3>
+                        <p class="city-description">${waypoint.description || ''}</p>
+                        ${waypoint.activities && waypoint.activities.length > 0 ? `
+                            <ul class="city-activities">
+                                ${waypoint.activities.map(activity => `<li>${activity}</li>`).join('')}
+                            </ul>
+                        ` : ''}
+                        ${waypoint.duration ? `<p><strong>Suggested duration:</strong> ${waypoint.duration}</p>` : ''}
+                    </div>
                 </div>
             `;
         });
@@ -415,8 +424,17 @@ class SpotlightController {
                     html += `
                         <div class="day-card">
                             <div class="day-header">
-                                <h3 class="day-title">Day ${day.day}</h3>
-                                <span class="day-location">${day.location || ''}</span>
+                                <div class="day-title-section">
+                                    <h3 class="day-title">Day ${day.day}</h3>
+                                    <span class="day-location">${day.location || ''}</span>
+                                </div>
+                                ${day.imageUrl ? `
+                                    <div class="day-image-container">
+                                        <img src="${day.imageUrl}" alt="${day.location}" class="day-image" 
+                                             onerror="this.style.display='none'" 
+                                             onload="this.classList.add('loaded')">
+                                    </div>
+                                ` : ''}
                             </div>
                             <div class="day-activities">
                                 ${day.activities ? day.activities.map(activity => `
@@ -425,6 +443,13 @@ class SpotlightController {
                                         <div class="activity-content">
                                             <h4 class="activity-title">${activity.title || activity.name || ''}</h4>
                                             <p class="activity-description">${activity.description || ''}</p>
+                                            ${activity.imageUrl ? `
+                                                <div class="activity-image-container">
+                                                    <img src="${activity.imageUrl}" alt="${activity.title || activity.name}" class="activity-image" 
+                                                         onerror="this.style.display='none'" 
+                                                         onload="this.classList.add('loaded')">
+                                                </div>
+                                            ` : ''}
                                         </div>
                                     </div>
                                 `).join('') : ''}
