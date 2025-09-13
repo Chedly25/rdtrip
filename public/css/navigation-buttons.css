@@ -1,0 +1,279 @@
+/* Navigation Export Buttons Styling */
+
+/* Main Results Page Navigation Buttons */
+.route-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.action-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+/* Google Maps Button */
+#exportGoogleMaps {
+    background: linear-gradient(135deg, #4285F4 0%, #34A853 100%);
+    color: white;
+    position: relative;
+    overflow: hidden;
+}
+
+#exportGoogleMaps::before {
+    content: '';
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 20px;
+    background-image: url('../images/gmaps.jpg');
+    background-size: cover;
+    background-position: center;
+    border-radius: 3px;
+}
+
+#exportGoogleMaps:hover {
+    background: linear-gradient(135deg, #3367D6 0%, #2E7D32 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(66, 133, 244, 0.3);
+}
+
+#exportGoogleMaps:active {
+    transform: translateY(0);
+}
+
+/* Waze Button */
+#exportWaze {
+    background: linear-gradient(135deg, #00D4FF 0%, #0099CC 100%);
+    color: white;
+    position: relative;
+    overflow: hidden;
+}
+
+#exportWaze::before {
+    content: '';
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 20px;
+    background-image: url('../images/wazelogo.png');
+    background-size: cover;
+    background-position: center;
+    border-radius: 3px;
+}
+
+#exportWaze:hover {
+    background: linear-gradient(135deg, #00B8E6 0%, #007AA3 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 212, 255, 0.3);
+}
+
+#exportWaze:active {
+    transform: translateY(0);
+}
+
+/* Adjust text position to account for logo */
+#exportGoogleMaps,
+#exportWaze {
+    padding-left: 40px;
+}
+
+/* Spotlight Page Navigation Buttons */
+.nav-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.nav-action-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    white-space: nowrap;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Google Maps Spotlight Button */
+#exportGoogleMapsSpotlight {
+    background: linear-gradient(135deg, #4285F4 0%, #34A853 100%);
+    color: white;
+}
+
+#exportGoogleMapsSpotlight::before {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 16px;
+    background-image: url('../images/gmaps.jpg');
+    background-size: cover;
+    background-position: center;
+    border-radius: 2px;
+}
+
+#exportGoogleMapsSpotlight:hover {
+    background: linear-gradient(135deg, #3367D6 0%, #2E7D32 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(66, 133, 244, 0.3);
+}
+
+/* Waze Spotlight Button */
+#exportWazeSpotlight {
+    background: linear-gradient(135deg, #00D4FF 0%, #0099CC 100%);
+    color: white;
+}
+
+#exportWazeSpotlight::before {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 16px;
+    background-image: url('../images/wazelogo.png');
+    background-size: cover;
+    background-position: center;
+    border-radius: 2px;
+}
+
+#exportWazeSpotlight:hover {
+    background: linear-gradient(135deg, #00B8E6 0%, #007AA3 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(0, 212, 255, 0.3);
+}
+
+/* Adjust text position for spotlight buttons */
+#exportGoogleMapsSpotlight,
+#exportWazeSpotlight {
+    padding-left: 32px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .route-actions {
+        gap: 8px;
+    }
+
+    .action-btn {
+        padding: 8px 12px;
+        font-size: 13px;
+        padding-left: 36px;
+    }
+
+    .action-btn::before {
+        width: 18px;
+        height: 18px;
+        left: 8px;
+    }
+
+    .nav-actions {
+        gap: 6px;
+    }
+
+    .nav-action-btn {
+        padding: 6px 10px;
+        font-size: 12px;
+        padding-left: 28px;
+    }
+
+    .nav-action-btn::before {
+        width: 14px;
+        height: 14px;
+        left: 6px;
+    }
+}
+
+@media (max-width: 480px) {
+    .route-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .action-btn {
+        justify-content: center;
+        padding: 10px 16px;
+        padding-left: 40px;
+    }
+
+    .nav-actions {
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .nav-action-btn {
+        justify-content: center;
+        padding: 8px 12px;
+        padding-left: 32px;
+    }
+}
+
+/* Loading state for buttons */
+.action-btn:disabled,
+.nav-action-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+.action-btn:disabled:hover,
+.nav-action-btn:disabled:hover {
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+/* Focus states for accessibility */
+.action-btn:focus,
+.nav-action-btn:focus {
+    outline: 2px solid rgba(255, 255, 255, 0.8);
+    outline-offset: 2px;
+}
+
+/* High contrast adjustments */
+@media (prefers-contrast: high) {
+    #exportGoogleMaps {
+        background: #1a73e8;
+        border: 2px solid #fff;
+    }
+
+    #exportWaze {
+        background: #0099cc;
+        border: 2px solid #fff;
+    }
+
+    #exportGoogleMapsSpotlight {
+        background: #1a73e8;
+        border: 1px solid #fff;
+    }
+
+    #exportWazeSpotlight {
+        background: #0099cc;
+        border: 1px solid #fff;
+    }
+}
