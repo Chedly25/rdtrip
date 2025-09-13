@@ -152,19 +152,30 @@ class RoadTripPlanner {
         // Extract all waypoints from AI responses
         const allWaypoints = this.extractWaypoints(routeData);
         
-        // Add waypoint markers to map
+        // Agent colors for markers
+        const agentColors = {
+            adventure: '#34C759', // Green for nature/adventure
+            culture: '#FF9500',   // Orange for culture/history  
+            food: '#FF3B30'       // Red for food/cuisine
+        };
+
+        // Add waypoint markers to map with agent-specific colors
         allWaypoints.forEach((waypoint, index) => {
-            new mapboxgl.Marker({ color: '#34C759' })
+            const color = agentColors[waypoint.agent] || '#34C759';
+            const agentEmoji = this.getAgentEmoji(waypoint.agent);
+            
+            new mapboxgl.Marker({ color: color })
                 .setLngLat([waypoint.lng, waypoint.lat])
                 .setPopup(new mapboxgl.Popup().setHTML(`
-                    <h3>📍 ${waypoint.name}</h3>
+                    <h3>${agentEmoji} ${waypoint.name}</h3>
                     <p>${waypoint.description || ''}</p>
+                    <small><strong>${this.capitalizeFirst(waypoint.agent)} Recommendation</strong></small>
                 `))
                 .addTo(this.map);
         });
 
         // Add destination marker
-        new mapboxgl.Marker({ color: '#FF3B30' })
+        new mapboxgl.Marker({ color: '#8E44AD' })
             .setLngLat([destinationCoords.lng, destinationCoords.lat])
             .setPopup(new mapboxgl.Popup().setHTML(`<h3>🎯 ${destinationCoords.name}</h3><p>Your destination</p>`))
             .addTo(this.map);
@@ -239,16 +250,62 @@ class RoadTripPlanner {
     }
 
     async addRouteToMap(waypoints, destinationCoords) {
-        // Clear existing route
-        if (this.map.getSource('route')) {
-            this.map.removeLayer('route');
-            this.map.removeSource('route');
-        }
+        // Clear existing routes
+        this.clearExistingRoutes();
 
-        // Create ordered coordinates for the route
+        // Group waypoints by agent
+        const waypointsByAgent = this.groupWaypointsByAgent(waypoints);
+        
+        // Agent colors
+        const agentColors = {
+            adventure: '#34C759', // Green for nature/adventure
+            culture: '#FF9500',   // Orange for culture/history  
+            food: '#FF3B30'       // Red for food/cuisine
+        };
+
+        // Create separate routes for each agent
+        for (const [agent, agentWaypoints] of Object.entries(waypointsByAgent)) {
+            if (agentWaypoints.length > 0) {
+                await this.addAgentRoute(agent, agentWaypoints, destinationCoords, agentColors[agent]);
+            }
+        }
+    }
+
+    clearExistingRoutes() {
+        // Remove all existing route layers and sources
+        ['adventure', 'culture', 'food', 'route'].forEach(routeId => {
+            if (this.map.getSource(`route-${routeId}`)) {
+                this.map.removeLayer(`route-${routeId}`);
+                this.map.removeSource(`route-${routeId}`);
+            }
+            if (this.map.getSource(routeId)) {
+                this.map.removeLayer(routeId);
+                this.map.removeSource(routeId);
+            }
+        });
+    }
+
+    groupWaypointsByAgent(waypoints) {
+        const grouped = {
+            adventure: [],
+            culture: [],
+            food: []
+        };
+        
+        waypoints.forEach(waypoint => {
+            if (waypoint.agent && grouped[waypoint.agent]) {
+                grouped[waypoint.agent].push(waypoint);
+            }
+        });
+        
+        return grouped;
+    }
+
+    async addAgentRoute(agent, agentWaypoints, destinationCoords, color) {
+        // Create route coordinates for this agent
         const coordinates = [
             [5.4474, 43.5297], // Aix-en-Provence (start)
-            ...waypoints.map(w => [w.lng, w.lat]),
+            ...agentWaypoints.map(w => [w.lng, w.lat]),
             [destinationCoords.lng, destinationCoords.lat] // Destination
         ];
 
@@ -257,34 +314,34 @@ class RoadTripPlanner {
             const routeGeometry = await this.getDirections(coordinates);
             
             if (routeGeometry) {
-                this.map.addSource('route', {
+                this.map.addSource(`route-${agent}`, {
                     'type': 'geojson',
                     'data': {
                         'type': 'Feature',
-                        'properties': {},
+                        'properties': { agent: agent },
                         'geometry': routeGeometry
                     }
                 });
 
                 this.map.addLayer({
-                    'id': 'route',
+                    'id': `route-${agent}`,
                     'type': 'line',
-                    'source': 'route',
+                    'source': `route-${agent}`,
                     'layout': {
                         'line-join': 'round',
                         'line-cap': 'round'
                     },
                     'paint': {
-                        'line-color': '#007AFF',
-                        'line-width': 4,
+                        'line-color': color,
+                        'line-width': 3,
                         'line-opacity': 0.8
                     }
                 });
             }
         } catch (error) {
-            console.error('Could not get driving directions:', error);
+            console.error(`Could not get driving directions for ${agent}:`, error);
             // Fallback to straight line if directions fail
-            this.addStraightLineRoute(coordinates);
+            this.addStraightLineRoute(coordinates, `route-${agent}`, color);
         }
     }
 
@@ -308,9 +365,9 @@ class RoadTripPlanner {
         return null;
     }
 
-    addStraightLineRoute(coordinates) {
+    addStraightLineRoute(coordinates, sourceId = 'route', color = '#007AFF') {
         // Fallback: Add straight line route
-        this.map.addSource('route', {
+        this.map.addSource(sourceId, {
             'type': 'geojson',
             'data': {
                 'type': 'Feature',
@@ -323,16 +380,16 @@ class RoadTripPlanner {
         });
 
         this.map.addLayer({
-            'id': 'route',
+            'id': sourceId,
             'type': 'line',
-            'source': 'route',
+            'source': sourceId,
             'layout': {
                 'line-join': 'round',
                 'line-cap': 'round'
             },
             'paint': {
-                'line-color': '#007AFF',
-                'line-width': 4,
+                'line-color': color,
+                'line-width': 3,
                 'line-opacity': 0.6
             }
         });
