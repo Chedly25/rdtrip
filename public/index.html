@@ -3,575 +3,75 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aix-en-Provence Road Trip Planner</title>
-    
-    <!-- External Dependencies -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- Apple-Grade Design System -->
-    <link rel="stylesheet" href="css/apple-design-system.css">
-    <link rel="stylesheet" href="css/agent-results.css">
-    
-    <!-- Leaflet JavaScript -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <title>Road Trip Planner - Aix-en-Provence</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet">
 </head>
 <body>
-    <div class="apple-header">
-        <div class="hero-content">
-            <h1 class="hero-title">🚗 Aix-en-Provence Road Trip Planner</h1>
-            <p class="hero-subtitle">Discover the perfect route through Provence, the French Riviera, and beyond</p>
-        </div>
-    </div>
-
-    <div class="apple-container">
-        <!-- Sidebar with Controls -->
-        <div class="apple-sidebar">
-            <!-- Destination Selection -->
-            <div class="apple-control-group">
-                <h3>Destination</h3>
-                <div style="position: relative;">
-                    <input type="text" id="destination" class="apple-input" placeholder="Type a city name (e.g., Nice, Venice, Florence)..." autocomplete="off">
-                    <div class="apple-autocomplete-dropdown" id="autocomplete"></div>
-                </div>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1 class="app-title">🚗 Road Trip Planner</h1>
+                <p class="app-subtitle">AI-powered routes from Aix-en-Provence</p>
             </div>
+        </header>
 
-            <!-- Trip Theme Selection -->
-            <div class="apple-control-group">
-                <h3>Trip Theme</h3>
-                <div class="apple-theme-grid">
-                    <button class="apple-btn apple-btn-theme theme-button" data-theme="balanced">🎯 Balanced</button>
-                    <button class="apple-btn apple-btn-theme theme-button" data-theme="adventure">🏔️ Adventure</button>
-                    <button class="apple-btn apple-btn-theme theme-button" data-theme="romantic">💕 Romantic</button>
-                    <button class="apple-btn apple-btn-theme theme-button" data-theme="cultural">🏛️ Cultural</button>
-                    <button class="apple-btn apple-btn-theme theme-button" data-theme="hidden">💎 Hidden Gems</button>
-                    <button class="apple-btn apple-btn-theme theme-button" data-theme="family">👨‍👩‍👧‍👦 Family</button>
-                </div>
-            </div>
-
-            <!-- Route Options -->
-            <div class="apple-control-group">
-                <h3>Route Options</h3>
-                <div class="apple-slider-group">
-                    <div class="apple-slider-label">
-                        <span>Number of Stops</span>
-                        <span id="stops-value">3</span>
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Planning Panel -->
+            <div class="planning-panel">
+                <div class="input-section">
+                    <div class="form-group">
+                        <label for="destination">Where do you want to go?</label>
+                        <input 
+                            type="text" 
+                            id="destination" 
+                            placeholder="Enter European city (e.g., Barcelona, Rome, Amsterdam)"
+                            class="input-field"
+                        >
                     </div>
-                    <input type="range" id="stops-slider" min="1" max="6" value="3">
-                </div>
-                <div class="apple-slider-group">
-                    <div class="apple-slider-label">
-                        <span>Detour Tolerance</span>
-                        <span id="detour-value">20%</span>
+
+                    <div class="form-group">
+                        <label for="stops">Number of stops</label>
+                        <select id="stops" class="select-field">
+                            <option value="2">2 stops</option>
+                            <option value="3" selected>3 stops</option>
+                            <option value="4">4 stops</option>
+                            <option value="5">5 stops</option>
+                        </select>
                     </div>
-                    <input type="range" id="detour-slider" min="10" max="50" value="20" step="5">
-                </div>
-            </div>
 
-            <!-- Calculate Button -->
-            <button class="apple-btn apple-btn-primary" id="calculate-btn">🧭 Calculate Route</button>
-            
-            <!-- Trip Types Section -->
-            <div class="modern-control-group" id="trip-types-section" style="display: none;">
-                <h3>✨ Choose Your Adventure</h3>
-                <p class="modern-subtitle">Select a trip style to see your personalized itinerary</p>
-                <button class="modern-btn modern-btn-secondary" id="show-trip-types">🗺️ View All Trip Types</button>
-            </div>
-
-            <!-- AI Travel Assistant -->
-            <div class="modern-control-group ai-assistant-section">
-                <h3>🤖 AI Travel Assistant</h3>
-                <input type="password" id="api-key" class="modern-input" placeholder="Custom Perplexity API Key (optional)" style="margin-bottom: 1rem;">
-                <div class="modern-ai-grid">
-                    <button class="modern-btn modern-btn-ai" id="ai-narrator">📖 Trip Story</button>
-                    <button class="modern-btn modern-btn-ai" id="ai-food">🍽️ Local Food</button>
-                    <button class="modern-btn modern-btn-ai" id="ai-weather">🌤️ Weather</button>
-                    <button class="modern-btn modern-btn-ai" id="ai-gems">💎 Secrets</button>
-                    <button class="modern-btn modern-btn-ai" id="ai-itinerary">📅 Itinerary</button>
-                </div>
-                <div class="modern-status-text">
-                    ✅ AI features ready! Leave API key blank to use default, or enter your own for custom usage.
-                </div>
-            </div>
-
-            <!-- AI Results Section -->
-            <div class="modern-ai-results glass-card" id="ai-results">
-                <h3 id="ai-title">AI Insights</h3>
-                <div class="modern-ai-content" id="ai-content"></div>
-            </div>
-
-            <!-- Route Information -->
-            <div class="modern-route-info glass-card" id="route-info" style="display: none;">
-                <div class="modern-stats-grid">
-                    <div class="modern-stat-card">
-                        <div class="stat-value" id="total-distance">0</div>
-                        <div class="stat-label">Kilometers</div>
+                    <div class="form-group">
+                        <label>Travel style</label>
+                        <div class="agent-selection">
+                            <button class="agent-btn active" data-agent="adventure">🏔️ Adventure</button>
+                            <button class="agent-btn active" data-agent="culture">🏛️ Culture</button>
+                            <button class="agent-btn active" data-agent="food">🍽️ Food</button>
+                        </div>
                     </div>
-                    <div class="modern-stat-card">
-                        <div class="stat-value" id="total-time">0</div>
-                        <div class="stat-label">Hours</div>
-                    </div>
-                    <div class="modern-stat-card">
-                        <div class="stat-value" id="total-stops">0</div>
-                        <div class="stat-label">Stops</div>
-                    </div>
-                </div>
 
-                <div class="modern-export-grid">
-                    <button class="modern-btn modern-btn-secondary" id="export-google">
-                        📍 Open in Google Maps
-                    </button>
-                    <button class="modern-btn modern-btn-secondary" id="export-gpx">
-                        📁 Download GPX File
+                    <button id="generateRoute" class="generate-btn">
+                        <span class="btn-text">Generate Route</span>
+                        <div class="btn-spinner hidden"></div>
                     </button>
                 </div>
 
-                <div class="stops-list" id="stops-list"></div>
-            </div>
-        </div>
-
-        <!-- Main Content Area -->
-        <div class="modern-main-content">
-            <div class="modern-map-container glass-card">
-                <div id="map" class="modern-map"></div>
-                <div class="modern-map-overlay">
-                    <div class="map-info-card glass-card">
-                        <h3>Your Journey</h3>
-                        <p>Plan your route and discover amazing places</p>
-                    </div>
+                <!-- Results Section -->
+                <div id="resultsSection" class="results-section hidden">
+                    <h3>Your Route</h3>
+                    <div id="routeResults" class="route-results"></div>
                 </div>
             </div>
-        </div>
 
+            <!-- Map Container -->
+            <div class="map-container">
+                <div id="map" class="map"></div>
+            </div>
+        </main>
     </div>
 
-    <!-- Apple-Style AI Agents Loading Modal -->
-    <div id="apple-agents-modal" class="apple-modal-overlay">
-        <div class="apple-modal">
-            <div class="apple-modal-header">
-                <h2 class="apple-modal-title">🤖 AI Travel Agents</h2>
-                <p class="apple-modal-subtitle">Our specialized agents are crafting your perfect route</p>
-            </div>
-            
-            <div class="apple-agents-grid" id="apple-agents-grid">
-                <!-- Agent cards will be populated dynamically -->
-            </div>
-            
-            <div style="text-align: center; margin-top: 32px;">
-                <div style="color: var(--secondary-label); font-size: 14px; margin-bottom: 16px;">
-                    This may take up to 2 minutes for the best results
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Trip Types Grid Modal -->
-    <div id="trip-types-modal" class="modal" style="display: none;">
-        <div class="modal-content trip-types-grid">
-            <div class="modal-header">
-                <h2>Choose Your Perfect Trip Style</h2>
-                <button class="close-btn" id="close-trip-types">&times;</button>
-            </div>
-            <div class="trip-types-container" id="trip-types-container">
-                <!-- Trip type cards will be dynamically generated -->
-            </div>
-        </div>
-    </div>
-
-    <!-- Detailed Itinerary Modal -->
-    <div id="itinerary-modal" class="modal" style="display: none;">
-        <div class="modal-content itinerary-detail">
-            <div class="itinerary-header">
-                <div class="itinerary-info">
-                    <div class="trip-type-badge" id="selected-trip-type">
-                        <span class="trip-icon">🏔️</span>
-                        <span class="trip-name">Adventure Trip</span>
-                    </div>
-                    <div class="trip-cities" id="trip-cities">Aix-en-Provence → Nice → Cannes</div>
-                </div>
-                <div class="itinerary-map-container">
-                    <div id="itinerary-mini-map" class="mini-map"></div>
-                </div>
-                <button class="close-btn" id="close-itinerary">&times;</button>
-            </div>
-            <div class="itinerary-content" id="itinerary-content">
-                <div class="loading-itinerary" style="display: none;">
-                    <div class="loading"></div>
-                    <p>Creating your personalized itinerary...</p>
-                </div>
-                <div class="itinerary-details" id="itinerary-details"></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Route Spotlight Page -->
-    <div id="route-spotlight-page" class="modern-spotlight-page" style="display: none;">
-        <div class="modern-spotlight-header glass-card">
-            <button class="modern-btn modern-back-btn" id="back-from-spotlight">← Back to Results</button>
-            <div class="modern-spotlight-title">
-                <div class="modern-agent-badge glass-card" id="spotlight-agent-badge">
-                    <span class="agent-icon">🏔️</span>
-                    <span class="agent-name">Adventure Explorer</span>
-                </div>
-                <h1>Route Spotlight</h1>
-            </div>
-            <div class="modern-header-controls">
-                <button class="modern-btn modern-icon-btn" id="dark-mode-toggle" title="Toggle Dark Mode">🌙</button>
-                <button class="modern-btn modern-icon-btn" id="ai-assistant-toggle" title="AI Assistant">🤖</button>
-            </div>
-        </div>
-
-        <!-- Progress Timeline -->
-        <div class="modern-progress-container glass-card">
-            <div class="progress-track">
-                <div class="progress-fill" id="journey-progress-fill"></div>
-                <div class="progress-stops" id="journey-progress-stops"></div>
-            </div>
-        </div>
-
-        <div class="modern-spotlight-container">
-            <div class="modern-map-section glass-card">
-                <div class="modern-map-controls">
-                    <button class="modern-btn modern-icon-btn" id="fullscreen-map" title="Fullscreen">⛶</button>
-                    <button class="modern-btn modern-icon-btn" id="reset-map-view" title="Reset View">🎯</button>
-                </div>
-                <div id="spotlight-map" class="modern-spotlight-map"></div>
-            </div>
-            
-            <div class="modern-content-section glass-card">
-                <!-- Enhanced Tab Navigation -->
-                <div class="spotlight-tabs">
-                    <div class="tab-nav">
-                        <button class="tab-btn active" data-tab="overview">
-                            <span class="tab-icon">📋</span>
-                            <span class="tab-text">Overview</span>
-                        </button>
-                        <button class="tab-btn" data-tab="day-by-day">
-                            <span class="tab-icon">📅</span>
-                            <span class="tab-text">Day-by-Day</span>
-                        </button>
-                        <button class="tab-btn" data-tab="food-wine">
-                            <span class="tab-icon">🍽️</span>
-                            <span class="tab-text">Food & Wine</span>
-                        </button>
-                        <button class="tab-btn" data-tab="photo-spots">
-                            <span class="tab-icon">📸</span>
-                            <span class="tab-text">Photo Spots</span>
-                        </button>
-                    </div>
-                    <div class="tab-indicator"></div>
-                </div>
-
-                <!-- Tab Content Panels -->
-                <div class="tab-content">
-                    <!-- Overview Tab -->
-                    <div class="tab-panel active" id="tab-overview">
-                        <div class="route-summary-card gradient-card">
-                            <div class="card-header">
-                                <h3>🗺️ Route Summary</h3>
-                                <div class="completion-badge">
-                                    <span class="completion-text">Ready to Explore</span>
-                                </div>
-                            </div>
-                            <div class="summary-stats" id="spotlight-stats"></div>
-                            <div class="route-cities-flow" id="spotlight-cities"></div>
-                        </div>
-                        
-                        <div class="highlights-card">
-                            <div class="card-header">
-                                <h3>✨ Trip Highlights</h3>
-                                <div class="highlight-actions">
-                                    <button class="action-btn" id="add-highlight" title="Add Custom Highlight">+</button>
-                                    <button class="action-btn" id="share-highlights" title="Share Highlights">📤</button>
-                                </div>
-                            </div>
-                            <div class="highlights-grid" id="trip-highlights"></div>
-                        </div>
-                        
-                        <div class="export-actions-card">
-                            <div class="card-header">
-                                <h3>🚀 Export & Share</h3>
-                            </div>
-                            <div class="export-buttons-grid">
-                                <button class="export-btn google-maps" id="export-google-maps">
-                                    <span class="export-icon">🗺️</span>
-                                    <div class="export-text">
-                                        <strong>Google Maps</strong>
-                                        <small>Send to mobile app</small>
-                                    </div>
-                                </button>
-                                <button class="export-btn pdf-export" id="export-pdf">
-                                    <span class="export-icon">📄</span>
-                                    <div class="export-text">
-                                        <strong>PDF Itinerary</strong>
-                                        <small>Print-friendly format</small>
-                                    </div>
-                                </button>
-                                <button class="export-btn email-share" id="export-email">
-                                    <span class="export-icon">✉️</span>
-                                    <div class="export-text">
-                                        <strong>Email Trip</strong>
-                                        <small>Share with others</small>
-                                    </div>
-                                </button>
-                                <button class="export-btn save-route" id="save-route">
-                                    <span class="export-icon">💾</span>
-                                    <div class="export-text">
-                                        <strong>Save Route</strong>
-                                        <small>Your favorites</small>
-                                    </div>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Day by Day Tab -->
-                    <div class="tab-panel" id="tab-day-by-day">
-                        <div class="detailed-itinerary-card">
-                            <div class="card-header">
-                                <h3>📅 Day-by-Day Itinerary</h3>
-                                <div class="itinerary-controls">
-                                    <button class="control-btn" id="add-stop" title="Add Stop">
-                                        <span>+</span> Add Stop
-                                    </button>
-                                    <button class="control-btn" id="optimize-route" title="Optimize Route">
-                                        <span>⚡</span> Optimize
-                                    </button>
-                                    <div class="toggle-switch">
-                                        <input type="checkbox" id="drag-mode" class="toggle-input">
-                                        <label for="drag-mode" class="toggle-label">
-                                            <span class="toggle-slider"></span>
-                                            <span class="toggle-text">Reorder Mode</span>
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="itinerary-content sortable" id="spotlight-itinerary"></div>
-                        </div>
-                        
-                        <div class="itinerary-stats-card">
-                            <div class="card-header">
-                                <h3>📊 Trip Statistics</h3>
-                            </div>
-                            <div class="stats-grid">
-                                <div class="stat-item">
-                                    <div class="stat-value" id="total-driving-time">4.5h</div>
-                                    <div class="stat-label">Driving Time</div>
-                                </div>
-                                <div class="stat-item">
-                                    <div class="stat-value" id="total-activities">12</div>
-                                    <div class="stat-label">Activities</div>
-                                </div>
-                                <div class="stat-item">
-                                    <div class="stat-value" id="estimated-cost">€245</div>
-                                    <div class="stat-label">Est. Cost</div>
-                                </div>
-                                <div class="stat-item">
-                                    <div class="stat-value" id="best-season">Spring</div>
-                                    <div class="stat-label">Best Season</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Food & Wine Tab -->
-                    <div class="tab-panel" id="tab-food-wine">
-                        <div class="culinary-card">
-                            <div class="card-header">
-                                <h3>🍽️ Culinary Journey</h3>
-                                <div class="cuisine-filter">
-                                    <button class="filter-btn active" data-cuisine="all">All</button>
-                                    <button class="filter-btn" data-cuisine="french">French</button>
-                                    <button class="filter-btn" data-cuisine="italian">Italian</button>
-                                    <button class="filter-btn" data-cuisine="mediterranean">Med</button>
-                                </div>
-                            </div>
-                            <div class="restaurants-grid" id="restaurants-list"></div>
-                        </div>
-                    </div>
-
-                    <!-- Photo Spots Tab -->
-                    <div class="tab-panel" id="tab-photo-spots">
-                        <div class="photography-card">
-                            <div class="card-header">
-                                <h3>📸 Photo Opportunities</h3>
-                                <div class="photo-time-filter">
-                                    <button class="time-btn active" data-time="all">All Day</button>
-                                    <button class="time-btn" data-time="golden">Golden Hour</button>
-                                    <button class="time-btn" data-time="blue">Blue Hour</button>
-                                </div>
-                            </div>
-                            <div class="photo-spots-grid" id="photo-spots-list"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- AI Assistant Sidebar -->
-        <div class="ai-assistant-sidebar" id="ai-assistant-sidebar">
-            <div class="assistant-header">
-                <div class="assistant-avatar">🤖</div>
-                <div class="assistant-info">
-                    <h4>Travel Assistant</h4>
-                    <p class="assistant-status">Online</p>
-                </div>
-                <button class="close-assistant" id="close-assistant">×</button>
-            </div>
-            <div class="assistant-content">
-                <div class="chat-messages" id="chat-messages"></div>
-                <div class="quick-suggestions">
-                    <h5>Quick Actions</h5>
-                    <button class="suggestion-btn" data-action="weather">🌤️ Check Weather</button>
-                    <button class="suggestion-btn" data-action="traffic">🚗 Traffic Updates</button>
-                    <button class="suggestion-btn" data-action="nearby">📍 Nearby POIs</button>
-                    <button class="suggestion-btn" data-action="tips">💡 Local Tips</button>
-                </div>
-                <div class="chat-input-container">
-                    <input type="text" class="chat-input" placeholder="Ask me anything about your trip..." id="chat-input">
-                    <button class="send-btn" id="send-chat">→</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- AI Agents Results Page -->
-    <div id="agents-results-page" class="agents-results-page" style="display: none;">
-        <div class="results-header">
-            <h1>🤖 AI Agents Results</h1>
-            <p>6 specialized agents found unique routes to <span id="results-destination">your destination</span></p>
-            <button class="back-to-planner-btn" id="back-to-planner">← Back to Planner</button>
-        </div>
-        
-        <div class="agents-grid" id="agents-results-grid">
-            <!-- Agent cards with individual maps will be populated here -->
-        </div>
-    </div>
-
-    <!-- Enhanced Loading Modal for Agents -->
-    <div id="agents-loading-modal" class="modal agents-loading-modal" style="display: none;">
-        <div class="modal-content loading-content">
-            <div class="loading-header">
-                <h2>🚀 Launching AI Agents</h2>
-                <p>6 specialized agents are calculating unique routes for you...</p>
-            </div>
-            
-            <div class="agents-loading-grid">
-                <div class="agent-loading-card" data-agent="adventure">
-                    <div class="agent-avatar">🏔️</div>
-                    <div class="agent-info">
-                        <h3>Adventure Explorer</h3>
-                        <div class="loading-status">Launching...</div>
-                        <div class="loading-progress">
-                            <div class="progress-bar" data-agent="adventure"></div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="agent-loading-card" data-agent="romantic">
-                    <div class="agent-avatar">💕</div>
-                    <div class="agent-info">
-                        <h3>Romance Curator</h3>
-                        <div class="loading-status">Launching...</div>
-                        <div class="loading-progress">
-                            <div class="progress-bar" data-agent="romantic"></div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="agent-loading-card" data-agent="cultural">
-                    <div class="agent-avatar">🏛️</div>
-                    <div class="agent-info">
-                        <h3>Culture Maven</h3>
-                        <div class="loading-status">Launching...</div>
-                        <div class="loading-progress">
-                            <div class="progress-bar" data-agent="cultural"></div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="agent-loading-card" data-agent="foodie">
-                    <div class="agent-avatar">🍽️</div>
-                    <div class="agent-info">
-                        <h3>Culinary Scout</h3>
-                        <div class="loading-status">Launching...</div>
-                        <div class="loading-progress">
-                            <div class="progress-bar" data-agent="foodie"></div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="agent-loading-card" data-agent="family">
-                    <div class="agent-avatar">👨‍👩‍👧‍👦</div>
-                    <div class="agent-info">
-                        <h3>Family Guide</h3>
-                        <div class="loading-status">Launching...</div>
-                        <div class="loading-progress">
-                            <div class="progress-bar" data-agent="family"></div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="agent-loading-card" data-agent="luxury">
-                    <div class="agent-avatar">✨</div>
-                    <div class="agent-info">
-                        <h3>Luxury Concierge</h3>
-                        <div class="loading-status">Launching...</div>
-                        <div class="loading-progress">
-                            <div class="progress-bar" data-agent="luxury"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="overall-progress">
-                <div class="overall-progress-text">Overall Progress: <span id="overall-progress-count">0/6</span></div>
-                <div class="overall-progress-bar">
-                    <div class="overall-progress-fill" id="overall-progress-fill"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Loading Screen -->
-    <div id="loading-screen" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-                                     background: rgba(255,255,255,0.9); z-index: 9999; 
-                                     justify-content: center; align-items: center; flex-direction: column;">
-        <div class="loading" style="margin-bottom: 1rem;"></div>
-        <p>Loading road trip planner...</p>
-    </div>
-
-    <!-- Application JavaScript Modules -->
-    <script type="module" src="js/uiEnhancements.js"></script>
-    <script type="module" src="js/app.js"></script>
-    <script src="js/spotlightController.js"></script>
-    
-    <!-- Additional Meta Information -->
-    <script type="application/ld+json">
-    {
-        "@context": "https://schema.org",
-        "@type": "WebApplication",
-        "name": "Aix-en-Provence Road Trip Planner",
-        "description": "Plan perfect road trips from Aix-en-Provence through Provence, French Riviera, and Italy with AI-powered recommendations",
-        "url": "https://your-domain.com",
-        "applicationCategory": "TravelApplication",
-        "operatingSystem": "Any",
-        "offers": {
-            "@type": "Offer",
-            "price": "0",
-            "priceCurrency": "USD"
-        },
-        "featureList": [
-            "Real-time route calculation",
-            "100+ European destinations",
-            "Theme-based trip planning",
-            "AI-powered travel insights",
-            "Google Maps and GPX export",
-            "Interactive map visualization"
-        ]
-    }
-    </script>
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+    <script src="js/app.js"></script>
 </body>
 </html>

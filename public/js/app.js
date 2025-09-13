@@ -1,208 +1,244 @@
-import { UIController } from './uiController.js';
-
-/**
- * Main Application Entry Point
- * Initializes the road trip planner when DOM is loaded
- */
-
-class RoadTripApp {
+// Road Trip Planner App
+class RoadTripPlanner {
     constructor() {
-        this.uiController = null;
+        this.map = null;
+        this.selectedAgents = ['adventure', 'culture', 'food'];
+        this.currentRoute = null;
+        
+        this.init();
     }
-    
-    /**
-     * Initialize the application
-     */
-    async init() {
+
+    init() {
+        this.initMap();
+        this.setupEventListeners();
+    }
+
+    initMap() {
+        // Initialize Mapbox map
+        mapboxgl.accessToken = 'pk.eyJ1IjoiY2hlZGx5MjUiLCJhIjoiY21lbW1qeHRoMHB5azJsc2VuMWJld2tlYSJ9.0jfOiOXCh0VN5ZjJ5ab7MQ';
+        
+        this.map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/mapbox/light-v11',
+            center: [5.4474, 43.5297], // Aix-en-Provence coordinates
+            zoom: 6
+        });
+
+        // Add navigation controls
+        this.map.addControl(new mapboxgl.NavigationControl());
+
+        // Add origin marker for Aix-en-Provence
+        new mapboxgl.Marker({ color: '#007AFF' })
+            .setLngLat([5.4474, 43.5297])
+            .setPopup(new mapboxgl.Popup().setHTML('<h3>🏠 Aix-en-Provence</h3><p>Your journey starts here</p>'))
+            .addTo(this.map);
+    }
+
+    setupEventListeners() {
+        // Agent selection buttons
+        document.querySelectorAll('.agent-btn').forEach(btn => {
+            btn.addEventListener('click', () => this.toggleAgent(btn));
+        });
+
+        // Generate route button
+        document.getElementById('generateRoute').addEventListener('click', () => {
+            this.generateRoute();
+        });
+
+        // Enter key for destination input
+        document.getElementById('destination').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                this.generateRoute();
+            }
+        });
+    }
+
+    toggleAgent(btn) {
+        const agent = btn.dataset.agent;
+        
+        if (btn.classList.contains('active')) {
+            // Ensure at least one agent remains selected
+            if (this.selectedAgents.length > 1) {
+                btn.classList.remove('active');
+                this.selectedAgents = this.selectedAgents.filter(a => a !== agent);
+            }
+        } else {
+            btn.classList.add('active');
+            this.selectedAgents.push(agent);
+        }
+    }
+
+    async generateRoute() {
+        const destination = document.getElementById('destination').value.trim();
+        const stops = parseInt(document.getElementById('stops').value);
+        
+        if (!destination) {
+            this.showError('Please enter a destination');
+            return;
+        }
+
+        this.setLoading(true);
+
         try {
-            console.log('Initializing Road Trip Planner...');
+            // Get destination coordinates first
+            const destinationCoords = await this.geocodeDestination(destination);
             
-            // Show loading screen
-            this.showLoadingScreen();
-            
-            // Check if required dependencies are loaded
-            this.checkDependencies();
-            
-            // Wait a bit for all resources to load
-            await this.delay(100);
-            
-            // Initialize UI controller
-            this.uiController = new UIController();
-            await this.uiController.init();
-            
-            // Setup global error handling
-            this.setupErrorHandling();
-            
-            // Hide loading screen
-            this.hideLoadingScreen();
-            
-            console.log('Road Trip Planner loaded successfully!');
+            if (!destinationCoords) {
+                throw new Error('Could not find destination coordinates');
+            }
+
+            // Generate route with AI agents
+            const response = await fetch('/api/generate-route', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    destination: destination,
+                    stops: stops,
+                    agents: this.selectedAgents
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to generate route');
+            }
+
+            const routeData = await response.json();
+            this.displayRoute(routeData, destinationCoords);
             
         } catch (error) {
-            console.error('Failed to initialize application:', error);
-            this.hideLoadingScreen();
-            this.showInitializationError(error);
+            console.error('Error generating route:', error);
+            this.showError('Failed to generate route. Please try again.');
+        } finally {
+            this.setLoading(false);
         }
     }
-    
-    /**
-     * Simple delay utility
-     */
-    delay(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
-    }
-    
-    /**
-     * Show loading screen
-     */
-    showLoadingScreen() {
-        const loadingScreen = document.getElementById('loading-screen');
-        if (loadingScreen) {
-            loadingScreen.style.display = 'flex';
-        }
-    }
-    
-    /**
-     * Hide loading screen
-     */
-    hideLoadingScreen() {
-        const loadingScreen = document.getElementById('loading-screen');
-        if (loadingScreen) {
-            loadingScreen.style.display = 'none';
-        }
-    }
-    
-    /**
-     * Check if all required dependencies are available
-     */
-    checkDependencies() {
-        const requiredGlobals = ['L']; // Leaflet
-        const missing = requiredGlobals.filter(global => typeof window[global] === 'undefined');
-        
-        if (missing.length > 0) {
-            throw new Error(`Missing required dependencies: ${missing.join(', ')}`);
-        }
-    }
-    
-    /**
-     * Setup global error handling
-     */
-    setupErrorHandling() {
-        // Handle unhandled promise rejections
-        window.addEventListener('unhandledrejection', (event) => {
-            console.error('Unhandled promise rejection:', event.reason);
+
+    async geocodeDestination(destination) {
+        try {
+            const response = await fetch(
+                `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(destination)}.json?access_token=${mapboxgl.accessToken}&limit=1&types=place`
+            );
             
-            // Show user-friendly error for API-related issues
-            if (event.reason && event.reason.message) {
-                const message = event.reason.message;
-                if (message.includes('API') || message.includes('fetch')) {
-                    this.showUserError('Network error: Please check your internet connection and API key.');
-                }
+            const data = await response.json();
+            
+            if (data.features && data.features.length > 0) {
+                return {
+                    lng: data.features[0].center[0],
+                    lat: data.features[0].center[1],
+                    name: data.features[0].place_name
+                };
+            }
+            
+            return null;
+        } catch (error) {
+            console.error('Geocoding error:', error);
+            return null;
+        }
+    }
+
+    displayRoute(routeData, destinationCoords) {
+        this.currentRoute = routeData;
+        
+        // Clear existing markers except origin
+        const existingMarkers = document.querySelectorAll('.mapboxgl-marker');
+        existingMarkers.forEach((marker, index) => {
+            if (index > 0) { // Keep the first marker (origin)
+                marker.remove();
             }
         });
+
+        // Add destination marker
+        new mapboxgl.Marker({ color: '#FF3B30' })
+            .setLngLat([destinationCoords.lng, destinationCoords.lat])
+            .setPopup(new mapboxgl.Popup().setHTML(`<h3>🎯 ${destinationCoords.name}</h3><p>Your destination</p>`))
+            .addTo(this.map);
+
+        // Fit map to show origin and destination
+        const bounds = new mapboxgl.LngLatBounds();
+        bounds.extend([5.4474, 43.5297]); // Aix-en-Provence
+        bounds.extend([destinationCoords.lng, destinationCoords.lat]); // Destination
         
-        // Handle general JavaScript errors
-        window.addEventListener('error', (event) => {
-            console.error('JavaScript error:', event.error);
-            
-            // Don't show every error to users, just log them
-            if (event.error && event.error.stack) {
-                console.error('Stack trace:', event.error.stack);
-            }
+        this.map.fitBounds(bounds, {
+            padding: 50,
+            maxZoom: 8
         });
+
+        // Display results
+        this.displayResults(routeData);
     }
-    
-    /**
-     * Show initialization error to user
-     */
-    showInitializationError(error) {
-        const errorHtml = `
-            <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
-                        background: #fee; border: 2px solid #c33; border-radius: 8px; 
-                        padding: 2rem; max-width: 500px; text-align: center; z-index: 10000;
-                        box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
-                <h2 style="color: #c33; margin-bottom: 1rem;">Failed to Load Application</h2>
-                <p style="margin-bottom: 1rem; color: #666;">
-                    ${error.message || 'An unexpected error occurred while loading the road trip planner.'}
-                </p>
-                <button onclick="window.location.reload()" 
-                        style="background: #667eea; color: white; border: none; padding: 0.75rem 1.5rem; 
-                               border-radius: 6px; cursor: pointer; font-size: 1rem;">
-                    Reload Page
-                </button>
-            </div>
-        `;
+
+    displayResults(routeData) {
+        const resultsSection = document.getElementById('resultsSection');
+        const routeResults = document.getElementById('routeResults');
         
-        document.body.insertAdjacentHTML('beforeend', errorHtml);
+        let html = '';
+        
+        html += `<div class="route-item">
+            <h4>📍 Route Overview</h4>
+            <p><strong>From:</strong> ${routeData.origin}</p>
+            <p><strong>To:</strong> ${routeData.destination}</p>
+            <p><strong>Planned stops:</strong> ${routeData.totalStops}</p>
+        </div>`;
+
+        routeData.agentResults.forEach(result => {
+            const agentEmoji = this.getAgentEmoji(result.agent);
+            html += `<div class="route-item">
+                <h4>${agentEmoji} ${this.capitalizeFirst(result.agent)} Recommendations</h4>
+                <p>${this.formatAgentResult(result.recommendations)}</p>
+            </div>`;
+        });
+
+        routeResults.innerHTML = html;
+        resultsSection.classList.remove('hidden');
     }
-    
-    /**
-     * Show user-friendly error message
-     */
-    showUserError(message) {
-        // Create or update error notification
-        let notification = document.getElementById('error-notification');
-        if (!notification) {
-            notification = document.createElement('div');
-            notification.id = 'error-notification';
-            notification.style.cssText = `
-                position: fixed; top: 20px; right: 20px; z-index: 10000;
-                background: #fee; color: #c33; padding: 1rem 1.5rem;
-                border-radius: 6px; border-left: 4px solid #c33;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-                max-width: 400px; font-size: 0.9rem;
-                transform: translateX(100%); transition: transform 0.3s ease;
-            `;
-            document.body.appendChild(notification);
+
+    getAgentEmoji(agent) {
+        const emojis = {
+            adventure: '🏔️',
+            culture: '🏛️',
+            food: '🍽️'
+        };
+        return emojis[agent] || '🤖';
+    }
+
+    capitalizeFirst(str) {
+        return str.charAt(0).toUpperCase() + str.slice(1);
+    }
+
+    formatAgentResult(result) {
+        // Basic text formatting for AI results
+        if (typeof result === 'string') {
+            // Clean up the result and make it more readable
+            return result.replace(/\n\n/g, '<br><br>').slice(0, 300) + '...';
         }
+        return 'Processing recommendations...';
+    }
+
+    setLoading(isLoading) {
+        const btn = document.getElementById('generateRoute');
+        const btnText = btn.querySelector('.btn-text');
+        const spinner = btn.querySelector('.btn-spinner');
         
-        notification.textContent = message;
-        
-        // Show notification
-        setTimeout(() => {
-            notification.style.transform = 'translateX(0)';
-        }, 100);
-        
-        // Hide after 5 seconds
-        setTimeout(() => {
-            notification.style.transform = 'translateX(100%)';
-            setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.parentNode.removeChild(notification);
-                }
-            }, 300);
-        }, 5000);
+        if (isLoading) {
+            btn.disabled = true;
+            btnText.textContent = 'Generating...';
+            spinner.classList.remove('hidden');
+        } else {
+            btn.disabled = false;
+            btnText.textContent = 'Generate Route';
+            spinner.classList.add('hidden');
+        }
+    }
+
+    showError(message) {
+        // Simple error display - can be enhanced with a toast/modal
+        alert(message);
     }
 }
 
-// Global app instance for cleanup
-window.roadTripApp = null;
-
-// Cleanup any existing instance
-function cleanupExistingApp() {
-    if (window.roadTripApp && window.roadTripApp.uiController) {
-        window.roadTripApp.uiController.cleanup();
-    }
-}
-
-// Initialize app function
-async function initializeApp() {
-    try {
-        cleanupExistingApp();
-        window.roadTripApp = new RoadTripApp();
-        await window.roadTripApp.init();
-    } catch (error) {
-        console.error('App initialization failed:', error);
-    }
-}
-
-// Initialize app when DOM is loaded
-document.addEventListener('DOMContentLoaded', initializeApp);
-
-// Also handle the case where DOM is already loaded
-if (document.readyState === 'loading') {
-    // DOM is still loading, event listener will handle it
-} else {
-    // DOM is already loaded
-    initializeApp();
-}
+// Initialize the app when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    new RoadTripPlanner();
+});
