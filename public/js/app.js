@@ -393,57 +393,70 @@ class RoadTripPlanner {
 
     displayRouteResults(routeData) {
         const resultsContainer = document.getElementById('routeResults');
-        
+
         let resultsHTML = '';
         routeData.agentResults.forEach(agentResult => {
             const agentEmoji = this.getAgentEmoji(agentResult.agent);
             const agentColor = this.getAgentColor(agentResult.agent);
-            
-            // Clean up the recommendations text
-            let cleanText = agentResult.recommendations;
-            
-            // Remove JSON markers and backticks
-            cleanText = cleanText
-                .replace(/```json\s*/g, '')
-                .replace(/```\s*$/g, '')
-                .replace(/^\s*{\s*"waypoints":/g, '')
-                .replace(/}\s*$/g, '');
-            
-            // Try to extract meaningful content
+
             let displayText = '';
+            let waypointCount = 0;
+
             try {
-                // Try to parse as JSON first
-                const parsed = JSON.parse('{' + cleanText + '}');
+                // Clean up and parse the JSON
+                let jsonText = agentResult.recommendations;
+
+                // Remove markdown code blocks and fix JSON formatting
+                jsonText = jsonText
+                    .replace(/```json\s*/g, '')
+                    .replace(/```\s*$/g, '')
+                    .trim();
+
+                // Try to parse the JSON
+                const parsed = JSON.parse(jsonText);
+
                 if (parsed.waypoints && Array.isArray(parsed.waypoints)) {
-                    displayText = parsed.waypoints.map(wp => `${wp.name}: ${wp.description || 'Great destination'}`).join(' • ');
+                    waypointCount = parsed.waypoints.length;
+                    // Create a readable summary
+                    const waypoints = parsed.waypoints.slice(0, 3); // Show first 3 waypoints
+                    displayText = waypoints.map(wp => wp.name).join(' → ');
+
+                    if (parsed.waypoints.length > 3) {
+                        displayText += ` and ${parsed.waypoints.length - 3} more stops`;
+                    }
+
+                    // Add route overview if available
+                    if (parsed.route_overview) {
+                        displayText += '. ' + parsed.route_overview.substring(0, 150) + '...';
+                    } else if (waypoints[0] && waypoints[0].description) {
+                        displayText += '. Starting with ' + waypoints[0].description.substring(0, 100) + '...';
+                    }
                 }
             } catch (e) {
-                // Fallback to cleaned text
-                displayText = cleanText
-                    .replace(/[{}"]/g, '')
-                    .replace(/name:\s*/g, '')
-                    .replace(/coordinates:\s*\[[^\]]+\]/g, '')
-                    .replace(/description:\s*/g, '')
-                    .replace(/,\s*,/g, ',')
-                    .trim();
+                console.warn('Could not parse agent recommendations:', e);
+                displayText = `Curated ${agentResult.agent} experiences and hidden gems along your route.`;
+                waypointCount = 3; // Default assumption
             }
-            
-            // If still too messy, create a friendly message
-            if (displayText.length < 10 || displayText.includes('waypoints')) {
-                displayText = `Specialized ${agentResult.agent} recommendations for unique stops along your route to Rome.`;
+
+            // Fallback if no display text
+            if (!displayText) {
+                displayText = `Discover amazing ${agentResult.agent} destinations and experiences tailored to your journey.`;
             }
-            
+
             resultsHTML += `
                 <div class="route-item" style="border-left-color: ${agentColor}">
                     <div class="route-item-header">
                         <h4>${agentEmoji} ${this.capitalizeFirst(agentResult.agent)} Agent</h4>
-                        <button class="view-details-btn" onclick="planner.viewAgentDetails('${agentResult.agent}')">View Details</button>
+                        <div class="route-item-meta">
+                            <span class="waypoint-count">${waypointCount} stops</span>
+                            <button class="view-details-btn" onclick="planner.viewAgentDetails('${agentResult.agent}')">View Details</button>
+                        </div>
                     </div>
-                    <p>${this.truncateText(displayText, 200)}</p>
+                    <p>${displayText}</p>
                 </div>
             `;
         });
-        
+
         resultsContainer.innerHTML = resultsHTML;
     }
 
@@ -663,25 +676,86 @@ class RoadTripPlanner {
     }
 
     generateLocalTips(waypoints, destination) {
+        const hiddenGems = [];
+        const avoidTraps = [];
+        const photoSpots = [];
+
+        // Extract specific tips from the current route's agent results
+        if (this.currentRoute && this.currentRoute.agentResults) {
+            this.currentRoute.agentResults.forEach(agentResult => {
+                try {
+                    const cleanedRecommendations = agentResult.recommendations
+                        .replace(/```json\s*/g, '')
+                        .replace(/```\s*$/g, '')
+                        .trim();
+
+                    const parsed = JSON.parse(cleanedRecommendations);
+
+                    if (parsed.budget_tips && Array.isArray(parsed.budget_tips)) {
+                        hiddenGems.push(...parsed.budget_tips.slice(0, 2));
+                    }
+
+                    if (parsed.waypoints && Array.isArray(parsed.waypoints)) {
+                        parsed.waypoints.forEach(waypoint => {
+                            if (waypoint.activities && Array.isArray(waypoint.activities)) {
+                                // Add photo spot tips from activities
+                                const photoTip = waypoint.activities.find(act =>
+                                    act.toLowerCase().includes('photo') ||
+                                    act.toLowerCase().includes('view') ||
+                                    act.toLowerCase().includes('scenery')
+                                );
+                                if (photoTip) {
+                                    photoSpots.push(`${waypoint.name}: ${photoTip.split('.')[0]}`);
+                                }
+                            }
+                        });
+                    }
+                } catch (e) {
+                    // Silent fail for parsing errors
+                }
+            });
+        }
+
+        // Add fallback tips based on waypoint locations
+        waypoints.forEach(waypoint => {
+            if (waypoint.name) {
+                hiddenGems.push(`Explore the local markets and small villages around ${waypoint.name}`);
+                avoidTraps.push(`Skip overpriced restaurants near main attractions in ${waypoint.name}`);
+                photoSpots.push(`Best views: Early morning or sunset at ${waypoint.name}`);
+            }
+        });
+
+        // Add destination-specific tip
+        if (destination && destination.name) {
+            hiddenGems.push(`Ask locals in ${destination.name} for their favorite neighborhood spots`);
+        }
+
+        // Ensure we have enough tips (fallback to generic ones if needed)
+        const fallbackHiddenGems = [
+            "Visit local farmers markets for authentic regional produce",
+            "Stay in family-run accommodations for insider tips",
+            "Take detours through small villages for unique discoveries",
+            "Look for restaurants where locals eat, not tourists"
+        ];
+
+        const fallbackAvoidTraps = [
+            "Avoid restaurants with multilingual tourist menus",
+            "Skip expensive parking near major attractions",
+            "Be cautious of overpriced souvenir shops in tourist areas",
+            "Avoid tours that only visit crowded mainstream sites"
+        ];
+
+        const fallbackPhotoSpots = [
+            "Golden hour shots at historical sites",
+            "Local bridges and waterfront areas",
+            "Elevated viewpoints and hills",
+            "Colorful local neighborhoods and street art"
+        ];
+
         return {
-            hiddenGems: [
-                "Visit local markets early morning for best selection",
-                "Ask locals for their favorite neighborhood restaurants",
-                "Explore residential areas for authentic experiences",
-                "Check community bulletin boards for local events"
-            ],
-            avoidTraps: [
-                "Restaurants with tourist menus in multiple languages",
-                "Overpriced souvenir shops near main attractions",
-                "Tours that only visit crowded landmarks",
-                "Expensive parking near popular sites"
-            ],
-            photoSpots: [
-                "Golden hour at historical monuments",
-                "Rooftop bars with city views",
-                "Local bridges and waterfront areas",
-                "Colorful street art districts"
-            ]
+            hiddenGems: [...new Set([...hiddenGems, ...fallbackHiddenGems])].slice(0, 4),
+            avoidTraps: [...new Set([...avoidTraps, ...fallbackAvoidTraps])].slice(0, 4),
+            photoSpots: [...new Set([...photoSpots, ...fallbackPhotoSpots])].slice(0, 4)
         };
     }
 
@@ -807,24 +881,121 @@ class RoadTripPlanner {
     }
 
     async addRouteToMap(waypoints, destination) {
-        // This would implement route drawing on the map
-        // For now, we'll skip the complex routing implementation
+        try {
+            // Create the route coordinates array
+            const routeCoordinates = [
+                [5.4474, 43.5297] // Start from Aix-en-Provence
+            ];
+
+            // Add all waypoints
+            waypoints.forEach(waypoint => {
+                routeCoordinates.push([waypoint.lng, waypoint.lat]);
+            });
+
+            // Add destination
+            if (destination) {
+                routeCoordinates.push([destination.lng, destination.lat]);
+            }
+
+            // Wait for map to be loaded
+            if (!this.map.isStyleLoaded()) {
+                this.map.once('styledata', () => {
+                    this.addRouteLayer(routeCoordinates);
+                });
+            } else {
+                this.addRouteLayer(routeCoordinates);
+            }
+
+        } catch (error) {
+            console.warn('Could not add route to map:', error);
+        }
+    }
+
+    addRouteLayer(coordinates) {
+        try {
+            // Remove existing route if it exists
+            if (this.map.getSource('route')) {
+                if (this.map.getLayer('route-arrows')) {
+                    this.map.removeLayer('route-arrows');
+                }
+                if (this.map.getLayer('route')) {
+                    this.map.removeLayer('route');
+                }
+                this.map.removeSource('route');
+            }
+
+            // Add route source
+            this.map.addSource('route', {
+                type: 'geojson',
+                data: {
+                    type: 'Feature',
+                    properties: {},
+                    geometry: {
+                        type: 'LineString',
+                        coordinates: coordinates
+                    }
+                }
+            });
+
+            // Add route layer
+            this.map.addLayer({
+                id: 'route',
+                type: 'line',
+                source: 'route',
+                layout: {
+                    'line-join': 'round',
+                    'line-cap': 'round'
+                },
+                paint: {
+                    'line-color': '#007AFF',
+                    'line-width': 4,
+                    'line-opacity': 0.8
+                }
+            });
+
+            // Add route arrows to show direction (only if the route has multiple points)
+            if (coordinates.length > 1) {
+                this.map.addLayer({
+                    id: 'route-arrows',
+                    type: 'symbol',
+                    source: 'route',
+                    layout: {
+                        'symbol-placement': 'line',
+                        'symbol-spacing': 150,
+                        'text-field': '▶',
+                        'text-size': 12,
+                        'text-rotation-alignment': 'map',
+                        'text-pitch-alignment': 'viewport'
+                    },
+                    paint: {
+                        'text-color': '#007AFF',
+                        'text-halo-color': 'white',
+                        'text-halo-width': 2
+                    }
+                });
+            }
+
+        } catch (error) {
+            console.warn('Could not add route layer:', error);
+        }
     }
 
     viewAgentDetails(agent) {
         // Find the agent's recommendations
         const agentResult = this.currentRoute?.agentResults.find(ar => ar.agent === agent);
-        if (agentResult) {
-            // Create a simple alert with formatted content
-            let content = agentResult.recommendations;
-            
-            // Clean up the content for display
-            content = content
-                .replace(/```json\s*/g, '')
-                .replace(/```\s*$/g, '')
-                .replace(/\n/g, '\n\n'); // Add spacing for readability
-            
-            alert(`${this.capitalizeFirst(agent)} Agent Recommendations:\n\n${content}`);
+        if (agentResult && this.currentRoute) {
+            // Store the agent data in localStorage for the spotlight page
+            const spotlightData = {
+                agent: agent,
+                agentResult: agentResult,
+                routeData: this.currentRoute,
+                timestamp: Date.now()
+            };
+
+            localStorage.setItem('spotlightData', JSON.stringify(spotlightData));
+
+            // Open spotlight page in new window/tab
+            window.open('./spotlight.html', '_blank');
         } else {
             alert(`No detailed recommendations available for ${agent} agent.`);
         }

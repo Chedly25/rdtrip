@@ -30,7 +30,8 @@ class SpotlightController {
     }
 
     loadSpotlightData() {
-        const data = sessionStorage.getItem('spotlightData');
+        // Try localStorage first (as set by the main app), then sessionStorage as fallback
+        let data = localStorage.getItem('spotlightData') || sessionStorage.getItem('spotlightData');
         if (data) {
             this.spotlightData = JSON.parse(data);
         }
