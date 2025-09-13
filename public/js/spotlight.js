@@ -68,12 +68,19 @@ class SpotlightController {
     initMap() {
         // Initialize Mapbox map
         mapboxgl.accessToken = 'pk.eyJ1IjoiY2hlZGx5MjUiLCJhIjoiY21lbW1qeHRoMHB5azJsc2VuMWJld2tlYSJ9.0jfOiOXCh0VN5ZjJ5ab7MQ';
-        
+
+        // Disable Mapbox telemetry to prevent ad-blocker conflicts
+        if (window.mapboxgl) {
+            window.mapboxgl.supported({ failIfMajorPerformanceCaveat: true });
+        }
+
         this.map = new mapboxgl.Map({
             container: 'spotlightMap',
             style: 'mapbox://styles/mapbox/light-v11',
             center: [5.4474, 43.5297], // Aix-en-Provence coordinates
-            zoom: 6
+            zoom: 6,
+            // Disable telemetry collection to prevent ad-blocker issues
+            collectResourceTiming: false
         });
 
         // Add navigation controls
@@ -160,13 +167,26 @@ class SpotlightController {
             if (jsonData && jsonData.waypoints) {
                 jsonData.waypoints.forEach(waypoint => {
                     if (waypoint.coordinates && waypoint.coordinates.length === 2) {
+                        // Handle both [lat, lng] and [lng, lat] coordinate formats
+                        let lat, lng;
+                        if (waypoint.coordinates[0] >= -90 && waypoint.coordinates[0] <= 90 &&
+                            waypoint.coordinates[1] >= -180 && waypoint.coordinates[1] <= 180) {
+                            // This looks like [lat, lng] format
+                            lat = waypoint.coordinates[0];
+                            lng = waypoint.coordinates[1];
+                        } else {
+                            // This looks like [lng, lat] format
+                            lng = waypoint.coordinates[0];
+                            lat = waypoint.coordinates[1];
+                        }
+
                         waypoints.push({
                             name: waypoint.name,
                             description: waypoint.description,
                             activities: waypoint.activities || [],
                             duration: waypoint.duration,
-                            lng: waypoint.coordinates[1], // Note: Mapbox uses [lng, lat]
-                            lat: waypoint.coordinates[0]
+                            lng: lng,
+                            lat: lat
                         });
                     }
                 });
@@ -209,8 +229,22 @@ class SpotlightController {
 
         try {
             const routeGeometry = await this.getDirections(coordinates);
-            
+
             if (routeGeometry) {
+                // Remove existing route if it exists
+                if (this.map.getSource('spotlight-route')) {
+                    if (this.map.getLayer('spotlight-route-arrows')) {
+                        this.map.removeLayer('spotlight-route-arrows');
+                    }
+                    if (this.map.getLayer('spotlight-route')) {
+                        this.map.removeLayer('spotlight-route');
+                    }
+                    if (this.map.getLayer('spotlight-route-outline')) {
+                        this.map.removeLayer('spotlight-route-outline');
+                    }
+                    this.map.removeSource('spotlight-route');
+                }
+
                 this.map.addSource('spotlight-route', {
                     'type': 'geojson',
                     'data': {
@@ -220,6 +254,23 @@ class SpotlightController {
                     }
                 });
 
+                // Add route outline for visibility
+                this.map.addLayer({
+                    'id': 'spotlight-route-outline',
+                    'type': 'line',
+                    'source': 'spotlight-route',
+                    'layout': {
+                        'line-join': 'round',
+                        'line-cap': 'round'
+                    },
+                    'paint': {
+                        'line-color': '#FFFFFF',
+                        'line-width': 6,
+                        'line-opacity': 0.6
+                    }
+                });
+
+                // Add main route line
                 this.map.addLayer({
                     'id': 'spotlight-route',
                     'type': 'line',
@@ -231,12 +282,104 @@ class SpotlightController {
                     'paint': {
                         'line-color': color,
                         'line-width': 4,
-                        'line-opacity': 0.8
+                        'line-opacity': 0.9
                     }
                 });
+
+                // Add direction arrows for detailed routes
+                if (routeGeometry.coordinates && routeGeometry.coordinates.length > 10) {
+                    this.map.addLayer({
+                        'id': 'spotlight-route-arrows',
+                        'type': 'symbol',
+                        'source': 'spotlight-route',
+                        'layout': {
+                            'symbol-placement': 'line',
+                            'symbol-spacing': 100,
+                            'text-field': '→',
+                            'text-size': 14,
+                            'text-rotation-alignment': 'map'
+                        },
+                        'paint': {
+                            'text-color': color,
+                            'text-halo-color': 'white',
+                            'text-halo-width': 2
+                        }
+                    });
+                }
+
+                console.log(`Spotlight route added with detailed geometry`);
+            } else {
+                // Fallback to straight line route
+                console.log('Falling back to straight line route');
+                this.createStraightLineRoute(coordinates, color);
             }
         } catch (error) {
             console.error('Could not get driving directions:', error);
+            // Fallback to straight line route
+            this.createStraightLineRoute(coordinates, color);
+        }
+    }
+
+    createStraightLineRoute(coordinates, color) {
+        try {
+            // Remove existing route if it exists
+            if (this.map.getSource('spotlight-route')) {
+                if (this.map.getLayer('spotlight-route')) {
+                    this.map.removeLayer('spotlight-route');
+                }
+                if (this.map.getLayer('spotlight-route-outline')) {
+                    this.map.removeLayer('spotlight-route-outline');
+                }
+                this.map.removeSource('spotlight-route');
+            }
+
+            this.map.addSource('spotlight-route', {
+                'type': 'geojson',
+                'data': {
+                    'type': 'Feature',
+                    'properties': {},
+                    'geometry': {
+                        'type': 'LineString',
+                        'coordinates': coordinates
+                    }
+                }
+            });
+
+            // Add route outline
+            this.map.addLayer({
+                'id': 'spotlight-route-outline',
+                'type': 'line',
+                'source': 'spotlight-route',
+                'layout': {
+                    'line-join': 'round',
+                    'line-cap': 'round'
+                },
+                'paint': {
+                    'line-color': '#FFFFFF',
+                    'line-width': 6,
+                    'line-opacity': 0.6
+                }
+            });
+
+            // Add main route line
+            this.map.addLayer({
+                'id': 'spotlight-route',
+                'type': 'line',
+                'source': 'spotlight-route',
+                'layout': {
+                    'line-join': 'round',
+                    'line-cap': 'round'
+                },
+                'paint': {
+                    'line-color': color,
+                    'line-width': 4,
+                    'line-opacity': 0.9
+                }
+            });
+
+            console.log(`Spotlight straight line route created`);
+        } catch (error) {
+            console.error('Could not create fallback route:', error);
         }
     }
 
@@ -273,10 +416,45 @@ class SpotlightController {
     }
 
     updateDistanceStats(waypoints, destinationCoords) {
-        // This is a rough estimate - in a real app you'd get this from the directions API
-        const totalPoints = waypoints.length + 2; // +2 for origin and destination
-        const estimatedDistance = totalPoints * 150; // Rough estimate in km
-        document.getElementById('totalDistance').textContent = `${estimatedDistance}km`;
+        // Calculate distance using the Haversine formula for great circle distance
+        let totalDistance = 0;
+        const origin = { lat: 43.5297, lng: 5.4474 }; // Aix-en-Provence
+
+        let previousPoint = origin;
+
+        // Add distances between consecutive waypoints
+        waypoints.forEach(waypoint => {
+            const distance = this.calculateDistance(previousPoint.lat, previousPoint.lng, waypoint.lat, waypoint.lng);
+            totalDistance += distance;
+            previousPoint = waypoint;
+        });
+
+        // Add distance from last waypoint to destination
+        if (destinationCoords) {
+            const finalDistance = this.calculateDistance(previousPoint.lat, previousPoint.lng, destinationCoords.lat, destinationCoords.lng);
+            totalDistance += finalDistance;
+        }
+
+        // Round to nearest 10km for a cleaner display
+        const roundedDistance = Math.round(totalDistance / 10) * 10;
+        document.getElementById('totalDistance').textContent = `${roundedDistance}km`;
+    }
+
+    calculateDistance(lat1, lng1, lat2, lng2) {
+        // Haversine formula to calculate great circle distance
+        const R = 6371; // Earth's radius in kilometers
+        const dLat = this.degreesToRadians(lat2 - lat1);
+        const dLng = this.degreesToRadians(lng2 - lng1);
+        const a =
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(this.degreesToRadians(lat1)) * Math.cos(this.degreesToRadians(lat2)) *
+            Math.sin(dLng / 2) * Math.sin(dLng / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+    }
+
+    degreesToRadians(degrees) {
+        return degrees * (Math.PI / 180);
     }
 
     displayCities() {

@@ -77,7 +77,17 @@
         </main>
     </div>
 
+    <script>
+        // Disable Mapbox telemetry to prevent ad-blocker conflicts
+        window.mapboxTelemetryBlocked = true;
+    </script>
     <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+    <script>
+        // Additional telemetry disabling
+        if (typeof mapboxgl !== 'undefined' && mapboxgl.Map) {
+            mapboxgl.config.ACCESS_TOKEN = '';
+        }
+    </script>
     <script src="js/spotlight.js"></script>
 </body>
 </html>

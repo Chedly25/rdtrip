@@ -1094,11 +1094,14 @@ class RoadTripPlanner {
         // Find the agent's recommendations
         const agentResult = this.currentRoute?.agentResults.find(ar => ar.agent === agent);
         if (agentResult && this.currentRoute) {
-            // Store the agent data in localStorage for the spotlight page
+            // Store the agent data in localStorage for the spotlight page in the format spotlight.js expects
             const spotlightData = {
                 agent: agent,
-                agentResult: agentResult,
-                routeData: this.currentRoute,
+                agentData: agentResult, // spotlight.js expects this key
+                destination: this.currentRoute.destination,
+                origin: this.currentRoute.origin,
+                totalStops: this.currentRoute.totalStops,
+                routeData: this.currentRoute, // Keep for compatibility
                 timestamp: Date.now()
             };
 
