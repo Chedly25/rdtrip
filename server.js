@@ -91,10 +91,14 @@ app.post('/api/generate-itinerary', async (req, res) => {
 });
 
 async function generateDetailedItinerary(agent, origin, destination, waypoints) {
-  try {
-    const waypointNames = waypoints ? waypoints.map(w => w.name).join(', ') : '';
-    
-    const prompt = `${agent.prompt}
+  const maxRetries = 3;
+  const retryDelay = 2000; // 2 seconds
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const waypointNames = waypoints ? waypoints.map(w => w.name).join(', ') : '';
+      
+      const prompt = `${agent.prompt}
 
 Create a detailed day-by-day itinerary for a road trip from ${origin} to ${destination}.
 ${waypoints && waypoints.length > 0 ? `Include these waypoints: ${waypointNames}` : ''}
@@ -114,27 +118,95 @@ For imageUrl fields, please search for and provide direct URLs to high-quality i
 
 Make it detailed and practical with specific times and recommendations.`;
 
-    const response = await axios.post('https://api.perplexity.ai/chat/completions', {
-      model: 'sonar',
-      messages: [
-        {
-          role: 'user',
-          content: prompt
-        }
-      ],
-      max_tokens: 2000,
-      temperature: 0.7
-    }, {
-      headers: {
-        'Authorization': `Bearer ${PERPLEXITY_API_KEY}`,
-        'Content-Type': 'application/json'
-      }
-    });
+      console.log(`Attempt ${attempt}/${maxRetries} - Generating itinerary for ${agent.name}`);
 
-    return response.data.choices[0].message.content;
-  } catch (error) {
-    console.error(`Error generating itinerary for ${agent.name}:`, error.response?.data || error.message);
-    return `Error generating detailed itinerary for ${agent.name}`;
+      const response = await axios.post('https://api.perplexity.ai/chat/completions', {
+        model: 'sonar',
+        messages: [
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        max_tokens: 2000,
+        temperature: 0.7
+      }, {
+        headers: {
+          'Authorization': `Bearer ${PERPLEXITY_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        timeout: 30000 // 30 second timeout
+      });
+
+      console.log(`Successfully generated itinerary for ${agent.name} on attempt ${attempt}`);
+      return response.data.choices[0].message.content;
+      
+    } catch (error) {
+      const status = error.response?.status;
+      const statusText = error.response?.statusText || error.message;
+      
+      console.error(`Attempt ${attempt}/${maxRetries} failed for ${agent.name}:`, {
+        status,
+        statusText,
+        data: error.response?.data
+      });
+      
+      // If this is the last attempt, return a fallback
+      if (attempt === maxRetries) {
+        console.error(`All ${maxRetries} attempts failed for ${agent.name}`);
+        
+        // Return a fallback itinerary
+        return JSON.stringify({
+          days: [
+            {
+              day: 1,
+              location: origin,
+              activities: [
+                {
+                  time: "09:00",
+                  title: "Start your journey",
+                  description: `Begin your ${agent.name.toLowerCase()} adventure from ${origin}`
+                },
+                {
+                  time: "12:00", 
+                  title: "Lunch break",
+                  description: "Stop for a local meal along the route"
+                }
+              ],
+              accommodation: "Local hotel or accommodation",
+              meals: {
+                breakfast: "Hotel breakfast",
+                lunch: "Local restaurant",
+                dinner: "Regional cuisine"
+              }
+            },
+            {
+              day: 2,
+              location: destination,
+              activities: [
+                {
+                  time: "10:00",
+                  title: "Explore destination",
+                  description: `Discover the highlights of ${destination}`
+                }
+              ],
+              accommodation: "Destination accommodation",
+              meals: {
+                breakfast: "Local café",
+                lunch: "City center restaurant", 
+                dinner: "Traditional local cuisine"
+              }
+            }
+          ]
+        });
+      }
+      
+      // Wait before retrying (except on last attempt)
+      if (attempt < maxRetries) {
+        console.log(`Waiting ${retryDelay}ms before retry...`);
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
+      }
+    }
   }
 }
 

@@ -326,18 +326,42 @@ class SpotlightController {
         const btn = document.getElementById('generateItinerary');
         const btnText = btn.querySelector('.btn-text');
         const spinner = btn.querySelector('.btn-spinner');
+        const container = document.getElementById('itineraryContainer');
         
         // Set loading state
         btn.disabled = true;
         btnText.textContent = 'Generating...';
         spinner.classList.remove('hidden');
+        
+        // Show loading message
+        container.innerHTML = `
+            <div class="itinerary-loading">
+                <div class="loading-icon">⏳</div>
+                <p>Creating your personalized day-by-day itinerary...</p>
+                <small>This may take a moment as we craft the perfect ${this.spotlightData.agent} experience for you.</small>
+            </div>
+        `;
 
         try {
             const itinerary = await this.requestDetailedItinerary();
             this.displayItinerary(itinerary);
         } catch (error) {
             console.error('Error generating itinerary:', error);
-            alert('Failed to generate itinerary. Please try again.');
+            
+            // Show error message in container instead of alert
+            container.innerHTML = `
+                <div class="itinerary-error">
+                    <div class="error-icon">⚠️</div>
+                    <h3>Unable to Generate Itinerary</h3>
+                    <p>We're experiencing high demand right now. The AI service is temporarily unavailable.</p>
+                    <div class="error-actions">
+                        <button class="retry-btn" onclick="document.getElementById('generateItinerary').click()">
+                            Try Again
+                        </button>
+                        <p><small>Or try again in a few minutes when the service is less busy.</small></p>
+                    </div>
+                </div>
+            `;
         } finally {
             // Reset button state
             btn.disabled = false;
