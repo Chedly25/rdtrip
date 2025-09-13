@@ -411,7 +411,13 @@ class SpotlightController {
                 const jsonMatch = itinerary.match(/```json\s*([\s\S]*?)\s*```/);
                 if (jsonMatch) {
                     console.log('Found JSON in code block');
-                    parsedItinerary = JSON.parse(jsonMatch[1]);
+                    try {
+                        parsedItinerary = JSON.parse(jsonMatch[1]);
+                    } catch (e) {
+                        console.log('JSON in code block is malformed, trying to fix...');
+                        // Try to fix incomplete JSON
+                        parsedItinerary = this.tryFixIncompleteJson(jsonMatch[1]);
+                    }
                 } else {
                     // Strategy 2: Look for any JSON object starting with {
                     const jsonStart = itinerary.indexOf('{');
@@ -431,8 +437,18 @@ class SpotlightController {
                         
                         if (jsonEnd !== -1) {
                             const jsonString = itinerary.substring(jsonStart, jsonEnd + 1);
-                            console.log('Extracted JSON string:', jsonString);
-                            parsedItinerary = JSON.parse(jsonString);
+                            console.log('Extracted JSON string length:', jsonString.length);
+                            try {
+                                parsedItinerary = JSON.parse(jsonString);
+                            } catch (e) {
+                                console.log('Extracted JSON is malformed, trying to fix...');
+                                parsedItinerary = this.tryFixIncompleteJson(jsonString);
+                            }
+                        } else {
+                            // JSON might be incomplete, try to extract what we can
+                            const partialJson = itinerary.substring(jsonStart);
+                            console.log('Trying to fix incomplete JSON...');
+                            parsedItinerary = this.tryFixIncompleteJson(partialJson);
                         }
                     }
                 }
@@ -521,6 +537,67 @@ class SpotlightController {
                 <p>${formattedText}</p>
             </div>
         `;
+    }
+
+    tryFixIncompleteJson(jsonString) {
+        try {
+            // First, try parsing as-is
+            return JSON.parse(jsonString);
+        } catch (e) {
+            console.log('Attempting to fix incomplete JSON...');
+            
+            // Common fixes for incomplete JSON
+            let fixedJson = jsonString.trim();
+            
+            // Remove any trailing commas before closing braces/brackets
+            fixedJson = fixedJson.replace(/,(\s*[}\]])/g, '$1');
+            
+            // If it ends with a comma and incomplete structure, try to close it properly
+            if (fixedJson.endsWith(',')) {
+                fixedJson = fixedJson.slice(0, -1);
+            }
+            
+            // Count braces and brackets to see what's missing
+            const openBraces = (fixedJson.match(/{/g) || []).length;
+            const closeBraces = (fixedJson.match(/}/g) || []).length;
+            const openBrackets = (fixedJson.match(/\[/g) || []).length;
+            const closeBrackets = (fixedJson.match(/]/g) || []).length;
+            
+            // Add missing closing braces
+            for (let i = 0; i < openBraces - closeBraces; i++) {
+                fixedJson += '}';
+            }
+            
+            // Add missing closing brackets
+            for (let i = 0; i < openBrackets - closeBrackets; i++) {
+                fixedJson += ']';
+            }
+            
+            // Try to parse the fixed version
+            try {
+                const parsed = JSON.parse(fixedJson);
+                console.log('Successfully fixed incomplete JSON');
+                return parsed;
+            } catch (e2) {
+                console.log('Could not fix JSON, extracting partial data...');
+                
+                // Last resort: try to extract at least the days array
+                const daysMatch = fixedJson.match(/"days"\s*:\s*\[([\s\S]*)/);
+                if (daysMatch) {
+                    try {
+                        // Try to create a minimal valid structure
+                        const daysContent = daysMatch[1];
+                        const simplifiedJson = `{"days":[${daysContent.split('},')[0]}}]}`;
+                        return JSON.parse(simplifiedJson);
+                    } catch (e3) {
+                        console.log('All JSON fixes failed');
+                        return null;
+                    }
+                }
+                
+                return null;
+            }
+        }
     }
 
     getAgentEmoji(agent) {
