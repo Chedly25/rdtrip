@@ -452,28 +452,27 @@ class RoadTripPlanner {
         routeData.agentResults.forEach(result => {
             const agentEmoji = this.getAgentEmoji(result.agent);
             const waypoints = this.extractSingleWaypoints(result.recommendations);
-            const firstImageUrl = waypoints.length > 0 ? waypoints[0].imageUrl : null;
+            const firstLocation = waypoints.length > 0 ? waypoints[0].name : routeData.destination;
             
-            html += `<div class="route-item">
+            html += `<div class="route-item" data-agent="${result.agent}">
                 <div class="route-item-header">
                     <h4>${agentEmoji} ${this.capitalizeFirst(result.agent)} Recommendations</h4>
                     <button class="view-details-btn" data-agent="${result.agent}" data-destination="${routeData.destination}">
                         View Details →
                     </button>
                 </div>
-                ${firstImageUrl ? `
-                    <div class="route-image-container">
-                        <img src="${firstImageUrl}" alt="${waypoints[0].name || 'Route destination'}" class="route-image" 
-                             onerror="this.style.display='none'" 
-                             onload="this.classList.add('loaded')">
-                    </div>
-                ` : ''}
+                <div class="route-image-container loading" data-location="${firstLocation}">
+                    <div class="image-loading">🖼️ Loading ${result.agent} image...</div>
+                </div>
                 <p>${this.formatAgentResult(result.recommendations)}</p>
             </div>`;
         });
 
         routeResults.innerHTML = html;
         resultsSection.classList.remove('hidden');
+        
+        // Fetch images for each route
+        this.fetchRouteImages(routeData);
         
         // Add event listeners for View Details buttons
         document.querySelectorAll('.view-details-btn').forEach(btn => {
@@ -483,6 +482,61 @@ class RoadTripPlanner {
                 this.openSpotlight(agent, destination, routeData);
             });
         });
+    }
+
+    async fetchRouteImages(routeData) {
+        // Fetch images for each agent route
+        for (const result of routeData.agentResults) {
+            try {
+                const waypoints = this.extractSingleWaypoints(result.recommendations);
+                const locations = waypoints.map(w => w.name).filter(name => name);
+                
+                if (locations.length === 0) {
+                    locations.push(routeData.destination); // Fallback to destination
+                }
+                
+                // Use Unsplash directly for reliable images
+                const location = locations[0];
+                const agentKeywords = {
+                    adventure: 'landscape',
+                    culture: 'architecture', 
+                    food: 'cuisine'
+                };
+                
+                const keyword = agentKeywords[result.agent] || 'travel';
+                const cleanLocation = location.replace(/[^\w\s-]/g, '').replace(/\s+/g, '-').toLowerCase();
+                const imageUrl = `https://source.unsplash.com/800x600/?${cleanLocation}-${keyword}`;
+                
+                this.updateRouteImage(result.agent, imageUrl, location);
+                
+            } catch (error) {
+                console.error(`Error fetching image for ${result.agent}:`, error);
+                this.updateRouteImageError(result.agent);
+            }
+        }
+    }
+
+    updateRouteImage(agent, imageUrl, locationName) {
+        const routeItem = document.querySelector(`[data-agent="${agent}"]`);
+        if (routeItem) {
+            const imageContainer = routeItem.querySelector('.route-image-container');
+            imageContainer.classList.remove('loading');
+            imageContainer.innerHTML = `
+                <img src="${imageUrl}" alt="${locationName}" class="route-image" 
+                     onerror="this.parentElement.querySelector('.image-error').style.display='block'; this.style.display='none';" 
+                     onload="this.classList.add('loaded')">
+                <div class="image-error" style="display: none;">📷 Image unavailable</div>
+            `;
+        }
+    }
+
+    updateRouteImageError(agent) {
+        const routeItem = document.querySelector(`[data-agent="${agent}"]`);
+        if (routeItem) {
+            const imageContainer = routeItem.querySelector('.route-image-container');
+            imageContainer.classList.remove('loading');
+            imageContainer.innerHTML = `<div class="image-error">📷 No image available</div>`;
+        }
     }
 
     getAgentEmoji(agent) {

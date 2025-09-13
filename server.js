@@ -296,6 +296,128 @@ app.get('/api/image-proxy', async (req, res) => {
   }
 });
 
+// Image fetching service - get real images for locations and activities
+app.post('/api/fetch-images', async (req, res) => {
+  try {
+    const { locations, agentType, waypoints } = req.body;
+    
+    if (!locations || !Array.isArray(locations)) {
+      return res.status(400).json({ error: 'Locations array is required' });
+    }
+
+    const images = {};
+    
+    // Generate images for each location
+    for (const location of locations) {
+      images[location] = await generateImageForLocation(location, agentType);
+    }
+    
+    // Generate images for waypoints if provided
+    if (waypoints && Array.isArray(waypoints)) {
+      for (const waypoint of waypoints) {
+        if (waypoint.name) {
+          images[waypoint.name] = await generateImageForLocation(waypoint.name, agentType, waypoint.activities);
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      images: images,
+      agentType: agentType
+    });
+
+  } catch (error) {
+    console.error('Image fetching error:', error);
+    res.status(500).json({ error: 'Failed to fetch images' });
+  }
+});
+
+// Generate image URL for a specific location
+async function generateImageForLocation(locationName, agentType, activities = []) {
+  // Create search terms based on agent type
+  const agentKeywords = {
+    adventure: ['landscape', 'nature', 'outdoor', 'hiking', 'mountains'],
+    culture: ['architecture', 'museum', 'historic', 'monument', 'art'],
+    food: ['restaurant', 'cuisine', 'market', 'food', 'dining']
+  };
+  
+  const keywords = agentKeywords[agentType] || ['travel', 'destination'];
+  
+  // Clean location name for search
+  const cleanLocation = locationName
+    .replace(/[^\w\s-]/g, '') // Remove special chars except hyphens
+    .replace(/\s+/g, '-') // Replace spaces with hyphens
+    .toLowerCase();
+  
+  // Generate Unsplash URL - they provide free stock photos
+  const searchTerm = `${cleanLocation}-${keywords[0]}`;
+  const unsplashUrl = `https://source.unsplash.com/800x600/?${searchTerm}`;
+  
+  // Also generate a backup URL with different keywords
+  const backupSearchTerm = `${cleanLocation}-${keywords[1] || 'travel'}`;
+  const backupUrl = `https://source.unsplash.com/800x600/?${backupSearchTerm}`;
+  
+  return {
+    primary: unsplashUrl,
+    backup: backupUrl,
+    location: locationName,
+    searchTerms: [searchTerm, backupSearchTerm]
+  };
+}
+
+// Generate Mapbox static image for route overview
+app.post('/api/mapbox-image', async (req, res) => {
+  try {
+    const { waypoints, destination, width = 800, height = 400 } = req.body;
+    
+    if (!waypoints || !destination) {
+      return res.status(400).json({ error: 'Waypoints and destination are required' });
+    }
+
+    // Create markers for Mapbox Static API
+    const markers = [];
+    
+    // Add origin marker (Aix-en-Provence)
+    markers.push('pin-s-a+007AFF(5.4474,43.5297)');
+    
+    // Add waypoint markers
+    waypoints.forEach((waypoint, index) => {
+      if (waypoint.lng && waypoint.lat) {
+        const markerColor = getAgentColor(waypoint.agent || 'adventure');
+        markers.push(`pin-s-${index + 1}+${markerColor}(${waypoint.lng},${waypoint.lat})`);
+      }
+    });
+    
+    // Add destination marker (you'd need to geocode the destination)
+    // For now, we'll create a basic map with waypoints
+    
+    const mapboxToken = 'pk.eyJ1IjoiY2hlZGx5MjUiLCJhIjoiY21lbW1qeHRoMHB5azJsc2VuMWJld2tlYSJ9.0jfOiOXCh0VN5ZjJ5ab7MQ';
+    const markersString = markers.join(',');
+    const mapboxUrl = `https://api.mapbox.com/styles/v1/mapbox/light-v11/static/${markersString}/auto/${width}x${height}@2x?access_token=${mapboxToken}`;
+    
+    res.json({
+      success: true,
+      mapUrl: mapboxUrl,
+      width: width,
+      height: height
+    });
+
+  } catch (error) {
+    console.error('Mapbox image error:', error);
+    res.status(500).json({ error: 'Failed to generate map image' });
+  }
+});
+
+function getAgentColor(agent) {
+  const colors = {
+    adventure: '34C759',
+    culture: 'FF9500', 
+    food: 'FF3B30'
+  };
+  return colors[agent] || '34C759';
+}
+
 // Fallback image service - returns placeholder images
 app.get('/api/placeholder-image', (req, res) => {
   const { type = 'location', width = 400, height = 300 } = req.query;

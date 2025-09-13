@@ -308,6 +308,29 @@ body {
     opacity: 1;
 }
 
+.route-image-container.loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 200px;
+    background-color: var(--background-secondary);
+}
+
+.image-loading {
+    font-size: var(--font-size-caption);
+    color: var(--text-tertiary);
+    text-align: center;
+}
+
+.image-error {
+    font-size: var(--font-size-caption);
+    color: var(--text-tertiary);
+    text-align: center;
+    padding: var(--spacing-lg);
+    background-color: var(--background-secondary);
+    border-radius: var(--radius-sm);
+}
+
 /* Map Container */
 .map-container {
     flex: 1;

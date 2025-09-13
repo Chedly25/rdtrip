@@ -284,15 +284,24 @@ class SpotlightController {
         
         let html = '';
         waypoints.forEach((waypoint, index) => {
+            // Generate reliable Unsplash image URL
+            const agentKeywords = {
+                adventure: 'landscape',
+                culture: 'architecture',
+                food: 'cuisine'
+            };
+            
+            const keyword = agentKeywords[this.spotlightData.agent] || 'travel';
+            const cleanLocation = waypoint.name.replace(/[^\w\s-]/g, '').replace(/\s+/g, '-').toLowerCase();
+            const imageUrl = `https://source.unsplash.com/800x600/?${cleanLocation}-${keyword}`;
+            
             html += `
                 <div class="city-card">
-                    ${waypoint.imageUrl ? `
-                        <div class="city-image-container">
-                            <img src="${waypoint.imageUrl}" alt="${waypoint.name}" class="city-image" 
-                                 onerror="this.style.display='none'" 
-                                 onload="this.classList.add('loaded')">
-                        </div>
-                    ` : ''}
+                    <div class="city-image-container">
+                        <img src="${imageUrl}" alt="${waypoint.name}" class="city-image" 
+                             onerror="this.src='https://source.unsplash.com/800x600/?travel-destination'" 
+                             onload="this.classList.add('loaded')">
+                    </div>
                     <div class="city-content">
                         <h3>${index + 1}. ${waypoint.name}</h3>
                         <p class="city-description">${waypoint.description || ''}</p>
@@ -468,10 +477,10 @@ class SpotlightController {
                                     <h3 class="day-title">Day ${day.day}</h3>
                                     <span class="day-location">${day.location || ''}</span>
                                 </div>
-                                ${day.imageUrl ? `
+                                ${day.location ? `
                                     <div class="day-image-container">
-                                        <img src="${day.imageUrl}" alt="${day.location}" class="day-image" 
-                                             onerror="this.style.display='none'" 
+                                        <img src="https://source.unsplash.com/400x200/?${day.location.replace(/[^\w\s-]/g, '').replace(/\s+/g, '-').toLowerCase()}-destination" alt="${day.location}" class="day-image" 
+                                             onerror="this.src='https://source.unsplash.com/400x200/?travel-destination'" 
                                              onload="this.classList.add('loaded')">
                                     </div>
                                 ` : ''}
@@ -483,10 +492,10 @@ class SpotlightController {
                                         <div class="activity-content">
                                             <h4 class="activity-title">${activity.title || activity.name || ''}</h4>
                                             <p class="activity-description">${activity.description || ''}</p>
-                                            ${activity.imageUrl ? `
+                                            ${activity.title ? `
                                                 <div class="activity-image-container">
-                                                    <img src="${activity.imageUrl}" alt="${activity.title || activity.name}" class="activity-image" 
-                                                         onerror="this.style.display='none'" 
+                                                    <img src="https://source.unsplash.com/300x200/?${(activity.title || activity.name || '').replace(/[^\w\s-]/g, '').replace(/\s+/g, '-').toLowerCase()}-activity" alt="${activity.title || activity.name}" class="activity-image" 
+                                                         onerror="this.src='https://source.unsplash.com/300x200/?activity'" 
                                                          onload="this.classList.add('loaded')">
                                                 </div>
                                             ` : ''}
