@@ -115,7 +115,17 @@
         </div>
     </div>
 
+    <script>
+        // Disable Mapbox telemetry to prevent ad-blocker conflicts
+        window.mapboxTelemetryBlocked = true;
+    </script>
     <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+    <script>
+        // Additional telemetry disabling
+        if (typeof mapboxgl !== 'undefined' && mapboxgl.Map) {
+            mapboxgl.config.ACCESS_TOKEN = '';
+        }
+    </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="js/app.js"></script>

@@ -18,12 +18,19 @@ class RoadTripPlanner {
     initMap() {
         // Initialize Mapbox map
         mapboxgl.accessToken = 'pk.eyJ1IjoiY2hlZGx5MjUiLCJhIjoiY21lbW1qeHRoMHB5azJsc2VuMWJld2tlYSJ9.0jfOiOXCh0VN5ZjJ5ab7MQ';
-        
+
+        // Disable Mapbox telemetry to prevent ad-blocker conflicts
+        if (window.mapboxgl) {
+            window.mapboxgl.supported({ failIfMajorPerformanceCaveat: true });
+        }
+
         this.map = new mapboxgl.Map({
             container: 'map',
             style: 'mapbox://styles/mapbox/light-v11',
             center: [5.4474, 43.5297], // Aix-en-Provence coordinates
-            zoom: 6
+            zoom: 6,
+            // Disable telemetry collection to prevent ad-blocker issues
+            collectResourceTiming: false
         });
 
         // Add navigation controls
@@ -412,6 +419,15 @@ class RoadTripPlanner {
                     .replace(/```\s*$/g, '')
                     .trim();
 
+                // Handle malformed JSON by trying to extract just the waypoints section
+                if (!jsonText.startsWith('{')) {
+                    // Try to find the waypoints section
+                    const waypointsMatch = jsonText.match(/"waypoints"\s*:\s*\[[\s\S]*?\]/);
+                    if (waypointsMatch) {
+                        jsonText = `{${waypointsMatch[0]}}`;
+                    }
+                }
+
                 // Try to parse the JSON
                 const parsed = JSON.parse(jsonText);
 
@@ -433,9 +449,27 @@ class RoadTripPlanner {
                     }
                 }
             } catch (e) {
-                console.warn('Could not parse agent recommendations:', e);
-                displayText = `Curated ${agentResult.agent} experiences and hidden gems along your route.`;
-                waypointCount = 3; // Default assumption
+                console.warn('Could not parse agent recommendations for', agentResult.agent, ':', e);
+
+                // Try to extract waypoint names from the raw text as fallback
+                try {
+                    const nameMatches = agentResult.recommendations.match(/"name"\s*:\s*"([^"]+)"/g);
+                    if (nameMatches && nameMatches.length > 0) {
+                        const names = nameMatches.map(match => match.match(/"name"\s*:\s*"([^"]+)"/)[1]);
+                        displayText = names.slice(0, 3).join(' → ');
+                        waypointCount = names.length;
+
+                        if (names.length > 3) {
+                            displayText += ` and ${names.length - 3} more stops`;
+                        }
+                    } else {
+                        displayText = `Curated ${agentResult.agent} experiences and hidden gems along your route.`;
+                        waypointCount = 3; // Default assumption
+                    }
+                } catch (fallbackError) {
+                    displayText = `Curated ${agentResult.agent} experiences and hidden gems along your route.`;
+                    waypointCount = 3; // Default assumption
+                }
             }
 
             // Fallback if no display text
@@ -882,32 +916,69 @@ class RoadTripPlanner {
 
     async addRouteToMap(waypoints, destination) {
         try {
-            // Create the route coordinates array
-            const routeCoordinates = [
+            // Create the coordinates array for the Directions API
+            const coordinates = [
                 [5.4474, 43.5297] // Start from Aix-en-Provence
             ];
 
             // Add all waypoints
             waypoints.forEach(waypoint => {
-                routeCoordinates.push([waypoint.lng, waypoint.lat]);
+                coordinates.push([waypoint.lng, waypoint.lat]);
             });
 
             // Add destination
             if (destination) {
-                routeCoordinates.push([destination.lng, destination.lat]);
+                coordinates.push([destination.lng, destination.lat]);
             }
 
-            // Wait for map to be loaded
-            if (!this.map.isStyleLoaded()) {
-                this.map.once('styledata', () => {
-                    this.addRouteLayer(routeCoordinates);
-                });
+            // Get the actual driving route using Mapbox Directions API
+            const routeGeometry = await this.getDirectionsRoute(coordinates);
+
+            if (routeGeometry) {
+                // Wait for map to be loaded
+                if (!this.map.isStyleLoaded()) {
+                    this.map.once('styledata', () => {
+                        this.addRouteLayer(routeGeometry);
+                    });
+                } else {
+                    this.addRouteLayer(routeGeometry);
+                }
             } else {
-                this.addRouteLayer(routeCoordinates);
+                // Fallback to straight lines if Directions API fails
+                console.warn('Directions API failed, using straight line route');
+                this.addRouteLayer(coordinates);
             }
 
         } catch (error) {
             console.warn('Could not add route to map:', error);
+        }
+    }
+
+    async getDirectionsRoute(coordinates) {
+        try {
+            // Format coordinates for the Directions API (lng,lat pairs)
+            const coordString = coordinates.map(coord => `${coord[0]},${coord[1]}`).join(';');
+
+            // Make request to Mapbox Directions API
+            const response = await fetch(
+                `https://api.mapbox.com/directions/v5/mapbox/driving/${coordString}?geometries=geojson&access_token=${mapboxgl.accessToken}`
+            );
+
+            if (!response.ok) {
+                throw new Error(`Directions API error: ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            if (data.routes && data.routes.length > 0) {
+                return data.routes[0].geometry.coordinates;
+            } else {
+                throw new Error('No routes found');
+            }
+
+        } catch (error) {
+            console.warn('Directions API request failed:', error);
+            return null;
         }
     }
 
@@ -921,7 +992,16 @@ class RoadTripPlanner {
                 if (this.map.getLayer('route')) {
                     this.map.removeLayer('route');
                 }
+                if (this.map.getLayer('route-outline')) {
+                    this.map.removeLayer('route-outline');
+                }
                 this.map.removeSource('route');
+            }
+
+            // Ensure coordinates are in the right format
+            if (!coordinates || coordinates.length === 0) {
+                console.warn('No coordinates provided for route');
+                return;
             }
 
             // Add route source
@@ -937,7 +1017,7 @@ class RoadTripPlanner {
                 }
             });
 
-            // Add route layer
+            // Add route layer with improved styling
             this.map.addLayer({
                 id: 'route',
                 type: 'line',
@@ -948,22 +1028,50 @@ class RoadTripPlanner {
                 },
                 paint: {
                     'line-color': '#007AFF',
-                    'line-width': 4,
-                    'line-opacity': 0.8
+                    'line-width': [
+                        'interpolate',
+                        ['linear'],
+                        ['zoom'],
+                        8, 3,
+                        14, 6
+                    ],
+                    'line-opacity': 0.9
                 }
             });
 
+            // Add route outline for better visibility
+            this.map.addLayer({
+                id: 'route-outline',
+                type: 'line',
+                source: 'route',
+                layout: {
+                    'line-join': 'round',
+                    'line-cap': 'round'
+                },
+                paint: {
+                    'line-color': '#FFFFFF',
+                    'line-width': [
+                        'interpolate',
+                        ['linear'],
+                        ['zoom'],
+                        8, 5,
+                        14, 8
+                    ],
+                    'line-opacity': 0.6
+                }
+            }, 'route');
+
             // Add route arrows to show direction (only if the route has multiple points)
-            if (coordinates.length > 1) {
+            if (coordinates.length > 10) { // Only for detailed routes
                 this.map.addLayer({
                     id: 'route-arrows',
                     type: 'symbol',
                     source: 'route',
                     layout: {
                         'symbol-placement': 'line',
-                        'symbol-spacing': 150,
-                        'text-field': '▶',
-                        'text-size': 12,
+                        'symbol-spacing': 100,
+                        'text-field': '→',
+                        'text-size': 14,
                         'text-rotation-alignment': 'map',
                         'text-pitch-alignment': 'viewport'
                     },
@@ -974,6 +1082,8 @@ class RoadTripPlanner {
                     }
                 });
             }
+
+            console.log(`Route added with ${coordinates.length} coordinate points`);
 
         } catch (error) {
             console.warn('Could not add route layer:', error);
