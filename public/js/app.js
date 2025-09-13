@@ -411,13 +411,27 @@ class RoadTripPlanner {
         routeData.agentResults.forEach(result => {
             const agentEmoji = this.getAgentEmoji(result.agent);
             html += `<div class="route-item">
-                <h4>${agentEmoji} ${this.capitalizeFirst(result.agent)} Recommendations</h4>
+                <div class="route-item-header">
+                    <h4>${agentEmoji} ${this.capitalizeFirst(result.agent)} Recommendations</h4>
+                    <button class="view-details-btn" data-agent="${result.agent}" data-destination="${routeData.destination}">
+                        View Details →
+                    </button>
+                </div>
                 <p>${this.formatAgentResult(result.recommendations)}</p>
             </div>`;
         });
 
         routeResults.innerHTML = html;
         resultsSection.classList.remove('hidden');
+        
+        // Add event listeners for View Details buttons
+        document.querySelectorAll('.view-details-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const agent = e.target.dataset.agent;
+                const destination = e.target.dataset.destination;
+                this.openSpotlight(agent, destination, routeData);
+            });
+        });
     }
 
     getAgentEmoji(agent) {
@@ -503,6 +517,24 @@ class RoadTripPlanner {
     showError(message) {
         // Simple error display - can be enhanced with a toast/modal
         alert(message);
+    }
+
+    openSpotlight(agent, destination, routeData) {
+        // Store route data for the spotlight page
+        const agentData = routeData.agentResults.find(result => result.agent === agent);
+        const spotlightData = {
+            agent: agent,
+            destination: destination,
+            origin: routeData.origin,
+            agentData: agentData,
+            totalStops: routeData.totalStops
+        };
+        
+        // Store data in sessionStorage to pass to spotlight page
+        sessionStorage.setItem('spotlightData', JSON.stringify(spotlightData));
+        
+        // Navigate to spotlight page
+        window.location.href = `spotlight.html?agent=${agent}&destination=${encodeURIComponent(destination)}`;
     }
 }
 

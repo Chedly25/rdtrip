@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Route Spotlight - Road Trip Planner</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/spotlight.css">
+    <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="header-nav">
+                    <button id="backButton" class="back-button">← Back to Overview</button>
+                    <div class="route-title">
+                        <span id="routeAgentIcon" class="agent-icon">🏔️</span>
+                        <h1 id="routeTitle" class="spotlight-title">Adventure Route</h1>
+                    </div>
+                </div>
+                <p id="routeSubtitle" class="route-subtitle">Aix-en-Provence → Barcelona</p>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="spotlight-main">
+            <!-- Route Overview -->
+            <section class="route-overview">
+                <div class="overview-content">
+                    <div class="route-stats">
+                        <div class="stat-item">
+                            <span class="stat-number" id="totalStops">3</span>
+                            <span class="stat-label">Stops</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number" id="estimatedDays">5</span>
+                            <span class="stat-label">Days</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number" id="totalDistance">--</span>
+                            <span class="stat-label">Distance</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Map Container -->
+                    <div class="spotlight-map-container">
+                        <div id="spotlightMap" class="spotlight-map"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Cities Overview -->
+            <section class="cities-section">
+                <h2>Cities & Highlights</h2>
+                <div id="citiesContainer" class="cities-container">
+                    <!-- Cities will be populated by JavaScript -->
+                </div>
+            </section>
+
+            <!-- Day-by-Day Itinerary -->
+            <section class="itinerary-section">
+                <div class="itinerary-header">
+                    <h2>Detailed Itinerary</h2>
+                    <button id="generateItinerary" class="generate-itinerary-btn">
+                        <span class="btn-text">Generate Day-by-Day Plan</span>
+                        <div class="btn-spinner hidden"></div>
+                    </button>
+                </div>
+                <div id="itineraryContainer" class="itinerary-container">
+                    <div class="itinerary-placeholder">
+                        <p>Click "Generate Day-by-Day Plan" to get a detailed itinerary with schedules, activities, and recommendations for each day of your trip.</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+    <script src="js/spotlight.js"></script>
+</body>
+</html>

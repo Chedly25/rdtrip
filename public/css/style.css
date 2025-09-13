@@ -251,11 +251,35 @@ body {
     border: 1px solid var(--border-color);
 }
 
+.route-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-xs);
+}
+
 .route-item h4 {
     font-size: var(--font-size-body);
     font-weight: 600;
-    margin-bottom: var(--spacing-xs);
+    margin: 0;
     color: var(--text-primary);
+}
+
+.view-details-btn {
+    background-color: var(--primary-blue);
+    color: white;
+    border: none;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-small);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.view-details-btn:hover {
+    background-color: var(--primary-blue-hover);
+    transform: translateY(-1px);
 }
 
 .route-item p {

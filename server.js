@@ -62,6 +62,79 @@ app.post('/api/generate-route', async (req, res) => {
   }
 });
 
+// Generate detailed day-by-day itinerary
+app.post('/api/generate-itinerary', async (req, res) => {
+  try {
+    const { agent, origin, destination, waypoints } = req.body;
+    
+    if (!agent || !origin || !destination) {
+      return res.status(400).json({ error: 'Agent, origin, and destination are required' });
+    }
+
+    const agentConfig = agents[agent];
+    if (!agentConfig) {
+      return res.status(400).json({ error: 'Invalid agent type' });
+    }
+
+    const itinerary = await generateDetailedItinerary(agentConfig, origin, destination, waypoints);
+    
+    res.json({
+      agent: agent,
+      origin: origin,
+      destination: destination,
+      itinerary: itinerary
+    });
+  } catch (error) {
+    console.error('Itinerary generation error:', error);
+    res.status(500).json({ error: 'Failed to generate itinerary' });
+  }
+});
+
+async function generateDetailedItinerary(agent, origin, destination, waypoints) {
+  try {
+    const waypointNames = waypoints ? waypoints.map(w => w.name).join(', ') : '';
+    
+    const prompt = `${agent.prompt}
+
+Create a detailed day-by-day itinerary for a road trip from ${origin} to ${destination}.
+${waypoints && waypoints.length > 0 ? `Include these waypoints: ${waypointNames}` : ''}
+
+Provide a JSON response with:
+- days: array of daily plans
+- each day should have:
+  - day: day number
+  - location: main city/area for the day
+  - activities: array of timed activities (with time, title, description)
+  - accommodation: suggested place to stay
+  - meals: breakfast, lunch, dinner recommendations
+  - travel: driving details if moving to next location
+
+Make it detailed and practical with specific times and recommendations based on your ${agent.name.toLowerCase()} expertise.`;
+
+    const response = await axios.post('https://api.perplexity.ai/chat/completions', {
+      model: 'sonar',
+      messages: [
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      max_tokens: 2000,
+      temperature: 0.7
+    }, {
+      headers: {
+        'Authorization': `Bearer ${PERPLEXITY_API_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    return response.data.choices[0].message.content;
+  } catch (error) {
+    console.error(`Error generating itinerary for ${agent.name}:`, error.response?.data || error.message);
+    return `Error generating detailed itinerary for ${agent.name}`;
+  }
+}
+
 async function queryPerplexity(agent, destination, stops) {
   try {
     const prompt = `${agent.prompt}
