@@ -3,12 +3,13 @@ class SpotlightController {
     constructor() {
         this.map = null;
         this.spotlightData = null;
+        this.imageCache = new Map(); // Cache for Wikipedia images
         this.agentColors = {
             adventure: '#34C759',
             culture: '#FF9500',
             food: '#FF3B30'
         };
-        
+
         this.init();
     }
 
@@ -457,29 +458,170 @@ class SpotlightController {
         return degrees * (Math.PI / 180);
     }
 
-    displayCities() {
+    async getWikipediaImage(locationName, width = 800, height = 600) {
+        // Check cache first
+        const cacheKey = `${locationName}_${width}x${height}`;
+        if (this.imageCache.has(cacheKey)) {
+            return this.imageCache.get(cacheKey);
+        }
+
+        try {
+            // Strategy 1: Try Wikipedia page summary (fastest)
+            const summaryResult = await this.getWikipediaPageImage(locationName, width);
+            if (summaryResult) {
+                this.imageCache.set(cacheKey, summaryResult);
+                return summaryResult;
+            }
+
+            // Strategy 2: Search Wikimedia Commons
+            const commonsResult = await this.searchWikimediaCommons(locationName, width, height);
+            if (commonsResult) {
+                this.imageCache.set(cacheKey, commonsResult);
+                return commonsResult;
+            }
+
+            // Strategy 3: Try simplified search terms
+            const simplifiedResult = await this.getSimplifiedLocationImage(locationName, width, height);
+            if (simplifiedResult) {
+                this.imageCache.set(cacheKey, simplifiedResult);
+                return simplifiedResult;
+            }
+
+        } catch (error) {
+            console.warn(`Could not fetch Wikipedia image for ${locationName}:`, error);
+        }
+
+        return null; // No placeholder - we want real images only
+    }
+
+    async getWikipediaPageImage(locationName, width = 800) {
+        try {
+            // Clean location name for Wikipedia search
+            const cleanName = locationName.replace(/[,\(\)]/g, '').trim();
+
+            const response = await fetch(
+                `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(cleanName)}`,
+                { headers: { 'Accept': 'application/json' } }
+            );
+
+            if (response.ok) {
+                const data = await response.json();
+
+                if (data.thumbnail && data.thumbnail.source) {
+                    // Get higher resolution image
+                    const imageUrl = data.thumbnail.source.replace(/\/\d+px-/, `/${width}px-`);
+                    return imageUrl;
+                }
+            }
+        } catch (error) {
+            console.warn(`Wikipedia page image search failed for ${locationName}:`, error);
+        }
+
+        return null;
+    }
+
+    async searchWikimediaCommons(locationName, width = 800, height = 600) {
+        try {
+            const searchQuery = locationName.replace(/[,\(\)]/g, ' ').trim();
+
+            const response = await fetch(
+                `https://commons.wikimedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(searchQuery)}&format=json&origin=*&srlimit=5`
+            );
+
+            if (response.ok) {
+                const data = await response.json();
+
+                if (data.query && data.query.search && data.query.search.length > 0) {
+                    // Try to get image from the first few results
+                    for (const result of data.query.search.slice(0, 3)) {
+                        const imageUrl = await this.getCommonsImageFromTitle(result.title, width);
+                        if (imageUrl) return imageUrl;
+                    }
+                }
+            }
+        } catch (error) {
+            console.warn(`Wikimedia Commons search failed for ${locationName}:`, error);
+        }
+
+        return null;
+    }
+
+    async getCommonsImageFromTitle(title, width = 800) {
+        try {
+            const response = await fetch(
+                `https://commons.wikimedia.org/w/api.php?action=query&titles=${encodeURIComponent(title)}&prop=imageinfo&iiprop=url&iiurlwidth=${width}&format=json&origin=*`
+            );
+
+            if (response.ok) {
+                const data = await response.json();
+                const pages = data.query?.pages;
+
+                if (pages) {
+                    const pageId = Object.keys(pages)[0];
+                    const imageInfo = pages[pageId]?.imageinfo?.[0];
+
+                    if (imageInfo && (imageInfo.thumburl || imageInfo.url)) {
+                        return imageInfo.thumburl || imageInfo.url;
+                    }
+                }
+            }
+        } catch (error) {
+            console.warn(`Commons image fetch failed for ${title}:`, error);
+        }
+
+        return null;
+    }
+
+    async getSimplifiedLocationImage(locationName, width = 800, height = 600) {
+        // Extract city names, remove descriptors
+        const cityKeywords = locationName
+            .split(/[,\-\(\)]/)[0]
+            .replace(/(?:museum|musée|château|castle|cathedral|church|abbey|park|lake|mountain|gorges?)/gi, '')
+            .trim();
+
+        if (cityKeywords && cityKeywords !== locationName) {
+            return await this.getWikipediaPageImage(cityKeywords, width);
+        }
+
+        return null;
+    }
+
+    async displayCities() {
         const waypoints = this.extractWaypoints(this.spotlightData.agentData);
         const container = document.getElementById('citiesContainer');
-        
-        let html = '';
-        waypoints.forEach((waypoint, index) => {
-            // Generate reliable placeholder image URL using Picsum Photos
-            const agentColors = {
-                adventure: '34C759',
-                culture: 'FF9500',
-                food: 'FF3B30'
-            };
 
-            const seedNumber = waypoint.name.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
-            const agentColor = agentColors[this.spotlightData.agent] || '007AFF';
-            const imageUrl = `https://picsum.photos/seed/${seedNumber}/800/600`;
+        // Show loading state first
+        container.innerHTML = `
+            <div class="cities-loading">
+                <div class="loading-message">
+                    <span class="loading-spinner">🔍</span>
+                    <p>Finding real images of your destinations...</p>
+                </div>
+            </div>
+        `;
+
+        let html = '';
+
+        // Process waypoints sequentially to avoid API rate limits
+        for (let index = 0; index < waypoints.length; index++) {
+            const waypoint = waypoints[index];
+
+            // Get real Wikipedia image for this location
+            const imageUrl = await this.getWikipediaImage(waypoint.name, 800, 600);
 
             html += `
                 <div class="city-card">
                     <div class="city-image-container">
-                        <img src="${imageUrl}" alt="${waypoint.name}" class="city-image"
-                             onerror="this.src='https://via.placeholder.com/800x600/${agentColor}/FFFFFF?text=${encodeURIComponent(waypoint.name)}'"
-                             onload="this.classList.add('loaded')">
+                        ${imageUrl ? `
+                            <img src="${imageUrl}" alt="${waypoint.name}" class="city-image"
+                                 onload="this.classList.add('loaded')"
+                                 onerror="this.style.display='none'">
+                        ` : `
+                            <div class="no-image-placeholder">
+                                <div class="no-image-icon">${this.getLocationIcon(waypoint.name)}</div>
+                                <div class="no-image-text">${waypoint.name}</div>
+                            </div>
+                        `}
                     </div>
                     <div class="city-content">
                         <h3>${index + 1}. ${waypoint.name}</h3>
@@ -493,9 +635,79 @@ class SpotlightController {
                     </div>
                 </div>
             `;
-        });
-        
+
+            // Update container with current progress
+            container.innerHTML = html + (index < waypoints.length - 1 ? `
+                <div class="cities-loading">
+                    <div class="loading-message">
+                        <span class="loading-spinner">🔍</span>
+                        <p>Loading more destinations... (${index + 1}/${waypoints.length})</p>
+                    </div>
+                </div>
+            ` : '');
+        }
+
+        // Final update - remove any loading indicators
         container.innerHTML = html;
+
+        console.log(`Loaded ${waypoints.length} locations with Wikipedia images`);
+    }
+
+    getLocationIcon(locationName) {
+        const name = locationName.toLowerCase();
+
+        if (name.includes('museum') || name.includes('musée')) return '🏛️';
+        if (name.includes('castle') || name.includes('château')) return '🏰';
+        if (name.includes('church') || name.includes('cathedral') || name.includes('abbey')) return '⛪';
+        if (name.includes('park') || name.includes('garden')) return '🌳';
+        if (name.includes('mountain') || name.includes('mont') || name.includes('peak')) return '⛰️';
+        if (name.includes('lake') || name.includes('lac')) return '🏞️';
+        if (name.includes('gorge') || name.includes('canyon') || name.includes('valley')) return '🏔️';
+        if (name.includes('beach') || name.includes('coast') || name.includes('bay')) return '🏖️';
+        if (name.includes('market') || name.includes('marché')) return '🏪';
+        if (name.includes('restaurant') || name.includes('bistro') || name.includes('café')) return '🍽️';
+
+        return '📍'; // Default location icon
+    }
+
+    async loadItineraryImages() {
+        // Load day location images
+        const dayPlaceholders = document.querySelectorAll('.day-image-placeholder');
+        for (const placeholder of dayPlaceholders) {
+            const location = placeholder.getAttribute('data-location');
+            if (location) {
+                const imageUrl = await this.getWikipediaImage(location, 400, 200);
+                if (imageUrl) {
+                    placeholder.innerHTML = `
+                        <img src="${imageUrl}" alt="${location}" class="day-image"
+                             onload="this.classList.add('loaded')">
+                    `;
+                } else {
+                    placeholder.innerHTML = `
+                        <div class="no-image-icon-small">${this.getLocationIcon(location)}</div>
+                    `;
+                }
+            }
+        }
+
+        // Load activity images
+        const activityPlaceholders = document.querySelectorAll('.activity-image-placeholder');
+        for (const placeholder of activityPlaceholders) {
+            const activity = placeholder.getAttribute('data-activity');
+            if (activity) {
+                const imageUrl = await this.getWikipediaImage(activity, 300, 200);
+                if (imageUrl) {
+                    placeholder.innerHTML = `
+                        <img src="${imageUrl}" alt="${activity}" class="activity-image"
+                             onload="this.classList.add('loaded')">
+                    `;
+                } else {
+                    placeholder.innerHTML = `
+                        <div class="no-image-icon-small">🎯</div>
+                    `;
+                }
+            }
+        }
     }
 
     setupEventListeners() {
@@ -658,9 +870,9 @@ class SpotlightController {
                                 </div>
                                 ${day.location ? `
                                     <div class="day-image-container">
-                                        <img src="https://picsum.photos/seed/${day.location.split('').reduce((a, b) => a + b.charCodeAt(0), 0)}/400/200" alt="${day.location}" class="day-image"
-                                             onerror="this.src='https://via.placeholder.com/400x200/007AFF/FFFFFF?text=${encodeURIComponent(day.location)}'"
-                                             onload="this.classList.add('loaded')">
+                                        <div class="day-image-placeholder" data-location="${day.location}">
+                                            <div class="image-loading">🔍</div>
+                                        </div>
                                     </div>
                                 ` : ''}
                             </div>
@@ -673,9 +885,9 @@ class SpotlightController {
                                             <p class="activity-description">${activity.description || ''}</p>
                                             ${activity.title ? `
                                                 <div class="activity-image-container">
-                                                    <img src="https://picsum.photos/seed/${(activity.title || activity.name || '').split('').reduce((a, b) => a + b.charCodeAt(0), 0)}/300/200" alt="${activity.title || activity.name}" class="activity-image"
-                                                         onerror="this.src='https://via.placeholder.com/300x200/34C759/FFFFFF?text=Activity'"
-                                                         onload="this.classList.add('loaded')">
+                                                    <div class="activity-image-placeholder" data-activity="${activity.title || activity.name}">
+                                                        <div class="image-loading">🎯</div>
+                                                    </div>
                                                 </div>
                                             ` : ''}
                                         </div>
@@ -700,6 +912,9 @@ class SpotlightController {
                     `;
                 });
                 container.innerHTML = html;
+
+                // Load images asynchronously for day locations and activities
+                this.loadItineraryImages();
             } else {
                 console.log('Could not parse JSON, falling back to raw display');
                 // Fallback to show raw content if JSON parsing fails
