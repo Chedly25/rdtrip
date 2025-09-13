@@ -716,6 +716,15 @@ class SpotlightController {
             window.location.href = 'index.html';
         });
 
+        // Navigation export buttons
+        document.getElementById('exportGoogleMapsSpotlight').addEventListener('click', () => {
+            this.exportToGoogleMaps();
+        });
+
+        document.getElementById('exportWazeSpotlight').addEventListener('click', () => {
+            this.exportToWaze();
+        });
+
         // Generate itinerary button
         document.getElementById('generateItinerary').addEventListener('click', () => {
             this.generateDetailedItinerary();
@@ -1010,6 +1019,67 @@ class SpotlightController {
             food: '🍽️'
         };
         return emojis[agent] || '🤖';
+    }
+
+    exportToGoogleMaps() {
+        try {
+            const waypoints = this.extractWaypoints(this.spotlightData.agentData);
+            const destination = this.spotlightData.destination;
+
+            if (waypoints.length === 0) {
+                alert('No waypoints found for this route. Please generate a route first.');
+                return;
+            }
+
+            // Create Google Maps URL with waypoints
+            const origin = 'Aix-en-Provence, France';
+            let googleMapsUrl = `https://www.google.com/maps/dir/${encodeURIComponent(origin)}`;
+
+            // Add waypoints
+            waypoints.forEach(wp => {
+                googleMapsUrl += `/${encodeURIComponent(wp.name)}`;
+            });
+
+            googleMapsUrl += `/${encodeURIComponent(destination)}`;
+
+            // Open in new tab
+            window.open(googleMapsUrl, '_blank');
+
+        } catch (error) {
+            console.error('Error exporting to Google Maps:', error);
+            alert('Could not export to Google Maps. Please try again.');
+        }
+    }
+
+    exportToWaze() {
+        try {
+            const waypoints = this.extractWaypoints(this.spotlightData.agentData);
+            const destination = this.spotlightData.destination;
+
+            if (waypoints.length === 0) {
+                alert('No waypoints found for this route. Please generate a route first.');
+                return;
+            }
+
+            // Waze doesn't support multiple waypoints well, so we'll create a route to the final destination
+            // and show a message about waypoints
+            const waypointNames = waypoints.map(wp => wp.name).join(', ');
+            const confirmMessage = `Waze will navigate directly to ${destination}.\n\nPlanned stops along the way: ${waypointNames}\n\nContinue?`;
+
+            if (!confirm(confirmMessage)) {
+                return;
+            }
+
+            // Create Waze URL to final destination
+            const wazeUrl = `https://waze.com/ul?q=${encodeURIComponent(destination)}&navigate=yes`;
+
+            // Open in new tab
+            window.open(wazeUrl, '_blank');
+
+        } catch (error) {
+            console.error('Error exporting to Waze:', error);
+            alert('Could not export to Waze. Please try again.');
+        }
     }
 }
 
