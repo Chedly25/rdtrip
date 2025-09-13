@@ -306,6 +306,31 @@
     line-height: 1.4;
 }
 
+.accommodation-section,
+.meals-section {
+    margin-top: var(--spacing-md);
+    padding: var(--spacing-md);
+    background-color: var(--background-primary);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-color);
+}
+
+.accommodation-section h5,
+.meals-section h5 {
+    font-size: var(--font-size-caption);
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-sm);
+}
+
+.accommodation-section p,
+.meals-section p {
+    font-size: var(--font-size-small);
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-xs);
+    line-height: 1.4;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .overview-content {

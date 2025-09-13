@@ -369,23 +369,47 @@ class SpotlightController {
             let itinerary = itineraryResponse.itinerary;
             let parsedItinerary = null;
             
+            console.log('Raw itinerary response:', itinerary);
+            
             if (typeof itinerary === 'string') {
-                // Try to extract JSON from the response
+                // Multiple parsing strategies
+                
+                // Strategy 1: Look for ```json code blocks
                 const jsonMatch = itinerary.match(/```json\s*([\s\S]*?)\s*```/);
                 if (jsonMatch) {
+                    console.log('Found JSON in code block');
                     parsedItinerary = JSON.parse(jsonMatch[1]);
                 } else {
-                    // Fallback: look for JSON without code blocks
+                    // Strategy 2: Look for any JSON object starting with {
                     const jsonStart = itinerary.indexOf('{');
-                    const jsonEnd = itinerary.lastIndexOf('}');
-                    if (jsonStart !== -1 && jsonEnd !== -1) {
-                        const jsonString = itinerary.substring(jsonStart, jsonEnd + 1);
-                        parsedItinerary = JSON.parse(jsonString);
+                    if (jsonStart !== -1) {
+                        // Find the matching closing brace by counting braces
+                        let braceCount = 0;
+                        let jsonEnd = -1;
+                        
+                        for (let i = jsonStart; i < itinerary.length; i++) {
+                            if (itinerary[i] === '{') braceCount++;
+                            if (itinerary[i] === '}') braceCount--;
+                            if (braceCount === 0) {
+                                jsonEnd = i;
+                                break;
+                            }
+                        }
+                        
+                        if (jsonEnd !== -1) {
+                            const jsonString = itinerary.substring(jsonStart, jsonEnd + 1);
+                            console.log('Extracted JSON string:', jsonString);
+                            parsedItinerary = JSON.parse(jsonString);
+                        }
                     }
                 }
+            } else if (typeof itinerary === 'object') {
+                // Already parsed object
+                parsedItinerary = itinerary;
             }
             
             if (parsedItinerary && parsedItinerary.days) {
+                console.log('Successfully parsed itinerary with', parsedItinerary.days.length, 'days');
                 let html = '';
                 parsedItinerary.days.forEach(day => {
                     html += `
@@ -424,11 +448,13 @@ class SpotlightController {
                 });
                 container.innerHTML = html;
             } else {
+                console.log('Could not parse JSON, falling back to raw display');
                 // Fallback to show raw content if JSON parsing fails
                 this.displayRawItinerary(itinerary);
             }
         } catch (e) {
-            console.log('Could not parse itinerary JSON, showing raw content');
+            console.error('Error parsing itinerary JSON:', e);
+            console.log('Falling back to raw content display');
             this.displayRawItinerary(itineraryResponse.itinerary);
         }
     }
