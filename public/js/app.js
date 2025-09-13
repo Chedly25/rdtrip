@@ -105,7 +105,7 @@ class RoadTripPlanner {
             }
 
             const routeData = await response.json();
-            this.displayRoute(routeData, destinationCoords);
+            await this.displayRoute(routeData, destinationCoords);
             
         } catch (error) {
             console.error('Error generating route:', error);
@@ -138,7 +138,7 @@ class RoadTripPlanner {
         }
     }
 
-    displayRoute(routeData, destinationCoords) {
+    async displayRoute(routeData, destinationCoords) {
         this.currentRoute = routeData;
         
         // Clear existing markers except origin
@@ -184,7 +184,7 @@ class RoadTripPlanner {
 
         // Add route line if we have waypoints
         if (allWaypoints.length > 0) {
-            this.addRouteToMap(allWaypoints, destinationCoords);
+            await this.addRouteToMap(allWaypoints, destinationCoords);
         }
 
         // Display results
@@ -238,20 +238,78 @@ class RoadTripPlanner {
         return uniqueWaypoints;
     }
 
-    addRouteToMap(waypoints, destinationCoords) {
-        // Create route coordinates array
-        const routeCoords = [
-            [5.4474, 43.5297], // Aix-en-Provence (start)
-            ...waypoints.map(w => [w.lng, w.lat]),
-            [destinationCoords.lng, destinationCoords.lat] // Destination
-        ];
-
-        // Add route line to map
+    async addRouteToMap(waypoints, destinationCoords) {
+        // Clear existing route
         if (this.map.getSource('route')) {
             this.map.removeLayer('route');
             this.map.removeSource('route');
         }
 
+        // Create ordered coordinates for the route
+        const coordinates = [
+            [5.4474, 43.5297], // Aix-en-Provence (start)
+            ...waypoints.map(w => [w.lng, w.lat]),
+            [destinationCoords.lng, destinationCoords.lat] // Destination
+        ];
+
+        try {
+            // Get real driving directions from Mapbox
+            const routeGeometry = await this.getDirections(coordinates);
+            
+            if (routeGeometry) {
+                this.map.addSource('route', {
+                    'type': 'geojson',
+                    'data': {
+                        'type': 'Feature',
+                        'properties': {},
+                        'geometry': routeGeometry
+                    }
+                });
+
+                this.map.addLayer({
+                    'id': 'route',
+                    'type': 'line',
+                    'source': 'route',
+                    'layout': {
+                        'line-join': 'round',
+                        'line-cap': 'round'
+                    },
+                    'paint': {
+                        'line-color': '#007AFF',
+                        'line-width': 4,
+                        'line-opacity': 0.8
+                    }
+                });
+            }
+        } catch (error) {
+            console.error('Could not get driving directions:', error);
+            // Fallback to straight line if directions fail
+            this.addStraightLineRoute(coordinates);
+        }
+    }
+
+    async getDirections(coordinates) {
+        // Build waypoints string for Mapbox Directions API
+        const coordinatesStr = coordinates.map(coord => `${coord[0]},${coord[1]}`).join(';');
+        
+        const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${coordinatesStr}?geometries=geojson&access_token=${mapboxgl.accessToken}`;
+        
+        try {
+            const response = await fetch(url);
+            const data = await response.json();
+            
+            if (data.routes && data.routes.length > 0) {
+                return data.routes[0].geometry;
+            }
+        } catch (error) {
+            console.error('Directions API error:', error);
+        }
+        
+        return null;
+    }
+
+    addStraightLineRoute(coordinates) {
+        // Fallback: Add straight line route
         this.map.addSource('route', {
             'type': 'geojson',
             'data': {
@@ -259,7 +317,7 @@ class RoadTripPlanner {
                 'properties': {},
                 'geometry': {
                     'type': 'LineString',
-                    'coordinates': routeCoords
+                    'coordinates': coordinates
                 }
             }
         });
@@ -275,7 +333,7 @@ class RoadTripPlanner {
             'paint': {
                 'line-color': '#007AFF',
                 'line-width': 4,
-                'line-opacity': 0.8
+                'line-opacity': 0.6
             }
         });
     }
