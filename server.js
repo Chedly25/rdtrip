@@ -31,7 +31,7 @@ const agents = {
 // Generate route with AI agents
 app.post('/api/generate-route', async (req, res) => {
   try {
-    const { destination, stops = 3, agents: selectedAgents = ['adventure', 'culture', 'food'] } = req.body;
+    const { destination, stops = 3, agents: selectedAgents = ['adventure', 'culture', 'food'], budget = 'budget' } = req.body;
     
     if (!destination) {
       return res.status(400).json({ error: 'Destination is required' });
@@ -39,7 +39,7 @@ app.post('/api/generate-route', async (req, res) => {
 
     // Process with selected agents
     const agentPromises = selectedAgents.map(agentType => 
-      queryPerplexity(agents[agentType], destination, stops)
+      queryPerplexity(agents[agentType], destination, stops, budget)
     );
 
     const agentResults = await Promise.all(agentPromises);
@@ -49,6 +49,7 @@ app.post('/api/generate-route', async (req, res) => {
       origin: "Aix-en-Provence, France",
       destination: destination,
       totalStops: stops,
+      budget: budget,
       agentResults: agentResults.map((result, index) => ({
         agent: selectedAgents[index],
         recommendations: result
@@ -210,11 +211,22 @@ Make it detailed and practical with specific times and recommendations.`;
   }
 }
 
-async function queryPerplexity(agent, destination, stops) {
+async function queryPerplexity(agent, destination, stops, budget = 'budget') {
   try {
+    const budgetDescriptions = {
+      budget: 'budget-friendly options, affordable accommodations, free or low-cost activities, local food markets',
+      moderate: 'mid-range accommodations, mix of free and paid activities, local restaurants and cafes',
+      comfort: 'comfortable hotels, paid attractions and activities, nice restaurants and dining experiences',
+      luxury: 'luxury hotels and resorts, premium experiences, fine dining, exclusive activities'
+    };
+    
+    const budgetContext = budgetDescriptions[budget] || budgetDescriptions.budget;
+    
     const prompt = `${agent.prompt}
 
 Create a UNIQUE road trip route from Aix-en-Provence, France to ${destination} with ${stops} interesting stops along the way.
+
+BUDGET CONSIDERATION: Focus on ${budgetContext}. All recommendations should match this budget level.
 
 IMPORTANT: Create a route that is completely DIFFERENT from what adventure/culture/food agents would recommend. Focus exclusively on your specialty and avoid popular tourist cities that other agents might choose.
 
@@ -250,6 +262,73 @@ Make this route unique to your travel style and avoid mainstream destinations.`;
     return `Error generating recommendations for ${agent.name}`;
   }
 }
+
+// Chat endpoint for AI assistant
+app.post('/api/chat', async (req, res) => {
+  try {
+    const { message, routeContext } = req.body;
+    
+    if (!message) {
+      return res.status(400).json({ error: 'Message is required' });
+    }
+
+    // Create context from route data
+    let contextInfo = '';
+    if (routeContext) {
+      contextInfo = `
+      
+Route Context:
+- Origin: ${routeContext.origin}
+- Destination: ${routeContext.destination}
+- Budget: ${routeContext.budget}
+- Stops: ${routeContext.totalStops}
+- Selected agents: ${routeContext.agentResults.map(ar => ar.agent).join(', ')}
+
+Previous recommendations:
+${routeContext.agentResults.map(ar => `${ar.agent}: ${ar.recommendations.substring(0, 200)}...`).join('\n')}`;
+    }
+
+    const prompt = `You are a helpful travel assistant specializing in road trips from Aix-en-Provence, France. 
+    
+You provide practical travel advice, local tips, budget information, and route suggestions. Be conversational, helpful, and specific.
+
+${contextInfo}
+
+User question: ${message}
+
+Provide a helpful, concise response (2-3 paragraphs maximum) that directly addresses the user's question.`;
+
+    const response = await axios.post('https://api.perplexity.ai/chat/completions', {
+      model: 'sonar',
+      messages: [
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      max_tokens: 500,
+      temperature: 0.7
+    }, {
+      headers: {
+        'Authorization': `Bearer ${PERPLEXITY_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      timeout: 15000
+    });
+
+    res.json({
+      response: response.data.choices[0].message.content,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('Chat error:', error.response?.data || error.message);
+    res.status(500).json({ 
+      error: 'Failed to get chat response',
+      message: 'Sorry, I encountered an error. Please try again.'
+    });
+  }
+});
 
 // Image validation and proxy endpoint
 app.get('/api/image-proxy', async (req, res) => {
