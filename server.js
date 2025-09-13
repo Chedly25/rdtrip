@@ -76,7 +76,7 @@ Provide a JSON response with:
 Keep it concise and practical.`;
 
     const response = await axios.post('https://api.perplexity.ai/chat/completions', {
-      model: 'llama-3.1-sonar-small-128k-online',
+      model: 'sonar',
       messages: [
         {
           role: 'user',
@@ -94,7 +94,7 @@ Keep it concise and practical.`;
 
     return response.data.choices[0].message.content;
   } catch (error) {
-    console.error(`Error with ${agent.name}:`, error);
+    console.error(`Error with ${agent.name}:`, error.response?.data || error.message);
     return `Error generating recommendations for ${agent.name}`;
   }
 }
