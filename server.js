@@ -109,13 +109,12 @@ Provide a JSON response with:
 - each day should have:
   - day: day number
   - location: main city/area for the day
-  - imageUrl: representative image URL for the day's main location
-  - activities: array of timed activities (with time, title, description, and optional imageUrl for major activities)
+  - activities: array of timed activities (with time, title, description)
   - accommodation: suggested place to stay
-  - meals: breakfast, lunch, dinner recommendations
+  - meals: breakfast, lunch, dinner recommendations  
   - travel: driving details if moving to next location
 
-For imageUrl fields, please search for and provide direct URLs to high-quality images that represent each location or activity. Include landscape photos, landmark images, or activity photos relevant to your ${agent.name.toLowerCase()} expertise.
+Focus on providing detailed, practical travel information and specific recommendations.
 
 Make it detailed and practical with specific times and recommendations.`;
 
@@ -231,11 +230,11 @@ BUDGET CONSIDERATION: Focus on ${budgetContext}. All recommendations should matc
 IMPORTANT: Create a route that is completely DIFFERENT from what adventure/culture/food agents would recommend. Focus exclusively on your specialty and avoid popular tourist cities that other agents might choose.
 
 Provide a JSON response with:
-- waypoints: array of ${stops} recommended stops with name, exact coordinates [latitude, longitude], brief description focused on your specialty, and imageUrl (find a representative image URL for each location)
-- activities: 2-3 activities for each waypoint related to your expertise
+- waypoints: array of ${stops} recommended stops with name, exact coordinates [latitude, longitude], brief description focused on your specialty
+- activities: 2-3 activities for each waypoint related to your expertise  
 - duration: estimated time at each stop
 
-For imageUrl, please search for and provide direct URLs to high-quality images that represent each waypoint. Include landscape photos, landmark images, or activity photos relevant to your specialty.
+Focus on providing detailed, accurate information about locations and activities rather than image URLs.
 
 Make this route unique to your travel style and avoid mainstream destinations.`;
 
@@ -330,120 +329,45 @@ Provide a helpful, concise response (2-3 paragraphs maximum) that directly addre
   }
 });
 
-// Image validation and proxy endpoint
-app.get('/api/image-proxy', async (req, res) => {
+// Simplified image endpoint - no external validation
+app.get('/api/image-info', (req, res) => {
+  const { url } = req.query;
+  
+  if (!url) {
+    return res.status(400).json({ error: 'Image URL is required' });
+  }
+
+  // Simple URL validation without external calls
   try {
-    const { url } = req.query;
-    
-    if (!url) {
-      return res.status(400).json({ error: 'Image URL is required' });
-    }
-
-    // Validate URL format
-    try {
-      new URL(url);
-    } catch {
-      return res.status(400).json({ error: 'Invalid URL format' });
-    }
-
-    // Check if the URL returns a valid image
-    const response = await axios.head(url, {
-      timeout: 5000,
-      validateStatus: (status) => status < 400
-    });
-
-    const contentType = response.headers['content-type'];
-    if (!contentType || !contentType.startsWith('image/')) {
-      return res.status(400).json({ error: 'URL does not point to an image' });
-    }
-
-    // Return validated image URL
+    new URL(url);
     res.json({ 
       valid: true, 
       url: url,
-      contentType: contentType,
-      size: response.headers['content-length']
+      message: 'URL format is valid'
     });
-
-  } catch (error) {
-    console.error('Image validation error:', error.message);
+  } catch {
     res.status(400).json({ 
       valid: false, 
-      error: 'Image not accessible or invalid',
-      originalUrl: req.query.url
+      error: 'Invalid URL format'
     });
   }
 });
 
-// Image fetching service - get real images for locations and activities
-app.post('/api/fetch-images', async (req, res) => {
-  try {
-    const { locations, agentType, waypoints } = req.body;
-    
-    if (!locations || !Array.isArray(locations)) {
-      return res.status(400).json({ error: 'Locations array is required' });
-    }
-
-    const images = {};
-    
-    // Generate images for each location
-    for (const location of locations) {
-      images[location] = await generateImageForLocation(location, agentType);
-    }
-    
-    // Generate images for waypoints if provided
-    if (waypoints && Array.isArray(waypoints)) {
-      for (const waypoint of waypoints) {
-        if (waypoint.name) {
-          images[waypoint.name] = await generateImageForLocation(waypoint.name, agentType, waypoint.activities);
-        }
-      }
-    }
-
-    res.json({
-      success: true,
-      images: images,
-      agentType: agentType
-    });
-
-  } catch (error) {
-    console.error('Image fetching error:', error);
-    res.status(500).json({ error: 'Failed to fetch images' });
-  }
+// Simple placeholder image service - no external API calls
+app.get('/api/location-image/:location', (req, res) => {
+  const { location } = req.params;
+  const { agent = 'adventure' } = req.query;
+  
+  // Simple placeholder that doesn't make external API calls
+  const imageId = Math.abs(location.split('').reduce((a, b) => a + b.charCodeAt(0), 0)) % 1000;
+  const placeholderUrl = `https://picsum.photos/400/300?random=${imageId}`;
+  
+  res.json({
+    url: placeholderUrl,
+    location: location,
+    agent: agent
+  });
 });
-
-// Generate image URL for a specific location
-async function generateImageForLocation(locationName, agentType, activities = []) {
-  // Create search terms based on agent type
-  const agentKeywords = {
-    adventure: ['landscape', 'nature', 'outdoor', 'hiking', 'mountains'],
-    culture: ['architecture', 'museum', 'historic', 'monument', 'art'],
-    food: ['restaurant', 'cuisine', 'market', 'food', 'dining']
-  };
-  
-  const keywords = agentKeywords[agentType] || ['travel', 'destination'];
-  
-  // Clean location name for search
-  const cleanLocation = locationName
-    .replace(/[^\w\s-]/g, '') // Remove special chars except hyphens
-    .replace(/\s+/g, '-') // Replace spaces with hyphens
-    .toLowerCase();
-  
-  // Generate Unsplash URL - they provide free stock photos
-  const searchTerm = `${cleanLocation}-${keywords[0]}`;
-  const unsplashUrl = `https://source.unsplash.com/800x600/?${searchTerm}`;
-  
-  // Also generate a backup URL with different keywords
-  const backupSearchTerm = `${cleanLocation}-${keywords[1] || 'travel'}`;
-  const backupUrl = `https://source.unsplash.com/800x600/?${backupSearchTerm}`;
-  
-  return {
-    primary: unsplashUrl,
-    backup: backupUrl,
-    location: locationName,
-    searchTerms: [searchTerm, backupSearchTerm]
-  };
-}
 
 // Generate Mapbox static image for route overview
 app.post('/api/mapbox-image', async (req, res) => {
