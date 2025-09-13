@@ -399,13 +399,47 @@ class RoadTripPlanner {
             const agentEmoji = this.getAgentEmoji(agentResult.agent);
             const agentColor = this.getAgentColor(agentResult.agent);
             
+            // Clean up the recommendations text
+            let cleanText = agentResult.recommendations;
+            
+            // Remove JSON markers and backticks
+            cleanText = cleanText
+                .replace(/```json\s*/g, '')
+                .replace(/```\s*$/g, '')
+                .replace(/^\s*{\s*"waypoints":/g, '')
+                .replace(/}\s*$/g, '');
+            
+            // Try to extract meaningful content
+            let displayText = '';
+            try {
+                // Try to parse as JSON first
+                const parsed = JSON.parse('{' + cleanText + '}');
+                if (parsed.waypoints && Array.isArray(parsed.waypoints)) {
+                    displayText = parsed.waypoints.map(wp => `${wp.name}: ${wp.description || 'Great destination'}`).join(' • ');
+                }
+            } catch (e) {
+                // Fallback to cleaned text
+                displayText = cleanText
+                    .replace(/[{}"]/g, '')
+                    .replace(/name:\s*/g, '')
+                    .replace(/coordinates:\s*\[[^\]]+\]/g, '')
+                    .replace(/description:\s*/g, '')
+                    .replace(/,\s*,/g, ',')
+                    .trim();
+            }
+            
+            // If still too messy, create a friendly message
+            if (displayText.length < 10 || displayText.includes('waypoints')) {
+                displayText = `Specialized ${agentResult.agent} recommendations for unique stops along your route to Rome.`;
+            }
+            
             resultsHTML += `
                 <div class="route-item" style="border-left-color: ${agentColor}">
                     <div class="route-item-header">
                         <h4>${agentEmoji} ${this.capitalizeFirst(agentResult.agent)} Agent</h4>
                         <button class="view-details-btn" onclick="planner.viewAgentDetails('${agentResult.agent}')">View Details</button>
                     </div>
-                    <p>${this.truncateText(agentResult.recommendations, 200)}</p>
+                    <p>${this.truncateText(displayText, 200)}</p>
                 </div>
             `;
         });
@@ -655,24 +689,85 @@ class RoadTripPlanner {
         const waypoints = [];
         
         routeData.agentResults.forEach(agentResult => {
-            // Parse waypoints from each agent's recommendations
-            const matches = agentResult.recommendations.match(/\*\*(.*?)\*\*/g);
-            if (matches) {
-                matches.forEach(match => {
-                    const name = match.replace(/\*\*/g, '').trim();
-                    // This is a simplified extraction - in a real app you'd parse more detailed coordinates
-                    waypoints.push({
-                        name: name,
-                        agent: agentResult.agent,
-                        description: `${this.capitalizeFirst(agentResult.agent)} recommendation`,
-                        lng: 5.4474 + (Math.random() - 0.5) * 10, // Mock coordinates for demo
-                        lat: 43.5297 + (Math.random() - 0.5) * 5
+            try {
+                // First try to parse as JSON
+                let parsed;
+                const cleanedRecommendations = agentResult.recommendations
+                    .replace(/```json\s*/g, '')
+                    .replace(/```\s*$/g, '')
+                    .trim();
+                
+                try {
+                    parsed = JSON.parse(cleanedRecommendations);
+                } catch (jsonError) {
+                    // If JSON parsing fails, extract waypoints from text
+                    console.log('JSON parsing failed, extracting from text for agent:', agentResult.agent);
+                    
+                    // Extract location names from the text
+                    const locationMatches = cleanedRecommendations.match(/"name":\s*"([^"]+)"/g) || 
+                                          cleanedRecommendations.match(/\*\*(.*?)\*\*/g) ||
+                                          cleanedRecommendations.match(/(\b[A-Z][a-z]+ [A-Z][a-z]+\b)/g);
+                    
+                    if (locationMatches) {
+                        locationMatches.slice(0, 3).forEach((match, index) => {
+                            let name = match.replace(/["*]/g, '').replace(/name:\s*/g, '').trim();
+                            if (name.length > 0) {
+                                waypoints.push({
+                                    name: name,
+                                    agent: agentResult.agent,
+                                    description: `${this.capitalizeFirst(agentResult.agent)} destination`,
+                                    lng: 5.4474 + (Math.random() - 0.5) * 8, // Varied coordinates
+                                    lat: 43.5297 + (Math.random() - 0.5) * 4
+                                });
+                            }
+                        });
+                    }
+                    return;
+                }
+                
+                // If we have parsed JSON with waypoints
+                if (parsed && parsed.waypoints && Array.isArray(parsed.waypoints)) {
+                    parsed.waypoints.forEach(waypoint => {
+                        if (waypoint.name) {
+                            waypoints.push({
+                                name: waypoint.name,
+                                agent: agentResult.agent,
+                                description: waypoint.description || `${this.capitalizeFirst(agentResult.agent)} destination`,
+                                lng: waypoint.coordinates ? waypoint.coordinates[1] : (5.4474 + (Math.random() - 0.5) * 8),
+                                lat: waypoint.coordinates ? waypoint.coordinates[0] : (43.5297 + (Math.random() - 0.5) * 4),
+                                activities: waypoint.activities || [],
+                                duration: waypoint.duration || '2-3 hours'
+                            });
+                        }
                     });
+                }
+            } catch (error) {
+                console.error('Error extracting waypoints for agent:', agentResult.agent, error);
+                
+                // Fallback: create a generic waypoint for this agent
+                waypoints.push({
+                    name: `${this.capitalizeFirst(agentResult.agent)} Destination`,
+                    agent: agentResult.agent,
+                    description: `Recommended ${agentResult.agent} stop`,
+                    lng: 5.4474 + (Math.random() - 0.5) * 8,
+                    lat: 43.5297 + (Math.random() - 0.5) * 4
                 });
             }
         });
         
-        return waypoints.slice(0, 5); // Limit to 5 waypoints
+        // Ensure we have at least as many waypoints as requested
+        const targetWaypoints = this.currentRoute?.totalStops || 3;
+        while (waypoints.length < targetWaypoints) {
+            waypoints.push({
+                name: `Stop ${waypoints.length + 1}`,
+                agent: 'general',
+                description: 'Recommended stop along your route',
+                lng: 5.4474 + (Math.random() - 0.5) * 8,
+                lat: 43.5297 + (Math.random() - 0.5) * 4
+            });
+        }
+        
+        return waypoints.slice(0, targetWaypoints);
     }
 
     getAgentEmoji(agent) {
@@ -717,8 +812,22 @@ class RoadTripPlanner {
     }
 
     viewAgentDetails(agent) {
-        // Could open a detailed view of agent recommendations
-        console.log(`Viewing details for ${agent} agent`);
+        // Find the agent's recommendations
+        const agentResult = this.currentRoute?.agentResults.find(ar => ar.agent === agent);
+        if (agentResult) {
+            // Create a simple alert with formatted content
+            let content = agentResult.recommendations;
+            
+            // Clean up the content for display
+            content = content
+                .replace(/```json\s*/g, '')
+                .replace(/```\s*$/g, '')
+                .replace(/\n/g, '\n\n'); // Add spacing for readability
+            
+            alert(`${this.capitalizeFirst(agent)} Agent Recommendations:\n\n${content}`);
+        } else {
+            alert(`No detailed recommendations available for ${agent} agent.`);
+        }
     }
 
     setLoading(isLoading) {
