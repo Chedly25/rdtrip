@@ -97,36 +97,42 @@ class RoadTripPlanner {
             this.exportToWaze();
         });
 
-        // Chat modal controls
-        document.getElementById('openChat').addEventListener('click', () => {
-            this.openChatModal();
+        // Chat modal controls (legacy)
+        const openChatBtn = document.getElementById('openChat');
+        if (openChatBtn) {
+            openChatBtn.addEventListener('click', () => {
+                this.openAiAssistant();
+            });
+        }
+
+        // Floating AI Assistant
+        document.getElementById('aiWidgetTrigger').addEventListener('click', () => {
+            this.openAiAssistant();
         });
 
-        // Always visible AI assistant button
-        document.getElementById('openChatAlways').addEventListener('click', () => {
-            this.openChatModal();
+        document.getElementById('closeAiModal').addEventListener('click', () => {
+            this.closeAiAssistant();
         });
 
-        document.getElementById('closeChatModal').addEventListener('click', () => {
-            this.closeChatModal();
+        document.getElementById('aiSendMessage').addEventListener('click', () => {
+            this.sendAiMessage();
         });
 
-        document.getElementById('sendMessage').addEventListener('click', () => {
-            this.sendChatMessage();
-        });
-
-        document.getElementById('chatInput').addEventListener('keypress', (e) => {
+        document.getElementById('aiInput').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
-                this.sendChatMessage();
+                this.sendAiMessage();
             }
         });
 
-        // Close modal on backdrop click
-        document.getElementById('chatModal').addEventListener('click', (e) => {
-            if (e.target.id === 'chatModal') {
-                this.closeChatModal();
-            }
-        });
+        // Close modal on backdrop click for legacy modal
+        const chatModal = document.getElementById('chatModal');
+        if (chatModal) {
+            chatModal.addEventListener('click', (e) => {
+                if (e.target.id === 'chatModal') {
+                    this.closeAiAssistant();
+                }
+            });
+        }
     }
 
     toggleAgent(btn) {
@@ -596,73 +602,105 @@ class RoadTripPlanner {
         resultsContainer.innerHTML = resultsHTML;
     }
 
-    // Chat functionality
-    openChatModal() {
-        document.getElementById('chatModal').classList.remove('hidden');
+    // Enhanced AI Assistant functionality
+    openAiAssistant() {
+        document.getElementById('aiAssistantModal').classList.remove('hidden');
         if (this.chatMessages.length === 0) {
             if (this.enhancedFeaturesAvailable) {
-                this.addChatMessage('assistant', "Hi! I'm your advanced route assistant! 🤖\n\nI can help you:\n• **Replace stops** - Say you've been to a city and I'll find a perfect alternative\n• **Optimize your route** - Ask me to rearrange for efficiency\n• **Get travel advice** - Local tips, food recommendations, hidden gems\n• **Plan itineraries** - Detailed day-by-day planning\n\nTry saying: \"I've been to [city name], can you find me an alternative?\" or \"Can you rearrange my route for the shortest distance?\"");
+                this.addAiMessage('assistant', "Hi! I'm your advanced route assistant! 🤖\n\nI can help you:\n• **Replace stops** - Say you've been to a city and I'll find a perfect alternative\n• **Optimize your route** - Ask me to rearrange for efficiency\n• **Get travel advice** - Local tips, food recommendations, hidden gems\n• **Plan itineraries** - Detailed day-by-day planning\n\nTry saying: \"I've been to [city name], can you find me an alternative?\" or \"Can you rearrange my route for the shortest distance?\"");
             } else {
-                this.addChatMessage('assistant', "Hi! I'm your route assistant! 🤖\n\nI can help you with:\n• **Travel advice** - Local tips, food recommendations, hidden gems\n• **Route questions** - Ask about your current itinerary\n• **Planning help** - Get suggestions for your trip\n\nAsk me anything about your route or travel plans!");
+                this.addAiMessage('assistant', "Hi! I'm your route assistant! 🤖\n\nI can help you with:\n• **Travel advice** - Local tips, food recommendations, hidden gems\n• **Route questions** - Ask about your current itinerary\n• **Planning help** - Get suggestions for your trip\n\nAsk me anything about your route or travel plans!");
             }
         }
     }
 
-    closeChatModal() {
-        document.getElementById('chatModal').classList.add('hidden');
+    closeAiAssistant() {
+        document.getElementById('aiAssistantModal').classList.add('hidden');
+        this.hideWorkflow();
     }
 
-    async sendChatMessage() {
-        const input = document.getElementById('chatInput');
+    async sendAiMessage() {
+        const input = document.getElementById('aiInput');
         const message = input.value.trim();
 
         if (!message) return;
 
         // Add user message
-        this.addChatMessage('user', message);
+        this.addAiMessage('user', message);
         input.value = '';
 
-        // Show loading message
-        const loadingId = this.addChatMessage('assistant', 'Thinking...', true);
+        // Check if this is a route modification request
+        const isRouteModification = this.isRouteModificationRequest(message);
 
-        try {
-            if (this.enhancedFeaturesAvailable && this.routeAgent) {
+        if (isRouteModification && this.enhancedFeaturesAvailable) {
+            // Show workflow visualization
+            this.showWorkflow();
+
+            // Update status
+            document.getElementById('aiStatus').textContent = 'Processing your request...';
+
+            try {
                 // Use the enhanced route agent for processing
                 const response = await this.routeAgent.processMessage(message, this.currentRoute);
 
-                // Remove loading message
-                this.removeChatMessage(loadingId);
+                // Hide workflow
+                this.hideWorkflow();
+
+                // Update status
+                document.getElementById('aiStatus').textContent = 'Ready to help optimize your trip';
 
                 // Handle different response types
                 await this.handleAgentResponse(response);
-            } else {
-                // Fallback to original chat functionality
-                const response = await fetch('/api/chat', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        message: message,
-                        routeContext: this.currentRoute
-                    })
-                });
 
-                if (!response.ok) {
-                    throw new Error('Failed to get chat response');
+            } catch (error) {
+                console.error('AI Agent error:', error);
+                this.hideWorkflow();
+                document.getElementById('aiStatus').textContent = 'Ready to help optimize your trip';
+                this.addAiMessage('assistant', 'Sorry, I encountered an error. Please try again.');
+            }
+        } else {
+            // Show loading message for regular chat
+            const loadingId = this.addAiMessage('assistant', 'Thinking...', true);
+
+            try {
+                if (this.enhancedFeaturesAvailable && this.routeAgent) {
+                    // Use the enhanced route agent for processing
+                    const response = await this.routeAgent.processMessage(message, this.currentRoute);
+
+                    // Remove loading message
+                    this.removeAiMessage(loadingId);
+
+                    // Handle different response types
+                    await this.handleAgentResponse(response);
+                } else {
+                    // Fallback to original chat functionality
+                    const response = await fetch('/api/chat', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            message: message,
+                            routeContext: this.currentRoute
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to get chat response');
+                    }
+
+                    const data = await response.json();
+
+                    // Remove loading message and add real response
+                    this.removeAiMessage(loadingId);
+                    this.addAiMessage('assistant', data.response);
                 }
 
-                const data = await response.json();
-
-                // Remove loading message and add real response
-                this.removeChatMessage(loadingId);
-                this.addChatMessage('assistant', data.response);
+            } catch (error) {
+                console.error('Chat error:', error);
+                this.removeAiMessage(loadingId);
+                this.addAiMessage('assistant', 'Sorry, I encountered an error. Please try again.');
             }
-
-        } catch (error) {
-            console.error('Chat error:', error);
-            this.removeChatMessage(loadingId);
-            this.addChatMessage('assistant', 'Sorry, I encountered an error. Please try again.');
         }
     }
 
@@ -673,12 +711,12 @@ class RoadTripPlanner {
     async handleAgentResponse(response) {
         switch (response.type) {
             case 'replacement_proposal':
-                this.addChatMessage('assistant', response.content);
+                this.addAiMessage('assistant', response.content);
                 // Could add special UI for replacement proposals
                 break;
 
             case 'replacement_executed':
-                this.addChatMessage('assistant', response.content);
+                this.addAiMessage('assistant', response.content);
                 // Update the current route and refresh display
                 if (response.data && response.data.updatedRoute) {
                     this.currentRoute = response.data.updatedRoute;
@@ -687,7 +725,7 @@ class RoadTripPlanner {
                 break;
 
             case 'route_optimized':
-                this.addChatMessage('assistant', response.content);
+                this.addAiMessage('assistant', response.content);
                 // Update the route display with optimized route
                 if (response.data && response.data.optimizedRoute) {
                     this.displayCurrentRoute();
@@ -700,9 +738,97 @@ class RoadTripPlanner {
             case 'info':
             case 'alternative_search':
             default:
-                this.addChatMessage('assistant', response.content);
+                this.addAiMessage('assistant', response.content);
                 break;
         }
+    }
+
+    // New AI Message handling methods
+    addAiMessage(sender, message, isLoading = false) {
+        const messagesContainer = document.getElementById('aiMessages');
+        const messageElement = document.createElement('div');
+        const messageId = 'ai_msg_' + Date.now();
+
+        messageElement.id = messageId;
+        messageElement.className = `ai-message ${sender}`;
+        if (isLoading) {
+            messageElement.className += ' loading';
+        }
+
+        // Handle markdown-style formatting
+        const formattedMessage = message.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
+        messageElement.innerHTML = formattedMessage;
+
+        messagesContainer.appendChild(messageElement);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+        this.chatMessages.push({
+            id: messageId,
+            sender: sender,
+            message: message,
+            timestamp: new Date()
+        });
+
+        return messageId;
+    }
+
+    removeAiMessage(messageId) {
+        const messageElement = document.getElementById(messageId);
+        if (messageElement) {
+            messageElement.remove();
+            this.chatMessages = this.chatMessages.filter(msg => msg.id !== messageId);
+        }
+    }
+
+    // Workflow visualization methods
+    showWorkflow() {
+        const workflow = document.getElementById('aiWorkflow');
+        workflow.classList.remove('hidden');
+
+        // Reset all steps
+        const steps = workflow.querySelectorAll('.workflow-step');
+        steps.forEach(step => {
+            step.classList.remove('active', 'completed');
+        });
+
+        // Start the workflow animation
+        this.animateWorkflowSteps();
+    }
+
+    hideWorkflow() {
+        document.getElementById('aiWorkflow').classList.add('hidden');
+    }
+
+    async animateWorkflowSteps() {
+        const steps = ['step1', 'step2', 'step3', 'step4'];
+        const progressBar = document.getElementById('workflowProgress');
+
+        for (let i = 0; i < steps.length; i++) {
+            const step = document.getElementById(steps[i]);
+            step.classList.add('active');
+
+            // Update progress bar
+            progressBar.style.width = `${((i + 1) / steps.length) * 100}%`;
+
+            // Wait for step to complete
+            await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1500));
+
+            step.classList.remove('active');
+            step.classList.add('completed');
+        }
+    }
+
+    // Detect if message is a route modification request
+    isRouteModificationRequest(message) {
+        const routeModificationKeywords = [
+            'replace', 'change', 'swap', 'substitute', 'alternative',
+            'been to', 'visited', 'already seen',
+            'optimize', 'rearrange', 'reorder', 'efficient',
+            'shortest', 'fastest', 'better route'
+        ];
+
+        const lowerMessage = message.toLowerCase();
+        return routeModificationKeywords.some(keyword => lowerMessage.includes(keyword));
     }
 
     addChatMessage(sender, message, isLoading = false) {

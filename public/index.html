@@ -67,14 +67,6 @@
                         <span class="btn-text">Generate Route</span>
                         <div class="btn-spinner hidden"></div>
                     </button>
-
-                    <!-- AI Assistant Button - Always Visible -->
-                    <div class="ai-assistant-section">
-                        <button id="openChatAlways" class="ai-assistant-btn">
-                            🤖 AI Route Assistant
-                        </button>
-                        <p class="ai-helper-text">Chat with AI about routes, get recommendations, or optimize your trip</p>
-                    </div>
                 </div>
 
                 <!-- Results Section -->
@@ -110,18 +102,68 @@
         </main>
     </div>
 
-    <!-- AI Chatbot Modal -->
-    <div id="chatModal" class="modal hidden">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>🤖 Route Assistant</h3>
-                <button class="modal-close" id="closeChatModal">&times;</button>
+    <!-- Floating AI Assistant Widget -->
+    <div id="aiAssistantWidget" class="ai-widget">
+        <div class="ai-widget-trigger" id="aiWidgetTrigger">
+            <div class="ai-avatar">🤖</div>
+            <div class="ai-pulse"></div>
+        </div>
+        <div class="ai-widget-tooltip">
+            <span>AI Route Assistant</span>
+            <div class="tooltip-arrow"></div>
+        </div>
+    </div>
+
+    <!-- Enhanced AI Assistant Modal -->
+    <div id="aiAssistantModal" class="ai-modal hidden">
+        <div class="ai-modal-content">
+            <div class="ai-modal-header">
+                <div class="ai-header-info">
+                    <div class="ai-avatar-small">🤖</div>
+                    <div class="ai-header-text">
+                        <h3>AI Route Assistant</h3>
+                        <p id="aiStatus">Ready to help optimize your trip</p>
+                    </div>
+                </div>
+                <button class="ai-modal-close" id="closeAiModal">&times;</button>
             </div>
-            <div class="chat-container">
-                <div id="chatMessages" class="chat-messages"></div>
-                <div class="chat-input-container">
-                    <input type="text" id="chatInput" placeholder="Ask about your route, local tips, or travel advice..." class="chat-input">
-                    <button id="sendMessage" class="send-btn">Send</button>
+
+            <!-- Workflow Visualization -->
+            <div id="aiWorkflow" class="ai-workflow hidden">
+                <div class="workflow-steps">
+                    <div class="workflow-step" id="step1">
+                        <div class="step-icon">🧠</div>
+                        <div class="step-text">Analyzing request...</div>
+                        <div class="step-spinner"></div>
+                    </div>
+                    <div class="workflow-step" id="step2">
+                        <div class="step-icon">🔍</div>
+                        <div class="step-text">Researching alternatives...</div>
+                        <div class="step-spinner"></div>
+                    </div>
+                    <div class="workflow-step" id="step3">
+                        <div class="step-icon">📍</div>
+                        <div class="step-text">Finding perfect match...</div>
+                        <div class="step-spinner"></div>
+                    </div>
+                    <div class="workflow-step" id="step4">
+                        <div class="step-icon">✨</div>
+                        <div class="step-text">Optimizing route...</div>
+                        <div class="step-spinner"></div>
+                    </div>
+                </div>
+                <div class="workflow-progress">
+                    <div class="progress-bar" id="workflowProgress"></div>
+                </div>
+            </div>
+
+            <div class="ai-chat-container">
+                <div id="aiMessages" class="ai-messages"></div>
+                <div class="ai-input-container">
+                    <input type="text" id="aiInput" placeholder="Try: 'I've been to Florence, find an alternative' or 'optimize my route'" class="ai-input">
+                    <button id="aiSendMessage" class="ai-send-btn">
+                        <span class="send-icon">➤</span>
+                    </button>
                 </div>
             </div>
         </div>
