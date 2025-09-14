@@ -211,14 +211,14 @@ export class AIFeatures {
             
             const data = await response.json();
             
-            if (!data.content) {
+            if (!data.response) {
                 throw new Error('Invalid response format from server');
             }
-            
+
             // Remove from pending requests
             this.pendingRequests.delete(requestKey);
-            
-            return data.content;
+
+            return data.response;
             } catch (error) {
                 // Remove from pending requests on error
                 this.pendingRequests.delete(requestKey);
