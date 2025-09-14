@@ -52,7 +52,13 @@ export class RouteAgent {
      * @param {Object} route - Current route object
      */
     setCurrentRoute(route) {
+        console.log('🗺️ RouteAgent.setCurrentRoute called with:', route);
         this.currentRoute = route;
+
+        // Log the cities that will be extracted
+        const cities = this.extractRouteCities(route);
+        console.log('🏙️ RouteAgent extracted cities:', cities);
+
         aiFeatures.setCurrentRoute(route);
     }
 
@@ -63,6 +69,7 @@ export class RouteAgent {
      * @returns {Promise<Object>} Response with action and content
      */
     async processMessage(message, routeContext) {
+        console.log('📨 RouteAgent.processMessage received:', { message, routeContext });
         this.setCurrentRoute(routeContext);
         this.conversationContext.push({ role: 'user', content: message, timestamp: Date.now() });
 

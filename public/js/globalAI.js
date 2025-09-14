@@ -504,6 +504,7 @@ class GlobalAIAssistant {
 
             try {
                 // Use the enhanced route agent for processing
+                console.log('🚀 Calling routeAgent.processMessage with route:', this.currentRoute);
                 const response = await this.routeAgent.processMessage(contextualMessage, this.currentRoute);
 
                 // Hide workflow
