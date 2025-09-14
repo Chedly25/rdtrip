@@ -215,7 +215,19 @@ class SpotlightController {
                 });
             }
         } catch (e) {
-            console.log('Could not parse waypoints from agent data');
+            console.log('Could not parse waypoints from agent data:', e);
+            console.log('Raw agent data sample:', agentData.recommendations.substring(0, 300));
+
+            // Add fallback waypoints with European coordinates
+            for (let i = 0; i < 3; i++) {
+                waypoints.push({
+                    name: `European Stop ${i + 1}`,
+                    description: `Waypoint ${i + 1}`,
+                    lat: 44.0 + Math.random() * 6.0, // 44-50°N (Central Europe)
+                    lng: 2.0 + Math.random() * 8.0,  // 2-10°E (Western/Central Europe)
+                    activities: []
+                });
+            }
         }
         
         return waypoints;
@@ -407,20 +419,59 @@ class SpotlightController {
     }
 
     async getDirections(coordinates) {
-        const coordinatesStr = coordinates.map(coord => `${coord[0]},${coord[1]}`).join(';');
+        // Validate coordinates before making API call
+        const validatedCoords = coordinates.filter(coord => {
+            const [lng, lat] = coord;
+            const isValid = lng >= -180 && lng <= 180 && lat >= -90 && lat <= 90 &&
+                           lng >= -10 && lng <= 20 && lat >= 35 && lat <= 60; // European bounds
+            if (!isValid) {
+                console.warn('Invalid coordinate:', coord);
+            }
+            return isValid;
+        });
+
+        if (validatedCoords.length < 2) {
+            console.warn('Not enough valid coordinates for directions API:', validatedCoords.length);
+            return null;
+        }
+
+        // Limit to 8 waypoints to avoid API errors
+        const limitedCoords = validatedCoords.length > 8 ?
+            [validatedCoords[0], ...validatedCoords.slice(1, -1).slice(0, 6), validatedCoords[validatedCoords.length - 1]] :
+            validatedCoords;
+
+        const coordinatesStr = limitedCoords.map(coord => `${coord[0]},${coord[1]}`).join(';');
         const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${coordinatesStr}?geometries=geojson&access_token=${mapboxgl.accessToken}`;
-        
+
+        console.log('Directions API request:', {
+            originalCoords: coordinates.length,
+            validatedCoords: validatedCoords.length,
+            limitedCoords: limitedCoords.length
+        });
+
         try {
             const response = await fetch(url);
+
+            if (!response.ok) {
+                console.error('Directions API error:', response.status, response.statusText);
+                const errorData = await response.json();
+                console.error('API error details:', errorData);
+                return null;
+            }
+
             const data = await response.json();
-            
+
             if (data.routes && data.routes.length > 0) {
                 return data.routes[0].geometry;
+            } else {
+                console.warn('No routes returned from API');
+                return null;
             }
         } catch (error) {
             console.error('Directions API error:', error);
+            console.error('Failed URL:', url);
         }
-        
+
         return null;
     }
 
