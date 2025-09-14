@@ -1,3 +1,5 @@
+import { routeAgent } from './routeAgent.js';
+
 // Enhanced Road Trip Planner App
 class RoadTripPlanner {
     constructor() {
@@ -6,13 +8,15 @@ class RoadTripPlanner {
         this.selectedBudget = 'budget';
         this.currentRoute = null;
         this.chatMessages = [];
-        
+        this.routeAgent = routeAgent;
+
         this.init();
     }
 
     init() {
         this.initMap();
         this.setupEventListeners();
+        this.setupRouteUpdateListener();
     }
 
     initMap() {
@@ -578,7 +582,7 @@ class RoadTripPlanner {
     openChatModal() {
         document.getElementById('chatModal').classList.remove('hidden');
         if (this.chatMessages.length === 0) {
-            this.addChatMessage('assistant', "Hi! I'm your route assistant. Ask me anything about your trip, local tips, or travel advice!");
+            this.addChatMessage('assistant', "Hi! I'm your advanced route assistant! 🤖\n\nI can help you:\n• **Replace stops** - Say you've been to a city and I'll find a perfect alternative\n• **Optimize your route** - Ask me to rearrange for efficiency\n• **Get travel advice** - Local tips, food recommendations, hidden gems\n• **Plan itineraries** - Detailed day-by-day planning\n\nTry saying: \"I've been to [city name], can you find me an alternative?\" or \"Can you rearrange my route for the shortest distance?\"");
         }
     }
 
@@ -589,7 +593,7 @@ class RoadTripPlanner {
     async sendChatMessage() {
         const input = document.getElementById('chatInput');
         const message = input.value.trim();
-        
+
         if (!message) return;
 
         // Add user message
@@ -600,31 +604,58 @@ class RoadTripPlanner {
         const loadingId = this.addChatMessage('assistant', 'Thinking...', true);
 
         try {
-            const response = await fetch('/api/chat', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    message: message,
-                    routeContext: this.currentRoute
-                })
-            });
+            // Use the enhanced route agent for processing
+            const response = await this.routeAgent.processMessage(message, this.currentRoute);
 
-            if (!response.ok) {
-                throw new Error('Failed to get chat response');
-            }
-
-            const data = await response.json();
-            
-            // Remove loading message and add real response
+            // Remove loading message
             this.removeChatMessage(loadingId);
-            this.addChatMessage('assistant', data.response);
-            
+
+            // Handle different response types
+            await this.handleAgentResponse(response);
+
         } catch (error) {
             console.error('Chat error:', error);
             this.removeChatMessage(loadingId);
             this.addChatMessage('assistant', 'Sorry, I encountered an error. Please try again.');
+        }
+    }
+
+    /**
+     * Handle different types of responses from the RouteAgent
+     * @param {Object} response - Response from RouteAgent
+     */
+    async handleAgentResponse(response) {
+        switch (response.type) {
+            case 'replacement_proposal':
+                this.addChatMessage('assistant', response.content);
+                // Could add special UI for replacement proposals
+                break;
+
+            case 'replacement_executed':
+                this.addChatMessage('assistant', response.content);
+                // Update the current route and refresh display
+                if (response.data && response.data.updatedRoute) {
+                    this.currentRoute = response.data.updatedRoute;
+                    this.displayCurrentRoute();
+                }
+                break;
+
+            case 'route_optimized':
+                this.addChatMessage('assistant', response.content);
+                // Update the route display with optimized route
+                if (response.data && response.data.optimizedRoute) {
+                    this.displayCurrentRoute();
+                }
+                break;
+
+            case 'clarification':
+            case 'error':
+            case 'general_response':
+            case 'info':
+            case 'alternative_search':
+            default:
+                this.addChatMessage('assistant', response.content);
+                break;
         }
     }
 
@@ -1766,6 +1797,62 @@ class RoadTripPlanner {
             console.error('Error exporting to Waze:', error);
             this.showError('Could not export to Waze. Please try again.');
         }
+    }
+
+    /**
+     * Set up listener for route updates from the RouteAgent
+     */
+    setupRouteUpdateListener() {
+        window.addEventListener('routeUpdated', (event) => {
+            if (event.detail && event.detail.route) {
+                this.currentRoute = event.detail.route;
+                this.displayCurrentRoute();
+                this.refreshMapWithNewRoute();
+            }
+        });
+    }
+
+    /**
+     * Display the current route information
+     */
+    displayCurrentRoute() {
+        if (this.currentRoute) {
+            // Update route agent with new route
+            this.routeAgent.setCurrentRoute(this.currentRoute);
+            // Refresh route display
+            this.displayRouteResults(this.currentRoute);
+        }
+    }
+
+    /**
+     * Refresh map with new route data
+     */
+    refreshMapWithNewRoute() {
+        if (this.currentRoute && this.currentRoute.route) {
+            // Clear existing markers and routes
+            this.clearMapLayers();
+
+            // Add new route to map
+            const waypoints = this.extractWaypoints(this.currentRoute);
+            this.addMarkersAndRoute(waypoints, this.currentRoute.destination);
+        }
+    }
+
+    /**
+     * Clear existing map layers (routes and waypoint markers)
+     */
+    clearMapLayers() {
+        // Remove route layer if it exists
+        if (this.map.getLayer('route')) {
+            this.map.removeLayer('route');
+        }
+        if (this.map.getSource('route')) {
+            this.map.removeSource('route');
+        }
+
+        // Remove waypoint markers (keep origin marker)
+        const markers = document.querySelectorAll('.mapboxgl-marker:not(.origin-marker)');
+        markers.forEach(marker => marker.remove());
     }
 }
 
