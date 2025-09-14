@@ -111,6 +111,7 @@ class GlobalAIAssistant {
             if (spotlightData) {
                 const spotlight = JSON.parse(spotlightData);
                 console.log('✅ Using spotlight data as primary source');
+                console.log('📋 Full spotlight object:', spotlight);
 
                 // Extract cities from various spotlight data formats
                 let extractedCities = [];
@@ -152,12 +153,37 @@ class GlobalAIAssistant {
                     console.log('  Cities from agentResults:', extractedCities);
                 }
 
-                // Method 4: From origin/destination
+                // Method 4: From origin/destination + missing intermediate cities
                 if (extractedCities.length === 0) {
                     if (spotlight.origin) extractedCities.push(spotlight.origin);
                     if (spotlight.destination) extractedCities.push(spotlight.destination);
                     console.log('  Cities from origin/destination:', extractedCities);
                 }
+
+                // Method 5: Extract from DOM if we still don't have enough cities
+                if (extractedCities.length < (spotlight.totalStops || 2)) {
+                    console.log(`⚠️ Only found ${extractedCities.length} cities but expecting ${spotlight.totalStops}, checking DOM...`);
+
+                    const citiesContainer = document.getElementById('citiesContainer');
+                    if (citiesContainer) {
+                        const cityElements = citiesContainer.querySelectorAll('.city-card, .city-item, [data-city], h3, h4');
+                        const domCities = Array.from(cityElements).map(element => {
+                            return element.querySelector('.city-name')?.textContent ||
+                                   element.querySelector('h3')?.textContent ||
+                                   element.querySelector('h4')?.textContent ||
+                                   element.dataset.city ||
+                                   (element.tagName === 'H3' || element.tagName === 'H4' ? element.textContent?.trim() : null);
+                        }).filter(Boolean).filter(city => !extractedCities.includes(city));
+
+                        if (domCities.length > 0) {
+                            console.log('  Additional cities from DOM:', domCities);
+                            extractedCities.push(...domCities);
+                        }
+                    }
+                }
+
+                // Remove duplicates and clean up
+                extractedCities = [...new Set(extractedCities)].filter(Boolean);
 
                 // Convert spotlight data to currentRoute format
                 this.currentRoute = {
