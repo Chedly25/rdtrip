@@ -256,11 +256,20 @@ class SpotlightController {
     }
 
     async createRoute(waypoints, destinationCoords, color) {
+        console.log('Creating route with waypoints:', waypoints);
+        console.log('Destination coords:', destinationCoords);
+
         const coordinates = [
             [5.4474, 43.5297], // Aix-en-Provence (start)
-            ...waypoints.map(w => [w.lng, w.lat]),
+            ...waypoints.map(w => {
+                const coord = [w.lng, w.lat];
+                console.log(`Waypoint ${w.name}: [${coord[0]}, ${coord[1]}] (lng, lat)`);
+                return coord;
+            }),
             [destinationCoords.lng, destinationCoords.lat] // Destination
         ];
+
+        console.log('Final coordinates array:', coordinates);
 
         try {
             const routeGeometry = await this.getDirections(coordinates);
@@ -419,15 +428,46 @@ class SpotlightController {
     }
 
     async getDirections(coordinates) {
-        // Validate coordinates before making API call
+        // Log coordinates for debugging
+        console.log('Input coordinates for directions:', coordinates);
+
+        // Validate and fix coordinates
         const validatedCoords = coordinates.filter(coord => {
-            const [lng, lat] = coord;
-            const isValid = lng >= -180 && lng <= 180 && lat >= -90 && lat <= 90 &&
-                           lng >= -10 && lng <= 20 && lat >= 35 && lat <= 60; // European bounds
-            if (!isValid) {
-                console.warn('Invalid coordinate:', coord);
+            if (!Array.isArray(coord) || coord.length !== 2) {
+                console.warn('Invalid coordinate format:', coord);
+                return false;
             }
-            return isValid;
+
+            let [first, second] = coord;
+
+            // Check if coordinates might be swapped (lat, lng instead of lng, lat)
+            let lng, lat;
+            if (first >= -180 && first <= 180 && second >= -90 && second <= 90) {
+                // Standard case: [lng, lat] format
+                lng = first;
+                lat = second;
+            } else if (second >= -180 && second <= 180 && first >= -90 && first <= 90) {
+                // Swapped case: [lat, lng] format - fix it
+                console.warn('Coordinate appears to be [lat, lng], converting to [lng, lat]:', coord);
+                lng = second;
+                lat = first;
+                // Fix the original array
+                coord[0] = lng;
+                coord[1] = lat;
+            } else {
+                console.warn('Coordinates out of valid range:', coord);
+                return false;
+            }
+
+            // Extended European bounds check
+            const isInEurope = lng >= -15 && lng <= 35 && lat >= 30 && lat <= 75;
+
+            if (!isInEurope) {
+                console.warn('Coordinate outside Europe:', { lng, lat, original: coord });
+                return false;
+            }
+
+            return true;
         });
 
         if (validatedCoords.length < 2) {
