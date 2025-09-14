@@ -1475,11 +1475,6 @@ class RoadTripPlanner {
         }
     }
 
-    @keyframes fadeOut {
-        from { opacity: 1; }
-        to { opacity: 0; }
-    }
-
     exportToGoogleMaps() {
         if (!this.currentRoute) {
             this.showError('Please generate a route first');

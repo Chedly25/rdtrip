@@ -18,6 +18,11 @@
     to { opacity: 1; }
 }
 
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
 .results-overlay-header {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     padding: 30px;
