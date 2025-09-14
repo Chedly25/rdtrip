@@ -232,6 +232,7 @@ class RoadTripPlanner {
                 .setLngLat([waypoint.lng, waypoint.lat])
                 .setPopup(new mapboxgl.Popup().setHTML(`
                     <h3>${agentEmoji} ${waypoint.name}</h3>
+                    ${waypoint.fullName && waypoint.fullName !== waypoint.name ? `<p><small>${waypoint.fullName}</small></p>` : ''}
                     <p>${waypoint.description || ''}</p>
                     <small><strong>${this.capitalizeFirst(waypoint.agent)} Recommendation</strong></small>
                 `))
@@ -410,92 +411,125 @@ class RoadTripPlanner {
     displayRouteResults(routeData) {
         const resultsContainer = document.getElementById('routeResults');
 
-        let resultsHTML = '';
+        let resultsHTML = '<h4 style="margin-bottom: 20px; font-size: 20px;">🎯 Agent Recommendations</h4>';
+
         routeData.agentResults.forEach(agentResult => {
             const agentEmoji = this.getAgentEmoji(agentResult.agent);
             const agentColor = this.getAgentColor(agentResult.agent);
 
-            let displayText = '';
+            let cities = [];
             let waypointCount = 0;
 
             try {
                 // Clean up and parse the JSON
                 let jsonText = agentResult.recommendations;
-
-                // Remove markdown code blocks and fix JSON formatting
                 jsonText = jsonText
                     .replace(/```json\s*/g, '')
                     .replace(/```\s*$/g, '')
                     .trim();
 
-                // Handle malformed JSON by trying to extract just the waypoints section
                 if (!jsonText.startsWith('{')) {
-                    // Try to find the waypoints section
                     const waypointsMatch = jsonText.match(/"waypoints"\s*:\s*\[[\s\S]*?\]/);
                     if (waypointsMatch) {
                         jsonText = `{${waypointsMatch[0]}}`;
                     }
                 }
 
-                // Try to parse the JSON
                 const parsed = JSON.parse(jsonText);
 
                 if (parsed.waypoints && Array.isArray(parsed.waypoints)) {
                     waypointCount = parsed.waypoints.length;
-                    // Create a readable summary
-                    const waypoints = parsed.waypoints.slice(0, 3); // Show first 3 waypoints
-                    displayText = waypoints.map(wp => wp.name).join(' → ');
 
-                    if (parsed.waypoints.length > 3) {
-                        displayText += ` and ${parsed.waypoints.length - 3} more stops`;
-                    }
+                    // Group waypoints by city
+                    const cityMap = new Map();
 
-                    // Add route overview if available
-                    if (parsed.route_overview) {
-                        displayText += '. ' + parsed.route_overview.substring(0, 150) + '...';
-                    } else if (waypoints[0] && waypoints[0].description) {
-                        displayText += '. Starting with ' + waypoints[0].description.substring(0, 100) + '...';
-                    }
+                    parsed.waypoints.forEach(wp => {
+                        // Extract city name from the waypoint name
+                        let cityName = this.extractCityName(wp.name);
+
+                        if (!cityMap.has(cityName)) {
+                            cityMap.set(cityName, []);
+                        }
+
+                        cityMap.get(cityName).push({
+                            name: wp.name,
+                            description: wp.description || '',
+                            activities: wp.activities || []
+                        });
+                    });
+
+                    // Convert to cities array
+                    cities = Array.from(cityMap.entries()).map(([city, activities]) => ({
+                        city: city,
+                        activities: activities
+                    }));
                 }
             } catch (e) {
                 console.warn('Could not parse agent recommendations for', agentResult.agent, ':', e);
 
-                // Try to extract waypoint names from the raw text as fallback
+                // Fallback: try to extract location names
                 try {
                     const nameMatches = agentResult.recommendations.match(/"name"\s*:\s*"([^"]+)"/g);
                     if (nameMatches && nameMatches.length > 0) {
                         const names = nameMatches.map(match => match.match(/"name"\s*:\s*"([^"]+)"/)[1]);
-                        displayText = names.slice(0, 3).join(' → ');
                         waypointCount = names.length;
 
-                        if (names.length > 3) {
-                            displayText += ` and ${names.length - 3} more stops`;
-                        }
-                    } else {
-                        displayText = `Curated ${agentResult.agent} experiences and hidden gems along your route.`;
-                        waypointCount = 3; // Default assumption
+                        // Group by city
+                        const cityMap = new Map();
+                        names.forEach(name => {
+                            const cityName = this.extractCityName(name);
+                            if (!cityMap.has(cityName)) {
+                                cityMap.set(cityName, []);
+                            }
+                            cityMap.get(cityName).push({ name: name, description: '', activities: [] });
+                        });
+
+                        cities = Array.from(cityMap.entries()).map(([city, activities]) => ({
+                            city: city,
+                            activities: activities
+                        }));
                     }
                 } catch (fallbackError) {
-                    displayText = `Curated ${agentResult.agent} experiences and hidden gems along your route.`;
-                    waypointCount = 3; // Default assumption
+                    waypointCount = 3;
+                    cities = [{ city: 'Various locations', activities: [] }];
                 }
             }
 
-            // Fallback if no display text
-            if (!displayText) {
-                displayText = `Discover amazing ${agentResult.agent} destinations and experiences tailored to your journey.`;
+            // Build city cards HTML
+            let cityCardsHTML = '';
+            if (cities.length > 0) {
+                cityCardsHTML = '<div class="city-cards">';
+                cities.forEach(cityData => {
+                    cityCardsHTML += `
+                        <div class="city-card">
+                            <div class="city-card-header">
+                                📍 ${cityData.city}
+                            </div>
+                            <ul class="city-activities">`;
+
+                    cityData.activities.forEach(activity => {
+                        const displayName = activity.name.replace(cityData.city, '').replace(/,\s*/, '').trim() || activity.name;
+                        cityCardsHTML += `<li>${displayName}</li>`;
+                    });
+
+                    cityCardsHTML += `
+                            </ul>
+                        </div>`;
+                });
+                cityCardsHTML += '</div>';
             }
 
             resultsHTML += `
-                <div class="route-item" style="border-left-color: ${agentColor}">
+                <div class="route-item ${agentResult.agent}-theme">
                     <div class="route-item-header">
-                        <h4>${agentEmoji} ${this.capitalizeFirst(agentResult.agent)} Agent</h4>
+                        <h4>${agentEmoji} ${this.capitalizeFirst(agentResult.agent)} Experience</h4>
                         <div class="route-item-meta">
                             <span class="waypoint-count">${waypointCount} stops</span>
                             <button class="view-details-btn" onclick="planner.viewAgentDetails('${agentResult.agent}')">View Details</button>
                         </div>
                     </div>
-                    <p>${displayText}</p>
+                    <p>Discover the best ${agentResult.agent} experiences across ${cities.length} destination${cities.length > 1 ? 's' : ''}.</p>
+                    ${cityCardsHTML}
                 </div>
             `;
         });
@@ -804,7 +838,7 @@ class RoadTripPlanner {
 
     extractWaypoints(routeData) {
         const waypoints = [];
-        
+
         routeData.agentResults.forEach(agentResult => {
             try {
                 // First try to parse as JSON
@@ -813,24 +847,27 @@ class RoadTripPlanner {
                     .replace(/```json\s*/g, '')
                     .replace(/```\s*$/g, '')
                     .trim();
-                
+
                 try {
                     parsed = JSON.parse(cleanedRecommendations);
                 } catch (jsonError) {
                     // If JSON parsing fails, extract waypoints from text
                     console.log('JSON parsing failed, extracting from text for agent:', agentResult.agent);
-                    
+
                     // Extract location names from the text
-                    const locationMatches = cleanedRecommendations.match(/"name":\s*"([^"]+)"/g) || 
+                    const locationMatches = cleanedRecommendations.match(/"name":\s*"([^"]+)"/g) ||
                                           cleanedRecommendations.match(/\*\*(.*?)\*\*/g) ||
                                           cleanedRecommendations.match(/(\b[A-Z][a-z]+ [A-Z][a-z]+\b)/g);
-                    
+
                     if (locationMatches) {
                         locationMatches.slice(0, 3).forEach((match, index) => {
                             let name = match.replace(/["*]/g, '').replace(/name:\s*/g, '').trim();
                             if (name.length > 0) {
+                                // Use city name for display
+                                const cityName = this.extractCityName(name);
                                 waypoints.push({
-                                    name: name,
+                                    name: cityName,
+                                    fullName: name,
                                     agent: agentResult.agent,
                                     description: `${this.capitalizeFirst(agentResult.agent)} destination`,
                                     lng: 5.4474 + (Math.random() - 0.5) * 8, // Varied coordinates
@@ -841,13 +878,16 @@ class RoadTripPlanner {
                     }
                     return;
                 }
-                
+
                 // If we have parsed JSON with waypoints
                 if (parsed && parsed.waypoints && Array.isArray(parsed.waypoints)) {
                     parsed.waypoints.forEach(waypoint => {
                         if (waypoint.name) {
+                            // Use city name for display
+                            const cityName = this.extractCityName(waypoint.name);
                             waypoints.push({
-                                name: waypoint.name,
+                                name: cityName,
+                                fullName: waypoint.name,
                                 agent: agentResult.agent,
                                 description: waypoint.description || `${this.capitalizeFirst(agentResult.agent)} destination`,
                                 lng: waypoint.coordinates ? waypoint.coordinates[1] : (5.4474 + (Math.random() - 0.5) * 8),
@@ -860,10 +900,11 @@ class RoadTripPlanner {
                 }
             } catch (error) {
                 console.error('Error extracting waypoints for agent:', agentResult.agent, error);
-                
+
                 // Fallback: create a generic waypoint for this agent
                 waypoints.push({
                     name: `${this.capitalizeFirst(agentResult.agent)} Destination`,
+                    fullName: `${this.capitalizeFirst(agentResult.agent)} Destination`,
                     agent: agentResult.agent,
                     description: `Recommended ${agentResult.agent} stop`,
                     lng: 5.4474 + (Math.random() - 0.5) * 8,
@@ -871,20 +912,101 @@ class RoadTripPlanner {
                 });
             }
         });
-        
+
         // Ensure we have at least as many waypoints as requested
         const targetWaypoints = this.currentRoute?.totalStops || 3;
         while (waypoints.length < targetWaypoints) {
             waypoints.push({
                 name: `Stop ${waypoints.length + 1}`,
+                fullName: `Stop ${waypoints.length + 1}`,
                 agent: 'general',
                 description: 'Recommended stop along your route',
                 lng: 5.4474 + (Math.random() - 0.5) * 8,
                 lat: 43.5297 + (Math.random() - 0.5) * 4
             });
         }
-        
+
         return waypoints.slice(0, targetWaypoints);
+    }
+
+    extractCityName(locationName) {
+        // Common location patterns to extract city names
+        const patterns = [
+            // Match "Something, City" pattern
+            /,\s*([^,]+)$/,
+            // Match "Something in City" pattern
+            /\bin\s+([A-Z][a-zA-Z\s]+)$/,
+            // Match "Something near City" pattern
+            /\bnear\s+([A-Z][a-zA-Z\s]+)$/,
+            // Match "Something at City" pattern
+            /\bat\s+([A-Z][a-zA-Z\s]+)$/,
+            // Match "Something de City" (French pattern)
+            /\bde\s+([A-Z][a-zA-Z\s]+)$/,
+            // Match "Something di City" (Italian pattern)
+            /\bdi\s+([A-Z][a-zA-Z\s]+)$/
+        ];
+
+        // Special cases for known attractions and their cities
+        const knownLocations = {
+            'Pont d\'Espagne': 'Cauterets',
+            'Cirque de Gavarnie': 'Gavarnie',
+            'Pic du Midi': 'La Mongie',
+            'Col du Tourmalet': 'Barèges',
+            'Lac de Gaube': 'Cauterets',
+            'Gorges du Verdon': 'Moustiers-Sainte-Marie',
+            'Calanques': 'Cassis',
+            'Mont Ventoux': 'Bedoin',
+            'Pont du Gard': 'Vers-Pont-du-Gard',
+            'Arena di Verona': 'Verona',
+            'Piazza San Marco': 'Venice',
+            'Duomo': 'Florence',
+            'Colosseum': 'Rome',
+            'Sagrada Familia': 'Barcelona',
+            'Park Güell': 'Barcelona',
+            'Alhambra': 'Granada',
+            'La Rambla': 'Barcelona'
+        };
+
+        // Check if it's a known location
+        for (const [attraction, city] of Object.entries(knownLocations)) {
+            if (locationName.includes(attraction)) {
+                return city;
+            }
+        }
+
+        // Try to extract city from patterns
+        for (const pattern of patterns) {
+            const match = locationName.match(pattern);
+            if (match && match[1]) {
+                return match[1].trim();
+            }
+        }
+
+        // If location already looks like a city name (single or two words, capitalized)
+        if (/^[A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)?$/.test(locationName)) {
+            return locationName;
+        }
+
+        // Extract the last capitalized word group as city name
+        const words = locationName.split(/\s+/);
+        const capitalizedWords = [];
+        for (let i = words.length - 1; i >= 0; i--) {
+            if (/^[A-Z]/.test(words[i])) {
+                capitalizedWords.unshift(words[i]);
+                if (capitalizedWords.length >= 2 || i === 0) {
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+
+        if (capitalizedWords.length > 0) {
+            return capitalizedWords.join(' ');
+        }
+
+        // Fallback: return the original name
+        return locationName;
     }
 
     getAgentEmoji(agent) {
