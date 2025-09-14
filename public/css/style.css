@@ -226,6 +226,49 @@ body {
     to { transform: rotate(360deg); }
 }
 
+/* AI Assistant Section */
+.ai-assistant-section {
+    margin-top: var(--spacing-lg);
+    padding: var(--spacing-md);
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: var(--radius-md);
+    text-align: center;
+    box-shadow: var(--shadow-md);
+}
+
+.ai-assistant-btn {
+    padding: var(--spacing-md) var(--spacing-lg);
+    background-color: rgba(255, 255, 255, 0.95);
+    color: #5a67d8;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-body);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: block;
+    width: 100%;
+    margin-bottom: var(--spacing-sm);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.ai-assistant-btn:hover {
+    background-color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.ai-assistant-btn:active {
+    transform: translateY(-1px);
+}
+
+.ai-helper-text {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: var(--font-size-caption);
+    margin: 0;
+    line-height: 1.4;
+}
+
 /* Results Section */
 .results-section {
     margin-top: var(--spacing-lg);

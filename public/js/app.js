@@ -1,5 +1,3 @@
-import { routeAgent } from './routeAgent.js';
-
 // Enhanced Road Trip Planner App
 class RoadTripPlanner {
     constructor() {
@@ -8,15 +6,30 @@ class RoadTripPlanner {
         this.selectedBudget = 'budget';
         this.currentRoute = null;
         this.chatMessages = [];
-        this.routeAgent = routeAgent;
+        this.routeAgent = null;
+        this.enhancedFeaturesAvailable = false;
 
         this.init();
     }
 
-    init() {
+    async init() {
         this.initMap();
         this.setupEventListeners();
+        await this.loadEnhancedFeatures();
         this.setupRouteUpdateListener();
+    }
+
+    async loadEnhancedFeatures() {
+        try {
+            const { routeAgent } = await import('./routeAgent.js');
+            this.routeAgent = routeAgent;
+            this.enhancedFeaturesAvailable = true;
+            console.log('✅ Enhanced AI features loaded successfully');
+        } catch (error) {
+            console.warn('⚠️ Enhanced AI features failed to load:', error);
+            console.log('💬 Using fallback chat functionality');
+            this.enhancedFeaturesAvailable = false;
+        }
     }
 
     initMap() {
@@ -86,6 +99,11 @@ class RoadTripPlanner {
 
         // Chat modal controls
         document.getElementById('openChat').addEventListener('click', () => {
+            this.openChatModal();
+        });
+
+        // Always visible AI assistant button
+        document.getElementById('openChatAlways').addEventListener('click', () => {
             this.openChatModal();
         });
 
@@ -582,7 +600,11 @@ class RoadTripPlanner {
     openChatModal() {
         document.getElementById('chatModal').classList.remove('hidden');
         if (this.chatMessages.length === 0) {
-            this.addChatMessage('assistant', "Hi! I'm your advanced route assistant! 🤖\n\nI can help you:\n• **Replace stops** - Say you've been to a city and I'll find a perfect alternative\n• **Optimize your route** - Ask me to rearrange for efficiency\n• **Get travel advice** - Local tips, food recommendations, hidden gems\n• **Plan itineraries** - Detailed day-by-day planning\n\nTry saying: \"I've been to [city name], can you find me an alternative?\" or \"Can you rearrange my route for the shortest distance?\"");
+            if (this.enhancedFeaturesAvailable) {
+                this.addChatMessage('assistant', "Hi! I'm your advanced route assistant! 🤖\n\nI can help you:\n• **Replace stops** - Say you've been to a city and I'll find a perfect alternative\n• **Optimize your route** - Ask me to rearrange for efficiency\n• **Get travel advice** - Local tips, food recommendations, hidden gems\n• **Plan itineraries** - Detailed day-by-day planning\n\nTry saying: \"I've been to [city name], can you find me an alternative?\" or \"Can you rearrange my route for the shortest distance?\"");
+            } else {
+                this.addChatMessage('assistant', "Hi! I'm your route assistant! 🤖\n\nI can help you with:\n• **Travel advice** - Local tips, food recommendations, hidden gems\n• **Route questions** - Ask about your current itinerary\n• **Planning help** - Get suggestions for your trip\n\nAsk me anything about your route or travel plans!");
+            }
         }
     }
 
@@ -604,14 +626,38 @@ class RoadTripPlanner {
         const loadingId = this.addChatMessage('assistant', 'Thinking...', true);
 
         try {
-            // Use the enhanced route agent for processing
-            const response = await this.routeAgent.processMessage(message, this.currentRoute);
+            if (this.enhancedFeaturesAvailable && this.routeAgent) {
+                // Use the enhanced route agent for processing
+                const response = await this.routeAgent.processMessage(message, this.currentRoute);
 
-            // Remove loading message
-            this.removeChatMessage(loadingId);
+                // Remove loading message
+                this.removeChatMessage(loadingId);
 
-            // Handle different response types
-            await this.handleAgentResponse(response);
+                // Handle different response types
+                await this.handleAgentResponse(response);
+            } else {
+                // Fallback to original chat functionality
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        routeContext: this.currentRoute
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to get chat response');
+                }
+
+                const data = await response.json();
+
+                // Remove loading message and add real response
+                this.removeChatMessage(loadingId);
+                this.addChatMessage('assistant', data.response);
+            }
 
         } catch (error) {
             console.error('Chat error:', error);
