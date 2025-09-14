@@ -1459,41 +1459,168 @@ class RoadTripPlanner {
                 center: [2.3522, 48.8566], // Center of France
                 zoom: 5,
                 interactive: false,
-                attributionControl: false
+                attributionControl: false,
+                collectResourceTiming: false
             });
 
-            // Add markers for cities
-            const cities = this.extractCitiesFromAgent(agentResult);
-            const color = this.getAgentColor(agentResult.agent);
+            miniMap.on('load', () => {
+                // Extract waypoints for this specific agent
+                const waypoints = this.extractWaypointsForAgent(agentResult);
+                const color = this.getAgentColor(agentResult.agent);
 
-            // Add origin marker
-            new mapboxgl.Marker({ color: '#007AFF' })
-                .setLngLat([5.4474, 43.5297])
-                .addTo(miniMap);
+                // Create coordinates array for route
+                const routeCoordinates = [
+                    [5.4474, 43.5297] // Start from Aix-en-Provence
+                ];
 
-            // Add city markers
-            cities.forEach((city, index) => {
-                if (city.coordinates) {
+                // Add origin marker
+                new mapboxgl.Marker({ color: '#007AFF' })
+                    .setLngLat([5.4474, 43.5297])
+                    .setPopup(new mapboxgl.Popup().setHTML('<h3>🏠 Start</h3>'))
+                    .addTo(miniMap);
+
+                // Add waypoint markers and coordinates
+                waypoints.forEach((waypoint, index) => {
+                    let coords;
+                    if (waypoint.coordinates && Array.isArray(waypoint.coordinates) && waypoint.coordinates.length === 2) {
+                        coords = waypoint.coordinates; // Should be [lng, lat]
+                    } else if (waypoint.lng && waypoint.lat) {
+                        coords = [waypoint.lng, waypoint.lat];
+                    } else {
+                        // Generate random coordinates around France
+                        coords = [
+                            5.4474 + (Math.random() - 0.5) * 8,  // longitude
+                            43.5297 + (Math.random() - 0.5) * 4  // latitude
+                        ];
+                    }
+
+                    routeCoordinates.push(coords);
+
                     new mapboxgl.Marker({ color: color })
-                        .setLngLat(city.coordinates)
+                        .setLngLat(coords)
+                        .setPopup(new mapboxgl.Popup().setHTML(`
+                            <h3>${this.getAgentEmoji(agentResult.agent)} ${waypoint.name}</h3>
+                            <p>${waypoint.description || ''}</p>
+                        `))
                         .addTo(miniMap);
-                } else {
-                    // Use estimated coordinates
-                    const lng = 5.4474 + (Math.random() - 0.5) * 8;
-                    const lat = 43.5297 + (Math.random() - 0.5) * 4;
-                    new mapboxgl.Marker({ color: color })
-                        .setLngLat([lng, lat])
+                });
+
+                // Add destination marker and coordinates
+                if (destinationCoords) {
+                    routeCoordinates.push([destinationCoords.lng, destinationCoords.lat]);
+                    new mapboxgl.Marker({ color: '#8E44AD' })
+                        .setLngLat([destinationCoords.lng, destinationCoords.lat])
+                        .setPopup(new mapboxgl.Popup().setHTML('<h3>🎯 Destination</h3>'))
                         .addTo(miniMap);
                 }
-            });
 
-            // Add destination marker
-            if (destinationCoords) {
-                new mapboxgl.Marker({ color: '#8E44AD' })
-                    .setLngLat([destinationCoords.lng, destinationCoords.lat])
-                    .addTo(miniMap);
-            }
+                // Add route line
+                if (routeCoordinates.length > 1) {
+                    miniMap.addSource(`route-${agentResult.agent}`, {
+                        type: 'geojson',
+                        data: {
+                            type: 'Feature',
+                            properties: {},
+                            geometry: {
+                                type: 'LineString',
+                                coordinates: routeCoordinates
+                            }
+                        }
+                    });
+
+                    // Add route line layer
+                    miniMap.addLayer({
+                        id: `route-${agentResult.agent}`,
+                        type: 'line',
+                        source: `route-${agentResult.agent}`,
+                        layout: {
+                            'line-join': 'round',
+                            'line-cap': 'round'
+                        },
+                        paint: {
+                            'line-color': color,
+                            'line-width': 3,
+                            'line-opacity': 0.8
+                        }
+                    });
+                }
+
+                // Fit map to show all points
+                if (routeCoordinates.length > 1) {
+                    const bounds = new mapboxgl.LngLatBounds();
+                    routeCoordinates.forEach(coord => {
+                        bounds.extend(coord);
+                    });
+                    miniMap.fitBounds(bounds, {
+                        padding: 30,
+                        maxZoom: 8
+                    });
+                }
+            });
         });
+    }
+
+    extractWaypointsForAgent(agentResult) {
+        const waypoints = [];
+
+        try {
+            let parsed;
+            const cleanedRecommendations = agentResult.recommendations
+                .replace(/```json\s*/g, '')
+                .replace(/```\s*$/g, '')
+                .replace(/```\s*/g, '')
+                .trim();
+
+            // More robust JSON extraction
+            if (!cleanedRecommendations.startsWith('{')) {
+                const jsonMatch = cleanedRecommendations.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                    const lastBraceIndex = jsonMatch[0].lastIndexOf('}');
+                    if (lastBraceIndex !== -1) {
+                        parsed = JSON.parse(jsonMatch[0].substring(0, lastBraceIndex + 1));
+                    }
+                }
+            } else {
+                const lastBraceIndex = cleanedRecommendations.lastIndexOf('}');
+                if (lastBraceIndex !== -1) {
+                    parsed = JSON.parse(cleanedRecommendations.substring(0, lastBraceIndex + 1));
+                }
+            }
+
+            if (parsed && parsed.waypoints && Array.isArray(parsed.waypoints)) {
+                parsed.waypoints.forEach(waypoint => {
+                    if (waypoint.name) {
+                        const cityName = this.extractCityName(waypoint.name);
+                        waypoints.push({
+                            name: cityName,
+                            fullName: waypoint.name,
+                            agent: agentResult.agent,
+                            description: waypoint.description || `${this.capitalizeFirst(agentResult.agent)} destination`,
+                            coordinates: waypoint.coordinates || null,
+                            lng: waypoint.coordinates ? waypoint.coordinates[0] : (5.4474 + (Math.random() - 0.5) * 8),
+                            lat: waypoint.coordinates ? waypoint.coordinates[1] : (43.5297 + (Math.random() - 0.5) * 4),
+                            activities: waypoint.activities || [],
+                            duration: waypoint.duration || '2-3 hours'
+                        });
+                    }
+                });
+            }
+        } catch (error) {
+            console.log('Could not parse waypoints for mini map:', agentResult.agent, error);
+
+            // Fallback: create sample waypoints
+            for (let i = 0; i < 3; i++) {
+                waypoints.push({
+                    name: `${this.capitalizeFirst(agentResult.agent)} Stop ${i + 1}`,
+                    agent: agentResult.agent,
+                    description: `${this.capitalizeFirst(agentResult.agent)} destination`,
+                    lng: 5.4474 + (Math.random() - 0.5) * 8,
+                    lat: 43.5297 + (Math.random() - 0.5) * 4
+                });
+            }
+        }
+
+        return waypoints;
     }
 
     scrollToAgent(agentType) {

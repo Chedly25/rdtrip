@@ -241,7 +241,7 @@ Return ONLY valid JSON (no extra text before or after):
   "waypoints": [
     {
       "name": "CITY_NAME",
-      "coordinates": [latitude, longitude],
+      "coordinates": [longitude, latitude],
       "description": "Why this city is great for ${agent.name.toLowerCase()}",
       "activities": ["activity 1", "activity 2", "activity 3"],
       "duration": "1-2 days"
