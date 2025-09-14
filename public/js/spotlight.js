@@ -190,22 +190,30 @@ class SpotlightController {
             if (jsonData && jsonData.waypoints) {
                 jsonData.waypoints.forEach(waypoint => {
                     if (waypoint.coordinates && waypoint.coordinates.length === 2) {
-                        // Handle coordinate formats - assume [longitude, latitude] (GeoJSON standard)
-                        let lng = waypoint.coordinates[0];
-                        let lat = waypoint.coordinates[1];
+                        let lng, lat;
 
-                        // Validate and potentially swap if they seem reversed
-                        if (lng >= -90 && lng <= 90 && lat >= -180 && lat <= 180) {
-                            // Coordinates appear to be [lat, lng] - swap them
-                            console.warn('Swapping coordinates from [lat, lng] to [lng, lat]:', waypoint.coordinates);
-                            const temp = lng;
-                            lng = lat;
-                            lat = temp;
+                        // Check if coordinates are in [lat, lng] or [lng, lat] format
+                        const first = waypoint.coordinates[0];
+                        const second = waypoint.coordinates[1];
+
+                        // If first value is in latitude range (-90 to 90) and second is in longitude range (-180 to 180)
+                        // then it's probably [lat, lng] format
+                        if (first >= -90 && first <= 90 && second >= -180 && second <= 180 &&
+                            Math.abs(first) > Math.abs(second)) {
+                            // This appears to be [lat, lng] format - swap to [lng, lat]
+                            lng = second;
+                            lat = first;
+                            console.log(`Detected [lat, lng] format for ${waypoint.name}: [${first}, ${second}] -> lng=${lng}, lat=${lat}`);
+                        } else {
+                            // Assume [lng, lat] format (GeoJSON standard)
+                            lng = first;
+                            lat = second;
+                            console.log(`Using [lng, lat] format for ${waypoint.name}: lng=${lng}, lat=${lat}`);
                         }
 
                         // Final validation
                         if (lng >= -180 && lng <= 180 && lat >= -90 && lat <= 90) {
-                            console.log(`Parsed waypoint ${waypoint.name}: lng=${lng}, lat=${lat}`);
+                            console.log(`✅ Valid coordinates for ${waypoint.name}: lng=${lng}, lat=${lat}`);
 
                             waypoints.push({
                                 name: waypoint.name,
@@ -459,13 +467,15 @@ class SpotlightController {
                 return false;
             }
 
-            // Extended European bounds check
-            const isInEurope = lng >= -15 && lng <= 35 && lat >= 30 && lat <= 75;
+            // Very generous European bounds check (includes all of Europe plus buffer)
+            const isInEurope = lng >= -25 && lng <= 45 && lat >= 25 && lat <= 80;
 
             if (!isInEurope) {
-                console.warn('Coordinate outside Europe:', { lng, lat, original: coord });
+                console.warn('Coordinate outside expanded Europe bounds:', { lng, lat, original: coord });
                 return false;
             }
+
+            console.log(`✅ Coordinate validated:`, { lng, lat });
 
             return true;
         });
