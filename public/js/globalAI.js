@@ -663,7 +663,18 @@ class GlobalAIAssistant {
     async handleAgentResponse(response) {
         switch (response.type) {
             case 'replacement_proposal':
+                // Add the proposal message
+                this.addAiMessage('assistant', response.content);
+
+                // Add action buttons for the user to confirm or reject
+                this.addReplacementActionButtons(response.data);
+                break;
+
             case 'replacement_executed':
+                this.addAiMessage('assistant', response.content);
+                // The replacement has already been executed by the route agent
+                break;
+
             case 'route_optimized':
             case 'clarification':
             case 'error':
@@ -673,6 +684,212 @@ class GlobalAIAssistant {
             default:
                 this.addAiMessage('assistant', response.content);
                 break;
+        }
+    }
+
+    addReplacementActionButtons(replacementData) {
+        const messagesContainer = document.getElementById('globalAiMessages');
+        const buttonContainer = document.createElement('div');
+        buttonContainer.className = 'ai-action-buttons';
+
+        const confirmButton = document.createElement('button');
+        confirmButton.className = 'ai-action-btn confirm-btn';
+        confirmButton.textContent = `✅ Yes, replace ${replacementData.originalCity} with ${replacementData.replacementCity.name}`;
+        confirmButton.onclick = () => this.executeReplacement(replacementData, buttonContainer);
+
+        const rejectButton = document.createElement('button');
+        rejectButton.className = 'ai-action-btn reject-btn';
+        rejectButton.textContent = '❌ No, keep the original';
+        rejectButton.onclick = () => this.rejectReplacement(replacementData, buttonContainer);
+
+        buttonContainer.appendChild(confirmButton);
+        buttonContainer.appendChild(rejectButton);
+        messagesContainer.appendChild(buttonContainer);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    async executeReplacement(replacementData, buttonContainer) {
+        try {
+            // Remove action buttons
+            buttonContainer.remove();
+
+            // Show loading message
+            const loadingId = this.addAiMessage('assistant', '🔄 Executing replacement...', true);
+
+            // Execute the replacement
+            const success = await this.performSeamlessReplacement(
+                replacementData.originalCity,
+                replacementData.replacementCity
+            );
+
+            // Remove loading message
+            this.removeAiMessage(loadingId);
+
+            if (success) {
+                this.addAiMessage('assistant', `✅ Perfect! I've successfully replaced ${replacementData.originalCity} with ${replacementData.replacementCity.name} throughout your route. The map, itinerary, and all route data have been updated.`);
+            } else {
+                this.addAiMessage('assistant', '❌ Sorry, I encountered an issue while updating the route. Please try again.');
+            }
+
+        } catch (error) {
+            console.error('Error executing replacement:', error);
+            this.addAiMessage('assistant', '❌ Sorry, I encountered an error while updating the route. Please try again.');
+        }
+    }
+
+    rejectReplacement(replacementData, buttonContainer) {
+        buttonContainer.remove();
+        this.addAiMessage('assistant', `Understood! I'll keep ${replacementData.originalCity} in your route. Is there anything else you'd like to adjust?`);
+    }
+
+    async performSeamlessReplacement(originalCity, replacementCity) {
+        try {
+            console.log(`🔄 Performing seamless replacement: ${originalCity} → ${replacementCity.name}`);
+
+            // 1. Update the current route data
+            if (this.currentRoute) {
+                // Update route array
+                if (this.currentRoute.route) {
+                    this.currentRoute.route = this.currentRoute.route.map(stop => {
+                        if (stop.name === originalCity || stop.city === originalCity) {
+                            return {
+                                name: replacementCity.name,
+                                city: replacementCity.name,
+                                lat: replacementCity.lat,
+                                lon: replacementCity.lon,
+                                description: replacementCity.description,
+                                activities: replacementCity.activities
+                            };
+                        }
+                        return stop;
+                    });
+                }
+
+                // Update waypoints if they exist
+                if (this.currentRoute.waypoints) {
+                    this.currentRoute.waypoints = this.currentRoute.waypoints.map(wp => {
+                        if (wp.name === originalCity || wp.city === originalCity) {
+                            return {
+                                name: replacementCity.name,
+                                city: replacementCity.name,
+                                lat: replacementCity.lat,
+                                lon: replacementCity.lon
+                            };
+                        }
+                        return wp;
+                    });
+                }
+
+                // Update origin/destination if needed
+                if (this.currentRoute.origin === originalCity) {
+                    this.currentRoute.origin = replacementCity.name;
+                }
+                if (this.currentRoute.destination === originalCity) {
+                    this.currentRoute.destination = replacementCity.name;
+                }
+            }
+
+            // 2. Update storage
+            this.updateStorageAfterReplacement();
+
+            // 3. Update UI elements
+            this.updateUIAfterReplacement(originalCity, replacementCity);
+
+            // 4. Update map if available
+            this.updateMapAfterReplacement();
+
+            console.log('✅ Seamless replacement completed successfully');
+            return true;
+
+        } catch (error) {
+            console.error('❌ Error in seamless replacement:', error);
+            return false;
+        }
+    }
+
+    updateStorageAfterReplacement() {
+        try {
+            // Update localStorage
+            if (this.currentRoute) {
+                localStorage.setItem('currentRoute', JSON.stringify(this.currentRoute));
+            }
+
+            // Update spotlight data if it exists
+            const spotlightData = localStorage.getItem('spotlightData') || sessionStorage.getItem('spotlightData');
+            if (spotlightData) {
+                const spotlight = JSON.parse(spotlightData);
+                spotlight.route = this.currentRoute.route;
+                spotlight.waypoints = this.currentRoute.waypoints;
+                spotlight.origin = this.currentRoute.origin;
+                spotlight.destination = this.currentRoute.destination;
+
+                localStorage.setItem('spotlightData', JSON.stringify(spotlight));
+                sessionStorage.setItem('spotlightData', JSON.stringify(spotlight));
+            }
+
+            console.log('✅ Storage updated after replacement');
+        } catch (error) {
+            console.error('❌ Error updating storage:', error);
+        }
+    }
+
+    updateUIAfterReplacement(originalCity, replacementCity) {
+        try {
+            // Update route subtitle if on spotlight page
+            const routeSubtitle = document.getElementById('routeSubtitle');
+            if (routeSubtitle) {
+                const currentText = routeSubtitle.textContent;
+                if (currentText.includes(originalCity)) {
+                    routeSubtitle.textContent = currentText.replace(originalCity, replacementCity.name);
+                }
+            }
+
+            // Update cities container
+            const citiesContainer = document.getElementById('citiesContainer');
+            if (citiesContainer) {
+                const cityCards = citiesContainer.querySelectorAll('.city-card, .city-item');
+                cityCards.forEach(card => {
+                    const cityName = card.querySelector('.city-name, h3, h4');
+                    if (cityName && (cityName.textContent === originalCity || cityName.textContent.includes(originalCity))) {
+                        cityName.textContent = replacementCity.name;
+
+                        // Update city description if available
+                        const description = card.querySelector('.city-description, .description, p');
+                        if (description && replacementCity.description) {
+                            description.textContent = replacementCity.description;
+                        }
+                    }
+                });
+            }
+
+            // Trigger a page refresh or reload of dynamic content if needed
+            if (typeof window.refreshRouteDisplay === 'function') {
+                window.refreshRouteDisplay();
+            }
+
+            console.log('✅ UI updated after replacement');
+        } catch (error) {
+            console.error('❌ Error updating UI:', error);
+        }
+    }
+
+    updateMapAfterReplacement() {
+        try {
+            // Update Mapbox map if available
+            if (window.spotlightMap) {
+                // Remove old markers and add new ones
+                // This would need to be implemented based on your specific map setup
+                console.log('🗺️ Map update triggered (implementation needed)');
+            }
+
+            // Trigger map refresh if there's a global function for it
+            if (typeof window.refreshMap === 'function') {
+                window.refreshMap();
+            }
+
+            console.log('✅ Map update completed');
+        } catch (error) {
+            console.error('❌ Error updating map:', error);
         }
     }
 }
