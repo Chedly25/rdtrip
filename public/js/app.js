@@ -429,13 +429,27 @@ class RoadTripPlanner {
                 jsonText = jsonText
                     .replace(/```json\s*/g, '')
                     .replace(/```\s*$/g, '')
+                    .replace(/```\s*/g, '')  // Remove any remaining markdown
                     .trim();
 
+                // More robust JSON extraction
                 if (!jsonText.startsWith('{')) {
-                    const waypointsMatch = jsonText.match(/"waypoints"\s*:\s*\[[\s\S]*?\]/);
-                    if (waypointsMatch) {
-                        jsonText = `{${waypointsMatch[0]}}`;
+                    // Try to find JSON object in the text
+                    const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
+                    if (jsonMatch) {
+                        jsonText = jsonMatch[0];
+                    } else {
+                        const waypointsMatch = jsonText.match(/"waypoints"\s*:\s*\[[\s\S]*?\]/);
+                        if (waypointsMatch) {
+                            jsonText = `{${waypointsMatch[0]}}`;
+                        }
                     }
+                }
+
+                // Clean up any trailing non-JSON text
+                const lastBraceIndex = jsonText.lastIndexOf('}');
+                if (lastBraceIndex !== -1) {
+                    jsonText = jsonText.substring(0, lastBraceIndex + 1);
                 }
 
                 const parsed = JSON.parse(jsonText);
@@ -469,12 +483,28 @@ class RoadTripPlanner {
                 }
             } catch (e) {
                 console.warn('Could not parse agent recommendations for', agentResult.agent, ':', e);
+                console.log('Raw response:', agentResult.recommendations.substring(0, 500) + '...');
 
                 // Fallback: try to extract location names
                 try {
-                    const nameMatches = agentResult.recommendations.match(/"name"\s*:\s*"([^"]+)"/g);
-                    if (nameMatches && nameMatches.length > 0) {
-                        const names = nameMatches.map(match => match.match(/"name"\s*:\s*"([^"]+)"/)[1]);
+                    // Try multiple patterns to extract location information
+                    const patterns = [
+                        /"name"\s*:\s*"([^"]+)"/g,
+                        /\*\*([^*]+)\*\*/g,
+                        /\d+\.\s*([^\n]+)/g,
+                        /^-\s*([^\n]+)/gm
+                    ];
+
+                    let names = [];
+                    for (const pattern of patterns) {
+                        const matches = [...agentResult.recommendations.matchAll(pattern)];
+                        if (matches.length > 0) {
+                            names = matches.map(match => match[1].trim()).filter(name => name.length > 3);
+                            if (names.length >= 2) break;
+                        }
+                    }
+
+                    if (names.length > 0) {
                         waypointCount = names.length;
 
                         // Group by city
@@ -491,10 +521,14 @@ class RoadTripPlanner {
                             city: city,
                             activities: activities
                         }));
+                    } else {
+                        waypointCount = 3;
+                        cities = [{ city: `${this.capitalizeFirst(agentResult.agent)} destinations`, activities: [{ name: `Curated ${agentResult.agent} experiences` }] }];
                     }
                 } catch (fallbackError) {
+                    console.warn('Fallback parsing also failed for', agentResult.agent, ':', fallbackError);
                     waypointCount = 3;
-                    cities = [{ city: 'Various locations', activities: [] }];
+                    cities = [{ city: `${this.capitalizeFirst(agentResult.agent)} destinations`, activities: [{ name: `Curated ${agentResult.agent} experiences` }] }];
                 }
             }
 
@@ -856,6 +890,7 @@ class RoadTripPlanner {
                 } catch (jsonError) {
                     // If JSON parsing fails, extract waypoints from text
                     console.log('JSON parsing failed, extracting from text for agent:', agentResult.agent);
+                    console.log('Failed JSON:', cleanedRecommendations.substring(0, 200) + '...');
 
                     // Extract location names from the text
                     const locationMatches = cleanedRecommendations.match(/"name":\s*"([^"]+)"/g) ||
@@ -1414,6 +1449,9 @@ class RoadTripPlanner {
         routeData.agentResults.forEach(agentResult => {
             const mapContainer = document.getElementById(`map-${agentResult.agent}`);
             if (!mapContainer) return;
+
+            // Clear any existing map content
+            mapContainer.innerHTML = '';
 
             const miniMap = new mapboxgl.Map({
                 container: `map-${agentResult.agent}`,

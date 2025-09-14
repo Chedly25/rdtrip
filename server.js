@@ -236,15 +236,20 @@ CRITICAL RULES:
 3. Examples of CORRECT names: "Grenoble", "Annecy", "Lyon"
 4. Examples of WRONG names: "Pont du Gard", "Mont Blanc", "Louvre Museum"
 
-Return JSON with:
-- waypoints: array of ${stops} CITIES with:
-  - name: CITY NAME ONLY
-  - coordinates: [latitude, longitude]
-  - description: Why this city is great for ${agent.name} (1 sentence)
-  - activities: 2-3 specific things to do IN this city
-  - duration: time to spend
+Return ONLY valid JSON (no extra text before or after):
+{
+  "waypoints": [
+    {
+      "name": "CITY_NAME",
+      "coordinates": [latitude, longitude],
+      "description": "Why this city is great for ${agent.name.toLowerCase()}",
+      "activities": ["activity 1", "activity 2", "activity 3"],
+      "duration": "1-2 days"
+    }
+  ]
+}
 
-Ensure variety - pick different cities than typical tourist routes.`;
+IMPORTANT: Return ONLY the JSON object, no markdown formatting, no extra text.`;
 
     const response = await axios.post('https://api.perplexity.ai/chat/completions', {
       model: 'sonar',
