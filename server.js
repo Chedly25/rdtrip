@@ -16,15 +16,18 @@ const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY;
 const agents = {
   adventure: {
     name: "Adventure Agent",
-    prompt: "You are an adventure travel expert. Create a UNIQUE route focusing ONLY on outdoor activities, hiking trails, national parks, mountains, coastal areas, and thrilling experiences. AVOID cities that other agents might choose - prefer nature-based destinations, smaller adventure towns, and outdoor activity centers."
+    color: "#34C759",
+    prompt: "You are an adventure travel expert. Create a route with CITIES (not specific attractions) that are gateways to outdoor activities, hiking, mountains, and nature. Each waypoint must be a CITY NAME like 'Chamonix' or 'Interlaken', not 'Mont Blanc' or 'Jungfrau'. List activities as things to do IN that city."
   },
   culture: {
-    name: "Culture Agent", 
-    prompt: "You are a cultural travel expert. Create a UNIQUE route focusing ONLY on museums, UNESCO heritage sites, historical monuments, ancient ruins, and cultural landmarks. Choose DIFFERENT cities from other agents - prefer places rich in history, art, and cultural significance that adventure/food agents wouldn't typically recommend."
+    name: "Culture Agent",
+    color: "#FFD60A",
+    prompt: "You are a cultural travel expert. Create a route with CITIES (not specific monuments) rich in history, art, and culture. Each waypoint must be a CITY NAME like 'Florence' or 'Avignon', not 'Uffizi Gallery' or 'Papal Palace'. List cultural sites as things to see IN that city."
   },
   food: {
     name: "Food Agent",
-    prompt: "You are a culinary travel expert. Create a UNIQUE route focusing ONLY on food markets, wine regions, local restaurants, culinary traditions, and gastronomic experiences. Select DIFFERENT destinations from other agents - prefer food capitals, wine regions, and places known for specific culinary specialties."
+    color: "#FF3B30",
+    prompt: "You are a culinary travel expert. Create a route with CITIES (not specific restaurants) known for their food scene. Each waypoint must be a CITY NAME like 'Lyon' or 'San Sebastian', not specific restaurants or markets. List culinary experiences as things to try IN that city."
   }
 };
 
@@ -223,20 +226,25 @@ async function queryPerplexity(agent, destination, stops, budget = 'budget') {
     
     const prompt = `${agent.prompt}
 
-Create a UNIQUE road trip route from Aix-en-Provence, France to ${destination} with ${stops} interesting stops along the way.
+Create a road trip from Aix-en-Provence to ${destination} with ${stops} CITY stops.
 
-BUDGET CONSIDERATION: Focus on ${budgetContext}. All recommendations should match this budget level.
+BUDGET: ${budgetContext}
 
-IMPORTANT: Create a route that is completely DIFFERENT from what adventure/culture/food agents would recommend. Focus exclusively on your specialty and avoid popular tourist cities that other agents might choose.
+CRITICAL RULES:
+1. Each waypoint MUST be a CITY or TOWN name only
+2. Do NOT use attraction names as waypoints
+3. Examples of CORRECT names: "Grenoble", "Annecy", "Lyon"
+4. Examples of WRONG names: "Pont du Gard", "Mont Blanc", "Louvre Museum"
 
-Provide a JSON response with:
-- waypoints: array of ${stops} recommended stops with name, exact coordinates [latitude, longitude], brief description focused on your specialty
-- activities: 2-3 activities for each waypoint related to your expertise  
-- duration: estimated time at each stop
+Return JSON with:
+- waypoints: array of ${stops} CITIES with:
+  - name: CITY NAME ONLY
+  - coordinates: [latitude, longitude]
+  - description: Why this city is great for ${agent.name} (1 sentence)
+  - activities: 2-3 specific things to do IN this city
+  - duration: time to spend
 
-Focus on providing detailed, accurate information about locations and activities rather than image URLs.
-
-Make this route unique to your travel style and avoid mainstream destinations.`;
+Ensure variety - pick different cities than typical tourist routes.`;
 
     const response = await axios.post('https://api.perplexity.ai/chat/completions', {
       model: 'sonar',

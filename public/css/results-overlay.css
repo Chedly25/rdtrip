@@ -1,0 +1,437 @@
+/* Results Overlay Styles */
+.results-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.95);
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.results-overlay-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 30px;
+    color: white;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.results-overlay-header h1 {
+    font-size: 36px;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+.results-overlay-header p {
+    font-size: 18px;
+    opacity: 0.95;
+}
+
+.close-results {
+    position: absolute;
+    top: 30px;
+    right: 30px;
+    background: rgba(255, 255, 255, 0.2);
+    border: 2px solid white;
+    color: white;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    font-size: 24px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.close-results:hover {
+    background: white;
+    color: #667eea;
+    transform: rotate(90deg);
+}
+
+/* Horizontal Agent Overview */
+.agents-overview {
+    background: white;
+    padding: 30px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.agents-overview h2 {
+    font-size: 24px;
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.agents-row {
+    display: flex;
+    gap: 20px;
+    justify-content: space-between;
+}
+
+.agent-quick-card {
+    flex: 1;
+    padding: 20px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+    position: relative;
+    overflow: hidden;
+}
+
+.agent-quick-card:before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+}
+
+.agent-quick-card.adventure {
+    background: linear-gradient(to bottom, rgba(52, 199, 89, 0.1), white);
+    border-color: #34C759;
+}
+
+.agent-quick-card.adventure:before {
+    background: #34C759;
+}
+
+.agent-quick-card.culture {
+    background: linear-gradient(to bottom, rgba(255, 214, 10, 0.1), white);
+    border-color: #FFD60A;
+}
+
+.agent-quick-card.culture:before {
+    background: #FFD60A;
+}
+
+.agent-quick-card.food {
+    background: linear-gradient(to bottom, rgba(255, 59, 48, 0.1), white);
+    border-color: #FF3B30;
+}
+
+.agent-quick-card.food:before {
+    background: #FF3B30;
+}
+
+.agent-quick-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+}
+
+.agent-quick-card h3 {
+    font-size: 20px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.agent-quick-card .emoji {
+    font-size: 28px;
+}
+
+.agent-quick-card .cities-count {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 10px;
+}
+
+.agent-quick-card .cities-preview {
+    font-size: 14px;
+    color: #333;
+    font-weight: 500;
+}
+
+/* Detailed Agent Cards */
+.agents-detailed {
+    padding: 30px;
+    background: #f5f5f5;
+}
+
+.agent-detailed-card {
+    background: white;
+    border-radius: 16px;
+    margin-bottom: 30px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.agent-detailed-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+}
+
+.agent-detailed-card.adventure .agent-card-header {
+    background: linear-gradient(135deg, #34C759, #30A14E);
+}
+
+.agent-detailed-card.culture .agent-card-header {
+    background: linear-gradient(135deg, #FFD60A, #FFA500);
+}
+
+.agent-detailed-card.food .agent-card-header {
+    background: linear-gradient(135deg, #FF3B30, #DC143C);
+}
+
+.agent-card-header {
+    padding: 25px 30px;
+    color: white;
+}
+
+.agent-card-header h3 {
+    font-size: 28px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 10px;
+}
+
+.agent-card-header .emoji {
+    font-size: 36px;
+}
+
+.agent-card-header p {
+    font-size: 16px;
+    opacity: 0.95;
+}
+
+.agent-card-body {
+    display: flex;
+    height: 400px;
+}
+
+.agent-card-content {
+    flex: 1;
+    padding: 30px;
+    overflow-y: auto;
+}
+
+.agent-card-map {
+    width: 500px;
+    background: #e0e0e0;
+    position: relative;
+}
+
+.city-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.city-item {
+    border-left: 4px solid;
+    padding-left: 20px;
+    position: relative;
+}
+
+.agent-detailed-card.adventure .city-item {
+    border-color: #34C759;
+}
+
+.agent-detailed-card.culture .city-item {
+    border-color: #FFD60A;
+}
+
+.agent-detailed-card.food .city-item {
+    border-color: #FF3B30;
+}
+
+.city-item:before {
+    content: '';
+    position: absolute;
+    left: -8px;
+    top: 10px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: white;
+    border: 3px solid;
+}
+
+.agent-detailed-card.adventure .city-item:before {
+    border-color: #34C759;
+}
+
+.agent-detailed-card.culture .city-item:before {
+    border-color: #FFD60A;
+}
+
+.agent-detailed-card.food .city-item:before {
+    border-color: #FF3B30;
+}
+
+.city-name {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #333;
+}
+
+.city-description {
+    font-size: 15px;
+    color: #666;
+    margin-bottom: 10px;
+    line-height: 1.5;
+}
+
+.city-activities {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.city-activities li {
+    font-size: 14px;
+    color: #444;
+    padding: 5px 0;
+    padding-left: 20px;
+    position: relative;
+}
+
+.city-activities li:before {
+    content: '→';
+    position: absolute;
+    left: 0;
+    font-weight: bold;
+}
+
+.agent-detailed-card.adventure .city-activities li:before {
+    color: #34C759;
+}
+
+.agent-detailed-card.culture .city-activities li:before {
+    color: #FFD60A;
+}
+
+.agent-detailed-card.food .city-activities li:before {
+    color: #FF3B30;
+}
+
+.view-full-route {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    padding: 12px 24px;
+    background: white;
+    border: 2px solid;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.agent-detailed-card.adventure .view-full-route {
+    border-color: #34C759;
+    color: #34C759;
+}
+
+.agent-detailed-card.culture .view-full-route {
+    border-color: #FFD60A;
+    color: #FFD60A;
+}
+
+.agent-detailed-card.food .view-full-route {
+    border-color: #FF3B30;
+    color: #FF3B30;
+}
+
+.view-full-route:hover {
+    background: currentColor;
+    color: white;
+    transform: translateY(-2px);
+}
+
+/* Route Actions Bar */
+.route-actions-bar {
+    position: sticky;
+    bottom: 0;
+    background: white;
+    border-top: 2px solid #e0e0e0;
+    padding: 20px 30px;
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.route-action-btn {
+    padding: 15px 30px;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: none;
+}
+
+.route-action-btn.primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.route-action-btn.secondary {
+    background: white;
+    color: #333;
+    border: 2px solid #e0e0e0;
+}
+
+.route-action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+    .agent-card-body {
+        flex-direction: column;
+        height: auto;
+    }
+
+    .agent-card-map {
+        width: 100%;
+        height: 300px;
+    }
+}
+
+@media (max-width: 768px) {
+    .agents-row {
+        flex-direction: column;
+    }
+
+    .results-overlay-header h1 {
+        font-size: 28px;
+    }
+
+    .agent-card-header h3 {
+        font-size: 24px;
+    }
+
+    .route-actions-bar {
+        flex-direction: column;
+    }
+
+    .route-action-btn {
+        width: 100%;
+    }
+}

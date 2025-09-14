@@ -6,7 +6,7 @@ class SpotlightController {
         this.imageCache = new Map(); // Cache for Wikipedia images
         this.agentColors = {
             adventure: '#34C759',
-            culture: '#FF9500',
+            culture: '#FFD60A',
             food: '#FF3B30'
         };
 
@@ -40,14 +40,14 @@ class SpotlightController {
 
     setupHeader() {
         const { agent, destination, origin } = this.spotlightData;
-        
+
         // Set agent icon and title
         const agentEmojis = {
             adventure: '🏔️',
             culture: '🏛️',
             food: '🍽️'
         };
-        
+
         const agentNames = {
             adventure: 'Adventure Route',
             culture: 'Culture Route',
@@ -57,13 +57,35 @@ class SpotlightController {
         document.getElementById('routeAgentIcon').textContent = agentEmojis[agent];
         document.getElementById('routeTitle').textContent = agentNames[agent];
         document.getElementById('routeSubtitle').textContent = `${origin} → ${destination}`;
-        
+
+        // Apply color theme to the page
+        this.applyColorTheme(agent);
+
         // Set stats
         document.getElementById('totalStops').textContent = this.spotlightData.totalStops;
-        
+
         // Calculate estimated days (assuming 1-2 days per stop + travel days)
         const estimatedDays = Math.max(3, this.spotlightData.totalStops * 1.5);
         document.getElementById('estimatedDays').textContent = Math.ceil(estimatedDays);
+    }
+
+    applyColorTheme(agent) {
+        const color = this.agentColors[agent];
+        const root = document.documentElement;
+
+        // Set CSS variables for the theme
+        root.style.setProperty('--agent-primary-color', color);
+        root.style.setProperty('--agent-primary-rgb', this.hexToRgb(color));
+
+        // Add theme class to body
+        document.body.className = `theme-${agent}`;
+    }
+
+    hexToRgb(hex) {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ?
+            `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` :
+            '0, 0, 0';
     }
 
     initMap() {

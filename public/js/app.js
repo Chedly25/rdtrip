@@ -204,6 +204,9 @@ class RoadTripPlanner {
 
     async displayRoute(routeData, destinationCoords) {
         this.currentRoute = routeData;
+
+        // Show prominent results overlay
+        this.showResultsOverlay(routeData, destinationCoords);
         
         // Clear existing markers except origin
         const existingMarkers = document.querySelectorAll('.mapboxgl-marker');
@@ -1021,7 +1024,7 @@ class RoadTripPlanner {
     getAgentColor(agent) {
         const colors = {
             adventure: '#34C759',
-            culture: '#FF9500',
+            culture: '#FFD60A',
             food: '#FF3B30'
         };
         return colors[agent] || '#007AFF';
@@ -1264,6 +1267,217 @@ class RoadTripPlanner {
     showError(message) {
         // Simple error display - could be enhanced with a proper notification system
         alert(message);
+    }
+
+    showResultsOverlay(routeData, destinationCoords) {
+        // Create overlay HTML
+        const overlayHTML = `
+            <div class="results-overlay" id="resultsOverlay">
+                <div class="results-overlay-header">
+                    <h1>🚗 Your Road Trip Routes</h1>
+                    <p>From Aix-en-Provence to ${routeData.destination}</p>
+                    <button class="close-results" onclick="planner.closeResultsOverlay()">×</button>
+                </div>
+
+                <!-- Horizontal Overview -->
+                <div class="agents-overview">
+                    <h2>Choose Your Adventure Style</h2>
+                    <div class="agents-row">
+                        ${this.createQuickCards(routeData)}
+                    </div>
+                </div>
+
+                <!-- Detailed Cards -->
+                <div class="agents-detailed">
+                    ${this.createDetailedCards(routeData)}
+                </div>
+
+                <!-- Actions Bar -->
+                <div class="route-actions-bar">
+                    <button class="route-action-btn primary" onclick="planner.closeResultsOverlay()">Continue Planning</button>
+                    <button class="route-action-btn secondary" onclick="planner.downloadPDF()">📄 Download All Routes</button>
+                    <button class="route-action-btn secondary" onclick="planner.openChatModal()">💬 Ask AI Assistant</button>
+                </div>
+            </div>
+        `;
+
+        // Add overlay to body
+        const overlayDiv = document.createElement('div');
+        overlayDiv.innerHTML = overlayHTML;
+        document.body.appendChild(overlayDiv.firstElementChild);
+
+        // Initialize mini maps for each card
+        setTimeout(() => {
+            this.initializeResultMaps(routeData, destinationCoords);
+        }, 100);
+    }
+
+    createQuickCards(routeData) {
+        return routeData.agentResults.map(agentResult => {
+            const cities = this.extractCitiesFromAgent(agentResult);
+            const cityNames = cities.slice(0, 3).map(c => c.city).join(' → ');
+
+            return `
+                <div class="agent-quick-card ${agentResult.agent}" onclick="planner.scrollToAgent('${agentResult.agent}')">
+                    <h3><span class="emoji">${this.getAgentEmoji(agentResult.agent)}</span> ${this.capitalizeFirst(agentResult.agent)}</h3>
+                    <div class="cities-count">${cities.length} cities</div>
+                    <div class="cities-preview">${cityNames}</div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    createDetailedCards(routeData) {
+        return routeData.agentResults.map(agentResult => {
+            const cities = this.extractCitiesFromAgent(agentResult);
+            const agentEmoji = this.getAgentEmoji(agentResult.agent);
+
+            return `
+                <div class="agent-detailed-card ${agentResult.agent}" id="agent-${agentResult.agent}" onclick="planner.viewAgentDetails('${agentResult.agent}')">
+                    <div class="agent-card-header">
+                        <h3><span class="emoji">${agentEmoji}</span> ${this.capitalizeFirst(agentResult.agent)} Route</h3>
+                        <p>Discover ${cities.length} amazing cities perfect for ${agentResult.agent} enthusiasts</p>
+                    </div>
+                    <div class="agent-card-body">
+                        <div class="agent-card-content">
+                            <div class="city-list">
+                                ${this.createCityList(cities, agentResult.agent)}
+                            </div>
+                        </div>
+                        <div class="agent-card-map" id="map-${agentResult.agent}">
+                            <!-- Map will be initialized here -->
+                        </div>
+                    </div>
+                    <button class="view-full-route">View Full ${this.capitalizeFirst(agentResult.agent)} Route →</button>
+                </div>
+            `;
+        }).join('');
+    }
+
+    createCityList(cities, agentType) {
+        return cities.map(cityData => `
+            <div class="city-item">
+                <div class="city-name">📍 ${cityData.city}</div>
+                <div class="city-description">${cityData.description || `Perfect for ${agentType} experiences`}</div>
+                <ul class="city-activities">
+                    ${cityData.activities.slice(0, 3).map(activity =>
+                        `<li>${activity.name || activity}</li>`
+                    ).join('')}
+                </ul>
+            </div>
+        `).join('');
+    }
+
+    extractCitiesFromAgent(agentResult) {
+        const cities = [];
+
+        try {
+            let jsonText = agentResult.recommendations
+                .replace(/```json\s*/g, '')
+                .replace(/```\s*$/g, '')
+                .trim();
+
+            if (!jsonText.startsWith('{')) {
+                const waypointsMatch = jsonText.match(/"waypoints"\s*:\s*\[[\s\S]*?\]/);
+                if (waypointsMatch) {
+                    jsonText = `{${waypointsMatch[0]}}`;
+                }
+            }
+
+            const parsed = JSON.parse(jsonText);
+
+            if (parsed.waypoints && Array.isArray(parsed.waypoints)) {
+                parsed.waypoints.forEach(wp => {
+                    const cityName = this.extractCityName(wp.name);
+                    cities.push({
+                        city: cityName,
+                        description: wp.description || '',
+                        activities: wp.activities || [],
+                        coordinates: wp.coordinates || null
+                    });
+                });
+            }
+        } catch (e) {
+            // Fallback
+            cities.push({
+                city: 'Various destinations',
+                description: `Curated ${agentResult.agent} experiences`,
+                activities: [],
+                coordinates: null
+            });
+        }
+
+        return cities;
+    }
+
+    initializeResultMaps(routeData, destinationCoords) {
+        routeData.agentResults.forEach(agentResult => {
+            const mapContainer = document.getElementById(`map-${agentResult.agent}`);
+            if (!mapContainer) return;
+
+            const miniMap = new mapboxgl.Map({
+                container: `map-${agentResult.agent}`,
+                style: 'mapbox://styles/mapbox/light-v11',
+                center: [2.3522, 48.8566], // Center of France
+                zoom: 5,
+                interactive: false,
+                attributionControl: false
+            });
+
+            // Add markers for cities
+            const cities = this.extractCitiesFromAgent(agentResult);
+            const color = this.getAgentColor(agentResult.agent);
+
+            // Add origin marker
+            new mapboxgl.Marker({ color: '#007AFF' })
+                .setLngLat([5.4474, 43.5297])
+                .addTo(miniMap);
+
+            // Add city markers
+            cities.forEach((city, index) => {
+                if (city.coordinates) {
+                    new mapboxgl.Marker({ color: color })
+                        .setLngLat(city.coordinates)
+                        .addTo(miniMap);
+                } else {
+                    // Use estimated coordinates
+                    const lng = 5.4474 + (Math.random() - 0.5) * 8;
+                    const lat = 43.5297 + (Math.random() - 0.5) * 4;
+                    new mapboxgl.Marker({ color: color })
+                        .setLngLat([lng, lat])
+                        .addTo(miniMap);
+                }
+            });
+
+            // Add destination marker
+            if (destinationCoords) {
+                new mapboxgl.Marker({ color: '#8E44AD' })
+                    .setLngLat([destinationCoords.lng, destinationCoords.lat])
+                    .addTo(miniMap);
+            }
+        });
+    }
+
+    scrollToAgent(agentType) {
+        const element = document.getElementById(`agent-${agentType}`);
+        if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }
+
+    closeResultsOverlay() {
+        const overlay = document.getElementById('resultsOverlay');
+        if (overlay) {
+            overlay.style.animation = 'fadeOut 0.3s ease';
+            setTimeout(() => {
+                overlay.remove();
+            }, 300);
+        }
+    }
+
+    @keyframes fadeOut {
+        from { opacity: 1; }
+        to { opacity: 0; }
     }
 
     exportToGoogleMaps() {
