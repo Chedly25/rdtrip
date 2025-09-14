@@ -97,32 +97,15 @@ class RoadTripPlanner {
             this.exportToWaze();
         });
 
-        // Chat modal controls (legacy)
+        // Legacy chat integration with global AI
         const openChatBtn = document.getElementById('openChat');
         if (openChatBtn) {
             openChatBtn.addEventListener('click', () => {
-                this.openAiAssistant();
+                if (window.globalAI) {
+                    window.globalAI.openAiAssistant();
+                }
             });
         }
-
-        // Floating AI Assistant
-        document.getElementById('aiWidgetTrigger').addEventListener('click', () => {
-            this.openAiAssistant();
-        });
-
-        document.getElementById('closeAiModal').addEventListener('click', () => {
-            this.closeAiAssistant();
-        });
-
-        document.getElementById('aiSendMessage').addEventListener('click', () => {
-            this.sendAiMessage();
-        });
-
-        document.getElementById('aiInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                this.sendAiMessage();
-            }
-        });
 
         // Close modal on backdrop click for legacy modal
         const chatModal = document.getElementById('chatModal');
@@ -232,6 +215,16 @@ class RoadTripPlanner {
 
     async displayRoute(routeData, destinationCoords) {
         this.currentRoute = routeData;
+
+        // Update global AI with route context
+        if (window.globalAI) {
+            window.globalAI.currentRoute = routeData;
+            window.globalAI.loadPageContext();
+            console.log('🤖 Global AI updated with new route data');
+        }
+
+        // Store route in localStorage for other pages
+        localStorage.setItem('currentRoute', JSON.stringify(routeData));
 
         // Show prominent results overlay
         this.showResultsOverlay(routeData, destinationCoords);
