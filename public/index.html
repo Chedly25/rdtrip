@@ -4,6 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Road Trip Planner - Aix-en-Provence</title>
+
+    <!-- Favicon and App Icons -->
+    <link rel="icon" type="image/png" sizes="32x32" href="logo.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="logo.png">
+    <link rel="apple-touch-icon" href="logo.png">
+    <link rel="shortcut icon" href="logo.png">
+
+    <!-- Meta tags -->
+    <meta name="description" content="AI-powered road trip planner from Aix-en-Provence. Discover amazing routes with intelligent recommendations.">
+    <meta name="theme-color" content="#667eea">
+
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/navigation-buttons.css">
     <link rel="stylesheet" href="css/results-overlay.css">
@@ -14,8 +25,13 @@
         <!-- Header -->
         <header class="header">
             <div class="header-content">
-                <h1 class="app-title">🚗 Road Trip Planner</h1>
-                <p class="app-subtitle">AI-powered routes from Aix-en-Provence</p>
+                <div class="header-logo">
+                    <img src="logo.png" alt="Road Trip Planner Logo" class="logo">
+                    <div class="header-text">
+                        <h1 class="app-title">Road Trip Planner</h1>
+                        <p class="app-subtitle">AI-powered routes from Aix-en-Provence</p>
+                    </div>
+                </div>
             </div>
         </header>
 
@@ -119,7 +135,9 @@
         <div class="ai-modal-content">
             <div class="ai-modal-header">
                 <div class="ai-header-info">
-                    <div class="ai-avatar-small">🤖</div>
+                    <div class="ai-logo-container">
+                        <img src="logo.png" alt="Logo" class="ai-logo">
+                    </div>
                     <div class="ai-header-text">
                         <h3>AI Route Assistant</h3>
                         <p id="aiStatus">Ready to help optimize your trip</p>
