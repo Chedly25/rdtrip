@@ -64,17 +64,172 @@ class GlobalAIAssistant {
             const estimatedDays = document.getElementById('estimatedDays')?.textContent;
             const totalDistance = document.getElementById('totalDistance')?.textContent;
 
-            // Try to get route data from URL params or localStorage
-            const urlParams = new URLSearchParams(window.location.search);
-            const routeDataParam = urlParams.get('routeData');
+            console.log('🔍 Context Loading Debug - DOM Elements:');
+            console.log('- routeTitle:', routeTitle);
+            console.log('- routeSubtitle:', routeSubtitle);
+            console.log('- totalStops:', totalStops);
 
-            if (routeDataParam) {
-                this.currentRoute = JSON.parse(decodeURIComponent(routeDataParam));
+            // Check all possible data sources comprehensively
+            console.log('🔍 Checking all storage sources...');
+
+            // Source 1: spotlightData from localStorage
+            const spotlightDataLocal = localStorage.getItem('spotlightData');
+            console.log('- localStorage.spotlightData:', spotlightDataLocal ? 'Found' : 'Not found');
+            if (spotlightDataLocal) {
+                console.log('  Content:', JSON.parse(spotlightDataLocal));
+            }
+
+            // Source 2: spotlightData from sessionStorage
+            const spotlightDataSession = sessionStorage.getItem('spotlightData');
+            console.log('- sessionStorage.spotlightData:', spotlightDataSession ? 'Found' : 'Not found');
+            if (spotlightDataSession) {
+                console.log('  Content:', JSON.parse(spotlightDataSession));
+            }
+
+            // Source 3: currentRoute from localStorage
+            const currentRouteLocal = localStorage.getItem('currentRoute');
+            console.log('- localStorage.currentRoute:', currentRouteLocal ? 'Found' : 'Not found');
+            if (currentRouteLocal) {
+                console.log('  Content:', JSON.parse(currentRouteLocal));
+            }
+
+            // Source 4: citiesContainer data
+            const citiesContainer = document.getElementById('citiesContainer');
+            if (citiesContainer) {
+                const cityElements = citiesContainer.querySelectorAll('.city-card');
+                console.log('- citiesContainer cities found:', cityElements.length);
+                cityElements.forEach((element, index) => {
+                    const cityName = element.querySelector('.city-name')?.textContent ||
+                                   element.querySelector('h3')?.textContent ||
+                                   element.dataset.city;
+                    console.log(`  City ${index + 1}:`, cityName);
+                });
+            }
+
+            // Try to get spotlight data first (this is how spotlight page stores its data)
+            let spotlightData = spotlightDataLocal || spotlightDataSession;
+            if (spotlightData) {
+                const spotlight = JSON.parse(spotlightData);
+                console.log('✅ Using spotlight data as primary source');
+
+                // Extract cities from various spotlight data formats
+                let extractedCities = [];
+
+                // Method 1: From waypoints
+                if (spotlight.waypoints && Array.isArray(spotlight.waypoints)) {
+                    extractedCities = spotlight.waypoints.map(wp => wp.name || wp.city || wp).filter(Boolean);
+                    console.log('  Cities from waypoints:', extractedCities);
+                }
+
+                // Method 2: From route array
+                if (extractedCities.length === 0 && spotlight.route && Array.isArray(spotlight.route)) {
+                    extractedCities = spotlight.route.map(stop => stop.name || stop.city || stop).filter(Boolean);
+                    console.log('  Cities from route array:', extractedCities);
+                }
+
+                // Method 3: From agentResults recommendations
+                if (extractedCities.length === 0 && spotlight.agentResults) {
+                    spotlight.agentResults.forEach(result => {
+                        try {
+                            if (typeof result.recommendations === 'string') {
+                                const parsed = JSON.parse(result.recommendations);
+                                if (parsed.waypoints) {
+                                    const waypointCities = parsed.waypoints.map(wp => wp.name || wp.city).filter(Boolean);
+                                    extractedCities.push(...waypointCities);
+                                }
+                            }
+                        } catch (e) {
+                            // Try to extract city names from text recommendations
+                            if (result.recommendations && typeof result.recommendations === 'string') {
+                                const cityPattern = /(?:^|\n|\*\s*)([A-Z][a-zA-Z\s-]+(?:,\s*[A-Z][a-zA-Z\s-]+)*)/g;
+                                const matches = result.recommendations.match(cityPattern);
+                                if (matches) {
+                                    extractedCities.push(...matches.map(m => m.trim().replace(/^\*\s*/, '')));
+                                }
+                            }
+                        }
+                    });
+                    console.log('  Cities from agentResults:', extractedCities);
+                }
+
+                // Method 4: From origin/destination
+                if (extractedCities.length === 0) {
+                    if (spotlight.origin) extractedCities.push(spotlight.origin);
+                    if (spotlight.destination) extractedCities.push(spotlight.destination);
+                    console.log('  Cities from origin/destination:', extractedCities);
+                }
+
+                // Convert spotlight data to currentRoute format
+                this.currentRoute = {
+                    agent: spotlight.agent,
+                    destination: spotlight.destination,
+                    origin: spotlight.origin,
+                    totalStops: spotlight.totalStops,
+                    route: extractedCities.map(city => ({ name: city, city: city })),
+                    waypoints: spotlight.waypoints || extractedCities.map(city => ({ name: city, city: city })),
+                    agentResults: spotlight.agentResults || [
+                        {
+                            agent: spotlight.agent,
+                            recommendations: spotlight.recommendations || ''
+                        }
+                    ]
+                };
+
+                console.log('✅ Final converted route with extracted cities:', this.currentRoute);
+                console.log('📋 Route cities extracted:', extractedCities);
             } else {
-                // Try localStorage
-                const storedRoute = localStorage.getItem('currentRoute');
-                if (storedRoute) {
-                    this.currentRoute = JSON.parse(storedRoute);
+                // Fallback: Try regular currentRoute from localStorage
+                if (currentRouteLocal) {
+                    this.currentRoute = JSON.parse(currentRouteLocal);
+                    console.log('📦 Using currentRoute from localStorage as fallback');
+
+                    // Extract and log cities from this format too
+                    const fallbackCities = this.extractCitiesFromCurrentRoute(this.currentRoute);
+                    console.log('📋 Cities from fallback route:', fallbackCities);
+                }
+            }
+
+            // If we still don't have route data, try to extract from page elements
+            if (!this.currentRoute && routeSubtitle) {
+                console.log('🔧 No stored data found, extracting from page elements');
+                // Parse route subtitle like "Aix-en-Provence → Barcelona"
+                const routeParts = routeSubtitle.split(' → ');
+                if (routeParts.length >= 2) {
+                    this.currentRoute = {
+                        origin: routeParts[0],
+                        destination: routeParts[1],
+                        route: [
+                            { name: routeParts[0], city: routeParts[0] },
+                            { name: routeParts[1], city: routeParts[1] }
+                        ],
+                        totalStops: parseInt(totalStops) || 2
+                    };
+                    console.log('🔧 Reconstructed route from page elements:', this.currentRoute);
+                }
+            }
+
+            // Extract cities from DOM as additional fallback
+            if (citiesContainer) {
+                const cityElements = citiesContainer.querySelectorAll('.city-card, .city-item, [data-city]');
+                const domCities = Array.from(cityElements).map(element => {
+                    return element.querySelector('.city-name')?.textContent ||
+                           element.querySelector('h3')?.textContent ||
+                           element.querySelector('h4')?.textContent ||
+                           element.dataset.city ||
+                           element.textContent?.trim();
+                }).filter(Boolean);
+
+                if (domCities.length > 0) {
+                    console.log('🏙️ Cities found in DOM:', domCities);
+
+                    // If we don't have a route yet, create one from DOM cities
+                    if (!this.currentRoute || !this.currentRoute.route || this.currentRoute.route.length === 0) {
+                        this.currentRoute = this.currentRoute || {};
+                        this.currentRoute.route = domCities.map(city => ({ name: city, city: city }));
+                        this.currentRoute.origin = domCities[0];
+                        this.currentRoute.destination = domCities[domCities.length - 1];
+                        console.log('🔧 Created route from DOM cities:', this.currentRoute);
+                    }
                 }
             }
 
@@ -88,10 +243,49 @@ class GlobalAIAssistant {
                 hasDetailedRoute: !!this.currentRoute
             };
 
-            console.log('📍 Spotlight page context loaded:', this.pageContext);
+            console.log('📍 Final spotlight context:', this.pageContext);
+            console.log('🗺️ Final route data for AI:', this.currentRoute);
+
+            // Final validation: Can we extract cities?
+            if (this.currentRoute) {
+                const finalCities = this.extractCitiesFromCurrentRoute(this.currentRoute);
+                console.log('🎯 FINAL VALIDATION - Cities that AI will see:', finalCities);
+                if (finalCities.length === 0) {
+                    console.error('❌ PROBLEM: No cities extracted despite having route data!');
+                    console.error('Route structure:', JSON.stringify(this.currentRoute, null, 2));
+                }
+            } else {
+                console.error('❌ PROBLEM: No route data loaded at all!');
+            }
+
         } catch (error) {
-            console.warn('Error loading spotlight context:', error);
+            console.error('❌ Error loading spotlight context:', error);
         }
+    }
+
+    // Helper method to extract cities from currentRoute using the same logic as routeAgent
+    extractCitiesFromCurrentRoute(route) {
+        if (!route) return [];
+        let cities = [];
+
+        // Extract from route.route array
+        if (route.route && Array.isArray(route.route)) {
+            cities = route.route.map(stop => stop.name || stop.city).filter(Boolean);
+        }
+
+        // If we don't have cities yet, try other formats
+        if (cities.length === 0) {
+            // Try waypoints
+            if (route.waypoints && Array.isArray(route.waypoints)) {
+                cities = route.waypoints.map(wp => wp.name || wp.city).filter(Boolean);
+            }
+            // Try origin and destination
+            if (cities.length === 0 && route.origin && route.destination) {
+                cities = [route.origin, route.destination];
+            }
+        }
+
+        return cities;
     }
 
     loadMainPageContext() {
@@ -241,7 +435,32 @@ class GlobalAIAssistant {
         if (this.enhancedFeaturesAvailable) {
             switch (this.currentPage) {
                 case 'spotlight':
-                    welcomeMessage = `Hi! I can see you're viewing a detailed route. 🗺️\n\nI have full context about this route and can help you:\n• **Modify stops** - Replace cities you've been to\n• **Optimize the route** - Rearrange for efficiency\n• **Add activities** - Find things to do in each city\n• **Adjust itinerary** - Change timing or add stops\n\nWhat would you like to adjust about this route?`;
+                    if (this.currentRoute) {
+                        // Try multiple methods to extract cities and show detailed debugging
+                        const routeCities = this.extractCitiesFromCurrentRoute(this.currentRoute);
+                        console.log('🎯 Welcome message - extracted cities:', routeCities);
+
+                        if (routeCities.length > 0) {
+                            welcomeMessage = `Hi! I can see you're viewing a detailed route. 🗺️\n\nI have full context about this route from ${this.currentRoute.origin || 'your starting point'} to ${this.currentRoute.destination || 'your destination'}.\n\n**Cities in your route:** ${routeCities.join(', ')}\n\nI can help you:\n• **Modify stops** - Replace cities you've been to\n• **Optimize the route** - Rearrange for efficiency\n• **Add activities** - Find things to do in each city\n• **Adjust itinerary** - Change timing or add stops\n\nWhat would you like to adjust about this route?`;
+                        } else {
+                            // Show debugging info to help diagnose the issue
+                            const debugInfo = {
+                                hasRoute: !!this.currentRoute.route,
+                                routeLength: this.currentRoute.route ? this.currentRoute.route.length : 0,
+                                hasWaypoints: !!this.currentRoute.waypoints,
+                                waypointsLength: this.currentRoute.waypoints ? this.currentRoute.waypoints.length : 0,
+                                hasOrigin: !!this.currentRoute.origin,
+                                hasDestination: !!this.currentRoute.destination,
+                                origin: this.currentRoute.origin,
+                                destination: this.currentRoute.destination
+                            };
+                            console.log('🔍 Route data debug info:', debugInfo);
+
+                            welcomeMessage = `Hi! I can see you're on a route detail page. 🗺️\n\nI have route data loaded but I'm having trouble extracting the city names. Let me work with what I can see:\n\n**Route info:**\n• Origin: ${this.currentRoute.origin || 'Unknown'}\n• Destination: ${this.currentRoute.destination || 'Unknown'}\n• Total stops: ${this.currentRoute.totalStops || 'Unknown'}\n\nCould you tell me which specific city you'd like to modify? I can still help with route planning and replacements!`;
+                        }
+                    } else {
+                        welcomeMessage = `Hi! I can see you're on a route detail page, but I'm having trouble loading the specific route data. 🗺️\n\nCould you tell me:\n• Which cities are in your current route?\n• What would you like to modify?\n\nI can still help you with route planning and travel advice!`;
+                    }
                     break;
                 case 'main':
                     if (this.pageContext.hasResults) {
@@ -308,9 +527,29 @@ class GlobalAIAssistant {
 
             try {
                 if (this.enhancedFeaturesAvailable && this.routeAgent) {
-                    const response = await this.routeAgent.processMessage(contextualMessage, this.currentRoute);
-                    this.removeAiMessage(loadingId);
-                    await this.handleAgentResponse(response);
+                    try {
+                        const response = await this.routeAgent.processMessage(contextualMessage, this.currentRoute);
+                        this.removeAiMessage(loadingId);
+                        await this.handleAgentResponse(response);
+                    } catch (agentError) {
+                        console.warn('Route agent failed, falling back to server chat:', agentError);
+                        // Fall back to server chat if route agent fails
+                        const response = await fetch('/api/chat', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                message: contextualMessage,
+                                routeContext: this.currentRoute,
+                                pageContext: this.pageContext
+                            })
+                        });
+
+                        if (!response.ok) throw new Error('Chat failed');
+
+                        const data = await response.json();
+                        this.removeAiMessage(loadingId);
+                        this.addAiMessage('assistant', data.response);
+                    }
                 } else {
                     // Fallback to server chat
                     const response = await fetch('/api/chat', {
@@ -332,7 +571,7 @@ class GlobalAIAssistant {
             } catch (error) {
                 console.error('Chat error:', error);
                 this.removeAiMessage(loadingId);
-                this.addAiMessage('assistant', 'Sorry, I encountered an error. Please try again.');
+                this.addAiMessage('assistant', 'I apologize, but I\'m having trouble accessing my knowledge base right now. Could you try rephrasing your question or check back in a moment?');
             }
         }
     }

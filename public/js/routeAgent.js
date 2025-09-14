@@ -488,8 +488,58 @@ export class RouteAgent {
     // Utility Methods
 
     extractRouteCities(route) {
-        if (!route || !route.route) return [];
-        return route.route.map(stop => stop.name || stop.city).filter(Boolean);
+        if (!route) return [];
+
+        let cities = [];
+
+        // Extract from route.route array
+        if (route.route && Array.isArray(route.route)) {
+            cities = route.route.map(stop => stop.name || stop.city).filter(Boolean);
+        }
+
+        // If we don't have cities yet, try other formats
+        if (cities.length === 0) {
+            // Try waypoints
+            if (route.waypoints && Array.isArray(route.waypoints)) {
+                cities = route.waypoints.map(wp => wp.name || wp.city).filter(Boolean);
+            }
+
+            // Try origin and destination
+            if (cities.length === 0 && route.origin && route.destination) {
+                cities = [route.origin, route.destination];
+            }
+
+            // Try agentResults for cities
+            if (cities.length === 0 && route.agentResults) {
+                route.agentResults.forEach(result => {
+                    try {
+                        // Try to parse JSON recommendations
+                        const parsed = JSON.parse(result.recommendations);
+                        if (parsed.waypoints) {
+                            parsed.waypoints.forEach(wp => {
+                                const cityName = wp.name || wp.city;
+                                if (cityName && !cities.includes(cityName)) {
+                                    cities.push(cityName);
+                                }
+                            });
+                        }
+                    } catch (e) {
+                        // Try to extract city names from text
+                        const cityMatches = result.recommendations.match(/[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*/g);
+                        if (cityMatches) {
+                            cityMatches.forEach(match => {
+                                if (match.length > 2 && !cities.includes(match)) {
+                                    cities.push(match);
+                                }
+                            });
+                        }
+                    }
+                });
+            }
+        }
+
+        console.log('🏙️ Extracted cities from route:', cities);
+        return cities;
     }
 
     findMatchingCity(cityName, routeCities) {
