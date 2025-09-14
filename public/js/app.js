@@ -908,8 +908,8 @@ class RoadTripPlanner {
                                     fullName: name,
                                     agent: agentResult.agent,
                                     description: `${this.capitalizeFirst(agentResult.agent)} destination`,
-                                    lng: 5.4474 + (Math.random() - 0.5) * 8, // Varied coordinates
-                                    lat: 43.5297 + (Math.random() - 0.5) * 4
+                                    lng: 2.0 + Math.random() * 8.0, // European coordinates
+                                    lat: 44.0 + Math.random() * 6.0
                                 });
                             }
                         });
@@ -928,8 +928,8 @@ class RoadTripPlanner {
                                 fullName: waypoint.name,
                                 agent: agentResult.agent,
                                 description: waypoint.description || `${this.capitalizeFirst(agentResult.agent)} destination`,
-                                lng: waypoint.coordinates ? waypoint.coordinates[1] : (5.4474 + (Math.random() - 0.5) * 8),
-                                lat: waypoint.coordinates ? waypoint.coordinates[0] : (43.5297 + (Math.random() - 0.5) * 4),
+                                lng: waypoint.coordinates ? waypoint.coordinates[1] : (2.0 + Math.random() * 8.0),
+                                lat: waypoint.coordinates ? waypoint.coordinates[0] : (44.0 + Math.random() * 6.0),
                                 activities: waypoint.activities || [],
                                 duration: waypoint.duration || '2-3 hours'
                             });
@@ -945,8 +945,8 @@ class RoadTripPlanner {
                     fullName: `${this.capitalizeFirst(agentResult.agent)} Destination`,
                     agent: agentResult.agent,
                     description: `Recommended ${agentResult.agent} stop`,
-                    lng: 5.4474 + (Math.random() - 0.5) * 8,
-                    lat: 43.5297 + (Math.random() - 0.5) * 4
+                    lng: 2.0 + Math.random() * 8.0,
+                    lat: 44.0 + Math.random() * 6.0
                 });
             }
         });
@@ -959,8 +959,8 @@ class RoadTripPlanner {
                 fullName: `Stop ${waypoints.length + 1}`,
                 agent: 'general',
                 description: 'Recommended stop along your route',
-                lng: 5.4474 + (Math.random() - 0.5) * 8,
-                lat: 43.5297 + (Math.random() - 0.5) * 4
+                lng: 2.0 + Math.random() * 8.0,
+                lat: 44.0 + Math.random() * 6.0
             });
         }
 
@@ -1487,10 +1487,10 @@ class RoadTripPlanner {
                     } else if (waypoint.lng && waypoint.lat) {
                         coords = [waypoint.lng, waypoint.lat];
                     } else {
-                        // Generate random coordinates around France
+                        // Generate random coordinates in Western/Central Europe
                         coords = [
-                            5.4474 + (Math.random() - 0.5) * 8,  // longitude
-                            43.5297 + (Math.random() - 0.5) * 4  // latitude
+                            2.0 + Math.random() * 8.0,  // longitude: 2° to 10° E (Western/Central Europe)
+                            44.0 + Math.random() * 6.0  // latitude: 44° to 50° N (France/Germany area)
                         ];
                     }
 
@@ -1514,35 +1514,9 @@ class RoadTripPlanner {
                         .addTo(miniMap);
                 }
 
-                // Add route line
+                // Add route line using actual roads
                 if (routeCoordinates.length > 1) {
-                    miniMap.addSource(`route-${agentResult.agent}`, {
-                        type: 'geojson',
-                        data: {
-                            type: 'Feature',
-                            properties: {},
-                            geometry: {
-                                type: 'LineString',
-                                coordinates: routeCoordinates
-                            }
-                        }
-                    });
-
-                    // Add route line layer
-                    miniMap.addLayer({
-                        id: `route-${agentResult.agent}`,
-                        type: 'line',
-                        source: `route-${agentResult.agent}`,
-                        layout: {
-                            'line-join': 'round',
-                            'line-cap': 'round'
-                        },
-                        paint: {
-                            'line-color': color,
-                            'line-width': 3,
-                            'line-opacity': 0.8
-                        }
-                    });
+                    this.addMiniMapRoute(miniMap, routeCoordinates, color, agentResult.agent);
                 }
 
                 // Fit map to show all points
@@ -1597,8 +1571,8 @@ class RoadTripPlanner {
                             agent: agentResult.agent,
                             description: waypoint.description || `${this.capitalizeFirst(agentResult.agent)} destination`,
                             coordinates: waypoint.coordinates || null,
-                            lng: waypoint.coordinates ? waypoint.coordinates[0] : (5.4474 + (Math.random() - 0.5) * 8),
-                            lat: waypoint.coordinates ? waypoint.coordinates[1] : (43.5297 + (Math.random() - 0.5) * 4),
+                            lng: waypoint.coordinates ? waypoint.coordinates[0] : (2.0 + Math.random() * 8.0),
+                            lat: waypoint.coordinates ? waypoint.coordinates[1] : (44.0 + Math.random() * 6.0),
                             activities: waypoint.activities || [],
                             duration: waypoint.duration || '2-3 hours'
                         });
@@ -1614,13 +1588,100 @@ class RoadTripPlanner {
                     name: `${this.capitalizeFirst(agentResult.agent)} Stop ${i + 1}`,
                     agent: agentResult.agent,
                     description: `${this.capitalizeFirst(agentResult.agent)} destination`,
-                    lng: 5.4474 + (Math.random() - 0.5) * 8,
-                    lat: 43.5297 + (Math.random() - 0.5) * 4
+                    lng: 2.0 + Math.random() * 8.0,  // Western/Central Europe longitude
+                    lat: 44.0 + Math.random() * 6.0  // Central Europe latitude
                 });
             }
         }
 
         return waypoints;
+    }
+
+    async addMiniMapRoute(miniMap, coordinates, color, agentId) {
+        try {
+            // Get actual road route using Mapbox Directions API
+            const actualRoute = await this.getMiniMapDirections(coordinates);
+
+            if (actualRoute) {
+                // Add route source with actual road geometry
+                miniMap.addSource(`route-${agentId}`, {
+                    type: 'geojson',
+                    data: {
+                        type: 'Feature',
+                        properties: {},
+                        geometry: {
+                            type: 'LineString',
+                            coordinates: actualRoute
+                        }
+                    }
+                });
+            } else {
+                // Fallback to straight lines if Directions API fails
+                miniMap.addSource(`route-${agentId}`, {
+                    type: 'geojson',
+                    data: {
+                        type: 'Feature',
+                        properties: {},
+                        geometry: {
+                            type: 'LineString',
+                            coordinates: coordinates
+                        }
+                    }
+                });
+            }
+
+            // Add route line layer
+            miniMap.addLayer({
+                id: `route-${agentId}`,
+                type: 'line',
+                source: `route-${agentId}`,
+                layout: {
+                    'line-join': 'round',
+                    'line-cap': 'round'
+                },
+                paint: {
+                    'line-color': color,
+                    'line-width': 2,
+                    'line-opacity': 0.8
+                }
+            });
+
+        } catch (error) {
+            console.warn('Could not add route to mini map:', error);
+        }
+    }
+
+    async getMiniMapDirections(coordinates) {
+        try {
+            // Limit to 3-4 waypoints for mini maps to avoid API limits
+            const limitedCoords = coordinates.length > 4 ?
+                [coordinates[0], ...coordinates.slice(1, -1).slice(0, 2), coordinates[coordinates.length - 1]] :
+                coordinates;
+
+            // Format coordinates for the Directions API (lng,lat pairs)
+            const coordString = limitedCoords.map(coord => `${coord[0]},${coord[1]}`).join(';');
+
+            // Make request to Mapbox Directions API
+            const response = await fetch(
+                `https://api.mapbox.com/directions/v5/mapbox/driving/${coordString}?geometries=geojson&access_token=${mapboxgl.accessToken}`
+            );
+
+            if (!response.ok) {
+                throw new Error(`Directions API error: ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            if (data.routes && data.routes.length > 0) {
+                return data.routes[0].geometry.coordinates;
+            } else {
+                return null;
+            }
+
+        } catch (error) {
+            console.warn('Mini map directions request failed:', error);
+            return null;
+        }
     }
 
     scrollToAgent(agentType) {
