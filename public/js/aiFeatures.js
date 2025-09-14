@@ -191,7 +191,7 @@ export class AIFeatures {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    prompt: prompt
+                    message: prompt
                 })
             });
             
