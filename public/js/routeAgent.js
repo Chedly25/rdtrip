@@ -99,11 +99,13 @@ export class RouteAgent {
      */
     detectIntent(message) {
         const lowercaseMessage = message.toLowerCase();
+        console.log('🔍 RouteAgent.detectIntent called with:', message);
 
         // Check for stop replacement intent
         for (const pattern of this.intentPatterns.replaceStop) {
             const match = message.match(pattern);
             if (match) {
+                console.log('✅ Detected replaceStop intent with pattern:', pattern);
                 return {
                     type: 'replaceStop',
                     extractedCity: this.extractCityFromMessage(message),
@@ -172,7 +174,9 @@ export class RouteAgent {
      * @returns {Promise<Object>} Response object
      */
     async handleStopReplacement(message, intent) {
+        console.log('🔍 handleStopReplacement called with:', { message, intent });
         const cityToReplace = intent.extractedCity;
+        console.log('🏙️ Extracted city to replace:', cityToReplace);
 
         if (!cityToReplace) {
             return {

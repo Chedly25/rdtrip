@@ -661,8 +661,11 @@ class GlobalAIAssistant {
     }
 
     async handleAgentResponse(response) {
+        console.log('🔍 handleAgentResponse called with:', response);
+
         switch (response.type) {
             case 'replacement_proposal':
+                console.log('✅ Processing replacement_proposal');
                 // Add the proposal message
                 this.addAiMessage('assistant', response.content);
 
