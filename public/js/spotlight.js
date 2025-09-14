@@ -190,27 +190,34 @@ class SpotlightController {
             if (jsonData && jsonData.waypoints) {
                 jsonData.waypoints.forEach(waypoint => {
                     if (waypoint.coordinates && waypoint.coordinates.length === 2) {
-                        // Handle both [lat, lng] and [lng, lat] coordinate formats
-                        let lat, lng;
-                        if (waypoint.coordinates[0] >= -90 && waypoint.coordinates[0] <= 90 &&
-                            waypoint.coordinates[1] >= -180 && waypoint.coordinates[1] <= 180) {
-                            // This looks like [lat, lng] format
-                            lat = waypoint.coordinates[0];
-                            lng = waypoint.coordinates[1];
-                        } else {
-                            // This looks like [lng, lat] format
-                            lng = waypoint.coordinates[0];
-                            lat = waypoint.coordinates[1];
+                        // Handle coordinate formats - assume [longitude, latitude] (GeoJSON standard)
+                        let lng = waypoint.coordinates[0];
+                        let lat = waypoint.coordinates[1];
+
+                        // Validate and potentially swap if they seem reversed
+                        if (lng >= -90 && lng <= 90 && lat >= -180 && lat <= 180) {
+                            // Coordinates appear to be [lat, lng] - swap them
+                            console.warn('Swapping coordinates from [lat, lng] to [lng, lat]:', waypoint.coordinates);
+                            const temp = lng;
+                            lng = lat;
+                            lat = temp;
                         }
 
-                        waypoints.push({
-                            name: waypoint.name,
-                            description: waypoint.description,
-                            activities: waypoint.activities || [],
-                            duration: waypoint.duration,
-                            lng: lng,
-                            lat: lat
-                        });
+                        // Final validation
+                        if (lng >= -180 && lng <= 180 && lat >= -90 && lat <= 90) {
+                            console.log(`Parsed waypoint ${waypoint.name}: lng=${lng}, lat=${lat}`);
+
+                            waypoints.push({
+                                name: waypoint.name,
+                                description: waypoint.description,
+                                activities: waypoint.activities || [],
+                                duration: waypoint.duration,
+                                lng: lng,
+                                lat: lat
+                            });
+                        } else {
+                            console.warn('Invalid coordinates after processing:', waypoint.coordinates, 'lng:', lng, 'lat:', lat);
+                        }
                     }
                 });
             }
@@ -262,8 +269,9 @@ class SpotlightController {
         const coordinates = [
             [5.4474, 43.5297], // Aix-en-Provence (start)
             ...waypoints.map(w => {
+                // Ensure coordinates are in [lng, lat] format for Mapbox
                 const coord = [w.lng, w.lat];
-                console.log(`Waypoint ${w.name}: [${coord[0]}, ${coord[1]}] (lng, lat)`);
+                console.log(`Waypoint ${w.name}: lng=${w.lng}, lat=${w.lat} -> [${coord[0]}, ${coord[1]}] (lng, lat)`);
                 return coord;
             }),
             [destinationCoords.lng, destinationCoords.lat] // Destination
@@ -441,21 +449,13 @@ class SpotlightController {
             let [first, second] = coord;
 
             // Check if coordinates might be swapped (lat, lng instead of lng, lat)
-            let lng, lat;
-            if (first >= -180 && first <= 180 && second >= -90 && second <= 90) {
-                // Standard case: [lng, lat] format
-                lng = first;
-                lat = second;
-            } else if (second >= -180 && second <= 180 && first >= -90 && first <= 90) {
-                // Swapped case: [lat, lng] format - fix it
-                console.warn('Coordinate appears to be [lat, lng], converting to [lng, lat]:', coord);
-                lng = second;
-                lat = first;
-                // Fix the original array
-                coord[0] = lng;
-                coord[1] = lat;
-            } else {
-                console.warn('Coordinates out of valid range:', coord);
+            // Expect [lng, lat] format at this point
+            const lng = first;
+            const lat = second;
+
+            // Basic validation
+            if (lng < -180 || lng > 180 || lat < -90 || lat > 90) {
+                console.warn('Coordinates out of valid range:', coord, { lng, lat });
                 return false;
             }
 
