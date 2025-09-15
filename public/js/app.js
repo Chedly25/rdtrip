@@ -33,6 +33,9 @@ class RoadTripPlanner {
     }
 
     initMap() {
+        // Initialize Mapbox access token first (needed for geocoding even without map)
+        mapboxgl.accessToken = 'pk.eyJ1IjoiY2hlZGx5MjUiLCJhIjoiY21lbW1qeHRoMHB5azJsc2VuMWJld2tlYSJ9.0jfOiOXCh0VN5ZjJ5ab7MQ';
+
         // Check if map container exists before initializing
         const mapContainer = document.getElementById('map');
         if (!mapContainer) {
@@ -40,9 +43,6 @@ class RoadTripPlanner {
             this.map = null;
             return;
         }
-
-        // Initialize Mapbox map
-        mapboxgl.accessToken = 'pk.eyJ1IjoiY2hlZGx5MjUiLCJhIjoiY21lbW1qeHRoMHB5azJsc2VuMWJld2tlYSJ9.0jfOiOXCh0VN5ZjJ5ab7MQ';
 
         // Disable Mapbox telemetry to prevent ad-blocker conflicts
         if (window.mapboxgl) {
