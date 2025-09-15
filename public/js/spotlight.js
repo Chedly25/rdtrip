@@ -1292,7 +1292,14 @@ class SpotlightController {
                             amenities: ["WiFi", "Reception"],
                             highlights: "Comfortable stay in the heart of the city",
                             bookingUrl: "#",
-                            address: `${city.name} city center`
+                            address: `${city.name} city center`,
+                            image: {
+                                url: `https://via.placeholder.com/400x300/4A90E2/white?text=🏨+Hotel`,
+                                thumb: `https://via.placeholder.com/200x150/4A90E2/white?text=🏨`,
+                                alt: `${city.name} - Hotel`,
+                                photographer: 'Placeholder',
+                                source: 'Placeholder'
+                            }
                         }],
                         restaurants: [{
                             name: `${city.name} Restaurant`,
@@ -1304,7 +1311,14 @@ class SpotlightController {
                             openingHours: "12:00-22:00",
                             specialFeatures: "Traditional cuisine",
                             reservationUrl: "#",
-                            address: `${city.name} city center`
+                            address: `${city.name} city center`,
+                            image: {
+                                url: `https://via.placeholder.com/400x300/FF6B35/white?text=🍽️+Restaurant`,
+                                thumb: `https://via.placeholder.com/200x150/FF6B35/white?text=🍽️`,
+                                alt: `${city.name} - Restaurant`,
+                                photographer: 'Placeholder',
+                                source: 'Placeholder'
+                            }
                         }],
                         images: [{
                             url: 'https://via.placeholder.com/800x400?text=' + encodeURIComponent(city.name),
@@ -1390,31 +1404,41 @@ class SpotlightController {
 
             return `
                 <div class="recommendation-card hotel-card">
-                    <div class="card-header">
-                        <h5 class="card-title">${hotel.name}</h5>
-                        <div class="card-rating">
-                            <span class="stars">${stars}</span>
+                    ${hotel.image ? `
+                    <div class="card-image-container">
+                        <img src="${hotel.image.thumb}" alt="${hotel.image.alt}" class="card-image"
+                             onerror="this.src='${hotel.image.url}'; this.onerror=null;">
+                        ${hotel.image.source === 'Unsplash' ? `<div class="image-credit">Photo by ${hotel.image.photographer}</div>` : ''}
+                    </div>
+                    ` : ''}
+
+                    <div class="card-content">
+                        <div class="card-header">
+                            <h5 class="card-title">${hotel.name}</h5>
+                            <div class="card-rating">
+                                <span class="stars">${stars}</span>
+                            </div>
                         </div>
-                    </div>
 
-                    <div class="card-meta">
-                        <span class="meta-item">${hotel.priceRange}</span>
-                        <span class="meta-item">${hotel.pricePerNight}</span>
-                        <span class="meta-item">${hotel.distance}</span>
-                    </div>
+                        <div class="card-meta">
+                            <span class="meta-item">${hotel.priceRange}</span>
+                            <span class="meta-item">${hotel.pricePerNight}</span>
+                            <span class="meta-item">${hotel.distance}</span>
+                        </div>
 
-                    <p class="card-description">${hotel.highlights || 'Great hotel in the city center'}</p>
+                        <p class="card-description">${hotel.highlights || 'Great hotel in the city center'}</p>
 
-                    <div class="card-features">
-                        ${amenitiesText.split(',').map(amenity => `<span class="feature-tag">${amenity.trim()}</span>`).join('')}
-                    </div>
+                        <div class="card-features">
+                            ${amenitiesText.split(',').map(amenity => `<span class="feature-tag">${amenity.trim()}</span>`).join('')}
+                        </div>
 
-                    <div class="card-actions">
-                        ${hotel.bookingUrl && hotel.bookingUrl !== '#' ?
-                            `<a href="${hotel.bookingUrl}" target="_blank" class="action-btn primary-action">Book Now</a>` :
-                            `<button class="action-btn primary-action" onclick="alert('Booking link not available')">Book Now</button>`
-                        }
-                        <button class="action-btn secondary-action" onclick="alert('Address: ${hotel.address || hotel.name}')">View Details</button>
+                        <div class="card-actions">
+                            ${hotel.bookingUrl && hotel.bookingUrl !== '#' ?
+                                `<a href="${hotel.bookingUrl}" target="_blank" class="action-btn primary-action">Book Now</a>` :
+                                `<button class="action-btn primary-action" onclick="alert('Booking link not available')">Book Now</button>`
+                            }
+                            <button class="action-btn secondary-action" onclick="alert('Address: ${hotel.address || hotel.name}')">View Details</button>
+                        </div>
                     </div>
                 </div>
             `;
@@ -1431,32 +1455,42 @@ class SpotlightController {
 
             return `
                 <div class="recommendation-card restaurant-card">
-                    <div class="card-header">
-                        <h5 class="card-title">${restaurant.name}</h5>
-                        <div class="card-rating">
-                            <span class="cuisine-type">${restaurant.cuisine || 'Local'}</span>
+                    ${restaurant.image ? `
+                    <div class="card-image-container">
+                        <img src="${restaurant.image.thumb}" alt="${restaurant.image.alt}" class="card-image"
+                             onerror="this.src='${restaurant.image.url}'; this.onerror=null;">
+                        ${restaurant.image.source === 'Unsplash' ? `<div class="image-credit">Photo by ${restaurant.image.photographer}</div>` : ''}
+                    </div>
+                    ` : ''}
+
+                    <div class="card-content">
+                        <div class="card-header">
+                            <h5 class="card-title">${restaurant.name}</h5>
+                            <div class="card-rating">
+                                <span class="cuisine-type">${restaurant.cuisine || 'Local'}</span>
+                            </div>
                         </div>
-                    </div>
 
-                    <div class="card-meta">
-                        <span class="meta-item">${restaurant.priceRange}</span>
-                        <span class="meta-item">${restaurant.avgPrice}</span>
-                        <span class="meta-item">${restaurant.atmosphere}</span>
-                    </div>
+                        <div class="card-meta">
+                            <span class="meta-item">${restaurant.priceRange}</span>
+                            <span class="meta-item">${restaurant.avgPrice}</span>
+                            <span class="meta-item">${restaurant.atmosphere}</span>
+                        </div>
 
-                    <p class="card-description">Must try: ${mustTryText}</p>
+                        <p class="card-description">Must try: ${mustTryText}</p>
 
-                    <div class="card-features">
-                        <span class="feature-tag">${restaurant.openingHours}</span>
-                        ${restaurant.specialFeatures ? `<span class="feature-tag">${restaurant.specialFeatures}</span>` : ''}
-                    </div>
+                        <div class="card-features">
+                            <span class="feature-tag">${restaurant.openingHours}</span>
+                            ${restaurant.specialFeatures ? `<span class="feature-tag">${restaurant.specialFeatures}</span>` : ''}
+                        </div>
 
-                    <div class="card-actions">
-                        ${restaurant.reservationUrl && restaurant.reservationUrl !== '#' ?
-                            `<a href="${restaurant.reservationUrl}" target="_blank" class="action-btn primary-action">Reserve</a>` :
-                            `<button class="action-btn primary-action" onclick="alert('Reservation link not available')">Reserve</button>`
-                        }
-                        <button class="action-btn secondary-action" onclick="alert('Address: ${restaurant.address || restaurant.name}')">View Details</button>
+                        <div class="card-actions">
+                            ${restaurant.reservationUrl && restaurant.reservationUrl !== '#' ?
+                                `<a href="${restaurant.reservationUrl}" target="_blank" class="action-btn primary-action">Reserve</a>` :
+                                `<button class="action-btn primary-action" onclick="alert('Reservation link not available')">Reserve</button>`
+                            }
+                            <button class="action-btn secondary-action" onclick="alert('Address: ${restaurant.address || restaurant.name}')">View Details</button>
+                        </div>
                     </div>
                 </div>
             `;

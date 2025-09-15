@@ -11,6 +11,8 @@ app.use(express.json());
 app.use(express.static('public'));
 
 const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY;
+// For demo purposes - in production, get your own key from https://unsplash.com/developers
+const UNSPLASH_ACCESS_KEY = process.env.UNSPLASH_ACCESS_KEY || 'lEwczWVNzGvFAp1BtKgfV5KOtJrFbMdaDFEfL4Z6qHQ';
 
 // AI Agent configurations
 const agents = {
@@ -293,9 +295,20 @@ async function getHotelsForCity(city, budget, preferences) {
     result = result.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
 
     try {
-      return JSON.parse(result);
+      const hotels = JSON.parse(result);
+
+      // Add images to each hotel
+      const hotelsWithImages = await Promise.all(
+        hotels.map(async (hotel) => {
+          const image = await getHotelImage(hotel.name, city, hotel.stars);
+          return { ...hotel, image };
+        })
+      );
+
+      return hotelsWithImages;
     } catch (parseError) {
       console.warn('Failed to parse hotels JSON, returning fallback');
+      const fallbackImage = await getHotelImage(`${city} Hotel`, city, 3);
       return [{
         name: `${city} Hotel`,
         stars: 3,
@@ -305,7 +318,8 @@ async function getHotelsForCity(city, budget, preferences) {
         amenities: ["WiFi", "Reception"],
         highlights: "Comfortable stay in the heart of the city",
         bookingUrl: "#",
-        address: `${city} city center`
+        address: `${city} city center`,
+        image: fallbackImage
       }];
     }
   } catch (error) {
@@ -363,9 +377,20 @@ async function getRestaurantsForCity(city, budget, preferences) {
     result = result.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
 
     try {
-      return JSON.parse(result);
+      const restaurants = JSON.parse(result);
+
+      // Add images to each restaurant
+      const restaurantsWithImages = await Promise.all(
+        restaurants.map(async (restaurant) => {
+          const image = await getRestaurantImage(restaurant.name, restaurant.cuisine);
+          return { ...restaurant, image };
+        })
+      );
+
+      return restaurantsWithImages;
     } catch (parseError) {
       console.warn('Failed to parse restaurants JSON, returning fallback');
+      const fallbackImage = await getRestaurantImage(`${city} Restaurant`, 'Local');
       return [{
         name: `${city} Restaurant`,
         cuisine: "Local",
@@ -376,13 +401,136 @@ async function getRestaurantsForCity(city, budget, preferences) {
         openingHours: "12:00-22:00",
         specialFeatures: "Traditional cuisine",
         reservationUrl: "#",
-        address: `${city} city center`
+        address: `${city} city center`,
+        image: fallbackImage
       }];
     }
   } catch (error) {
     console.error('Error fetching restaurants:', error);
     return [];
   }
+}
+
+// Helper function to get hotel images from Unsplash
+async function getHotelImage(hotelName, city, stars = 3) {
+  try {
+    // Create search terms based on hotel quality
+    let searchTerms = ['hotel'];
+
+    if (stars >= 4) {
+      searchTerms.push('luxury', 'elegant', 'boutique');
+    } else if (stars === 3) {
+      searchTerms.push('modern', 'comfortable');
+    } else {
+      searchTerms.push('budget', 'cozy');
+    }
+
+    searchTerms.push('lobby', 'interior', 'room');
+
+    const query = searchTerms.join(' ');
+
+    const response = await axios.get('https://api.unsplash.com/search/photos', {
+      params: {
+        query: query,
+        per_page: 1,
+        orientation: 'landscape',
+        content_filter: 'high'
+      },
+      headers: {
+        'Authorization': `Client-ID ${UNSPLASH_ACCESS_KEY}`
+      }
+    });
+
+    if (response.data.results && response.data.results.length > 0) {
+      const photo = response.data.results[0];
+      return {
+        url: photo.urls.regular,
+        thumb: photo.urls.thumb,
+        alt: photo.alt_description || `${hotelName} - Hotel`,
+        photographer: photo.user.name,
+        source: 'Unsplash'
+      };
+    }
+  } catch (error) {
+    console.warn('Error fetching hotel image from Unsplash:', error.message);
+  }
+
+  // Fallback to placeholder
+  return {
+    url: `https://via.placeholder.com/400x300/4A90E2/white?text=🏨+Hotel`,
+    thumb: `https://via.placeholder.com/200x150/4A90E2/white?text=🏨`,
+    alt: `${hotelName} - Hotel`,
+    photographer: 'Placeholder',
+    source: 'Placeholder'
+  };
+}
+
+// Helper function to get restaurant images from Unsplash
+async function getRestaurantImage(restaurantName, cuisine = 'restaurant') {
+  try {
+    // Create search terms based on cuisine type
+    let searchTerms = [];
+
+    const cuisineMap = {
+      'italian': ['italian food', 'pasta', 'pizza', 'trattoria'],
+      'french': ['french cuisine', 'bistro', 'fine dining', 'brasserie'],
+      'asian': ['asian cuisine', 'sushi', 'ramen', 'asian restaurant'],
+      'mexican': ['mexican food', 'tacos', 'mexican restaurant'],
+      'indian': ['indian food', 'curry', 'indian restaurant'],
+      'mediterranean': ['mediterranean food', 'greek', 'mezze'],
+      'seafood': ['seafood restaurant', 'fish', 'oysters'],
+      'steakhouse': ['steakhouse', 'grill', 'meat'],
+      'cafe': ['cafe', 'coffee shop', 'pastries'],
+      'bakery': ['bakery', 'bread', 'pastries']
+    };
+
+    const cuisineLower = cuisine.toLowerCase();
+    const matchedCuisine = Object.keys(cuisineMap).find(key =>
+      cuisineLower.includes(key) || key.includes(cuisineLower)
+    );
+
+    if (matchedCuisine) {
+      searchTerms = [...cuisineMap[matchedCuisine]];
+    } else {
+      searchTerms = ['restaurant', 'dining', 'food', 'cuisine'];
+    }
+
+    const query = searchTerms.join(' OR ');
+
+    const response = await axios.get('https://api.unsplash.com/search/photos', {
+      params: {
+        query: query,
+        per_page: 1,
+        orientation: 'landscape',
+        content_filter: 'high'
+      },
+      headers: {
+        'Authorization': `Client-ID ${UNSPLASH_ACCESS_KEY}`
+      }
+    });
+
+    if (response.data.results && response.data.results.length > 0) {
+      const photo = response.data.results[0];
+      return {
+        url: photo.urls.regular,
+        thumb: photo.urls.thumb,
+        alt: photo.alt_description || `${restaurantName} - ${cuisine} Restaurant`,
+        photographer: photo.user.name,
+        source: 'Unsplash'
+      };
+    }
+  } catch (error) {
+    console.warn('Error fetching restaurant image from Unsplash:', error.message);
+  }
+
+  // Fallback to placeholder
+  return {
+    url: `https://via.placeholder.com/400x300/FF6B35/white?text=🍽️+Restaurant`,
+    thumb: `https://via.placeholder.com/200x150/FF6B35/white?text=🍽️`,
+    alt: `${restaurantName} - Restaurant`,
+    photographer: 'Placeholder',
+    source: 'Placeholder'
+  };
 }
 
 // Helper function to get city images from Wikimedia
