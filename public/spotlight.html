@@ -75,6 +75,29 @@
                 </div>
             </section>
 
+            <!-- Hotels & Restaurants Section -->
+            <section class="hotels-restaurants-section">
+                <div class="section-header">
+                    <h2>🏨 Stay & 🍽️ Dine</h2>
+                    <div class="section-controls">
+                        <select id="budgetFilter" class="filter-select">
+                            <option value="budget">Budget (€-€€)</option>
+                            <option value="mid" selected>Mid-range (€€-€€€)</option>
+                            <option value="luxury">Luxury (€€€-€€€€)</option>
+                        </select>
+                        <button id="loadHotelsRestaurants" class="load-recommendations-btn">
+                            <span class="btn-text">Load Recommendations</span>
+                            <div class="btn-spinner hidden"></div>
+                        </button>
+                    </div>
+                </div>
+                <div id="hotelsRestaurantsContainer" class="hotels-restaurants-container">
+                    <div class="recommendations-placeholder">
+                        <p>Click "Load Recommendations" to discover the best hotels and restaurants for each city on your route.</p>
+                    </div>
+                </div>
+            </section>
+
             <!-- Day-by-Day Itinerary -->
             <section class="itinerary-section">
                 <div class="itinerary-header">

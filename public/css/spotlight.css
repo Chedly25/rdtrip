@@ -4,6 +4,12 @@
 :root {
     --agent-primary-color: #007AFF;
     --agent-primary-rgb: 0, 122, 255;
+
+    /* Hotels & Restaurants colors */
+    --hotel-color: #0077BE;
+    --restaurant-color: #FF6B35;
+    --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    --card-hover-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
 }
 
 /* Theme Classes */
@@ -551,5 +557,353 @@
     
     .activity-image-container {
         max-width: 100%;
+    }
+}
+
+/* Hotels & Restaurants Section Styles */
+.hotels-restaurants-section {
+    background: var(--background-primary);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-xl);
+    margin-bottom: var(--spacing-xl);
+    box-shadow: var(--card-shadow);
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-xl);
+    flex-wrap: wrap;
+    gap: var(--spacing-md);
+}
+
+.section-header h2 {
+    font-size: var(--font-size-h2);
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.section-controls {
+    display: flex;
+    gap: var(--spacing-md);
+    align-items: center;
+}
+
+.filter-select {
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: var(--background-primary);
+    font-size: var(--font-size-body);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: border-color 0.2s ease;
+}
+
+.filter-select:focus {
+    outline: none;
+    border-color: var(--agent-primary-color);
+}
+
+.load-recommendations-btn {
+    background: linear-gradient(135deg, var(--agent-primary-color), rgba(var(--agent-primary-rgb), 0.8));
+    color: white;
+    border: none;
+    padding: var(--spacing-sm) var(--spacing-lg);
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    transition: all 0.2s ease;
+}
+
+.load-recommendations-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: var(--card-hover-shadow);
+}
+
+.load-recommendations-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.hotels-restaurants-container {
+    min-height: 200px;
+}
+
+.recommendations-placeholder {
+    text-align: center;
+    padding: var(--spacing-xl);
+    color: var(--text-secondary);
+    background: var(--background-secondary);
+    border-radius: var(--radius-md);
+    border: 2px dashed var(--border-color);
+}
+
+/* City Recommendations Layout */
+.city-recommendations {
+    margin-bottom: var(--spacing-xl);
+}
+
+.city-recommendations:last-child {
+    margin-bottom: 0;
+}
+
+.city-header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
+    padding-bottom: var(--spacing-md);
+    border-bottom: 2px solid var(--border-color);
+}
+
+.city-header h3 {
+    font-size: var(--font-size-h3);
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.city-image {
+    width: 60px;
+    height: 60px;
+    border-radius: var(--radius-md);
+    object-fit: cover;
+}
+
+.recommendations-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-lg);
+}
+
+/* Hotels and Restaurants Sections */
+.hotels-section,
+.restaurants-section {
+    background: var(--background-secondary);
+    padding: var(--spacing-lg);
+    border-radius: var(--radius-md);
+}
+
+.hotels-section {
+    border-left: 4px solid var(--hotel-color);
+}
+
+.restaurants-section {
+    border-left: 4px solid var(--restaurant-color);
+}
+
+.section-title {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-lg);
+    font-size: var(--font-size-h4);
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.hotels-section .section-title {
+    color: var(--hotel-color);
+}
+
+.restaurants-section .section-title {
+    color: var(--restaurant-color);
+}
+
+/* Individual Cards */
+.recommendation-card {
+    background: var(--background-primary);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+    box-shadow: var(--card-shadow);
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.recommendation-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--card-hover-shadow);
+}
+
+.recommendation-card:last-child {
+    margin-bottom: 0;
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--spacing-sm);
+}
+
+.card-title {
+    font-size: var(--font-size-body-large);
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+    line-height: 1.3;
+}
+
+.card-rating {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    font-size: var(--font-size-small);
+    color: var(--text-secondary);
+}
+
+.stars {
+    color: #FFD700;
+}
+
+.card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-sm);
+    font-size: var(--font-size-small);
+}
+
+.meta-item {
+    background: rgba(var(--agent-primary-rgb), 0.1);
+    color: var(--agent-primary-color);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--radius-xs);
+    font-weight: 500;
+}
+
+.hotel-card .meta-item {
+    background: rgba(0, 119, 190, 0.1);
+    color: var(--hotel-color);
+}
+
+.restaurant-card .meta-item {
+    background: rgba(255, 107, 53, 0.1);
+    color: var(--restaurant-color);
+}
+
+.card-description {
+    color: var(--text-secondary);
+    font-size: var(--font-size-body);
+    line-height: 1.5;
+    margin-bottom: var(--spacing-sm);
+}
+
+.card-features {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-xs);
+    margin-bottom: var(--spacing-md);
+}
+
+.feature-tag {
+    background: var(--background-tertiary);
+    color: var(--text-secondary);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--radius-xs);
+    font-size: var(--font-size-small);
+}
+
+.card-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-sm);
+}
+
+.action-btn {
+    flex: 1;
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-small);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-xs);
+}
+
+.primary-action {
+    background: var(--agent-primary-color);
+    color: white;
+}
+
+.primary-action:hover {
+    background: rgba(var(--agent-primary-rgb), 0.9);
+}
+
+.secondary-action {
+    background: var(--background-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+.secondary-action:hover {
+    background: var(--background-tertiary);
+}
+
+/* Loading and Error States */
+.loading-recommendations {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-xl);
+    color: var(--text-secondary);
+}
+
+.error-recommendations {
+    text-align: center;
+    padding: var(--spacing-xl);
+    color: var(--error-color);
+    background: rgba(255, 0, 0, 0.05);
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(255, 0, 0, 0.2);
+}
+
+/* Responsive Design for Hotels & Restaurants */
+@media (max-width: 1024px) {
+    .recommendations-grid {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-md);
+    }
+}
+
+@media (max-width: 768px) {
+    .section-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .section-controls {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .city-header {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+
+    .card-actions {
+        flex-direction: column;
+    }
+
+    .card-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-xs);
     }
 }

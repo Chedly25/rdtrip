@@ -852,6 +852,18 @@ class SpotlightController {
         document.getElementById('generateItinerary').addEventListener('click', () => {
             this.generateDetailedItinerary();
         });
+
+        // Hotels & Restaurants button
+        document.getElementById('loadHotelsRestaurants').addEventListener('click', () => {
+            this.loadHotelsRestaurants();
+        });
+
+        // Budget filter change
+        document.getElementById('budgetFilter').addEventListener('change', () => {
+            // Clear current recommendations when budget changes
+            const container = document.getElementById('hotelsRestaurantsContainer');
+            container.innerHTML = '<div class="recommendations-placeholder"><p>Click "Load Recommendations" to discover the best hotels and restaurants for each city on your route.</p></div>';
+        });
     }
 
     async generateDetailedItinerary() {
@@ -1203,6 +1215,252 @@ class SpotlightController {
             console.error('Error exporting to Waze:', error);
             alert('Could not export to Waze. Please try again.');
         }
+    }
+
+    async loadHotelsRestaurants() {
+        const btn = document.getElementById('loadHotelsRestaurants');
+        const btnText = btn.querySelector('.btn-text');
+        const spinner = btn.querySelector('.btn-spinner');
+        const container = document.getElementById('hotelsRestaurantsContainer');
+        const budgetSelect = document.getElementById('budgetFilter');
+
+        // Set loading state
+        btn.disabled = true;
+        btnText.style.display = 'none';
+        spinner.classList.remove('hidden');
+
+        // Show loading state
+        container.innerHTML = `
+            <div class="loading-recommendations">
+                <div class="spinner-large"></div>
+                <p>Loading hotels and restaurants for your route...</p>
+                <small>This may take a moment as we fetch the best recommendations</small>
+            </div>
+        `;
+
+        try {
+            const budget = budgetSelect.value;
+            const cities = this.spotlightData.waypoints || [];
+
+            // Add origin and destination to cities list
+            const allCities = [
+                { name: this.spotlightData.origin, coordinates: [5.4474, 43.5297] }, // Aix-en-Provence
+                ...cities,
+                { name: this.spotlightData.destination }
+            ];
+
+            const recommendationsData = [];
+
+            // Fetch hotels and restaurants for each city
+            for (const city of allCities) {
+                try {
+                    console.log(`Fetching recommendations for ${city.name}`);
+
+                    const response = await fetch('/api/get-hotels-restaurants', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            city: city.name,
+                            budget: budget,
+                            preferences: {}
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    recommendationsData.push({
+                        cityName: city.name,
+                        ...data
+                    });
+                } catch (cityError) {
+                    console.warn(`Failed to fetch data for ${city.name}:`, cityError);
+                    // Add fallback data for this city
+                    recommendationsData.push({
+                        cityName: city.name,
+                        city: city.name,
+                        hotels: [{
+                            name: `${city.name} Hotel`,
+                            stars: 3,
+                            priceRange: budget === 'budget' ? '€-€€' : budget === 'luxury' ? '€€€-€€€€' : '€€-€€€',
+                            pricePerNight: "€80-120",
+                            distance: "City center",
+                            amenities: ["WiFi", "Reception"],
+                            highlights: "Comfortable stay in the heart of the city",
+                            bookingUrl: "#",
+                            address: `${city.name} city center`
+                        }],
+                        restaurants: [{
+                            name: `${city.name} Restaurant`,
+                            cuisine: "Local",
+                            priceRange: budget === 'budget' ? '€-€€' : budget === 'luxury' ? '€€€-€€€€' : '€€-€€€',
+                            avgPrice: "€20-35 per person",
+                            mustTry: ["Local specialty"],
+                            atmosphere: "Casual",
+                            openingHours: "12:00-22:00",
+                            specialFeatures: "Traditional cuisine",
+                            reservationUrl: "#",
+                            address: `${city.name} city center`
+                        }],
+                        images: [{
+                            url: 'https://via.placeholder.com/800x400?text=' + encodeURIComponent(city.name),
+                            caption: `${city.name} - Image not available`,
+                            source: 'Placeholder'
+                        }]
+                    });
+                }
+            }
+
+            // Render the recommendations
+            this.renderHotelsRestaurants(recommendationsData);
+
+        } catch (error) {
+            console.error('Error loading hotels and restaurants:', error);
+            container.innerHTML = `
+                <div class="error-recommendations">
+                    <h3>🚫 Unable to load recommendations</h3>
+                    <p>We encountered an issue while fetching hotel and restaurant data.</p>
+                    <button class="retry-btn" onclick="document.getElementById('loadHotelsRestaurants').click()">
+                        Try Again
+                    </button>
+                    <p><small>Or try again in a few minutes when the service is less busy.</small></p>
+                </div>
+            `;
+        } finally {
+            // Reset button state
+            btn.disabled = false;
+            btnText.style.display = 'inline';
+            spinner.classList.add('hidden');
+        }
+    }
+
+    renderHotelsRestaurants(recommendationsData) {
+        const container = document.getElementById('hotelsRestaurantsContainer');
+
+        if (!recommendationsData || recommendationsData.length === 0) {
+            container.innerHTML = '<div class="error-recommendations"><p>No recommendations available.</p></div>';
+            return;
+        }
+
+        let html = '';
+
+        recommendationsData.forEach(cityData => {
+            const { cityName, hotels = [], restaurants = [], images = [] } = cityData;
+
+            // Get primary city image
+            const primaryImage = images[0];
+
+            html += `
+                <div class="city-recommendations">
+                    <div class="city-header">
+                        ${primaryImage ? `<img src="${primaryImage.url}" alt="${cityName}" class="city-image" onerror="this.src='https://via.placeholder.com/60x60?text=${encodeURIComponent(cityName.charAt(0))}';">` : ''}
+                        <h3>${cityName}</h3>
+                    </div>
+
+                    <div class="recommendations-grid">
+                        <div class="hotels-section">
+                            <h4 class="section-title">🏨 Where to Stay</h4>
+                            ${this.renderHotelCards(hotels.slice(0, 3))}
+                        </div>
+
+                        <div class="restaurants-section">
+                            <h4 class="section-title">🍽️ Where to Eat</h4>
+                            ${this.renderRestaurantCards(restaurants.slice(0, 3))}
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+    }
+
+    renderHotelCards(hotels) {
+        if (!hotels || hotels.length === 0) {
+            return '<p class="no-recommendations">No hotel recommendations available.</p>';
+        }
+
+        return hotels.map(hotel => {
+            const stars = '★'.repeat(hotel.stars || 3) + '☆'.repeat(5 - (hotel.stars || 3));
+            const amenitiesText = Array.isArray(hotel.amenities) ? hotel.amenities.slice(0, 3).join(', ') : 'Standard amenities';
+
+            return `
+                <div class="recommendation-card hotel-card">
+                    <div class="card-header">
+                        <h5 class="card-title">${hotel.name}</h5>
+                        <div class="card-rating">
+                            <span class="stars">${stars}</span>
+                        </div>
+                    </div>
+
+                    <div class="card-meta">
+                        <span class="meta-item">${hotel.priceRange}</span>
+                        <span class="meta-item">${hotel.pricePerNight}</span>
+                        <span class="meta-item">${hotel.distance}</span>
+                    </div>
+
+                    <p class="card-description">${hotel.highlights || 'Great hotel in the city center'}</p>
+
+                    <div class="card-features">
+                        ${amenitiesText.split(',').map(amenity => `<span class="feature-tag">${amenity.trim()}</span>`).join('')}
+                    </div>
+
+                    <div class="card-actions">
+                        ${hotel.bookingUrl && hotel.bookingUrl !== '#' ?
+                            `<a href="${hotel.bookingUrl}" target="_blank" class="action-btn primary-action">Book Now</a>` :
+                            `<button class="action-btn primary-action" onclick="alert('Booking link not available')">Book Now</button>`
+                        }
+                        <button class="action-btn secondary-action" onclick="alert('Address: ${hotel.address || hotel.name}')">View Details</button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    renderRestaurantCards(restaurants) {
+        if (!restaurants || restaurants.length === 0) {
+            return '<p class="no-recommendations">No restaurant recommendations available.</p>';
+        }
+
+        return restaurants.map(restaurant => {
+            const mustTryText = Array.isArray(restaurant.mustTry) ? restaurant.mustTry.slice(0, 2).join(', ') : 'Local specialties';
+
+            return `
+                <div class="recommendation-card restaurant-card">
+                    <div class="card-header">
+                        <h5 class="card-title">${restaurant.name}</h5>
+                        <div class="card-rating">
+                            <span class="cuisine-type">${restaurant.cuisine || 'Local'}</span>
+                        </div>
+                    </div>
+
+                    <div class="card-meta">
+                        <span class="meta-item">${restaurant.priceRange}</span>
+                        <span class="meta-item">${restaurant.avgPrice}</span>
+                        <span class="meta-item">${restaurant.atmosphere}</span>
+                    </div>
+
+                    <p class="card-description">Must try: ${mustTryText}</p>
+
+                    <div class="card-features">
+                        <span class="feature-tag">${restaurant.openingHours}</span>
+                        ${restaurant.specialFeatures ? `<span class="feature-tag">${restaurant.specialFeatures}</span>` : ''}
+                    </div>
+
+                    <div class="card-actions">
+                        ${restaurant.reservationUrl && restaurant.reservationUrl !== '#' ?
+                            `<a href="${restaurant.reservationUrl}" target="_blank" class="action-btn primary-action">Reserve</a>` :
+                            `<button class="action-btn primary-action" onclick="alert('Reservation link not available')">Reserve</button>`
+                        }
+                        <button class="action-btn secondary-action" onclick="alert('Address: ${restaurant.address || restaurant.name}')">View Details</button>
+                    </div>
+                </div>
+            `;
+        }).join('');
     }
 }
 

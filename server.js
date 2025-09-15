@@ -66,6 +66,38 @@ app.post('/api/generate-route', async (req, res) => {
   }
 });
 
+// Get hotels and restaurants for a city
+app.post('/api/get-hotels-restaurants', async (req, res) => {
+  try {
+    const { city, budget = 'mid', preferences = {} } = req.body;
+
+    if (!city) {
+      return res.status(400).json({ error: 'City is required' });
+    }
+
+    console.log(`Fetching hotels and restaurants for ${city} with budget ${budget}`);
+
+    const results = await Promise.all([
+      getHotelsForCity(city, budget, preferences),
+      getRestaurantsForCity(city, budget, preferences),
+      getCityImages(city)
+    ]);
+
+    const [hotels, restaurants, images] = results;
+
+    res.json({
+      city,
+      hotels,
+      restaurants,
+      images
+    });
+
+  } catch (error) {
+    console.error('Error fetching hotels and restaurants:', error);
+    res.status(500).json({ error: 'Failed to fetch hotels and restaurants' });
+  }
+});
+
 // Generate detailed day-by-day itinerary
 app.post('/api/generate-itinerary', async (req, res) => {
   try {
@@ -210,6 +242,207 @@ Make it detailed and practical with specific times and recommendations.`;
         await new Promise(resolve => setTimeout(resolve, retryDelay));
       }
     }
+  }
+}
+
+// Helper function to get hotels for a city
+async function getHotelsForCity(city, budget, preferences) {
+  const budgetMap = {
+    budget: '€-€€',
+    mid: '€€-€€€',
+    luxury: '€€€-€€€€'
+  };
+
+  const budgetRange = budgetMap[budget] || '€€-€€€';
+
+  const prompt = `Find the top 5 hotels in ${city} with ${budgetRange} price range.
+
+  Return ONLY a JSON array with this exact structure:
+  [
+    {
+      "name": "Hotel Name",
+      "stars": 4,
+      "priceRange": "${budgetRange}",
+      "pricePerNight": "€120-180",
+      "distance": "0.5km from city center",
+      "amenities": ["WiFi", "Breakfast", "Parking"],
+      "highlights": "Brief description of why this hotel stands out",
+      "bookingUrl": "https://booking.com/hotel/...",
+      "address": "Hotel address"
+    }
+  ]
+
+  Focus on: location, value for money, guest ratings, and unique features. Include direct booking links when available.`;
+
+  try {
+    const response = await axios.post('https://api.perplexity.ai/chat/completions', {
+      model: 'sonar',
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: 1500,
+      temperature: 0.3
+    }, {
+      headers: {
+        'Authorization': `Bearer ${PERPLEXITY_API_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    let result = response.data.choices[0].message.content;
+
+    // Clean up the response - remove markdown formatting
+    result = result.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+
+    try {
+      return JSON.parse(result);
+    } catch (parseError) {
+      console.warn('Failed to parse hotels JSON, returning fallback');
+      return [{
+        name: `${city} Hotel`,
+        stars: 3,
+        priceRange: budgetRange,
+        pricePerNight: "€80-120",
+        distance: "City center",
+        amenities: ["WiFi", "Reception"],
+        highlights: "Comfortable stay in the heart of the city",
+        bookingUrl: "#",
+        address: `${city} city center`
+      }];
+    }
+  } catch (error) {
+    console.error('Error fetching hotels:', error);
+    return [];
+  }
+}
+
+// Helper function to get restaurants for a city
+async function getRestaurantsForCity(city, budget, preferences) {
+  const budgetMap = {
+    budget: '€-€€',
+    mid: '€€-€€€',
+    luxury: '€€€-€€€€'
+  };
+
+  const budgetRange = budgetMap[budget] || '€€-€€€';
+
+  const prompt = `Find the top 5 restaurants in ${city} with ${budgetRange} price range.
+
+  Return ONLY a JSON array with this exact structure:
+  [
+    {
+      "name": "Restaurant Name",
+      "cuisine": "Italian",
+      "priceRange": "${budgetRange}",
+      "avgPrice": "€25-40 per person",
+      "mustTry": ["Signature dish 1", "Signature dish 2"],
+      "atmosphere": "Casual/Fine dining/Family-friendly",
+      "openingHours": "12:00-22:00",
+      "specialFeatures": "Outdoor seating, Local ingredients, etc.",
+      "reservationUrl": "https://...",
+      "address": "Restaurant address"
+    }
+  ]
+
+  Include a mix of local specialties, international cuisine, and different price points within the range.`;
+
+  try {
+    const response = await axios.post('https://api.perplexity.ai/chat/completions', {
+      model: 'sonar',
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: 1500,
+      temperature: 0.3
+    }, {
+      headers: {
+        'Authorization': `Bearer ${PERPLEXITY_API_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    let result = response.data.choices[0].message.content;
+
+    // Clean up the response
+    result = result.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+
+    try {
+      return JSON.parse(result);
+    } catch (parseError) {
+      console.warn('Failed to parse restaurants JSON, returning fallback');
+      return [{
+        name: `${city} Restaurant`,
+        cuisine: "Local",
+        priceRange: budgetRange,
+        avgPrice: "€20-35 per person",
+        mustTry: ["Local specialty"],
+        atmosphere: "Casual",
+        openingHours: "12:00-22:00",
+        specialFeatures: "Traditional cuisine",
+        reservationUrl: "#",
+        address: `${city} city center`
+      }];
+    }
+  } catch (error) {
+    console.error('Error fetching restaurants:', error);
+    return [];
+  }
+}
+
+// Helper function to get city images from Wikimedia
+async function getCityImages(city) {
+  try {
+    // Search for city images on Wikipedia/Wikimedia Commons
+    const searchResponse = await axios.get('https://en.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(city));
+
+    const images = [];
+
+    // Get main image from Wikipedia
+    if (searchResponse.data.originalimage) {
+      images.push({
+        url: searchResponse.data.originalimage.source,
+        caption: `${city} - Main view`,
+        source: 'Wikipedia'
+      });
+    }
+
+    // If we have the main image, try to get a few more from Wikimedia Commons
+    if (images.length > 0) {
+      try {
+        const commonsSearch = await axios.get(`https://commons.wikimedia.org/w/api.php`, {
+          params: {
+            action: 'query',
+            generator: 'search',
+            gsrnamespace: 6,
+            gsrsearch: `${city} landscape OR ${city} cityscape OR ${city} architecture`,
+            gsrlimit: 3,
+            prop: 'imageinfo',
+            iiprop: 'url|size',
+            iiurlwidth: 800,
+            format: 'json'
+          }
+        });
+
+        if (commonsSearch.data.query && commonsSearch.data.query.pages) {
+          Object.values(commonsSearch.data.query.pages).forEach(page => {
+            if (page.imageinfo && page.imageinfo[0] && page.imageinfo[0].thumburl) {
+              images.push({
+                url: page.imageinfo[0].thumburl,
+                caption: page.title.replace('File:', '').replace(/\.(jpg|png|jpeg)$/i, ''),
+                source: 'Wikimedia Commons'
+              });
+            }
+          });
+        }
+      } catch (commonsError) {
+        console.warn('Could not fetch additional images from Commons:', commonsError.message);
+      }
+    }
+
+    return images.slice(0, 4); // Limit to 4 images
+  } catch (error) {
+    console.error('Error fetching city images:', error);
+    return [{
+      url: 'https://via.placeholder.com/800x400?text=' + encodeURIComponent(city),
+      caption: `${city} - Image not available`,
+      source: 'Placeholder'
+    }];
   }
 }
 
