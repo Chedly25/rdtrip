@@ -234,27 +234,29 @@ class RoadTripPlanner {
             food: '#FF3B30'       // Red for food/cuisine
         };
 
-        // Add waypoint markers to map with agent-specific colors
-        allWaypoints.forEach((waypoint, index) => {
-            const color = agentColors[waypoint.agent] || '#34C759';
-            const agentEmoji = this.getAgentEmoji(waypoint.agent);
-            
-            new mapboxgl.Marker({ color: color })
-                .setLngLat([waypoint.lng, waypoint.lat])
-                .setPopup(new mapboxgl.Popup().setHTML(`
-                    <h3>${agentEmoji} ${waypoint.name}</h3>
-                    ${waypoint.fullName && waypoint.fullName !== waypoint.name ? `<p><small>${waypoint.fullName}</small></p>` : ''}
-                    <p>${waypoint.description || ''}</p>
-                    <small><strong>${this.capitalizeFirst(waypoint.agent)} Recommendation</strong></small>
-                `))
-                .addTo(this.map);
-        });
+        // Add waypoint markers to map with agent-specific colors (only if map exists)
+        if (this.map) {
+            allWaypoints.forEach((waypoint, index) => {
+                const color = agentColors[waypoint.agent] || '#34C759';
+                const agentEmoji = this.getAgentEmoji(waypoint.agent);
 
-        // Add destination marker
-        new mapboxgl.Marker({ color: '#8E44AD' })
-            .setLngLat([destinationCoords.lng, destinationCoords.lat])
-            .setPopup(new mapboxgl.Popup().setHTML(`<h3>🎯 ${destinationCoords.name}</h3><p>Your destination</p>`))
-            .addTo(this.map);
+                new mapboxgl.Marker({ color: color })
+                    .setLngLat([waypoint.lng, waypoint.lat])
+                    .setPopup(new mapboxgl.Popup().setHTML(`
+                        <h3>${agentEmoji} ${waypoint.name}</h3>
+                        ${waypoint.fullName && waypoint.fullName !== waypoint.name ? `<p><small>${waypoint.fullName}</small></p>` : ''}
+                        <p>${waypoint.description || ''}</p>
+                        <small><strong>${this.capitalizeFirst(waypoint.agent)} Recommendation</strong></small>
+                    `))
+                    .addTo(this.map);
+            });
+
+            // Add destination marker
+            new mapboxgl.Marker({ color: '#8E44AD' })
+                .setLngLat([destinationCoords.lng, destinationCoords.lat])
+                .setPopup(new mapboxgl.Popup().setHTML(`<h3>🎯 ${destinationCoords.name}</h3><p>Your destination</p>`))
+                .addTo(this.map);
+        }
 
         // Fit map to show all points (if map exists)
         if (this.map) {
@@ -271,8 +273,8 @@ class RoadTripPlanner {
             });
         }
 
-        // Add route line if we have waypoints
-        if (allWaypoints.length > 0) {
+        // Add route line if we have waypoints (only if map exists)
+        if (allWaypoints.length > 0 && this.map) {
             await this.addRouteToMap(allWaypoints, destinationCoords);
         }
 
@@ -1279,6 +1281,75 @@ class RoadTripPlanner {
         } catch (error) {
             console.error('Error parsing agent recommendations:', error);
             return [];
+        }
+    }
+
+    extractWaypoints(routeData) {
+        const allWaypoints = [];
+
+        routeData.agentResults.forEach(agentResult => {
+            try {
+                const recommendations = JSON.parse(agentResult.recommendations);
+                if (recommendations.waypoints && Array.isArray(recommendations.waypoints)) {
+                    recommendations.waypoints.forEach(waypoint => {
+                        allWaypoints.push({
+                            name: waypoint.name,
+                            lat: waypoint.coordinates[1],
+                            lng: waypoint.coordinates[0],
+                            agent: agentResult.agent,
+                            description: waypoint.description,
+                            activities: waypoint.activities,
+                            duration: waypoint.duration
+                        });
+                    });
+                }
+            } catch (error) {
+                console.error(`Error parsing recommendations for ${agentResult.agent}:`, error);
+            }
+        });
+
+        return allWaypoints;
+    }
+
+    async addRouteToMap(waypoints, destinationCoords) {
+        if (!this.map) return;
+
+        try {
+            // Create coordinates array for the route line
+            const coordinates = [
+                [5.4474, 43.5297], // Aix-en-Provence starting point
+                ...waypoints.map(wp => [wp.lng, wp.lat]),
+                [destinationCoords.lng, destinationCoords.lat]
+            ];
+
+            // Add route line to map
+            this.map.addSource('route', {
+                'type': 'geojson',
+                'data': {
+                    'type': 'Feature',
+                    'properties': {},
+                    'geometry': {
+                        'type': 'LineString',
+                        'coordinates': coordinates
+                    }
+                }
+            });
+
+            this.map.addLayer({
+                'id': 'route',
+                'type': 'line',
+                'source': 'route',
+                'layout': {
+                    'line-join': 'round',
+                    'line-cap': 'round'
+                },
+                'paint': {
+                    'line-color': '#667eea',
+                    'line-width': 4
+                }
+            });
+        } catch (error) {
+            console.error('Error adding route to map:', error);
         }
     }
 
