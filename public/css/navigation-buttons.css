@@ -118,61 +118,40 @@
 }
 
 /* Google Maps Spotlight Button */
-#exportGoogleMapsSpotlight {
-    background: linear-gradient(135deg, #4285F4 0%, #34A853 100%);
-    color: white;
-}
-
 #exportGoogleMapsSpotlight::before {
     content: '';
     position: absolute;
-    left: 8px;
+    left: 12px;
     top: 50%;
     transform: translateY(-50%);
-    width: 16px;
-    height: 16px;
+    width: 20px;
+    height: 20px;
     background-image: url('../images/gmaps.jpg');
     background-size: cover;
     background-position: center;
-    border-radius: 2px;
-}
-
-#exportGoogleMapsSpotlight:hover {
-    background: linear-gradient(135deg, #3367D6 0%, #2E7D32 100%);
-    transform: translateY(-1px);
-    box-shadow: 0 3px 8px rgba(66, 133, 244, 0.3);
+    border-radius: 3px;
 }
 
 /* Waze Spotlight Button */
-#exportWazeSpotlight {
-    background: linear-gradient(135deg, #00D4FF 0%, #0099CC 100%);
-    color: white;
-}
-
 #exportWazeSpotlight::before {
     content: '';
     position: absolute;
-    left: 8px;
+    left: 12px;
     top: 50%;
     transform: translateY(-50%);
-    width: 16px;
-    height: 16px;
+    width: 20px;
+    height: 20px;
     background-image: url('../images/wazelogo.png');
     background-size: cover;
     background-position: center;
-    border-radius: 2px;
-}
-
-#exportWazeSpotlight:hover {
-    background: linear-gradient(135deg, #00B8E6 0%, #007AA3 100%);
-    transform: translateY(-1px);
-    box-shadow: 0 3px 8px rgba(0, 212, 255, 0.3);
+    border-radius: 3px;
 }
 
 /* Adjust text position for spotlight buttons */
 #exportGoogleMapsSpotlight,
 #exportWazeSpotlight {
-    padding-left: 32px;
+    padding-left: 44px;
+    position: relative;
 }
 
 /* Responsive Design */
@@ -197,16 +176,18 @@
         gap: 6px;
     }
 
-    .nav-action-btn {
+    #exportGoogleMapsSpotlight,
+    #exportWazeSpotlight {
         padding: 6px 10px;
         font-size: 12px;
-        padding-left: 28px;
+        padding-left: 36px;
     }
 
-    .nav-action-btn::before {
-        width: 14px;
-        height: 14px;
-        left: 6px;
+    #exportGoogleMapsSpotlight::before,
+    #exportWazeSpotlight::before {
+        width: 16px;
+        height: 16px;
+        left: 8px;
     }
 }
 
@@ -227,10 +208,11 @@
         gap: 4px;
     }
 
-    .nav-action-btn {
+    #exportGoogleMapsSpotlight,
+    #exportWazeSpotlight {
         justify-content: center;
         padding: 8px 12px;
-        padding-left: 32px;
+        padding-left: 40px;
     }
 }
 
@@ -267,13 +249,4 @@
         border: 2px solid #fff;
     }
 
-    #exportGoogleMapsSpotlight {
-        background: #1a73e8;
-        border: 1px solid #fff;
-    }
-
-    #exportWazeSpotlight {
-        background: #0099cc;
-        border: 1px solid #fff;
-    }
 }

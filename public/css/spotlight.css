@@ -113,22 +113,27 @@
 }
 
 .nav-action-btn {
-    background: var(--gray-100);
-    border: 1px solid var(--gray-300);
+    background: var(--white);
+    border: 2px solid var(--gray-300);
     color: var(--gray-700);
-    font-size: var(--text-sm);
+    font-size: var(--text-base);
     font-weight: var(--font-weight-semibold);
     font-family: var(--font-inter);
     cursor: pointer;
-    padding: var(--space-2) var(--space-4);
-    border-radius: var(--radius);
+    padding: var(--space-3) var(--space-6);
+    border-radius: var(--radius-lg);
     transition: all var(--transition-normal);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    box-shadow: var(--shadow-sm);
 }
 
 .nav-action-btn:hover {
-    background: var(--gray-200);
+    background: var(--gray-50);
     border-color: var(--gray-400);
     transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
 }
 
 /* Main Layout */
