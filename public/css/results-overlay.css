@@ -41,7 +41,7 @@
     background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    padding: var(--space-5) var(--space-8);
+    padding: var(--space-4) var(--space-8);
     color: var(--gray-900);
     position: sticky;
     top: 0;
@@ -50,35 +50,65 @@
     border-bottom: 1px solid var(--gray-200);
 }
 
-.results-overlay-header h1 {
-    font-size: var(--text-2xl);
-    font-weight: var(--font-weight-bold);
-    margin: 0;
-    color: var(--gray-900);
+.header-content {
     display: flex;
     align-items: center;
-    gap: var(--space-3);
+    gap: var(--space-4);
+}
+
+.header-icon {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+    border-radius: var(--radius-lg);
+}
+
+.header-text {
+    flex: 1;
+}
+
+.header-text h1 {
+    font-size: var(--text-xl);
+    font-weight: var(--font-weight-bold);
+    margin: 0 0 var(--space-1) 0;
+    color: var(--gray-900);
     letter-spacing: -0.025em;
 }
 
-.results-overlay-header p {
-    font-size: var(--text-base);
+.route-path {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--text-sm);
     color: var(--gray-600);
-    margin: var(--space-2) 0 0 0;
     font-weight: var(--font-weight-medium);
+}
+
+.route-path .origin {
+    color: var(--gray-700);
+}
+
+.route-path .arrow {
+    color: var(--primary);
+    font-weight: var(--font-weight-bold);
+}
+
+.route-path .destination {
+    color: var(--gray-900);
+    font-weight: var(--font-weight-semibold);
 }
 
 .close-results {
     position: absolute;
-    top: var(--space-5);
+    top: var(--space-4);
     right: var(--space-8);
     background: var(--gray-100);
     border: none;
     color: var(--gray-600);
-    width: 40px;
-    height: 40px;
+    width: 36px;
+    height: 36px;
     border-radius: var(--radius-full);
-    font-size: var(--text-xl);
+    font-size: var(--text-lg);
     cursor: pointer;
     transition: all var(--transition-normal);
     display: flex;
@@ -513,18 +543,32 @@
     }
 
     .results-overlay-header {
-        padding: var(--space-4) var(--space-5);
+        padding: var(--space-3) var(--space-5);
     }
 
-    .results-overlay-header h1 {
-        font-size: var(--text-xl);
+    .header-content {
+        gap: var(--space-3);
+    }
+
+    .header-icon {
+        width: 32px;
+        height: 32px;
+    }
+
+    .header-text h1 {
+        font-size: var(--text-lg);
+    }
+
+    .route-path {
+        font-size: var(--text-xs);
     }
 
     .close-results {
-        top: var(--space-4);
+        top: var(--space-3);
         right: var(--space-5);
-        width: 36px;
-        height: 36px;
+        width: 32px;
+        height: 32px;
+        font-size: var(--text-base);
     }
 
     .agents-overview {
