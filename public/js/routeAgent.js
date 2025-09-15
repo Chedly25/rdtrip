@@ -254,11 +254,15 @@ export class RouteAgent {
      * @returns {Promise<Object>} Replacement city with full details
      */
     async findReplacementCity(originalCity, userMessage) {
+        console.log('🔍 findReplacementCity called for:', originalCity);
+
         // Extract preferences from user message
         const preferences = this.extractPreferences(userMessage);
+        console.log('📝 Extracted preferences:', preferences);
 
         // Get current route bounds and constraints
         const routeInfo = this.analyzeCurrentRoute();
+        console.log('🗺️ Route info for replacement search:', routeInfo);
 
         // Use Perplexity to find replacement with detailed research
         const prompt = `Find a perfect alternative to ${originalCity} for a road trip route from ${routeInfo.origin} to ${routeInfo.destination}.
@@ -292,11 +296,16 @@ export class RouteAgent {
         Focus on finding a hidden gem or excellent alternative that travelers would be excited to discover.`;
 
         try {
+            console.log('📤 Sending replacement request to Perplexity API...');
             const response = await aiFeatures.callPerplexityAPI(prompt, true);
+            console.log('📥 Raw API response:', response);
 
             // Clean and parse the JSON response
             const cleanedResponse = this.cleanJSONResponse(response);
+            console.log('🧹 Cleaned response:', cleanedResponse);
+
             const replacementData = JSON.parse(cleanedResponse);
+            console.log('✅ Parsed replacement data:', replacementData);
 
             // Enrich with coordinate data if possible
             const cityCoords = this.findCityCoordinates(replacementData.name);
@@ -308,7 +317,11 @@ export class RouteAgent {
             return replacementData;
 
         } catch (error) {
-            console.error('Error finding replacement city:', error);
+            console.error('❌ Error finding replacement city:', error);
+            console.error('Error details:', {
+                message: error.message,
+                stack: error.stack
+            });
             return null;
         }
     }
