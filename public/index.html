@@ -15,6 +15,11 @@
     <meta name="description" content="AI-powered road trip planner from Aix-en-Provence. Discover amazing routes with intelligent recommendations.">
     <meta name="theme-color" content="#667eea">
 
+    <!-- Premium Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/navigation-buttons.css">
     <link rel="stylesheet" href="css/results-overlay.css">
@@ -22,102 +27,335 @@
 </head>
 <body>
     <div class="app-container">
-        <!-- Header -->
-        <header class="header">
-            <div class="header-content">
-                <div class="header-logo">
-                    <img src="logo.png" alt="Road Trip Planner Logo" class="logo">
-                    <div class="header-text">
-                        <h1 class="app-title">Road Trip Planner</h1>
-                        <p class="app-subtitle">AI-powered routes from Aix-en-Provence</p>
+        <!-- Premium Landing Page -->
+        <section class="landing-page">
+            <!-- Navigation -->
+            <nav class="landing-nav">
+                <div class="nav-container">
+                    <div class="nav-brand">
+                        <img src="logo.png" alt="Road Trip Planner" class="nav-logo">
+                        <span class="nav-title">Road Trip Planner</span>
+                    </div>
+                    <div class="nav-links">
+                        <a href="#features" class="nav-link">Features</a>
+                        <a href="#planning" class="nav-link">Plan Trip</a>
+                        <button class="nav-cta" onclick="scrollToPlanning()">Get Started</button>
                     </div>
                 </div>
-            </div>
-        </header>
+            </nav>
 
-        <!-- Main Content -->
-        <main class="main-content">
-            <!-- Planning Panel -->
-            <div class="planning-panel">
-                <div class="input-section">
-                    <div class="form-group">
-                        <label for="destination">Where do you want to go?</label>
-                        <input 
-                            type="text" 
-                            id="destination" 
-                            placeholder="Enter European city (e.g., Barcelona, Rome, Amsterdam)"
-                            class="input-field"
-                        >
-                    </div>
-
-                    <div class="form-group">
-                        <label for="stops">Number of stops</label>
-                        <select id="stops" class="select-field">
-                            <option value="2">2 stops</option>
-                            <option value="3" selected>3 stops</option>
-                            <option value="4">4 stops</option>
-                            <option value="5">5 stops</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Budget preference</label>
-                        <div class="budget-selection">
-                            <button class="budget-btn active" data-budget="budget">💰 Budget ($)</button>
-                            <button class="budget-btn" data-budget="moderate">💳 Moderate ($$)</button>
-                            <button class="budget-btn" data-budget="comfort">🏨 Comfort ($$$)</button>
-                            <button class="budget-btn" data-budget="luxury">🍾 Luxury ($$$$)</button>
+            <!-- Hero Section -->
+            <section class="hero">
+                <div class="hero-container">
+                    <div class="hero-content">
+                        <div class="hero-text">
+                            <h1 class="hero-title">
+                                <span class="hero-title-main">Discover Europe</span>
+                                <span class="hero-title-sub">one perfect route at a time</span>
+                            </h1>
+                            <p class="hero-description">
+                                AI-powered journey planning from Aix-en-Provence to your dream destinations.
+                                Curated experiences, hidden gems, and seamless routes crafted just for you.
+                            </p>
+                            <div class="hero-actions">
+                                <button class="hero-cta primary" onclick="scrollToPlanning()">
+                                    Start Planning
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                                        <path d="M5 12h14m-7-7l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                    </svg>
+                                </button>
+                                <button class="hero-cta secondary" onclick="playVideo()">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                                        <path d="M8 5v14l11-7z" fill="currentColor"/>
+                                    </svg>
+                                    Watch Demo
+                                </button>
+                            </div>
+                        </div>
+                        <div class="hero-media">
+                            <div class="video-showcase">
+                                <div class="video-container">
+                                    <video id="heroVideo1" autoplay muted loop playsinline class="hero-video active">
+                                        <source src="video.mp4" type="video/mp4">
+                                    </video>
+                                    <video id="heroVideo2" muted loop playsinline class="hero-video">
+                                        <source src="video (1).mp4" type="video/mp4">
+                                    </video>
+                                    <div class="video-overlay">
+                                        <button class="video-play" onclick="toggleVideoPlay()">
+                                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                                                <path id="playIcon" d="M8 5v14l11-7z" fill="currentColor"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="video-controls">
+                                    <button class="video-dot active" onclick="switchVideo(1)"></button>
+                                    <button class="video-dot" onclick="switchVideo(2)"></button>
+                                </div>
+                            </div>
                         </div>
                     </div>
+                </div>
+            </section>
 
-                    <div class="form-group">
-                        <label>Travel style</label>
-                        <div class="agent-selection">
-                            <button class="agent-btn active" data-agent="adventure">🏔️ Adventure</button>
-                            <button class="agent-btn active" data-agent="culture">🏛️ Culture</button>
-                            <button class="agent-btn active" data-agent="food">🍽️ Food</button>
+            <!-- Features Section -->
+            <section id="features" class="features">
+                <div class="features-container">
+                    <div class="features-header">
+                        <h2 class="features-title">Why choose our AI-powered planner</h2>
+                        <p class="features-subtitle">Experience the future of travel planning with technology that understands your journey</p>
+                    </div>
+                    <div class="features-grid">
+                        <div class="feature-card">
+                            <div class="feature-image">
+                                <img src="photo-1500530855697-b586d89ba3ee.avif" alt="AI-Powered Routes" loading="lazy">
+                            </div>
+                            <div class="feature-content">
+                                <h3 class="feature-title">Intelligent Route Planning</h3>
+                                <p class="feature-description">Our AI analyzes millions of travel patterns, real-time traffic, and local insights to craft the perfect journey tailored to your preferences.</p>
+                            </div>
+                        </div>
+                        <div class="feature-card">
+                            <div class="feature-image">
+                                <img src="photo-1552470470-959579335ea9.avif" alt="Local Experiences" loading="lazy">
+                            </div>
+                            <div class="feature-content">
+                                <h3 class="feature-title">Curated Local Experiences</h3>
+                                <p class="feature-description">Discover hidden gems, authentic restaurants, and unique experiences that only locals know about, making every stop memorable.</p>
+                            </div>
+                        </div>
+                        <div class="feature-card">
+                            <div class="feature-image">
+                                <img src="photo-1558980395-2f289089d3ec.avif" alt="Seamless Experience" loading="lazy">
+                            </div>
+                            <div class="feature-content">
+                                <h3 class="feature-title">Seamless Integration</h3>
+                                <p class="feature-description">Export to Google Maps, get real-time updates, and access your personalized itinerary across all your devices.</p>
+                            </div>
+                        </div>
+                        <div class="feature-card">
+                            <div class="feature-image">
+                                <img src="premium_photo-1661885251699-b242dd1e6e20.avif" alt="Premium Support" loading="lazy">
+                            </div>
+                            <div class="feature-content">
+                                <h3 class="feature-title">24/7 AI Assistant</h3>
+                                <p class="feature-description">Get instant help, modify your plans on the go, and receive personalized recommendations from our intelligent travel assistant.</p>
+                            </div>
                         </div>
                     </div>
+                </div>
+            </section>
 
-                    <button id="generateRoute" class="generate-btn">
-                        <span class="btn-text">Generate Route</span>
-                        <div class="btn-spinner hidden"></div>
-                    </button>
+            <!-- Planning Section -->
+            <section id="planning" class="planning-section">
+                <div class="planning-container">
+                    <div class="planning-header">
+                        <h2 class="planning-title">Plan Your Perfect Journey</h2>
+                        <p class="planning-subtitle">Tell us your preferences and let our AI create an unforgettable experience</p>
+                    </div>
+
+                    <div class="planning-layout">
+                        <!-- Premium Form -->
+                        <div class="planning-form-wrapper">
+                            <div class="planning-form">
+                                <div class="form-section">
+                                    <div class="form-group">
+                                        <label for="destination" class="form-label">Where do you want to go?</label>
+                                        <input
+                                            type="text"
+                                            id="destination"
+                                            placeholder="Enter European city (e.g., Barcelona, Rome, Amsterdam)"
+                                            class="form-input"
+                                        >
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="stops" class="form-label">Number of stops</label>
+                                        <select id="stops" class="form-select">
+                                            <option value="2">2 stops</option>
+                                            <option value="3" selected>3 stops</option>
+                                            <option value="4">4 stops</option>
+                                            <option value="5">5 stops</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label class="form-label">Budget preference</label>
+                                        <div class="option-grid budget-selection">
+                                            <button class="option-btn budget-btn active" data-budget="budget">
+                                                <span class="option-icon">💰</span>
+                                                <span class="option-text">Budget</span>
+                                            </button>
+                                            <button class="option-btn budget-btn" data-budget="moderate">
+                                                <span class="option-icon">💳</span>
+                                                <span class="option-text">Moderate</span>
+                                            </button>
+                                            <button class="option-btn budget-btn" data-budget="comfort">
+                                                <span class="option-icon">🏨</span>
+                                                <span class="option-text">Comfort</span>
+                                            </button>
+                                            <button class="option-btn budget-btn" data-budget="luxury">
+                                                <span class="option-icon">🍾</span>
+                                                <span class="option-text">Luxury</span>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label class="form-label">Travel style</label>
+                                        <div class="option-grid agent-selection">
+                                            <button class="option-btn agent-btn active" data-agent="adventure">
+                                                <span class="option-icon">🏔️</span>
+                                                <span class="option-text">Adventure</span>
+                                            </button>
+                                            <button class="option-btn agent-btn active" data-agent="culture">
+                                                <span class="option-icon">🏛️</span>
+                                                <span class="option-text">Culture</span>
+                                            </button>
+                                            <button class="option-btn agent-btn active" data-agent="food">
+                                                <span class="option-icon">🍽️</span>
+                                                <span class="option-text">Food</span>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <button id="generateRoute" class="generate-button">
+                                        <span class="btn-content">
+                                            <span class="btn-text">Generate Route</span>
+                                            <svg class="btn-icon" width="20" height="20" viewBox="0 0 24 24" fill="none">
+                                                <path d="M5 12h14m-7-7l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                            </svg>
+                                        </span>
+                                        <div class="btn-spinner hidden">
+                                            <div class="spinner"></div>
+                                        </div>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Map Container -->
+                        <div class="map-wrapper">
+                            <div class="map-container">
+                                <div id="map" class="map"></div>
+                                <div class="map-overlay">
+                                    <div class="map-info">
+                                        <h3>Interactive Route Preview</h3>
+                                        <p>Your custom route will appear here</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </section>
+
+        <!-- Results Section (hidden initially, same as before) -->
+        <div id="resultsSection" class="results-section hidden">
+            <div class="results-container">
+                <div class="results-header">
+                    <h3>Your Route</h3>
+                    <div class="route-actions">
+                        <button id="exportGoogleMaps" class="action-btn">Google Maps</button>
+                        <button id="exportWaze" class="action-btn">Waze</button>
+                        <button id="downloadPdf" class="action-btn">📄 Download PDF</button>
+                        <button id="openChat" class="action-btn">💬 Ask AI</button>
+                    </div>
                 </div>
 
-                <!-- Results Section -->
-                <div id="resultsSection" class="results-section hidden">
-                    <div class="results-header">
-                        <h3>Your Route</h3>
-                        <div class="route-actions">
-                            <button id="exportGoogleMaps" class="action-btn">Google Maps</button>
-                            <button id="exportWaze" class="action-btn">Waze</button>
-                            <button id="downloadPdf" class="action-btn">📄 Download PDF</button>
-                            <button id="openChat" class="action-btn">💬 Ask AI</button>
-                        </div>
-                    </div>
-                    
-                    <!-- Route Timeline -->
-                    <div id="routeTimeline" class="route-timeline"></div>
-                    
-                    <!-- Budget Summary -->
-                    <div id="budgetSummary" class="budget-summary"></div>
-                    
-                    <!-- Local Tips -->
-                    <div id="localTips" class="local-tips"></div>
-                    
-                    <!-- Agent Results -->
-                    <div id="routeResults" class="route-results"></div>
-                </div>
-            </div>
+                <!-- Route Timeline -->
+                <div id="routeTimeline" class="route-timeline"></div>
 
-            <!-- Map Container -->
-            <div class="map-container">
-                <div id="map" class="map"></div>
+                <!-- Budget Summary -->
+                <div id="budgetSummary" class="budget-summary"></div>
+
+                <!-- Local Tips -->
+                <div id="localTips" class="local-tips"></div>
+
+                <!-- Agent Results -->
+                <div id="routeResults" class="route-results"></div>
             </div>
-        </main>
+        </div>
     </div>
 
+    <!-- Scripts -->
+    <script>
+        // Video functionality
+        let currentVideo = 1;
+        let isPlaying = true;
+
+        function switchVideo(videoNum) {
+            const video1 = document.getElementById('heroVideo1');
+            const video2 = document.getElementById('heroVideo2');
+            const dots = document.querySelectorAll('.video-dot');
+
+            // Update dots
+            dots.forEach((dot, index) => {
+                dot.classList.toggle('active', index + 1 === videoNum);
+            });
+
+            // Switch videos
+            if (videoNum === 1) {
+                video1.classList.add('active');
+                video2.classList.remove('active');
+                if (isPlaying) video1.play();
+            } else {
+                video2.classList.add('active');
+                video1.classList.remove('active');
+                if (isPlaying) video2.play();
+            }
+
+            currentVideo = videoNum;
+        }
+
+        function toggleVideoPlay() {
+            const activeVideo = currentVideo === 1 ?
+                document.getElementById('heroVideo1') :
+                document.getElementById('heroVideo2');
+
+            if (isPlaying) {
+                activeVideo.pause();
+                isPlaying = false;
+            } else {
+                activeVideo.play();
+                isPlaying = true;
+            }
+        }
+
+        function playVideo() {
+            const video2 = document.getElementById('heroVideo2');
+            switchVideo(2);
+            video2.currentTime = 0;
+            video2.play();
+            isPlaying = true;
+        }
+
+        function scrollToPlanning() {
+            document.getElementById('planning').scrollIntoView({
+                behavior: 'smooth',
+                block: 'start'
+            });
+        }
+
+        // Auto-switch videos every 10 seconds
+        setInterval(() => {
+            if (isPlaying) {
+                switchVideo(currentVideo === 1 ? 2 : 1);
+            }
+        }, 10000);
+
+        // Navigation scroll effect
+        window.addEventListener('scroll', () => {
+            const nav = document.querySelector('.landing-nav');
+            if (window.scrollY > 100) {
+                nav.classList.add('scrolled');
+            } else {
+                nav.classList.remove('scrolled');
+            }
+        });
+    </script>
 
     <script>
         // Disable Mapbox telemetry to prevent ad-blocker conflicts
