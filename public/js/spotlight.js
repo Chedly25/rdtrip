@@ -60,11 +60,11 @@ class SpotlightController {
 
         // Check if it's an image path or emoji
         if (agent === 'adventure') {
-            iconElement.innerHTML = '<img src="/adventure.png" alt="Adventure" style="width: 32px; height: 32px; vertical-align: middle;">';
+            iconElement.innerHTML = '<img src="/adventure.png" alt="Adventure" style="width: 48px; height: 48px; vertical-align: middle;">';
         } else if (agent === 'culture') {
-            iconElement.innerHTML = '<img src="/culture.png" alt="Culture" style="width: 32px; height: 32px; vertical-align: middle;">';
+            iconElement.innerHTML = '<img src="/culture.png" alt="Culture" style="width: 48px; height: 48px; vertical-align: middle;">';
         } else if (agent === 'food') {
-            iconElement.innerHTML = '<img src="/food.png" alt="Food" style="width: 32px; height: 32px; vertical-align: middle;">';
+            iconElement.innerHTML = '<img src="/food.png" alt="Food" style="width: 48px; height: 48px; vertical-align: middle;">';
         } else {
             iconElement.textContent = iconValue;
         }

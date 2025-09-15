@@ -5,9 +5,9 @@
 (function() {
     // Map emojis to their image files
     const emojiToImage = {
-        '🏔️': { src: '/adventure.png', alt: 'Adventure', size: 28 },
-        '🏛️': { src: '/culture.png', alt: 'Culture', size: 28 },
-        '🍽️': { src: '/food.png', alt: 'Food', size: 28 }
+        '🏔️': { src: '/adventure.png', alt: 'Adventure', size: 48 },
+        '🏛️': { src: '/culture.png', alt: 'Culture', size: 48 },
+        '🍽️': { src: '/food.png', alt: 'Food', size: 48 }
     };
 
     /**
@@ -81,7 +81,9 @@
                             img.style.height = `${imgData.size}px`;
                             img.style.verticalAlign = 'middle';
                             img.style.display = 'inline-block';
-                            img.style.margin = '0 2px';
+                            img.style.margin = '0 4px';
+                            img.style.filter = 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))';
+                            img.style.borderRadius = '4px';
                             fragment.appendChild(img);
 
                             // Update indices
