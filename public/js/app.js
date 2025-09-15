@@ -1245,7 +1245,7 @@ class RoadTripPlanner {
 
     getAgentEmoji(agent) {
         const emojis = {
-            adventure: '<img src="/adventure.png" alt="Adventure" style="width: 20px; height: 20px; vertical-align: middle;">',
+            adventure: '🏔️',
             culture: '🏛️',
             food: '🍽️'
         };

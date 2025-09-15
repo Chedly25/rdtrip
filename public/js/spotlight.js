@@ -43,7 +43,7 @@ class SpotlightController {
 
         // Set agent icon and title
         const agentEmojis = {
-            adventure: '<img src="/adventure.png" alt="Adventure" style="width: 20px; height: 20px; vertical-align: middle;">',
+            adventure: '🏔️',
             culture: '🏛️',
             food: '🍽️'
         };
@@ -54,7 +54,20 @@ class SpotlightController {
             food: 'Food Route'
         };
 
-        document.getElementById('routeAgentIcon').textContent = agentEmojis[agent];
+        // Handle icon display - use innerHTML for images, textContent for emojis
+        const iconElement = document.getElementById('routeAgentIcon');
+        const iconValue = agentEmojis[agent];
+
+        // Check if it's an image path or emoji
+        if (agent === 'adventure') {
+            iconElement.innerHTML = '<img src="/adventure.png" alt="Adventure" style="width: 24px; height: 24px; vertical-align: middle;">';
+        } else if (agent === 'culture') {
+            iconElement.innerHTML = '<img src="/culture.png" alt="Culture" style="width: 24px; height: 24px; vertical-align: middle;">';
+        } else if (agent === 'food') {
+            iconElement.innerHTML = '<img src="/food.png" alt="Food" style="width: 24px; height: 24px; vertical-align: middle;">';
+        } else {
+            iconElement.textContent = iconValue;
+        }
         document.getElementById('routeTitle').textContent = agentNames[agent];
         document.getElementById('routeSubtitle').textContent = `${origin} → ${destination}`;
 
@@ -785,7 +798,7 @@ class SpotlightController {
         if (name.includes('park') || name.includes('garden')) return '🌳';
         if (name.includes('mountain') || name.includes('mont') || name.includes('peak')) return '⛰️';
         if (name.includes('lake') || name.includes('lac')) return '🏞️';
-        if (name.includes('gorge') || name.includes('canyon') || name.includes('valley')) return '<img src="/adventure.png" alt="Adventure" style="width: 20px; height: 20px; vertical-align: middle;">';
+        if (name.includes('gorge') || name.includes('canyon') || name.includes('valley')) return '🏔️';
         if (name.includes('beach') || name.includes('coast') || name.includes('bay')) return '🏖️';
         if (name.includes('market') || name.includes('marché')) return '🏪';
         if (name.includes('restaurant') || name.includes('bistro') || name.includes('café')) return '🍽️';
@@ -1149,7 +1162,7 @@ class SpotlightController {
 
     getAgentEmoji(agent) {
         const emojis = {
-            adventure: '<img src="/adventure.png" alt="Adventure" style="width: 20px; height: 20px; vertical-align: middle;">',
+            adventure: '🏔️',
             culture: '🏛️',
             food: '🍽️'
         };

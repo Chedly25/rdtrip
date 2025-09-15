@@ -247,7 +247,7 @@ class SpotlightController {
     createCityHighlight(city, agentType, index) {
         const cityName = city.name || city;
         const agentTypeIcons = {
-            adventure: '<img src="/adventure.png" alt="Adventure" style="width: 20px; height: 20px; vertical-align: middle;">',
+            adventure: '🏔️',
             romantic: '💕', 
             cultural: '🏛️',
             foodie: '🍽️',
