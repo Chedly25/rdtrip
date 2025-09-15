@@ -128,7 +128,20 @@ class GlobalAIAssistant {
                     console.log('  Cities from route array:', extractedCities);
                 }
 
-                // Method 3: From agentResults recommendations
+                // Method 3: From agentData.recommendations (new format)
+                if (extractedCities.length === 0 && spotlight.agentData && spotlight.agentData.recommendations) {
+                    try {
+                        const parsed = JSON.parse(spotlight.agentData.recommendations);
+                        if (parsed.waypoints) {
+                            extractedCities = parsed.waypoints.map(wp => wp.name || wp.city).filter(Boolean);
+                            console.log('  Cities from agentData.recommendations:', extractedCities);
+                        }
+                    } catch (e) {
+                        console.log('  Failed to parse agentData.recommendations:', e);
+                    }
+                }
+
+                // Method 4: From agentResults recommendations (fallback)
                 if (extractedCities.length === 0 && spotlight.agentResults) {
                     spotlight.agentResults.forEach(result => {
                         try {
@@ -153,14 +166,14 @@ class GlobalAIAssistant {
                     console.log('  Cities from agentResults:', extractedCities);
                 }
 
-                // Method 4: From origin/destination + missing intermediate cities
+                // Method 5: From origin/destination + missing intermediate cities
                 if (extractedCities.length === 0) {
                     if (spotlight.origin) extractedCities.push(spotlight.origin);
                     if (spotlight.destination) extractedCities.push(spotlight.destination);
                     console.log('  Cities from origin/destination:', extractedCities);
                 }
 
-                // Method 5: Extract from DOM if we still don't have enough cities
+                // Method 6: Extract from DOM if we still don't have enough cities
                 if (extractedCities.length < (spotlight.totalStops || 2)) {
                     console.log(`⚠️ Only found ${extractedCities.length} cities but expecting ${spotlight.totalStops}, checking DOM...`);
 
