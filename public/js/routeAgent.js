@@ -82,7 +82,7 @@ export class RouteAgent {
                 response = await this.handleStopReplacement(message, intent);
                 break;
             case 'confirmReplacement':
-                response = await this.handleReplacementConfirmation(true);
+                response = await this.handleDirectReplacementChoice(intent);
                 break;
             case 'rejectReplacement':
                 response = await this.handleReplacementConfirmation(false);
@@ -107,6 +107,26 @@ export class RouteAgent {
     detectIntent(message) {
         const lowercaseMessage = message.toLowerCase();
         console.log('🔍 RouteAgent.detectIntent called with:', message);
+
+        // Check for user confirming a specific replacement choice
+        const confirmationPatterns = [
+            /let'?s go with (.*?)(?:\.|$)/i,
+            /yes,? (?:let'?s )?(?:go with|choose|pick|use) (.*?)(?:\.|$)/i,
+            /i'?ll (?:take|choose|go with) (.*?)(?:\.|$)/i,
+            /(?:replace it with|change it to) (.*?)(?:\.|$)/i
+        ];
+
+        for (const pattern of confirmationPatterns) {
+            const match = message.match(pattern);
+            if (match && match[1]) {
+                console.log('✅ Detected replacement confirmation for:', match[1]);
+                return {
+                    type: 'confirmReplacement',
+                    replacementCity: match[1].trim(),
+                    fullMessage: message
+                };
+            }
+        }
 
         // Check for stop replacement intent
         for (const pattern of this.intentPatterns.replaceStop) {
@@ -172,6 +192,79 @@ export class RouteAgent {
         }
 
         return null;
+    }
+
+    /**
+     * Handle direct replacement choice (e.g., "let's go with Nîmes")
+     * @param {Object} intent - Detected intent with replacement city
+     * @returns {Promise<Object>} Response object
+     */
+    async handleDirectReplacementChoice(intent) {
+        console.log('🎯 handleDirectReplacementChoice called with:', intent);
+
+        const replacementName = intent.replacementCity;
+
+        // Try to determine which city is being replaced from conversation context
+        let cityToReplace = null;
+
+        // Check recent conversation for mentioned cities
+        if (this.conversationContext.length > 0) {
+            const recentMessages = this.conversationContext.slice(-3);
+            for (const msg of recentMessages) {
+                if (msg.content && msg.content.toLowerCase().includes('replace')) {
+                    // Extract city from messages like "replace montpellier"
+                    const cities = this.extractRouteCities(this.currentRoute);
+                    for (const city of cities) {
+                        if (msg.content.toLowerCase().includes(city.toLowerCase())) {
+                            cityToReplace = city;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (!cityToReplace) {
+            // Try to guess based on middle city (most commonly replaced)
+            const cities = this.extractRouteCities(this.currentRoute);
+            if (cities.length > 2) {
+                cityToReplace = cities[1]; // Middle city
+            }
+        }
+
+        if (!cityToReplace) {
+            return {
+                type: 'clarification',
+                content: `I understand you want to go with ${replacementName}, but which city would you like to replace with it? Please specify which city in your route you'd like to replace.`
+            };
+        }
+
+        // Create a replacement data structure
+        const replacementData = {
+            name: replacementName,
+            description: `${replacementName} is a great choice for your route! This historic city offers unique attractions and experiences.`,
+            activities: [
+                'Explore the historic center',
+                'Visit local attractions',
+                'Enjoy regional cuisine',
+                'Discover cultural sites'
+            ],
+            bestFor: ['culture', 'history', 'food'],
+            estimatedTime: '1-2 days'
+        };
+
+        // Return a replacement proposal with action buttons
+        const responseContent = `Perfect! Let me set up the replacement of **${cityToReplace}** with **${replacementName}**.\n\n`;
+
+        return {
+            type: 'replacement_proposal',
+            content: responseContent + `Would you like me to replace ${cityToReplace} with ${replacementName} throughout your route?`,
+            data: {
+                originalCity: cityToReplace,
+                replacementCity: replacementData,
+                detourInfo: { isSignificantDetour: false }
+            }
+        };
     }
 
     /**
