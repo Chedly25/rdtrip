@@ -639,7 +639,31 @@ class GlobalAIAssistant {
         messageElement.className = `ai-message ${sender}`;
         if (isLoading) messageElement.className += ' loading';
 
-        const formattedMessage = message.replace(/\\*\\*(.*?)\\*\\*/g, '<strong>$1</strong>').replace(/\\n/g, '<br>');
+        // Enhanced markdown parsing for better formatting
+        let formattedMessage = message
+            // Convert bold text
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            // Convert italic text (single asterisk)
+            .replace(/(?<!\*)\*(?!\*)([^*]+)\*(?!\*)/g, '<em>$1</em>')
+            // Convert code blocks
+            .replace(/`([^`]+)`/g, '<code>$1</code>')
+            // Convert bullet points (handle both • and * at start of line after newline)
+            .split('\n')
+            .map(line => {
+                if (line.trim().startsWith('•') || line.trim().startsWith('*')) {
+                    return '<li>' + line.replace(/^[\s]*[•\*]\s*/, '') + '</li>';
+                }
+                return line;
+            })
+            .join('\n')
+            // Wrap consecutive li elements in ul
+            .replace(/(<li>.*<\/li>\n?)+/g, match => `<ul>${match}</ul>`)
+            // Convert line breaks (but not within HTML tags)
+            .replace(/\n(?!<\/?(ul|li|strong|em|code))/g, '<br>')
+            // Clean up extra line breaks around lists
+            .replace(/<br>(<ul>)/g, '$1')
+            .replace(/(<\/ul>)<br>/g, '$1');
+
         messageElement.innerHTML = formattedMessage;
 
         messagesContainer.appendChild(messageElement);
