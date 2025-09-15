@@ -1505,8 +1505,11 @@ class RoadTripPlanner {
         const overlayHTML = `
             <div class="results-overlay" id="resultsOverlay">
                 <div class="results-overlay-header">
-                    <h1>🚗 Your Road Trip Routes</h1>
-                    <p>From Aix-en-Provence to ${routeData.destination}</p>
+                    <h1>
+                        <span style="color: #667eea;">✈️</span>
+                        Route Results
+                    </h1>
+                    <p>Aix-en-Provence → ${routeData.destination}</p>
                     <button class="close-results" onclick="planner.closeResultsOverlay()">×</button>
                 </div>
 
