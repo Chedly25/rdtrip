@@ -1259,6 +1259,29 @@ class RoadTripPlanner {
         return colors[agent] || '#007AFF';
     }
 
+    capitalizeFirst(str) {
+        return str.charAt(0).toUpperCase() + str.slice(1);
+    }
+
+    extractCitiesFromAgent(agentResult) {
+        try {
+            const recommendations = JSON.parse(agentResult.recommendations);
+            if (recommendations.waypoints && Array.isArray(recommendations.waypoints)) {
+                return recommendations.waypoints.map(waypoint => ({
+                    city: waypoint.name,
+                    coordinates: waypoint.coordinates,
+                    description: waypoint.description,
+                    activities: waypoint.activities,
+                    duration: waypoint.duration
+                }));
+            }
+            return [];
+        } catch (error) {
+            console.error('Error parsing agent recommendations:', error);
+            return [];
+        }
+    }
+
     getEstimatedDuration(waypoint) {
         const durations = {
             adventure: '2-3 hours',
