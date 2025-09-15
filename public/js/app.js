@@ -83,29 +83,8 @@ class RoadTripPlanner {
             }
         });
 
-        // PDF download button
-        document.getElementById('downloadPdf').addEventListener('click', () => {
-            this.downloadPDF();
-        });
-
-        // Navigation export buttons
-        document.getElementById('exportGoogleMaps').addEventListener('click', () => {
-            this.exportToGoogleMaps();
-        });
-
-        document.getElementById('exportWaze').addEventListener('click', () => {
-            this.exportToWaze();
-        });
-
-        // Legacy chat integration with global AI
-        const openChatBtn = document.getElementById('openChat');
-        if (openChatBtn) {
-            openChatBtn.addEventListener('click', () => {
-                if (window.globalAI) {
-                    window.globalAI.openAiAssistant();
-                }
-            });
-        }
+        // Note: Export buttons and chat are now handled in the results overlay
+        // These elements no longer exist in the main form
 
         // Close modal on backdrop click for legacy modal
         const chatModal = document.getElementById('chatModal');
@@ -287,18 +266,13 @@ class RoadTripPlanner {
             await this.addRouteToMap(allWaypoints, destinationCoords);
         }
 
-        // Display route information
-        this.displayRouteTimeline(allWaypoints, destinationCoords);
-        this.displayBudgetSummary(allWaypoints);
-        this.displayLocalTips(allWaypoints, destinationCoords);
-        this.displayRouteResults(routeData);
-
-        // Show results section
-        document.getElementById('resultsSection').classList.remove('hidden');
+        // Display route information through the results overlay
+        // The results overlay will handle all the display
     }
 
     displayRouteTimeline(waypoints, destination) {
         const timelineContainer = document.getElementById('routeTimeline');
+        if (!timelineContainer) return; // Element no longer exists
         timelineContainer.innerHTML = '<h4>🗺️ Route Timeline</h4>';
 
         // Add starting point
@@ -369,6 +343,7 @@ class RoadTripPlanner {
 
     displayBudgetSummary(waypoints) {
         const budgetContainer = document.getElementById('budgetSummary');
+        if (!budgetContainer) return; // Element no longer exists
         const budgetInfo = this.calculateBudget(waypoints);
         
         budgetContainer.innerHTML = `
@@ -405,6 +380,7 @@ class RoadTripPlanner {
 
     displayLocalTips(waypoints, destination) {
         const tipsContainer = document.getElementById('localTips');
+        if (!tipsContainer) return; // Element no longer exists
         const tips = this.generateLocalTips(waypoints, destination);
         
         tipsContainer.innerHTML = `
@@ -434,6 +410,7 @@ class RoadTripPlanner {
 
     displayRouteResults(routeData) {
         const resultsContainer = document.getElementById('routeResults');
+        if (!resultsContainer) return; // Element no longer exists
 
         let resultsHTML = '<h4 style="margin-bottom: 20px; font-size: 20px;">🎯 Agent Recommendations</h4>';
 
@@ -862,11 +839,14 @@ class RoadTripPlanner {
         }
 
         try {
-            // Show loading
+            // Show loading (if button exists)
             const btn = document.getElementById('downloadPdf');
-            const originalText = btn.textContent;
-            btn.textContent = '📄 Generating PDF...';
-            btn.disabled = true;
+            let originalText = '📄 Download PDF';
+            if (btn) {
+                originalText = btn.textContent;
+                btn.textContent = '📄 Generating PDF...';
+                btn.disabled = true;
+            }
 
             // Create PDF using jsPDF
             const { jsPDF } = window.jspdf;
@@ -928,18 +908,22 @@ class RoadTripPlanner {
             // Save PDF
             pdf.save(`road-trip-itinerary-${new Date().toISOString().split('T')[0]}.pdf`);
             
-            // Reset button
-            btn.textContent = originalText;
-            btn.disabled = false;
+            // Reset button (if it exists)
+            if (btn) {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
             
         } catch (error) {
             console.error('PDF generation error:', error);
             this.showError('Failed to generate PDF. Please try again.');
             
-            // Reset button
+            // Reset button (if it exists)
             const btn = document.getElementById('downloadPdf');
-            btn.textContent = '📄 Download PDF';
-            btn.disabled = false;
+            if (btn) {
+                btn.textContent = '📄 Download PDF';
+                btn.disabled = false;
+            }
         }
     }
 
