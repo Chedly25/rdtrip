@@ -15,7 +15,7 @@ export class TripTypesManager {
         this.tripTypes = {
             adventure: {
                 name: 'Adventure Trip',
-                icon: '🏔️',
+                icon: '<img src="/adventure.png" alt="Adventure" style="width: 20px; height: 20px; vertical-align: middle;">',
                 color: '#28a745',
                 gradient: 'linear-gradient(135deg, #28a745, #20c997)',
                 description: 'Hiking, outdoor activities, and adrenaline experiences',

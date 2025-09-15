@@ -247,7 +247,7 @@ class SpotlightController {
     createCityHighlight(city, agentType, index) {
         const cityName = city.name || city;
         const agentTypeIcons = {
-            adventure: '🏔️',
+            adventure: '<img src="/adventure.png" alt="Adventure" style="width: 20px; height: 20px; vertical-align: middle;">',
             romantic: '💕', 
             cultural: '🏛️',
             foodie: '🍽️',
@@ -905,7 +905,7 @@ class SpotlightController {
             'Marseille': [
                 { type: 'golden', title: 'Old Port Sunset', image: '🌅', description: 'Historic harbor with fishing boats' },
                 { type: 'architecture', title: 'Notre-Dame de la Garde', image: '⛪', description: 'Basilica overlooking the city' },
-                { type: 'nature', title: 'Calanques Views', image: '🏔️', description: 'Dramatic limestone cliffs and turquoise water' }
+                { type: 'nature', title: 'Calanques Views', image: '<img src="/adventure.png" alt="Adventure" style="width: 24px; height: 24px; vertical-align: middle;">', description: 'Dramatic limestone cliffs and turquoise water' }
             ],
             'Avignon': [
                 { type: 'golden', title: 'Palace of the Popes', image: '🏛️', description: 'Gothic architecture in warm light' },

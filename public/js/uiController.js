@@ -1136,7 +1136,7 @@ export class UIController {
         if (!agentsGrid) return;
         
         const agents = [
-            { type: 'adventure', name: 'Adventure Explorer', emoji: '🏔️', description: 'Finding thrilling experiences' },
+            { type: 'adventure', name: 'Adventure Explorer', emoji: '<img src="/adventure.png" alt="Adventure" style="width: 20px; height: 20px; vertical-align: middle;">', description: 'Finding thrilling experiences' },
             { type: 'romantic', name: 'Romance Guide', emoji: '💕', description: 'Crafting romantic moments' },
             { type: 'cultural', name: 'Culture Expert', emoji: '🏛️', description: 'Discovering heritage sites' },
             { type: 'foodie', name: 'Food Connoisseur', emoji: '🍷', description: 'Locating culinary gems' },

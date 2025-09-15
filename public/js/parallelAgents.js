@@ -15,7 +15,7 @@ export class ParallelAgentSystem {
         this.agents = {
             adventure: {
                 name: 'Adventure Explorer',
-                icon: '🏔️',
+                icon: '<img src="/adventure.png" alt="Adventure" style="width: 20px; height: 20px; vertical-align: middle;">',
                 color: '#28a745',
                 gradient: 'linear-gradient(135deg, #28a745, #20c997)',
                 description: 'Discovers thrilling outdoor activities and scenic routes',
@@ -548,7 +548,7 @@ Format as clean HTML. Include booking requirements and luxury service details. D
         const cities = route.route.map(c => c.name);
         const agentItineraries = {
             'Adventure Explorer': `
-                <h3>🏔️ Adventure Journey: ${cities.join(' → ')}</h3>
+                <h3><img src="/adventure.png" alt="Adventure" style="width: 24px; height: 24px; vertical-align: middle; margin-right: 8px;">Adventure Journey: ${cities.join(' → ')}</h3>
                 <p>Experience the thrill of Southern France and Italy with this adventure-packed route covering ${route.totalDistance}km.</p>
                 
                 <h4>Adventure Highlights:</h4>
@@ -743,7 +743,7 @@ Format as clean HTML. Include booking requirements and luxury service details. D
      */
     isFallbackResponse(response) {
         const fallbackIndicators = [
-            '🏔️ Adventure Route:', '💕 Romantic Journey:', '🏛️ Cultural Discovery:',
+            '<img src="/adventure.png" alt="Adventure" style="width: 20px; height: 20px; vertical-align: middle;"> Adventure Route:', '💕 Romantic Journey:', '🏛️ Cultural Discovery:',
             '🍽️ Culinary Adventure:', '👨‍👩‍👧‍👦 Family-Friendly Route:', '✨ Luxury Experience:',
             'This is a fallback response', 'please try again', 'Note: This is a fallback',
             'Adventure Route:', 'Romantic Journey:', 'Cultural Discovery:',
@@ -796,7 +796,7 @@ Format as clean HTML. Include booking requirements and luxury service details. D
             /\b(route|journey|adventure|experience|highlights?)\b/i,
             /\b(activities?|attractions?|restaurants?|hotels?)\b/i,
             /\b(please|try|again|note|fallback)\b/i,
-            /[🏔️💕🏛️🍽️👨‍👩‍👧‍👦✨]/, // Emoji indicators
+            /[💕🏛️🍽️👨‍👩‍👧‍👦✨]|<img[^>]*adventure\.png[^>]*>/, // Emoji and image indicators
             /^(this|that|the|and|or|but|with|for|in|on|at)\s+/i, // Articles/prepositions
             /\b(sunset|views?|dining|cuisine|culture)\b/i,
             /:/, // Colon indicates description
