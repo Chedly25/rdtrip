@@ -33,6 +33,14 @@ class RoadTripPlanner {
     }
 
     initMap() {
+        // Check if map container exists before initializing
+        const mapContainer = document.getElementById('map');
+        if (!mapContainer) {
+            console.log('Map container not found, skipping map initialization');
+            this.map = null;
+            return;
+        }
+
         // Initialize Mapbox map
         mapboxgl.accessToken = 'pk.eyJ1IjoiY2hlZGx5MjUiLCJhIjoiY21lbW1qeHRoMHB5azJsc2VuMWJld2tlYSJ9.0jfOiOXCh0VN5ZjJ5ab7MQ';
 
@@ -248,18 +256,20 @@ class RoadTripPlanner {
             .setPopup(new mapboxgl.Popup().setHTML(`<h3>🎯 ${destinationCoords.name}</h3><p>Your destination</p>`))
             .addTo(this.map);
 
-        // Fit map to show all points
-        const bounds = new mapboxgl.LngLatBounds();
-        bounds.extend([5.4474, 43.5297]); // Aix-en-Provence
-        allWaypoints.forEach(waypoint => {
-            bounds.extend([waypoint.lng, waypoint.lat]);
-        });
-        bounds.extend([destinationCoords.lng, destinationCoords.lat]); // Destination
-        
-        this.map.fitBounds(bounds, {
-            padding: 50,
-            maxZoom: 8
-        });
+        // Fit map to show all points (if map exists)
+        if (this.map) {
+            const bounds = new mapboxgl.LngLatBounds();
+            bounds.extend([5.4474, 43.5297]); // Aix-en-Provence
+            allWaypoints.forEach(waypoint => {
+                bounds.extend([waypoint.lng, waypoint.lat]);
+            });
+            bounds.extend([destinationCoords.lng, destinationCoords.lat]); // Destination
+
+            this.map.fitBounds(bounds, {
+                padding: 50,
+                maxZoom: 8
+            });
+        }
 
         // Add route line if we have waypoints
         if (allWaypoints.length > 0) {
@@ -303,12 +313,14 @@ class RoadTripPlanner {
             
             // Add click handler
             timelineItem.addEventListener('click', () => {
-                // Highlight on map
-                this.map.flyTo({
-                    center: [waypoint.lng, waypoint.lat],
-                    zoom: 10
-                });
-                
+                // Highlight on map (if map exists)
+                if (this.map) {
+                    this.map.flyTo({
+                        center: [waypoint.lng, waypoint.lat],
+                        zoom: 10
+                    });
+                }
+
                 // Toggle active state
                 document.querySelectorAll('.timeline-item').forEach(item => item.classList.remove('active'));
                 timelineItem.classList.add('active');
@@ -330,10 +342,12 @@ class RoadTripPlanner {
         `;
         
         destinationItem.addEventListener('click', () => {
-            this.map.flyTo({
-                center: [destination.lng, destination.lat],
-                zoom: 10
-            });
+            if (this.map) {
+                this.map.flyTo({
+                    center: [destination.lng, destination.lat],
+                    zoom: 10
+                });
+            }
             document.querySelectorAll('.timeline-item').forEach(item => item.classList.remove('active'));
             destinationItem.classList.add('active');
         });
@@ -1264,6 +1278,11 @@ class RoadTripPlanner {
     }
 
     async addRouteToMap(waypoints, destination) {
+        if (!this.map) {
+            console.log('Map not available, skipping route display');
+            return;
+        }
+
         try {
             // Create the coordinates array for the Directions API
             const coordinates = [
@@ -1332,6 +1351,11 @@ class RoadTripPlanner {
     }
 
     addRouteLayer(coordinates) {
+        if (!this.map) {
+            console.log('Map not available, skipping route layer');
+            return;
+        }
+
         try {
             // Remove existing route if it exists
             if (this.map.getSource('route')) {
@@ -1988,6 +2012,11 @@ class RoadTripPlanner {
      * Clear existing map layers (routes and waypoint markers)
      */
     clearMapLayers() {
+        if (!this.map) {
+            console.log('Map not available, skipping layer cleanup');
+            return;
+        }
+
         // Remove route layer if it exists
         if (this.map.getLayer('route')) {
             this.map.removeLayer('route');
