@@ -1523,12 +1523,6 @@ class RoadTripPlanner {
                     ${this.createDetailedCards(routeData)}
                 </div>
 
-                <!-- Actions Bar -->
-                <div class="route-actions-bar">
-                    <button class="route-action-btn primary" onclick="planner.closeResultsOverlay()">Continue Planning</button>
-                    <button class="route-action-btn secondary" onclick="planner.downloadPDF()">📄 Download All Routes</button>
-                    <button class="route-action-btn secondary" onclick="planner.openChatModal()">💬 Ask AI Assistant</button>
-                </div>
             </div>
         `;
 
