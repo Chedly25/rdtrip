@@ -241,6 +241,78 @@
 
     </div>
 
+    <!-- AI Assistant Widget -->
+    <div class="ai-widget" id="aiWidget">
+        <div class="ai-widget-trigger" onclick="openAiAssistant()">
+            <div class="ai-pulse"></div>
+            <div class="ai-avatar">🤖</div>
+        </div>
+        <div class="ai-widget-tooltip">
+            AI Assistant
+            <div class="tooltip-arrow"></div>
+        </div>
+    </div>
+
+    <!-- AI Assistant Modal -->
+    <div class="ai-modal hidden" id="aiAssistantModal">
+        <div class="ai-modal-content">
+            <div class="ai-modal-header">
+                <div class="ai-header-info">
+                    <div class="ai-logo-container">
+                        <img src="logo.png" alt="AI" class="ai-logo">
+                    </div>
+                    <div class="ai-header-text">
+                        <h3>Route Assistant</h3>
+                        <p id="aiStatus">Ready to help optimize your trip</p>
+                    </div>
+                </div>
+                <button class="ai-modal-close" onclick="closeAiAssistant()">×</button>
+            </div>
+
+            <!-- Workflow Visualization (hidden by default) -->
+            <div class="ai-workflow hidden" id="aiWorkflow">
+                <div class="workflow-steps">
+                    <div class="workflow-step" id="step1">
+                        <div class="step-icon">🔍</div>
+                        <div class="step-text">Analyzing request</div>
+                        <div class="step-spinner"></div>
+                    </div>
+                    <div class="workflow-step" id="step2">
+                        <div class="step-icon">🗺️</div>
+                        <div class="step-text">Finding alternatives</div>
+                        <div class="step-spinner"></div>
+                    </div>
+                    <div class="workflow-step" id="step3">
+                        <div class="step-icon">⚡</div>
+                        <div class="step-text">Optimizing route</div>
+                        <div class="step-spinner"></div>
+                    </div>
+                    <div class="workflow-step" id="step4">
+                        <div class="step-icon">✨</div>
+                        <div class="step-text">Finalizing changes</div>
+                        <div class="step-spinner"></div>
+                    </div>
+                </div>
+                <div class="workflow-progress">
+                    <div class="progress-bar" id="workflowProgress"></div>
+                </div>
+            </div>
+
+            <!-- Chat Container -->
+            <div class="ai-chat-container">
+                <div class="ai-messages" id="aiMessages">
+                    <!-- Messages will be added here dynamically -->
+                </div>
+                <div class="ai-input-container">
+                    <input type="text" class="ai-input" id="aiInput" placeholder="Ask me about your route..." onkeypress="if(event.key==='Enter') sendAiMessage()">
+                    <button class="ai-send-btn" onclick="sendAiMessage()">
+                        <span class="send-icon">➤</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script>
         // Video functionality
@@ -316,6 +388,68 @@
                 nav.classList.remove('scrolled');
             }
         });
+
+        // AI Assistant Functions
+        function openAiAssistant() {
+            document.getElementById('aiAssistantModal').classList.remove('hidden');
+            // Add welcome message if first time opening
+            const messagesContainer = document.getElementById('aiMessages');
+            if (messagesContainer.children.length === 0) {
+                addAiMessage('assistant', 'Hi! I\'m your route assistant 🤖\n\nI can help you with:\n• Route optimization\n• Finding alternatives\n• Travel recommendations\n• Local tips and advice\n\nHow can I help you today?');
+            }
+        }
+
+        function closeAiAssistant() {
+            document.getElementById('aiAssistantModal').classList.add('hidden');
+        }
+
+        function sendAiMessage() {
+            const input = document.getElementById('aiInput');
+            const message = input.value.trim();
+
+            if (!message) return;
+
+            // Add user message
+            addAiMessage('user', message);
+            input.value = '';
+
+            // Show loading response
+            const loadingId = addAiMessage('assistant', 'Thinking...', true);
+
+            // Simulate AI response (replace with actual AI integration)
+            setTimeout(() => {
+                removeAiMessage(loadingId);
+                addAiMessage('assistant', 'Thanks for your message! This is a demo response. The full AI integration will be available once you generate a route.');
+            }, 1500);
+        }
+
+        function addAiMessage(sender, message, isLoading = false) {
+            const messagesContainer = document.getElementById('aiMessages');
+            const messageElement = document.createElement('div');
+            const messageId = 'ai_msg_' + Date.now();
+
+            messageElement.id = messageId;
+            messageElement.className = `ai-message ${sender}`;
+            if (isLoading) {
+                messageElement.className += ' loading';
+            }
+
+            // Handle markdown-style formatting
+            const formattedMessage = message.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
+            messageElement.innerHTML = formattedMessage;
+
+            messagesContainer.appendChild(messageElement);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+            return messageId;
+        }
+
+        function removeAiMessage(messageId) {
+            const messageElement = document.getElementById(messageId);
+            if (messageElement) {
+                messageElement.remove();
+            }
+        }
     </script>
 
     <script>
