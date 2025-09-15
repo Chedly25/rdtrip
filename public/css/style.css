@@ -1123,8 +1123,8 @@ html {
 /* Floating AI Assistant Widget */
 .ai-widget {
     position: fixed;
-    bottom: 24px;
-    right: 24px;
+    bottom: var(--space-6);
+    right: var(--space-6);
     z-index: 1000;
     user-select: none;
 }
@@ -1132,30 +1132,33 @@ html {
 .ai-widget-trigger {
     width: 64px;
     height: 64px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 50%;
+    background: var(--primary);
+    border-radius: var(--radius-full);
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: var(--shadow-lg);
+    transition: all var(--transition-normal);
     position: relative;
     overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .ai-widget-trigger:hover {
-    transform: scale(1.1);
-    box-shadow: 0 8px 30px rgba(102, 126, 234, 0.6);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-xl);
+    background: var(--primary-hover);
 }
 
 .ai-widget-trigger:active {
-    transform: scale(1.05);
+    transform: translateY(-1px);
 }
 
 .ai-avatar {
     font-size: 28px;
     z-index: 2;
+    color: var(--white);
 }
 
 .ai-pulse {
@@ -1164,7 +1167,7 @@ html {
     left: 50%;
     width: 100%;
     height: 100%;
-    border-radius: 50%;
+    border-radius: var(--radius-full);
     background: rgba(255, 255, 255, 0.3);
     transform: translate(-50%, -50%) scale(0);
     animation: aiPulse 2s infinite;
@@ -1180,17 +1183,20 @@ html {
     position: absolute;
     bottom: 100%;
     right: 0;
-    margin-bottom: 12px;
-    background: rgba(0, 0, 0, 0.8);
-    color: white;
-    padding: 8px 12px;
-    border-radius: 6px;
-    font-size: 14px;
+    margin-bottom: var(--space-3);
+    background: var(--gray-900);
+    color: var(--white);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-sm);
+    font-family: var(--font-inter);
+    font-weight: var(--font-weight-medium);
     white-space: nowrap;
     opacity: 0;
     visibility: hidden;
-    transition: all 0.3s ease;
+    transition: all var(--transition-normal);
     backdrop-filter: blur(10px);
+    box-shadow: var(--shadow-md);
 }
 
 .ai-widget:hover .ai-widget-tooltip {
@@ -1206,14 +1212,14 @@ html {
     height: 0;
     border-left: 6px solid transparent;
     border-right: 6px solid transparent;
-    border-top: 6px solid rgba(0, 0, 0, 0.8);
+    border-top: 6px solid var(--gray-900);
 }
 
 /* Enhanced AI Modal */
 .ai-modal {
     position: fixed;
     bottom: 100px;
-    right: 24px;
+    right: var(--space-6);
     z-index: 1001;
     width: 400px;
     height: 600px;
@@ -1224,25 +1230,25 @@ html {
 .ai-modal.hidden {
     opacity: 0;
     visibility: hidden;
-    transform: translateY(20px) scale(0.95);
+    transform: translateY(var(--space-5)) scale(0.95);
 }
 
 .ai-modal-content {
-    background: white;
-    border-radius: 16px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+    background: var(--white);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-2xl);
     height: 100%;
     display: flex;
     flex-direction: column;
     overflow: hidden;
     backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid var(--gray-200);
 }
 
 .ai-modal-header {
-    padding: 20px 24px 16px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
+    padding: var(--space-5) var(--space-6) var(--space-4);
+    background: var(--primary);
+    color: var(--white);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -1251,18 +1257,18 @@ html {
 .ai-header-info {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: var(--space-3);
 }
 
 .ai-logo-container {
     width: 40px;
     height: 40px;
     background: rgba(255, 255, 255, 0.2);
-    border-radius: 50%;
+    border-radius: var(--radius-full);
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 8px;
+    padding: var(--space-2);
 }
 
 .ai-logo {
@@ -1273,78 +1279,81 @@ html {
 }
 
 .ai-header-text h3 {
-    margin: 0 0 4px 0;
-    font-size: 18px;
-    font-weight: 600;
+    margin: 0 0 var(--space-1) 0;
+    font-size: var(--text-lg);
+    font-weight: var(--font-weight-semibold);
+    font-family: var(--font-inter);
 }
 
 .ai-header-text p {
     margin: 0;
-    font-size: 14px;
+    font-size: var(--text-sm);
     opacity: 0.9;
+    font-family: var(--font-inter);
 }
 
 .ai-modal-close {
     background: rgba(255, 255, 255, 0.2);
     border: none;
-    color: white;
+    color: var(--white);
     width: 32px;
     height: 32px;
-    border-radius: 50%;
+    border-radius: var(--radius-full);
     cursor: pointer;
-    font-size: 18px;
+    font-size: var(--text-lg);
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s ease;
+    transition: all var(--transition-fast);
 }
 
 .ai-modal-close:hover {
     background: rgba(255, 255, 255, 0.3);
-    transform: scale(1.1);
+    transform: scale(1.05);
 }
 
 /* Workflow Visualization */
 .ai-workflow {
-    padding: 24px;
-    background: #f8fafc;
-    border-bottom: 1px solid #e2e8f0;
+    padding: var(--space-6);
+    background: var(--gray-50);
+    border-bottom: 1px solid var(--gray-200);
 }
 
 .workflow-steps {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: var(--space-4);
 }
 
 .workflow-step {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 12px 16px;
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-    transition: all 0.3s ease;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    background: var(--white);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    transition: all var(--transition-normal);
+    border: 1px solid var(--gray-200);
 }
 
 .workflow-step.active {
-    background: #f0f9ff;
-    border: 2px solid #3b82f6;
-    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.1);
+    background: var(--primary-light);
+    border: 2px solid var(--primary);
+    box-shadow: var(--shadow-md);
 }
 
 .workflow-step.completed {
-    background: #f0fdf4;
-    border: 2px solid #10b981;
+    background: rgba(52, 199, 89, 0.1);
+    border: 2px solid var(--success);
 }
 
 .step-icon {
-    font-size: 20px;
+    font-size: var(--text-xl);
     width: 36px;
     height: 36px;
-    background: #f1f5f9;
-    border-radius: 50%;
+    background: var(--gray-100);
+    border-radius: var(--radius-full);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1352,26 +1361,29 @@ html {
 }
 
 .workflow-step.active .step-icon {
-    background: #dbeafe;
+    background: rgba(102, 126, 234, 0.1);
+    color: var(--primary);
 }
 
 .workflow-step.completed .step-icon {
-    background: #dcfce7;
+    background: rgba(52, 199, 89, 0.1);
+    color: var(--success);
 }
 
 .step-text {
-    font-size: 14px;
-    font-weight: 500;
-    color: #475569;
+    font-size: var(--text-sm);
+    font-weight: var(--font-weight-medium);
+    color: var(--gray-700);
     flex: 1;
+    font-family: var(--font-inter);
 }
 
 .step-spinner {
     width: 16px;
     height: 16px;
-    border: 2px solid #e2e8f0;
-    border-top-color: #3b82f6;
-    border-radius: 50%;
+    border: 2px solid var(--gray-300);
+    border-top-color: var(--primary);
+    border-radius: var(--radius-full);
     animation: spin 1s linear infinite;
     opacity: 0;
 }
@@ -1381,19 +1393,19 @@ html {
 }
 
 .workflow-progress {
-    margin-top: 20px;
-    background: #e2e8f0;
+    margin-top: var(--space-5);
+    background: var(--gray-200);
     height: 4px;
-    border-radius: 2px;
+    border-radius: var(--radius-sm);
     overflow: hidden;
 }
 
 .progress-bar {
     height: 100%;
-    background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+    background: var(--gradient-primary);
     width: 0%;
-    transition: width 0.5s ease;
-    border-radius: 2px;
+    transition: width var(--transition-slow);
+    border-radius: var(--radius-sm);
 }
 
 /* Chat Container */
@@ -1406,113 +1418,125 @@ html {
 
 .ai-messages {
     flex: 1;
-    padding: 20px;
+    padding: var(--space-5);
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: var(--space-4);
 }
 
 .ai-input-container {
-    padding: 16px 20px;
-    border-top: 1px solid #e2e8f0;
-    background: #fafafa;
+    padding: var(--space-4) var(--space-5);
+    border-top: 1px solid var(--gray-200);
+    background: var(--gray-50);
     display: flex;
-    gap: 8px;
+    gap: var(--space-2);
     align-items: center;
 }
 
 .ai-input {
     flex: 1;
-    padding: 12px 16px;
-    border: 2px solid #e2e8f0;
-    border-radius: 12px;
-    font-size: 14px;
+    padding: var(--space-3) var(--space-4);
+    border: 2px solid var(--gray-200);
+    border-radius: var(--radius-lg);
+    font-size: var(--text-sm);
+    font-family: var(--font-inter);
     outline: none;
-    background: white;
-    transition: all 0.2s ease;
+    background: var(--white);
+    transition: all var(--transition-fast);
+    color: var(--gray-900);
 }
 
 .ai-input:focus {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.ai-input::placeholder {
+    color: var(--gray-400);
 }
 
 .ai-send-btn {
     width: 44px;
     height: 44px;
-    background: #3b82f6;
+    background: var(--primary);
     border: none;
-    border-radius: 12px;
-    color: white;
+    border-radius: var(--radius-lg);
+    color: var(--white);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s ease;
+    transition: all var(--transition-fast);
     flex-shrink: 0;
+    box-shadow: var(--shadow-sm);
 }
 
 .ai-send-btn:hover {
-    background: #2563eb;
-    transform: scale(1.05);
+    background: var(--primary-hover);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
 }
 
 .ai-send-btn:active {
-    transform: scale(0.98);
+    transform: translateY(0);
 }
 
 .send-icon {
-    font-size: 16px;
-    font-weight: bold;
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-bold);
 }
 
 /* AI Message Styles */
 .ai-message {
     max-width: 80%;
-    padding: 12px 16px;
-    border-radius: 16px;
-    font-size: 14px;
-    line-height: 1.4;
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-xl);
+    font-size: var(--text-sm);
+    font-family: var(--font-inter);
+    line-height: 1.5;
     word-wrap: break-word;
 }
 
 .ai-message.user {
-    background: #3b82f6;
-    color: white;
+    background: var(--primary);
+    color: var(--white);
     align-self: flex-end;
     margin-left: auto;
+    border-bottom-right-radius: var(--radius-sm);
 }
 
 .ai-message.assistant {
-    background: #f1f5f9;
-    color: #1e293b;
+    background: var(--gray-100);
+    color: var(--gray-900);
     align-self: flex-start;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--gray-200);
+    border-bottom-left-radius: var(--radius-sm);
 }
 
 .ai-message.loading {
-    background: #f8fafc;
-    color: #64748b;
+    background: var(--gray-50);
+    color: var(--gray-600);
     font-style: italic;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--space-2);
+    border: 1px solid var(--gray-200);
 }
 
 .ai-message.loading::after {
     content: '';
     width: 12px;
     height: 12px;
-    border: 2px solid #cbd5e1;
-    border-top-color: #3b82f6;
-    border-radius: 50%;
+    border: 2px solid var(--gray-300);
+    border-top-color: var(--primary);
+    border-radius: var(--radius-full);
     animation: spin 1s linear infinite;
 }
 
 /* Modal Transition */
 .ai-modal {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all var(--transition-normal);
 }
 
 .ai-modal:not(.hidden) {
@@ -2218,7 +2242,7 @@ html {
 @media (max-width: 768px) {
     .header-logo {
         flex-direction: column;
-        gap: var(--spacing-sm);
+        gap: var(--space-2);
     }
 
     .logo {
@@ -2227,15 +2251,15 @@ html {
     }
 
     .ai-modal {
-        width: calc(100vw - 24px);
+        width: calc(100vw - var(--space-6));
         height: calc(100vh - 120px);
-        right: 12px;
+        right: var(--space-3);
         bottom: 80px;
     }
 
     .ai-widget {
-        bottom: 20px;
-        right: 20px;
+        bottom: var(--space-5);
+        right: var(--space-5);
     }
 
     .ai-widget-trigger {
