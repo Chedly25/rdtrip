@@ -298,7 +298,13 @@ export class RouteAgent {
         }
 
         // Find replacement
-        const replacement = await this.findReplacementCity(normalizedCity, message);
+        let replacement = await this.findReplacementCity(normalizedCity, message);
+
+        if (!replacement) {
+            console.log('⚠️ API replacement failed, using fallback suggestions');
+            // Use fallback replacement suggestions
+            replacement = this.getFallbackReplacement(normalizedCity, routeCities);
+        }
 
         if (!replacement) {
             return {
@@ -417,6 +423,117 @@ export class RouteAgent {
             });
             return null;
         }
+    }
+
+    /**
+     * Get fallback replacement suggestions when API fails
+     * @param {string} originalCity - City to replace
+     * @param {Array} routeCities - All cities in current route
+     * @returns {Object|null} Fallback replacement data
+     */
+    getFallbackReplacement(originalCity, routeCities) {
+        const fallbackReplacements = {
+            'Florence': [
+                {
+                    name: 'Siena',
+                    description: 'A stunning medieval city in Tuscany, famous for its fan-shaped central square, Gothic architecture, and the famous Palio horse race.',
+                    activities: [
+                        'Explore the Piazza del Campo and Torre del Mangia',
+                        'Visit the magnificent Siena Cathedral',
+                        'Wander through medieval streets and neighborhoods',
+                        'Sample local Tuscan cuisine and wines'
+                    ],
+                    bestFor: ['culture', 'history', 'architecture'],
+                    estimatedTime: '1-2 days'
+                },
+                {
+                    name: 'Pisa',
+                    description: 'Home to the iconic Leaning Tower, this charming Tuscan city offers Renaissance architecture and vibrant university atmosphere.',
+                    activities: [
+                        'Visit the famous Leaning Tower and Piazza dei Miracoli',
+                        'Explore the historic University of Pisa',
+                        'Stroll along the Arno River',
+                        'Discover local markets and traditional restaurants'
+                    ],
+                    bestFor: ['culture', 'history', 'photography'],
+                    estimatedTime: '1 day'
+                }
+            ],
+            'Montpellier': [
+                {
+                    name: 'Nîmes',
+                    description: 'A historic French city renowned for its remarkably well-preserved Roman monuments and vibrant cultural scene.',
+                    activities: [
+                        'Visit the Roman Arena and Maison Carrée',
+                        'Explore the nearby Pont du Gard aqueduct',
+                        'Wander through historic streets and markets',
+                        'Enjoy regional Provençal cuisine'
+                    ],
+                    bestFor: ['history', 'culture', 'architecture'],
+                    estimatedTime: '1-2 days'
+                },
+                {
+                    name: 'Avignon',
+                    description: 'The historic seat of the Catholic popes, famous for its papal palace and well-preserved medieval ramparts.',
+                    activities: [
+                        'Tour the Palais des Papes',
+                        'Walk across the famous Pont d\'Avignon',
+                        'Explore the charming old town',
+                        'Experience local markets and festivals'
+                    ],
+                    bestFor: ['history', 'culture', 'architecture'],
+                    estimatedTime: '1-2 days'
+                }
+            ],
+            'Avignon': [
+                {
+                    name: 'Arles',
+                    description: 'A charming Provençal city with Roman heritage and connections to Vincent van Gogh, surrounded by the beautiful Camargue region.',
+                    activities: [
+                        'Visit Roman amphitheater and ancient sites',
+                        'Follow Van Gogh\'s footsteps through the city',
+                        'Explore the nearby Camargue natural park',
+                        'Discover local markets and Provençal culture'
+                    ],
+                    bestFor: ['history', 'art', 'nature'],
+                    estimatedTime: '1-2 days'
+                },
+                {
+                    name: 'Aix-en-Provence',
+                    description: 'An elegant university city known for its markets, fountains, and as the birthplace of Paul Cézanne.',
+                    activities: [
+                        'Stroll down the famous Cours Mirabeau',
+                        'Visit Cézanne\'s studio and art sites',
+                        'Explore vibrant markets and cafés',
+                        'Day trip to nearby Provence countryside'
+                    ],
+                    bestFor: ['culture', 'art', 'lifestyle'],
+                    estimatedTime: '1-2 days'
+                }
+            ]
+        };
+
+        const suggestions = fallbackReplacements[originalCity];
+        if (suggestions && suggestions.length > 0) {
+            // Return the first suggestion as a fallback
+            const suggestion = suggestions[0];
+            console.log('✅ Using fallback suggestion:', suggestion.name);
+            return suggestion;
+        }
+
+        // Generic fallback for cities not in our predefined list
+        return {
+            name: 'Alternative Destination',
+            description: `A great alternative to ${originalCity} that offers unique attractions and experiences for your route.`,
+            activities: [
+                'Explore the historic center',
+                'Visit local attractions and landmarks',
+                'Experience local cuisine and culture',
+                'Discover hidden gems and viewpoints'
+            ],
+            bestFor: ['culture', 'history', 'exploration'],
+            estimatedTime: '1-2 days'
+        };
     }
 
     /**
