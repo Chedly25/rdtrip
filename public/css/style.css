@@ -1155,10 +1155,11 @@ html {
     transform: translateY(-1px);
 }
 
-.ai-avatar {
-    font-size: 28px;
+.ai-avatar-icon {
+    width: 32px;
+    height: 32px;
     z-index: 2;
-    color: var(--white);
+    filter: brightness(0) invert(1);
 }
 
 .ai-pulse {
@@ -2267,8 +2268,9 @@ html {
         height: 56px;
     }
 
-    .ai-avatar {
-        font-size: 24px;
+    .ai-avatar-icon {
+        width: 28px;
+        height: 28px;
     }
 }
 
