@@ -149,6 +149,9 @@ class RoadTripPlanner {
             }
 
             // Generate route with AI agents
+            console.log('🔥 SENDING API REQUEST WITH AGENTS:', this.selectedAgents);
+            console.log('🔥 Hidden in selectedAgents?', this.selectedAgents.includes('hidden'));
+
             const response = await fetch('/api/generate-route', {
                 method: 'POST',
                 headers: {
@@ -167,6 +170,9 @@ class RoadTripPlanner {
             }
 
             const routeData = await response.json();
+            console.log('🔥 API RESPONSE RECEIVED:', routeData);
+            console.log('🔥 Agent Results in response:', routeData.agentResults?.map(ar => ar.agent));
+
             await this.displayRoute(routeData, destinationCoords);
             
         } catch (error) {
@@ -426,12 +432,17 @@ class RoadTripPlanner {
     }
 
     displayRouteResults(routeData) {
+        console.log('🔥 DISPLAYING ROUTE RESULTS:', routeData);
+        console.log('🔥 Agent Results:', routeData.agentResults);
+        console.log('🔥 Hidden Gems present?', routeData.agentResults.find(ar => ar.agent === 'hidden'));
+
         const resultsContainer = document.getElementById('routeResults');
         if (!resultsContainer) return; // Element no longer exists
 
         let resultsHTML = '<h4 style="margin-bottom: 20px; font-size: 20px;">🎯 Agent Recommendations</h4>';
 
         routeData.agentResults.forEach(agentResult => {
+            console.log(`🔥 Processing agent: ${agentResult.agent}`);
             const agentEmoji = this.getAgentEmoji(agentResult.agent);
             const agentColor = this.getAgentColor(agentResult.agent);
 
