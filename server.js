@@ -170,14 +170,14 @@ Make it detailed and practical with specific times and recommendations.`;
             content: prompt
           }
         ],
-        max_tokens: 6000,
+        max_tokens: 10000,
         temperature: 0.7
       }, {
         headers: {
           'Authorization': `Bearer ${PERPLEXITY_API_KEY}`,
           'Content-Type': 'application/json'
         },
-        timeout: 30000 // 30 second timeout
+        timeout: 120000 // 120 second timeout
       });
 
       console.log(`Successfully generated itinerary for ${agent.name} on attempt ${attempt}`);
