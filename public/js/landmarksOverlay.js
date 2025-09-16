@@ -45,9 +45,6 @@ class LandmarksOverlay {
     }
 
     init() {
-        // Disable Mapbox telemetry globally to prevent ad-blocker conflicts
-        window.mapboxTelemetryBlocked = true;
-
         this.createOverlayHTML();
         this.setupEventListeners();
         console.log('🏛️ Landmarks Overlay initialized');
@@ -253,14 +250,8 @@ class LandmarksOverlay {
             this.map.remove();
         }
 
-        // Set access token and disable telemetry
+        // Set access token for landmarks map
         mapboxgl.accessToken = 'pk.eyJ1IjoiY2hlZGx5MjUiLCJhIjoiY21lbW1qeHRoMHB5azJsc2VuMWJld2tlYSJ9.0jfOiOXCh0VN5ZjJ5ab7MQ';
-
-        // Disable telemetry to prevent ad-blocker conflicts
-        if (typeof mapboxgl !== 'undefined') {
-            mapboxgl.config = mapboxgl.config || {};
-            mapboxgl.config.ACCESS_TOKEN = '';
-        }
 
         // Calculate bounds from current route
         const bounds = this.calculateRouteBounds();
