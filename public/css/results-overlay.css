@@ -182,7 +182,7 @@
     background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
 }
 
-.agent-quick-card.hidden::before {
+.agent-quick-card.hidden-gems::before {
     background: linear-gradient(135deg, #9333ea 0%, #7c3aed 100%);
 }
 
@@ -260,7 +260,7 @@
     background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
 }
 
-.agent-detailed-card.hidden .agent-card-header {
+.agent-detailed-card.hidden-gems .agent-card-header {
     background: linear-gradient(135deg, #9333ea 0%, #7c3aed 100%);
 }
 
@@ -350,7 +350,7 @@
     border-color: #ef4444;
 }
 
-.agent-detailed-card.hidden .city-item {
+.agent-detailed-card.hidden-gems .city-item {
     border-color: #9333ea;
 }
 
@@ -379,7 +379,7 @@
     border-color: #ef4444;
 }
 
-.agent-detailed-card.hidden .city-item::before {
+.agent-detailed-card.hidden-gems .city-item::before {
     border-color: #9333ea;
 }
 
@@ -445,7 +445,7 @@
     color: #ef4444;
 }
 
-.agent-detailed-card.hidden .city-activities li::before {
+.agent-detailed-card.hidden-gems .city-activities li::before {
     color: #9333ea;
 }
 
@@ -481,7 +481,7 @@
     color: #ef4444;
 }
 
-.agent-detailed-card.hidden .view-full-route {
+.agent-detailed-card.hidden-gems .view-full-route {
     border-color: #9333ea;
     color: #9333ea;
 }

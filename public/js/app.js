@@ -2,7 +2,7 @@
 class RoadTripPlanner {
     constructor() {
         this.map = null;
-        this.selectedAgents = ['adventure', 'culture', 'food', 'hidden'];
+        this.selectedAgents = ['adventure', 'culture', 'food', 'hidden-gems'];
         this.selectedBudget = 'budget';
         this.currentRoute = null;
         this.chatMessages = [];
@@ -150,7 +150,7 @@ class RoadTripPlanner {
 
             // Generate route with AI agents
             console.log('🔥 SENDING API REQUEST WITH AGENTS:', this.selectedAgents);
-            console.log('🔥 Hidden in selectedAgents?', this.selectedAgents.includes('hidden'));
+            console.log('🔥 Hidden in selectedAgents?', this.selectedAgents.includes('hidden-gems'));
 
             const response = await fetch('/api/generate-route', {
                 method: 'POST',
@@ -238,7 +238,7 @@ class RoadTripPlanner {
             adventure: '#34C759', // Green for nature/adventure
             culture: '#FF9500',   // Orange for culture/history
             food: '#FF3B30',      // Red for food/cuisine
-            hidden: '#9333ea'     // Purple for hidden gems
+            hidden-gems: '#9333ea'     // Purple for hidden gems
         };
 
         // Add waypoint markers to map with agent-specific colors (only if map exists)
@@ -434,7 +434,7 @@ class RoadTripPlanner {
     displayRouteResults(routeData) {
         console.log('🔥 DISPLAYING ROUTE RESULTS:', routeData);
         console.log('🔥 Agent Results:', routeData.agentResults);
-        console.log('🔥 Hidden Gems present?', routeData.agentResults.find(ar => ar.agent === 'hidden'));
+        console.log('🔥 Hidden Gems present?', routeData.agentResults.find(ar => ar.agent === 'hidden-gems'));
 
         const resultsContainer = document.getElementById('routeResults');
         if (!resultsContainer) return; // Element no longer exists
@@ -1270,7 +1270,7 @@ class RoadTripPlanner {
             adventure: '#34C759',
             culture: '#FFD60A',
             food: '#FF3B30',
-            hidden: '#9333ea'
+            hidden-gems: '#9333ea'
         };
         return colors[agent] || '#007AFF';
     }

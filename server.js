@@ -31,7 +31,7 @@ const agents = {
     color: "#FF3B30",
     prompt: "You are a culinary travel expert. Create a route with CITIES (not specific restaurants) known for their food scene. Each waypoint must be a CITY NAME like 'Lyon' or 'San Sebastian', not specific restaurants or markets. List culinary experiences as things to try IN that city."
   },
-  hidden: {
+  "hidden-gems": {
     name: "Hidden Gems Agent",
     color: "#9333ea",
     prompt: "You are a hidden gems travel expert. Create a route with LESSER-KNOWN CITIES that have authentic charm, character, and local flavor but are not famous tourist destinations. Focus on charming small towns, overlooked villages, and underrated cities. For example: L'Isle-sur-la-Sorgue instead of Avignon, Pienza instead of Florence, or Guimarães instead of Porto. Each waypoint must be a CITY NAME that tourists typically miss. Explain what makes each place special and worth the detour - unique local markets, artisan workshops, architectural gems, natural beauty, or authentic local life."
