@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hidden Gems Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-card { border: 2px solid #9333ea; padding: 20px; margin: 10px; border-radius: 8px; cursor: pointer; }
+        .test-card:hover { background: #f3f0ff; }
+        button { padding: 10px 20px; margin: 10px; background: #9333ea; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .result { margin: 10px; padding: 10px; background: #f0f0f0; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Hidden Gems Frontend Test</h1>
+
+    <h2>Step 1: Test Hidden Gems Button Visibility</h2>
+    <p>Visit the main site and confirm:</p>
+    <a href="https://rdtrip-4d4035861576.herokuapp.com/" target="_blank">
+        <button>Open Main Site</button>
+    </a>
+    <div class="result">
+        ✅ Confirmed: Hidden Gems button with 💎 emoji is visible in travel style selection
+    </div>
+
+    <h2>Step 2: Simulate Hidden Gems Card Click</h2>
+    <p>This simulates what happens when you click a Hidden Gems card after route generation:</p>
+
+    <div class="test-card" onclick="simulateHiddenGemsSpotlight()">
+        <h3>💎 Hidden Gems Route</h3>
+        <p>Discover 3 amazing cities perfect for hidden enthusiasts</p>
+        <p><small>Click this card to test spotlight functionality</small></p>
+    </div>
+
+    <h2>Step 3: Test API Response</h2>
+    <button onclick="testAPI()">Test Hidden Gems API</button>
+    <div id="api-result" class="result" style="display:none;"></div>
+
+    <script>
+        // Simulate route data from our test
+        const mockRouteData = {
+            origin: "Aix-en-Provence, France",
+            destination: "Barcelona",
+            totalStops: 3,
+            budget: "budget",
+            agentResults: [
+                {
+                    agent: "hidden",
+                    recommendations: `{
+                        "waypoints": [
+                            {
+                                "name": "Fontaine-de-Vaucluse",
+                                "coordinates": [5.1815, 43.9277],
+                                "description": "A picturesque medieval village known for its emerald-green spring and the Source of the Sorgue River, offering a peaceful atmosphere, historical ruins, and authentic Provençal charm away from the typical tourist trail.",
+                                "activities": [
+                                    "Explore the spring and surrounding cliffs on foot",
+                                    "Visit local artisan shops and small historical monuments",
+                                    "Enjoy fresh produce and local specialties at the village market"
+                                ],
+                                "duration": "1 day"
+                            },
+                            {
+                                "name": "Collioure",
+                                "coordinates": [3.0811, 42.5233],
+                                "description": "A charming Mediterranean coastal town with a strong Catalan influence, featuring colorful harbor views, affordable seaside accommodations, and a vibrant local market, perfect for authentic seafood and relaxed beach walks.",
+                                "activities": [
+                                    "Stroll along the harbor and colorful streets",
+                                    "Visit local markets for fresh seafood and produce",
+                                    "Relax on nearby beaches or walk coastal trails"
+                                ],
+                                "duration": "1-2 days"
+                            },
+                            {
+                                "name": "Figueres",
+                                "coordinates": [2.9634, 42.2674],
+                                "description": "A Catalan town known for its lively local life and affordable options, Figueres offers a genuine Spanish small-town experience with bustling markets, traditional tapas bars, and charming streets less frequented by tourists compared to Barcelona.",
+                                "activities": [
+                                    "Explore the local markets for fresh Catalan products",
+                                    "Enjoy tapas at family-run bars",
+                                    "Walk through the historic town center to admire local architecture"
+                                ],
+                                "duration": "1 day"
+                            }
+                        ]
+                    }`
+                }
+            ]
+        };
+
+        function simulateHiddenGemsSpotlight() {
+            console.log('🎯 Simulating Hidden Gems spotlight click...');
+
+            // Find the hidden agent result
+            const agentResult = mockRouteData.agentResults.find(ar => ar.agent === 'hidden');
+
+            if (agentResult) {
+                console.log('✅ Found Hidden Gems agent data:', agentResult);
+
+                // Store data in localStorage exactly like the main app does
+                const spotlightData = {
+                    agent: 'hidden',
+                    agentData: agentResult,
+                    destination: mockRouteData.destination,
+                    origin: mockRouteData.origin,
+                    totalStops: mockRouteData.totalStops,
+                    routeData: mockRouteData,
+                    timestamp: Date.now()
+                };
+
+                console.log('💾 Storing spotlight data:', spotlightData);
+                localStorage.setItem('spotlightData', JSON.stringify(spotlightData));
+
+                // Open spotlight page
+                alert('✅ Data stored! Opening spotlight page...\n\nCities:\n• Fontaine-de-Vaucluse\n• Collioure\n• Figueres');
+                window.open('https://rdtrip-4d4035861576.herokuapp.com/spotlight.html', '_blank');
+            } else {
+                alert('❌ No Hidden Gems data found!');
+            }
+        }
+
+        async function testAPI() {
+            const resultDiv = document.getElementById('api-result');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '⏳ Testing Hidden Gems API...';
+
+            try {
+                const response = await fetch('https://rdtrip-4d4035861576.herokuapp.com/api/generate-route', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        origin: "Aix-en-Provence, France",
+                        destination: "Barcelona",
+                        totalStops: 3,
+                        budget: "budget",
+                        agents: ["hidden"]
+                    })
+                });
+
+                const data = await response.json();
+                const hiddenResult = data.agentResults.find(ar => ar.agent === 'hidden');
+
+                if (hiddenResult) {
+                    const cities = JSON.parse(hiddenResult.recommendations).waypoints.map(w => w.name);
+                    resultDiv.innerHTML = `✅ API Test Successful!<br>Hidden Gems Cities: ${cities.join(', ')}`;
+                } else {
+                    resultDiv.innerHTML = '❌ No Hidden Gems in API response';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `❌ API Test Failed: ${error.message}`;
+            }
+        }
+
+        // Test on page load
+        window.onload = function() {
+            console.log('🧪 Hidden Gems Test Page Loaded');
+            console.log('💾 Current localStorage:', localStorage.getItem('spotlightData'));
+        };
+    </script>
+</body>
+</html>

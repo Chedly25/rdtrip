@@ -7,7 +7,8 @@ class SpotlightController {
         this.agentColors = {
             adventure: '#34C759',
             culture: '#FFD60A',
-            food: '#FF3B30'
+            food: '#FF3B30',
+            hidden: '#9333ea'
         };
 
         this.init();
@@ -45,13 +46,15 @@ class SpotlightController {
         const agentEmojis = {
             adventure: '🏔️',
             culture: '🏛️',
-            food: '🍽️'
+            food: '🍽️',
+            hidden: '💎'
         };
 
         const agentNames = {
             adventure: 'Adventure Route',
             culture: 'Culture Route',
-            food: 'Food Route'
+            food: 'Food Route',
+            hidden: 'Hidden Gems Route'
         };
 
         // Handle icon display - use innerHTML for images, textContent for emojis
@@ -65,6 +68,8 @@ class SpotlightController {
             iconElement.innerHTML = '<img src="/culture.png" alt="Culture" style="width: 48px; height: 48px; vertical-align: middle;">';
         } else if (agent === 'food') {
             iconElement.innerHTML = '<img src="/food.png" alt="Food" style="width: 48px; height: 48px; vertical-align: middle;">';
+        } else if (agent === 'hidden') {
+            iconElement.textContent = '💎';
         } else {
             iconElement.textContent = iconValue;
         }
@@ -1164,7 +1169,8 @@ class SpotlightController {
         const emojis = {
             adventure: '🏔️',
             culture: '🏛️',
-            food: '🍽️'
+            food: '🍽️',
+            hidden: '💎'
         };
         return emojis[agent] || '🤖';
     }
