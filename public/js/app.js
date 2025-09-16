@@ -1,6 +1,7 @@
 // Enhanced Road Trip Planner App
 class RoadTripPlanner {
     constructor() {
+        console.log('🔥 RoadTripPlanner constructor called');
         this.map = null;
         this.selectedAgents = ['adventure', 'culture', 'food', 'hidden-gems'];
         this.selectedBudget = 'budget';
@@ -9,6 +10,7 @@ class RoadTripPlanner {
         this.routeAgent = null;
         this.enhancedFeaturesAvailable = false;
 
+        console.log('🔥 Calling init()...');
         this.init();
     }
 
@@ -69,20 +71,34 @@ class RoadTripPlanner {
     }
 
     setupEventListeners() {
+        console.log('🔥 Setting up event listeners...');
+
         // Agent selection buttons
-        document.querySelectorAll('.agent-btn').forEach(btn => {
+        const agentBtns = document.querySelectorAll('.agent-btn');
+        console.log('🔥 Found agent buttons:', agentBtns.length);
+        agentBtns.forEach(btn => {
             btn.addEventListener('click', () => this.toggleAgent(btn));
         });
 
         // Budget selection buttons
-        document.querySelectorAll('.budget-btn').forEach(btn => {
+        const budgetBtns = document.querySelectorAll('.budget-btn');
+        console.log('🔥 Found budget buttons:', budgetBtns.length);
+        budgetBtns.forEach(btn => {
             btn.addEventListener('click', () => this.selectBudget(btn));
         });
 
         // Generate route button
-        document.getElementById('generateRoute').addEventListener('click', () => {
-            this.generateRoute();
-        });
+        const generateBtn = document.getElementById('generateRoute');
+        console.log('🔥 Found generate button:', generateBtn);
+        if (generateBtn) {
+            generateBtn.addEventListener('click', () => {
+                console.log('🔥 Generate button clicked!');
+                this.generateRoute();
+            });
+            console.log('🔥 Generate button event listener added');
+        } else {
+            console.error('🔥 Generate button not found!');
+        }
 
         // Enter key for destination input
         document.getElementById('destination').addEventListener('keypress', (e) => {
@@ -2147,5 +2163,7 @@ class RoadTripPlanner {
 
 // Initialize the app when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('🔥 DOM loaded, creating RoadTripPlanner...');
     window.planner = new RoadTripPlanner();
+    console.log('🔥 RoadTripPlanner created and assigned to window.planner');
 });
