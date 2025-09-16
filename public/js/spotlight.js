@@ -8,7 +8,7 @@ class SpotlightController {
             adventure: '#34C759',
             culture: '#FFD60A',
             food: '#FF3B30',
-            hidden: '#9333ea'
+            'hidden-gems': '#9333ea'
         };
 
         this.init();
@@ -47,14 +47,14 @@ class SpotlightController {
             adventure: '🏔️',
             culture: '🏛️',
             food: '🍽️',
-            hidden: '💎'
+            'hidden-gems': '💎'
         };
 
         const agentNames = {
             adventure: 'Adventure Route',
             culture: 'Culture Route',
             food: 'Food Route',
-            hidden: 'Hidden Gems Route'
+            'hidden-gems': 'Hidden Gems Route'
         };
 
         // Handle icon display - use innerHTML for images, textContent for emojis
@@ -1170,7 +1170,7 @@ class SpotlightController {
             adventure: '🏔️',
             culture: '🏛️',
             food: '🍽️',
-            hidden: '💎'
+            'hidden-gems': '💎'
         };
         return emojis[agent] || '🤖';
     }
