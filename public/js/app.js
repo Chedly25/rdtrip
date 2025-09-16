@@ -254,7 +254,7 @@ class RoadTripPlanner {
             adventure: '#34C759', // Green for nature/adventure
             culture: '#FF9500',   // Orange for culture/history
             food: '#FF3B30',      // Red for food/cuisine
-            hidden-gems: '#9333ea'     // Purple for hidden gems
+            'hidden-gems': '#9333ea'     // Purple for hidden gems
         };
 
         // Add waypoint markers to map with agent-specific colors (only if map exists)
@@ -1286,7 +1286,7 @@ class RoadTripPlanner {
             adventure: '#34C759',
             culture: '#FFD60A',
             food: '#FF3B30',
-            hidden-gems: '#9333ea'
+            'hidden-gems': '#9333ea'
         };
         return colors[agent] || '#007AFF';
     }
