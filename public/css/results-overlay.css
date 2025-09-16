@@ -123,6 +123,44 @@
     transform: scale(1.05);
 }
 
+/* Header Actions */
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    position: relative;
+}
+
+.landmarks-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    color: white;
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-lg);
+    font-size: var(--text-sm);
+    font-weight: var(--font-weight-medium);
+    cursor: pointer;
+    transition: all var(--transition-normal);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    box-shadow: var(--shadow-md);
+}
+
+.landmarks-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+    background: linear-gradient(135deg, #5a6fd8 0%, #6a3d94 100%);
+}
+
+.landmarks-btn-icon {
+    font-size: var(--text-base);
+}
+
+.landmarks-btn-text {
+    font-weight: var(--font-weight-semibold);
+}
+
 /* Agent Overview Section */
 .agents-overview {
     background: var(--white);
@@ -594,6 +632,17 @@
         width: 32px;
         height: 32px;
         font-size: var(--text-base);
+    }
+    .landmarks-btn {
+        padding: var(--space-1) var(--space-3);
+        font-size: var(--text-xs);
+        gap: var(--space-1);
+    }
+    .landmarks-btn-text {
+        display: none;
+    }
+    .landmarks-btn-icon {
+        font-size: var(--text-sm);
     }
 
     .agents-overview {

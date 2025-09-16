@@ -1648,7 +1648,13 @@ class RoadTripPlanner {
                             </div>
                         </div>
                     </div>
-                    <button class="close-results" onclick="planner.closeResultsOverlay()">×</button>
+                    <div class="header-actions">
+                        <button class="landmarks-btn" onclick="planner.showLandmarksOverlay()" title="Discover European landmarks to add to your route">
+                            <span class="landmarks-btn-icon">🗺️</span>
+                            <span class="landmarks-btn-text">Discover Landmarks</span>
+                        </button>
+                        <button class="close-results" onclick="planner.closeResultsOverlay()">×</button>
+                    </div>
                 </div>
 
                 <!-- Horizontal Overview -->
@@ -2030,6 +2036,34 @@ class RoadTripPlanner {
                 overlay.remove();
             }, 300);
         }
+    }
+
+    showLandmarksOverlay() {
+        if (!this.currentRoute) {
+            this.showError('Please generate a route first to discover landmarks');
+            return;
+        }
+
+        console.log('🗺️ Opening landmarks overlay with route:', this.currentRoute);
+
+        // Store original route for reset functionality
+        window.landmarksOverlay.originalRoute = JSON.parse(JSON.stringify(this.currentRoute));
+
+        // Show the landmarks overlay
+        window.landmarksOverlay.show(this.currentRoute);
+
+        // Listen for route updates from landmarks overlay
+        const handleRouteUpdate = (event) => {
+            if (event.detail?.route) {
+                this.currentRoute = event.detail.route;
+                this.displayRouteResults(this.currentRoute);
+                console.log('🗺️ Route updated from landmarks overlay');
+            }
+        };
+
+        // Remove previous listener and add new one
+        window.removeEventListener('routeUpdated', handleRouteUpdate);
+        window.addEventListener('routeUpdated', handleRouteUpdate);
     }
 
     exportToGoogleMaps() {

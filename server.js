@@ -835,6 +835,398 @@ app.get('/api/placeholder-image', (req, res) => {
   });
 });
 
+// European Landmarks Database
+const europeanLandmarks = [
+  // France
+  {
+    id: 1,
+    name: "Eiffel Tower",
+    type: "monument",
+    lat: 48.8584,
+    lng: 2.2945,
+    country: "France",
+    city: "Paris",
+    icon_type: "tower",
+    description: "Iconic iron lattice tower and symbol of Paris",
+    image_url: "https://images.unsplash.com/photo-1511739001486-6bfe10ce785f?w=500",
+    rating: 4.6,
+    visit_duration: 120
+  },
+  {
+    id: 2,
+    name: "Mont Saint-Michel",
+    type: "historic",
+    lat: 48.6361,
+    lng: -1.5115,
+    country: "France",
+    city: "Normandy",
+    icon_type: "castle",
+    description: "Medieval abbey perched on a tidal island",
+    image_url: "https://images.unsplash.com/photo-1539650116574-75c0c6d73a0e?w=500",
+    rating: 4.8,
+    visit_duration: 180
+  },
+  // Italy
+  {
+    id: 3,
+    name: "Colosseum",
+    type: "historic",
+    lat: 41.8902,
+    lng: 12.4922,
+    country: "Italy",
+    city: "Rome",
+    icon_type: "amphitheater",
+    description: "Ancient Roman amphitheater and architectural marvel",
+    image_url: "https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=500",
+    rating: 4.5,
+    visit_duration: 150
+  },
+  {
+    id: 4,
+    name: "Leaning Tower of Pisa",
+    type: "monument",
+    lat: 43.7230,
+    lng: 10.3966,
+    country: "Italy",
+    city: "Pisa",
+    icon_type: "tower",
+    description: "Famous tilted bell tower",
+    image_url: "https://images.unsplash.com/photo-1513581166391-887a96ddeafd?w=500",
+    rating: 4.3,
+    visit_duration: 90
+  },
+  // Spain
+  {
+    id: 5,
+    name: "Sagrada Familia",
+    type: "cultural",
+    lat: 41.4036,
+    lng: 2.1744,
+    country: "Spain",
+    city: "Barcelona",
+    icon_type: "cathedral",
+    description: "Gaudí's unfinished masterpiece basilica",
+    image_url: "https://images.unsplash.com/photo-1539037116277-4db20889f2d4?w=500",
+    rating: 4.7,
+    visit_duration: 120
+  },
+  {
+    id: 6,
+    name: "Alhambra",
+    type: "historic",
+    lat: 37.1760,
+    lng: -3.5881,
+    country: "Spain",
+    city: "Granada",
+    icon_type: "palace",
+    description: "Moorish palace and fortress complex",
+    image_url: "https://images.unsplash.com/photo-1539650116574-75c0c6d73a0e?w=500",
+    rating: 4.8,
+    visit_duration: 240
+  },
+  // Germany
+  {
+    id: 7,
+    name: "Neuschwanstein Castle",
+    type: "historic",
+    lat: 47.5576,
+    lng: 10.7498,
+    country: "Germany",
+    city: "Bavaria",
+    icon_type: "castle",
+    description: "Fairy-tale castle in the Bavarian Alps",
+    image_url: "https://images.unsplash.com/photo-1467269204594-9661b134dd2b?w=500",
+    rating: 4.6,
+    visit_duration: 180
+  },
+  {
+    id: 8,
+    name: "Brandenburg Gate",
+    type: "monument",
+    lat: 52.5163,
+    lng: 13.3777,
+    country: "Germany",
+    city: "Berlin",
+    icon_type: "gate",
+    description: "Iconic neoclassical monument",
+    image_url: "https://images.unsplash.com/photo-1587330979470-3d86d9d4d8be?w=500",
+    rating: 4.4,
+    visit_duration: 60
+  },
+  // UK
+  {
+    id: 9,
+    name: "Tower Bridge",
+    type: "monument",
+    lat: 51.5055,
+    lng: -0.0754,
+    country: "United Kingdom",
+    city: "London",
+    icon_type: "bridge",
+    description: "Victorian bascule bridge over the Thames",
+    image_url: "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=500",
+    rating: 4.5,
+    visit_duration: 90
+  },
+  {
+    id: 10,
+    name: "Stonehenge",
+    type: "historic",
+    lat: 51.1789,
+    lng: -1.8262,
+    country: "United Kingdom",
+    city: "Salisbury",
+    icon_type: "monument",
+    description: "Prehistoric stone circle",
+    image_url: "https://images.unsplash.com/photo-1539650116574-75c0c6d73a0e?w=500",
+    rating: 4.2,
+    visit_duration: 120
+  },
+  // Switzerland
+  {
+    id: 11,
+    name: "Matterhorn",
+    type: "natural",
+    lat: 45.9763,
+    lng: 7.6586,
+    country: "Switzerland",
+    city: "Zermatt",
+    icon_type: "mountain",
+    description: "Iconic pyramid-shaped peak in the Alps",
+    image_url: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=500",
+    rating: 4.9,
+    visit_duration: 300
+  },
+  // Greece
+  {
+    id: 12,
+    name: "Acropolis of Athens",
+    type: "historic",
+    lat: 37.9715,
+    lng: 23.7267,
+    country: "Greece",
+    city: "Athens",
+    icon_type: "temple",
+    description: "Ancient citadel with the Parthenon",
+    image_url: "https://images.unsplash.com/photo-1539650116574-75c0c6d73a0e?w=500",
+    rating: 4.6,
+    visit_duration: 180
+  },
+  // Portugal
+  {
+    id: 13,
+    name: "Jerónimos Monastery",
+    type: "cultural",
+    lat: 38.6979,
+    lng: -9.2065,
+    country: "Portugal",
+    city: "Lisbon",
+    icon_type: "monastery",
+    description: "Manueline architectural masterpiece",
+    image_url: "https://images.unsplash.com/photo-1555881400-74d7acaacd8b?w=500",
+    rating: 4.5,
+    visit_duration: 120
+  },
+  // Netherlands
+  {
+    id: 14,
+    name: "Kinderdijk Windmills",
+    type: "cultural",
+    lat: 51.8839,
+    lng: 4.6389,
+    country: "Netherlands",
+    city: "Kinderdijk",
+    icon_type: "windmill",
+    description: "Historic windmill complex",
+    image_url: "https://images.unsplash.com/photo-1580996787472-b4a3c685b1f2?w=500",
+    rating: 4.4,
+    visit_duration: 150
+  },
+  // Austria
+  {
+    id: 15,
+    name: "Hallstatt",
+    type: "natural",
+    lat: 47.5622,
+    lng: 13.6493,
+    country: "Austria",
+    city: "Hallstatt",
+    icon_type: "village",
+    description: "Picturesque lakeside village",
+    image_url: "https://images.unsplash.com/photo-1505142468610-359e7d316be0?w=500",
+    rating: 4.7,
+    visit_duration: 240
+  }
+];
+
+// Get landmarks within a bounding box (for map region)
+app.get('/api/landmarks/region', (req, res) => {
+  try {
+    const { north, south, east, west, type } = req.query;
+
+    let filtered = europeanLandmarks;
+
+    // Filter by bounding box if provided
+    if (north && south && east && west) {
+      filtered = filtered.filter(landmark =>
+        landmark.lat <= parseFloat(north) &&
+        landmark.lat >= parseFloat(south) &&
+        landmark.lng <= parseFloat(east) &&
+        landmark.lng >= parseFloat(west)
+      );
+    }
+
+    // Filter by type if provided
+    if (type && type !== 'all') {
+      filtered = filtered.filter(landmark => landmark.type === type);
+    }
+
+    res.json({
+      success: true,
+      landmarks: filtered,
+      count: filtered.length
+    });
+
+  } catch (error) {
+    console.error('Error fetching landmarks:', error);
+    res.status(500).json({ error: 'Failed to fetch landmarks' });
+  }
+});
+
+// Get all landmark types for filtering
+app.get('/api/landmarks/types', (req, res) => {
+  try {
+    const types = [...new Set(europeanLandmarks.map(landmark => landmark.type))];
+    res.json({
+      success: true,
+      types: types
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch landmark types' });
+  }
+});
+
+// Recalculate route with added landmark
+app.post('/api/route/add-landmark', async (req, res) => {
+  try {
+    const { originalRoute, landmarkId, insertIndex } = req.body;
+
+    if (!originalRoute || !landmarkId) {
+      return res.status(400).json({ error: 'Original route and landmark ID are required' });
+    }
+
+    // Find the landmark
+    const landmark = europeanLandmarks.find(l => l.id === parseInt(landmarkId));
+    if (!landmark) {
+      return res.status(404).json({ error: 'Landmark not found' });
+    }
+
+    // Create new route with landmark inserted
+    const newRoute = {
+      ...originalRoute,
+      waypoints: [...originalRoute.waypoints]
+    };
+
+    // Insert landmark at optimal position (or specified index)
+    const insertPosition = insertIndex !== undefined ? insertIndex :
+      findOptimalInsertPosition(originalRoute.waypoints, landmark);
+
+    newRoute.waypoints.splice(insertPosition, 0, {
+      name: landmark.name,
+      lat: landmark.lat,
+      lng: landmark.lng,
+      type: 'landmark',
+      landmark_id: landmark.id,
+      visit_duration: landmark.visit_duration,
+      description: landmark.description,
+      image_url: landmark.image_url
+    });
+
+    // Recalculate route using Mapbox (simplified for now)
+    const coordinates = newRoute.waypoints.map(wp => [wp.lng, wp.lat]);
+
+    res.json({
+      success: true,
+      route: newRoute,
+      landmark: landmark,
+      insertPosition: insertPosition,
+      totalDistance: calculateTotalDistance(coordinates),
+      estimatedDuration: calculateEstimatedDuration(newRoute.waypoints)
+    });
+
+  } catch (error) {
+    console.error('Error adding landmark to route:', error);
+    res.status(500).json({ error: 'Failed to add landmark to route' });
+  }
+});
+
+// Helper function to find optimal position to insert landmark
+function findOptimalInsertPosition(waypoints, landmark) {
+  if (waypoints.length < 2) return waypoints.length;
+
+  let minDetour = Infinity;
+  let bestPosition = waypoints.length;
+
+  for (let i = 0; i <= waypoints.length; i++) {
+    const prevPoint = i > 0 ? waypoints[i-1] : null;
+    const nextPoint = i < waypoints.length ? waypoints[i] : null;
+
+    let detour = 0;
+
+    if (prevPoint && nextPoint) {
+      // Calculate detour: distance(prev->landmark) + distance(landmark->next) - distance(prev->next)
+      const originalDistance = calculateDistance(prevPoint, nextPoint);
+      const newDistance = calculateDistance(prevPoint, landmark) + calculateDistance(landmark, nextPoint);
+      detour = newDistance - originalDistance;
+    } else if (prevPoint) {
+      detour = calculateDistance(prevPoint, landmark);
+    } else if (nextPoint) {
+      detour = calculateDistance(landmark, nextPoint);
+    }
+
+    if (detour < minDetour) {
+      minDetour = detour;
+      bestPosition = i;
+    }
+  }
+
+  return bestPosition;
+}
+
+// Helper function to calculate distance between two points (Haversine formula)
+function calculateDistance(point1, point2) {
+  const R = 6371; // Earth's radius in km
+  const dLat = (point2.lat - point1.lat) * Math.PI / 180;
+  const dLng = (point2.lng - point1.lng) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(point1.lat * Math.PI / 180) * Math.cos(point2.lat * Math.PI / 180) *
+    Math.sin(dLng/2) * Math.sin(dLng/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
+// Helper function to calculate total route distance
+function calculateTotalDistance(coordinates) {
+  let total = 0;
+  for (let i = 0; i < coordinates.length - 1; i++) {
+    const point1 = { lat: coordinates[i][1], lng: coordinates[i][0] };
+    const point2 = { lat: coordinates[i+1][1], lng: coordinates[i+1][0] };
+    total += calculateDistance(point1, point2);
+  }
+  return Math.round(total);
+}
+
+// Helper function to calculate estimated duration
+function calculateEstimatedDuration(waypoints) {
+  const baseMinutes = waypoints.reduce((total, wp) => {
+    return total + (wp.visit_duration || 120); // Default 2 hours per stop
+  }, 0);
+
+  const drivingTime = waypoints.length * 60; // Assume 1 hour driving between stops
+  return Math.round((baseMinutes + drivingTime) / 60); // Return in hours
+}
+
 app.listen(PORT, () => {
   console.log(`🚗 Road Trip Planner MVP running on port ${PORT}`);
+  console.log(`📍 Loaded ${europeanLandmarks.length} European landmarks`);
 });
