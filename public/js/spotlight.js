@@ -4,6 +4,7 @@ class SpotlightController {
         this.map = null;
         this.spotlightData = null;
         this.imageCache = new Map(); // Cache for Wikipedia images
+        this.landmarkMarkers = []; // Store landmark markers for cleanup
         this.agentColors = {
             adventure: '#34C759',
             culture: '#FFD60A',
@@ -131,6 +132,15 @@ class SpotlightController {
         this.map.on('load', () => {
             this.addRouteToMap();
         });
+
+        // Reload landmarks when map is moved/zoomed
+        let landmarkTimeout;
+        this.map.on('moveend', () => {
+            clearTimeout(landmarkTimeout);
+            landmarkTimeout = setTimeout(() => {
+                this.loadLandmarksOnMap();
+            }, 500); // Debounce to avoid too many API calls
+        });
     }
 
     async addRouteToMap() {
@@ -182,6 +192,117 @@ class SpotlightController {
             
             // Update distance in stats
             this.updateDistanceStats(waypoints, destinationCoords);
+
+            // Load and display European landmarks on the map
+            await this.loadLandmarksOnMap();
+        }
+    }
+
+    async loadLandmarksOnMap() {
+        try {
+            // Clear existing landmark markers
+            this.landmarkMarkers.forEach(marker => marker.remove());
+            this.landmarkMarkers = [];
+
+            // Get map bounds
+            const bounds = this.map.getBounds();
+
+            // Fetch landmarks within visible area
+            const response = await fetch(`/api/landmarks/region?north=${bounds.getNorth()}&south=${bounds.getSouth()}&east=${bounds.getEast()}&west=${bounds.getWest()}`);
+
+            if (!response.ok) {
+                console.error('Failed to fetch landmarks');
+                return;
+            }
+
+            const data = await response.json();
+            const landmarks = data.landmarks || [];
+
+            console.log(`🏛️ Adding ${landmarks.length} landmarks to spotlight map`);
+
+            // Define landmark colors by type
+            const typeColors = {
+                monument: '#FF6B6B',
+                historic: '#4ECDC4',
+                cultural: '#FFD93D',
+                natural: '#95E77E'
+            };
+
+            // Add landmark markers to map
+            landmarks.forEach(landmark => {
+                const color = typeColors[landmark.type] || '#9333EA';
+
+                // Create custom marker element with icon
+                const el = document.createElement('div');
+                el.className = 'landmark-marker-custom';
+                el.style.width = '35px';
+                el.style.height = '35px';
+                el.style.borderRadius = '50%';
+                el.style.backgroundColor = color;
+                el.style.border = '3px solid white';
+                el.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+                el.style.cursor = 'pointer';
+                el.style.display = 'flex';
+                el.style.alignItems = 'center';
+                el.style.justifyContent = 'center';
+                el.style.fontSize = '18px';
+                el.style.transition = 'all 0.3s ease';
+
+                // Add icon based on type
+                const iconMap = {
+                    monument: '🗼',
+                    historic: '🏰',
+                    cultural: '🎭',
+                    natural: '🏔️'
+                };
+                el.innerHTML = iconMap[landmark.type] || '📍';
+
+                // Add hover effect
+                el.addEventListener('mouseenter', () => {
+                    el.style.transform = 'scale(1.1)';
+                    el.style.boxShadow = '0 4px 15px rgba(0,0,0,0.3)';
+                });
+
+                el.addEventListener('mouseleave', () => {
+                    el.style.transform = 'scale(1)';
+                    el.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+                });
+
+                // Create popup with landmark details
+                const popupContent = `
+                    <div style="padding: 10px; max-width: 200px;">
+                        <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600;">
+                            ${iconMap[landmark.type] || '📍'} ${landmark.name}
+                        </h3>
+                        <p style="margin: 0 0 8px 0; color: #666; font-size: 14px;">
+                            ${landmark.city}, ${landmark.country}
+                        </p>
+                        ${landmark.description ? `
+                            <p style="margin: 0 0 8px 0; font-size: 13px; line-height: 1.4;">
+                                ${landmark.description}
+                            </p>
+                        ` : ''}
+                        ${landmark.rating ? `
+                            <div style="display: flex; align-items: center; gap: 5px; font-size: 13px;">
+                                <span>⭐ ${landmark.rating}</span>
+                                ${landmark.visit_duration ? `<span>• ${landmark.visit_duration} min</span>` : ''}
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+
+                // Add marker to map
+                const marker = new mapboxgl.Marker(el)
+                    .setLngLat([landmark.lng, landmark.lat])
+                    .setPopup(new mapboxgl.Popup({ offset: 25 }).setHTML(popupContent))
+                    .addTo(this.map);
+
+                // Store marker reference for cleanup
+                this.landmarkMarkers.push(marker);
+            });
+
+        } catch (error) {
+            console.error('Error loading landmarks:', error);
         }
     }
 
@@ -866,11 +987,6 @@ class SpotlightController {
             this.exportToWaze();
         });
 
-        // Landmarks button
-        document.getElementById('landmarksButton').addEventListener('click', () => {
-            this.showLandmarksOverlay();
-        });
-
         // Generate itinerary button
         document.getElementById('generateItinerary').addEventListener('click', () => {
             this.generateDetailedItinerary();
@@ -1519,26 +1635,6 @@ class SpotlightController {
                 </div>
             `;
         }).join('');
-    }
-
-    showLandmarksOverlay() {
-        console.log('🗺️ Opening landmarks overlay from spotlight');
-
-        // Prepare route data for landmarks overlay
-        const routeData = {
-            agentResults: [this.spotlightData.agentData],
-            selectedAgent: this.spotlightData.agent,
-            destination: this.spotlightData.destination,
-            origin: this.spotlightData.origin || 'Aix-en-Provence'
-        };
-
-        // Initialize landmarks overlay if it doesn't exist
-        if (!window.landmarksOverlay) {
-            window.landmarksOverlay = new LandmarksOverlay();
-        }
-
-        // Show the landmarks overlay
-        window.landmarksOverlay.show(routeData);
     }
 }
 
