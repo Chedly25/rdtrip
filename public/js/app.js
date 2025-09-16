@@ -1649,10 +1649,6 @@ class RoadTripPlanner {
                         </div>
                     </div>
                     <div class="header-actions">
-                        <button class="landmarks-btn" onclick="planner.showLandmarksOverlay()" title="Discover European landmarks to add to your route">
-                            <span class="landmarks-btn-icon">🗺️</span>
-                            <span class="landmarks-btn-text">Discover Landmarks</span>
-                        </button>
                         <button class="close-results" onclick="planner.closeResultsOverlay()">×</button>
                     </div>
                 </div>

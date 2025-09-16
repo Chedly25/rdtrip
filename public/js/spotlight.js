@@ -866,6 +866,11 @@ class SpotlightController {
             this.exportToWaze();
         });
 
+        // Landmarks button
+        document.getElementById('landmarksButton').addEventListener('click', () => {
+            this.showLandmarksOverlay();
+        });
+
         // Generate itinerary button
         document.getElementById('generateItinerary').addEventListener('click', () => {
             this.generateDetailedItinerary();
@@ -1514,6 +1519,26 @@ class SpotlightController {
                 </div>
             `;
         }).join('');
+    }
+
+    showLandmarksOverlay() {
+        console.log('🗺️ Opening landmarks overlay from spotlight');
+
+        // Prepare route data for landmarks overlay
+        const routeData = {
+            agentResults: [this.spotlightData.agentData],
+            selectedAgent: this.spotlightData.agent,
+            destination: this.spotlightData.destination,
+            origin: this.spotlightData.origin || 'Aix-en-Provence'
+        };
+
+        // Initialize landmarks overlay if it doesn't exist
+        if (!window.landmarksOverlay) {
+            window.landmarksOverlay = new LandmarksOverlay();
+        }
+
+        // Show the landmarks overlay
+        window.landmarksOverlay.show(routeData);
     }
 }
 
