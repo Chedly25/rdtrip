@@ -2,7 +2,7 @@
 class RoadTripPlanner {
     constructor() {
         this.map = null;
-        this.selectedAgents = ['adventure', 'culture', 'food'];
+        this.selectedAgents = ['adventure', 'culture', 'food', 'hidden'];
         this.selectedBudget = 'budget';
         this.currentRoute = null;
         this.chatMessages = [];
@@ -230,8 +230,9 @@ class RoadTripPlanner {
         // Agent colors for markers
         const agentColors = {
             adventure: '#34C759', // Green for nature/adventure
-            culture: '#FF9500',   // Orange for culture/history  
-            food: '#FF3B30'       // Red for food/cuisine
+            culture: '#FF9500',   // Orange for culture/history
+            food: '#FF3B30',      // Red for food/cuisine
+            hidden: '#9333ea'     // Purple for hidden gems
         };
 
         // Add waypoint markers to map with agent-specific colors (only if map exists)
@@ -1247,7 +1248,8 @@ class RoadTripPlanner {
         const emojis = {
             adventure: '🏔️',
             culture: '🏛️',
-            food: '🍽️'
+            food: '🍽️',
+            hidden: '💎'
         };
         return emojis[agent] || '📍';
     }
@@ -1256,7 +1258,8 @@ class RoadTripPlanner {
         const colors = {
             adventure: '#34C759',
             culture: '#FFD60A',
-            food: '#FF3B30'
+            food: '#FF3B30',
+            hidden: '#9333ea'
         };
         return colors[agent] || '#007AFF';
     }

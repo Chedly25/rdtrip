@@ -182,6 +182,10 @@
     background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
 }
 
+.agent-quick-card.hidden::before {
+    background: linear-gradient(135deg, #9333ea 0%, #7c3aed 100%);
+}
+
 .agent-quick-card:hover {
     transform: translateY(-8px);
     box-shadow: var(--shadow-xl);
@@ -254,6 +258,10 @@
 
 .agent-detailed-card.food .agent-card-header {
     background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+}
+
+.agent-detailed-card.hidden .agent-card-header {
+    background: linear-gradient(135deg, #9333ea 0%, #7c3aed 100%);
 }
 
 .agent-card-header {
@@ -342,6 +350,10 @@
     border-color: #ef4444;
 }
 
+.agent-detailed-card.hidden .city-item {
+    border-color: #9333ea;
+}
+
 .city-item::before {
     content: '';
     position: absolute;
@@ -365,6 +377,10 @@
 
 .agent-detailed-card.food .city-item::before {
     border-color: #ef4444;
+}
+
+.agent-detailed-card.hidden .city-item::before {
+    border-color: #9333ea;
 }
 
 .city-name {
@@ -429,6 +445,10 @@
     color: #ef4444;
 }
 
+.agent-detailed-card.hidden .city-activities li::before {
+    color: #9333ea;
+}
+
 /* Action Button */
 .view-full-route {
     position: absolute;
@@ -459,6 +479,11 @@
 .agent-detailed-card.food .view-full-route {
     border-color: #ef4444;
     color: #ef4444;
+}
+
+.agent-detailed-card.hidden .view-full-route {
+    border-color: #9333ea;
+    color: #9333ea;
 }
 
 .view-full-route:hover {
