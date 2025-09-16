@@ -12,6 +12,9 @@ class SpotlightController {
             'hidden-gems': '#9333ea'
         };
 
+        // Make this instance globally available for popup buttons
+        window.spotlightController = this;
+
         this.init();
     }
 
@@ -248,14 +251,9 @@ class SpotlightController {
                 el.style.fontSize = '18px';
                 el.style.transition = 'all 0.3s ease';
 
-                // Add icon based on type
-                const iconMap = {
-                    monument: '🗼',
-                    historic: '🏰',
-                    cultural: '🎭',
-                    natural: '🏔️'
-                };
-                el.innerHTML = iconMap[landmark.type] || '📍';
+                // Add icon based on specific landmark or type
+                const icon = this.getSpecificLandmarkIcon(landmark.name, landmark.type);
+                el.innerHTML = icon;
 
                 // Add hover effect
                 el.addEventListener('mouseenter', () => {
@@ -268,11 +266,17 @@ class SpotlightController {
                     el.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
                 });
 
+                // Prevent map jumping on click
+                el.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                });
+
                 // Create popup with landmark details
                 const popupContent = `
-                    <div style="padding: 10px; max-width: 200px;">
+                    <div style="padding: 10px; max-width: 250px;">
                         <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600;">
-                            ${iconMap[landmark.type] || '📍'} ${landmark.name}
+                            ${icon} ${landmark.name}
                         </h3>
                         <p style="margin: 0 0 8px 0; color: #666; font-size: 14px;">
                             ${landmark.city}, ${landmark.country}
@@ -283,11 +287,15 @@ class SpotlightController {
                             </p>
                         ` : ''}
                         ${landmark.rating ? `
-                            <div style="display: flex; align-items: center; gap: 5px; font-size: 13px;">
+                            <div style="display: flex; align-items: center; gap: 5px; font-size: 13px; margin-bottom: 10px;">
                                 <span>⭐ ${landmark.rating}</span>
                                 ${landmark.visit_duration ? `<span>• ${landmark.visit_duration} min</span>` : ''}
                             </div>
                         ` : ''}
+                        <button onclick="window.spotlightController.addLandmarkToRoute('${landmark.name}', ${landmark.lat}, ${landmark.lng}, '${landmark.type}', '${landmark.description || ''}', '${landmark.city}')"
+                                style="background: var(--agent-primary-color, #007AFF); color: white; border: none; padding: 8px 16px; border-radius: 6px; font-size: 13px; cursor: pointer; width: 100%; margin-top: 5px;">
+                            ✚ Add to Route
+                        </button>
                     </div>
                 `;
 
@@ -1635,6 +1643,452 @@ class SpotlightController {
                 </div>
             `;
         }).join('');
+    }
+
+    async addLandmarkToRoute(name, lat, lng, type, description, city) {
+        try {
+            console.log(`Adding landmark to route: ${name} at ${lat}, ${lng}`);
+
+            // Show loading feedback
+            const button = event.target;
+            const originalText = button.textContent;
+            button.textContent = '⏳ Adding...';
+            button.disabled = true;
+
+            // Get current waypoints
+            const currentWaypoints = this.extractWaypoints(this.spotlightData.agentData);
+
+            // Create new landmark waypoint
+            const landmarkWaypoint = {
+                name: name,
+                description: description || `Visit ${name} in ${city}`,
+                lat: parseFloat(lat),
+                lng: parseFloat(lng),
+                type: type,
+                city: city,
+                activities: [`Explore ${name}`, `Learn about the history`, `Take photos`],
+                duration: type === 'monument' ? '1-2 hours' : '30-60 minutes',
+                isLandmark: true
+            };
+
+            // Add to waypoints array (insert in optimal position)
+            const updatedWaypoints = this.insertLandmarkOptimally(currentWaypoints, landmarkWaypoint);
+
+            // Update the route data
+            this.updateRouteWithLandmark(updatedWaypoints, landmarkWaypoint);
+
+            // Success feedback
+            button.textContent = '✅ Added!';
+            button.style.background = '#28a745';
+
+            // Reset button after 2 seconds
+            setTimeout(() => {
+                button.textContent = originalText;
+                button.style.background = '';
+                button.disabled = false;
+            }, 2000);
+
+            // Close popup
+            this.map.getCanvas().querySelector('.mapboxgl-popup-close-button')?.click();
+
+        } catch (error) {
+            console.error('Error adding landmark to route:', error);
+
+            // Error feedback
+            const button = event.target;
+            button.textContent = '❌ Error';
+            button.style.background = '#dc3545';
+
+            setTimeout(() => {
+                button.textContent = '✚ Add to Route';
+                button.style.background = '';
+                button.disabled = false;
+            }, 2000);
+        }
+    }
+
+    insertLandmarkOptimally(waypoints, landmark) {
+        if (waypoints.length === 0) {
+            return [landmark];
+        }
+
+        // Calculate distances from landmark to each waypoint
+        let bestPosition = 0;
+        let minAdditionalDistance = Infinity;
+
+        for (let i = 0; i <= waypoints.length; i++) {
+            let additionalDistance = 0;
+
+            if (i === 0) {
+                // Insert at beginning
+                const distanceFromOrigin = this.calculateDistance(43.5297, 5.4474, landmark.lat, landmark.lng);
+                const distanceToFirst = waypoints.length > 0 ?
+                    this.calculateDistance(landmark.lat, landmark.lng, waypoints[0].lat, waypoints[0].lng) : 0;
+                const originalDistanceToFirst = waypoints.length > 0 ?
+                    this.calculateDistance(43.5297, 5.4474, waypoints[0].lat, waypoints[0].lng) : 0;
+                additionalDistance = distanceFromOrigin + distanceToFirst - originalDistanceToFirst;
+            } else if (i === waypoints.length) {
+                // Insert at end
+                const distanceFromLast = this.calculateDistance(waypoints[i-1].lat, waypoints[i-1].lng, landmark.lat, landmark.lng);
+                additionalDistance = distanceFromLast;
+            } else {
+                // Insert between waypoints
+                const distanceFromPrev = this.calculateDistance(waypoints[i-1].lat, waypoints[i-1].lng, landmark.lat, landmark.lng);
+                const distanceToNext = this.calculateDistance(landmark.lat, landmark.lng, waypoints[i].lat, waypoints[i].lng);
+                const originalDistance = this.calculateDistance(waypoints[i-1].lat, waypoints[i-1].lng, waypoints[i].lat, waypoints[i].lng);
+                additionalDistance = distanceFromPrev + distanceToNext - originalDistance;
+            }
+
+            if (additionalDistance < minAdditionalDistance) {
+                minAdditionalDistance = additionalDistance;
+                bestPosition = i;
+            }
+        }
+
+        // Insert at optimal position
+        const updatedWaypoints = [...waypoints];
+        updatedWaypoints.splice(bestPosition, 0, landmark);
+        return updatedWaypoints;
+    }
+
+    updateRouteWithLandmark(updatedWaypoints, landmark) {
+        // Update the spotlight data
+        this.spotlightData.waypoints = updatedWaypoints;
+
+        // Update localStorage
+        localStorage.setItem('spotlightData', JSON.stringify(this.spotlightData));
+
+        // Add landmark marker to map with special styling
+        this.addLandmarkMarkerToRoute(landmark);
+
+        // Recalculate and redraw route
+        this.recalculateRoute(updatedWaypoints);
+
+        // Update cities display
+        this.addLandmarkToCitiesDisplay(landmark);
+
+        // Update stats
+        this.updateStatsWithLandmark(landmark);
+    }
+
+    addLandmarkMarkerToRoute(landmark) {
+        // Create distinctive marker for added landmarks
+        const el = document.createElement('div');
+        el.className = 'added-landmark-marker';
+        el.style.width = '30px';
+        el.style.height = '30px';
+        el.style.borderRadius = '50%';
+        el.style.backgroundColor = '#9333EA';
+        el.style.border = '3px solid white';
+        el.style.boxShadow = '0 2px 10px rgba(147, 51, 234, 0.4)';
+        el.style.display = 'flex';
+        el.style.alignItems = 'center';
+        el.style.justifyContent = 'center';
+        el.style.fontSize = '16px';
+        el.style.animation = 'pulse 2s ease-in-out';
+
+        // Add icon
+        const iconMap = {
+            monument: '🗼',
+            historic: '🏰',
+            cultural: '🎭',
+            natural: '🏔️'
+        };
+        el.innerHTML = iconMap[landmark.type] || '⭐';
+
+        // Add to map
+        new mapboxgl.Marker(el)
+            .setLngLat([landmark.lng, landmark.lat])
+            .setPopup(new mapboxgl.Popup().setHTML(`
+                <div style="padding: 10px;">
+                    <h3 style="margin: 0 0 5px 0;">✅ ${landmark.name}</h3>
+                    <p style="margin: 0; color: #666; font-size: 13px;">Added to your route!</p>
+                </div>
+            `))
+            .addTo(this.map);
+    }
+
+    async recalculateRoute(waypoints) {
+        const destinationCoords = await this.geocodeDestination(this.spotlightData.destination);
+        if (destinationCoords) {
+            const color = this.agentColors[this.spotlightData.agent];
+            await this.createRoute(waypoints, destinationCoords, color);
+            this.fitMapToRoute(waypoints, destinationCoords);
+            this.updateDistanceStats(waypoints, destinationCoords);
+        }
+    }
+
+    addLandmarkToCitiesDisplay(landmark) {
+        const container = document.getElementById('citiesContainer');
+        const existingCards = container.querySelectorAll('.city-card');
+
+        // Create landmark card
+        const landmarkCard = document.createElement('div');
+        landmarkCard.className = 'city-card landmark-card';
+        landmarkCard.style.border = '2px solid #9333EA';
+        landmarkCard.style.background = 'linear-gradient(135deg, #f8f4ff 0%, #e6d9ff 100%)';
+
+        landmarkCard.innerHTML = `
+            <div class="city-image-container">
+                <div class="no-image-placeholder">
+                    <div class="no-image-icon">${this.getLandmarkIcon(landmark.type)}</div>
+                    <div class="no-image-text">${landmark.name}</div>
+                </div>
+            </div>
+            <div class="city-content">
+                <h3>⭐ ${landmark.name}</h3>
+                <p class="city-description">${landmark.description}</p>
+                <div class="landmark-details">
+                    <span class="landmark-type">${landmark.type.charAt(0).toUpperCase() + landmark.type.slice(1)}</span>
+                    <span class="landmark-city">${landmark.city}</span>
+                    <span class="landmark-duration">${landmark.duration}</span>
+                </div>
+                <ul class="city-activities">
+                    ${landmark.activities.map(activity => `<li>${activity}</li>`).join('')}
+                </ul>
+            </div>
+        `;
+
+        // Insert in appropriate position based on optimal route
+        const waypoints = this.extractWaypoints(this.spotlightData.agentData);
+        const landmarkIndex = waypoints.findIndex(w => w.name === landmark.name);
+
+        if (landmarkIndex >= 0 && landmarkIndex < existingCards.length) {
+            container.insertBefore(landmarkCard, existingCards[landmarkIndex]);
+        } else {
+            container.appendChild(landmarkCard);
+        }
+
+        // Animate the new card
+        landmarkCard.style.transform = 'scale(0.8)';
+        landmarkCard.style.opacity = '0';
+        setTimeout(() => {
+            landmarkCard.style.transition = 'all 0.5s ease';
+            landmarkCard.style.transform = 'scale(1)';
+            landmarkCard.style.opacity = '1';
+        }, 100);
+    }
+
+    getLandmarkIcon(type) {
+        const icons = {
+            monument: '🗼',
+            historic: '🏰',
+            cultural: '🎭',
+            natural: '🏔️'
+        };
+        return icons[type] || '⭐';
+    }
+
+    updateStatsWithLandmark(landmark) {
+        // Update total stops count
+        const totalStopsElement = document.getElementById('totalStops');
+        if (totalStopsElement) {
+            const currentStops = parseInt(totalStopsElement.textContent) || 0;
+            totalStopsElement.textContent = currentStops + 1;
+        }
+
+        // Show success notification
+        this.showNotification(`${landmark.name} added to your route!`, 'success');
+    }
+
+    showNotification(message, type = 'info') {
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: ${type === 'success' ? '#28a745' : '#007AFF'};
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            z-index: 10000;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+        `;
+        notification.textContent = message;
+
+        document.body.appendChild(notification);
+
+        // Animate in
+        setTimeout(() => {
+            notification.style.transform = 'translateX(0)';
+        }, 100);
+
+        // Remove after 3 seconds
+        setTimeout(() => {
+            notification.style.transform = 'translateX(400px)';
+            setTimeout(() => {
+                document.body.removeChild(notification);
+            }, 300);
+        }, 3000);
+    }
+
+    getSpecificLandmarkIcon(landmarkName, type) {
+        // Normalize name for comparison
+        const name = landmarkName.toLowerCase();
+
+        // Specific landmark icons
+        const specificLandmarks = {
+            // Famous towers and monuments
+            'eiffel tower': '🗼',
+            'tower of london': '🏰',
+            'big ben': '🕰️',
+            'london eye': '🎡',
+            'arc de triomphe': '🏛️',
+
+            // Spanish landmarks
+            'sagrada familia': '⛪',
+            'park güell': '🏞️',
+            'alhambra': '🏰',
+            'guggenheim bilbao': '🎨',
+            'santiago de compostela': '⛪',
+            'alcázar': '🏰',
+            'mezquita': '🕌',
+
+            // Italian landmarks
+            'colosseum': '🏟️',
+            'leaning tower of pisa': '🗼',
+            'vatican': '⛪',
+            'sistine chapel': '🎨',
+            'st. peters basilica': '⛪',
+            'pantheon': '🏛️',
+            'trevi fountain': '⛲',
+            'ponte vecchio': '🌉',
+            'duomo': '⛪',
+            'basilica': '⛪',
+
+            // French landmarks
+            'notre-dame': '⛪',
+            'louvre': '🎨',
+            'versailles': '🏰',
+            'mont-saint-michel': '🏰',
+            'chateau': '🏰',
+            'château': '🏰',
+
+            // German landmarks
+            'neuschwanstein': '🏰',
+            'brandenburg gate': '🏛️',
+            'cologne cathedral': '⛪',
+            'reichstag': '🏛️',
+
+            // UK landmarks
+            'stonehenge': '🗿',
+            'windsor castle': '🏰',
+            'westminster': '🏛️',
+            'buckingham palace': '🏰',
+            'edinburgh castle': '🏰',
+
+            // Greek landmarks
+            'parthenon': '🏛️',
+            'acropolis': '🏛️',
+            'santorini': '🏛️',
+
+            // Austrian landmarks
+            'schönbrunn': '🏰',
+            'salzburg': '🎵',
+
+            // Swiss landmarks
+            'matterhorn': '⛰️',
+            'jungfraujoch': '🏔️',
+
+            // Dutch landmarks
+            'anne frank house': '🏠',
+            'rijksmuseum': '🎨',
+            'van gogh museum': '🎨',
+
+            // Czech landmarks
+            'prague castle': '🏰',
+            'charles bridge': '🌉',
+
+            // Portuguese landmarks
+            'jerónimos monastery': '⛪',
+            'torre de belém': '🗼',
+            'pena palace': '🏰',
+
+            // Russian landmarks
+            'kremlin': '🏰',
+            'red square': '🏛️',
+            'hermitage': '🎨',
+
+            // Belgian landmarks
+            'atomium': '⚛️',
+            'grand place': '🏛️',
+
+            // Norwegian landmarks
+            'geirangerfjord': '🏔️',
+            'preikestolen': '🗿',
+
+            // Croatian landmarks
+            'dubrovnik walls': '🏰',
+            'plitvice lakes': '🏞️'
+        };
+
+        // Check for specific landmark first
+        for (const [key, icon] of Object.entries(specificLandmarks)) {
+            if (name.includes(key)) {
+                return icon;
+            }
+        }
+
+        // Fallback to type-based icons
+        const typeIcons = {
+            monument: '🗼',
+            historic: '🏰',
+            cultural: '🎭',
+            natural: '🏔️',
+            religious: '⛪',
+            museum: '🎨',
+            palace: '🏰',
+            castle: '🏰',
+            church: '⛪',
+            cathedral: '⛪',
+            bridge: '🌉',
+            tower: '🗼',
+            fountain: '⛲',
+            park: '🏞️',
+            garden: '🌳',
+            square: '🏛️',
+            market: '🏪'
+        };
+
+        // Check name for keywords
+        const nameKeywords = {
+            'castle': '🏰',
+            'château': '🏰',
+            'palace': '🏰',
+            'church': '⛪',
+            'cathedral': '⛪',
+            'basilica': '⛪',
+            'monastery': '⛪',
+            'abbey': '⛪',
+            'tower': '🗼',
+            'bridge': '🌉',
+            'fountain': '⛲',
+            'museum': '🎨',
+            'gallery': '🎨',
+            'park': '🏞️',
+            'garden': '🌳',
+            'square': '🏛️',
+            'plaza': '🏛️',
+            'market': '🏪',
+            'opera': '🎭',
+            'theatre': '🎭',
+            'theater': '🎭'
+        };
+
+        for (const [keyword, icon] of Object.entries(nameKeywords)) {
+            if (name.includes(keyword)) {
+                return icon;
+            }
+        }
+
+        // Return type-based icon or default
+        return typeIcons[type] || '📍';
     }
 }
 
