@@ -83,6 +83,12 @@
 }
 
 /* Custom landmark marker hover effects */
+.landmark-marker-custom {
+    pointer-events: auto !important;
+    position: relative !important;
+    z-index: 1000 !important;
+}
+
 .landmark-marker-custom:hover {
     transform: scale(1.1) !important;
     transition: all 0.2s ease !important;
@@ -91,11 +97,51 @@
 .added-landmark-marker {
     cursor: pointer;
     transition: all 0.3s ease;
+    pointer-events: auto !important;
+    position: relative !important;
+    z-index: 1000 !important;
 }
 
 .added-landmark-marker:hover {
     transform: scale(1.1) !important;
     box-shadow: 0 4px 20px rgba(147, 51, 234, 0.6) !important;
+}
+
+/* Ensure landmark markers don't interfere with map events */
+.mapboxgl-marker {
+    pointer-events: auto !important;
+}
+
+.mapboxgl-marker .landmark-marker-custom,
+.mapboxgl-marker .added-landmark-marker {
+    pointer-events: auto !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+}
+
+/* Landmark popup styling */
+.landmark-popup .mapboxgl-popup-content {
+    border-radius: 12px !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    backdrop-filter: blur(10px) !important;
+    background: rgba(255, 255, 255, 0.95) !important;
+}
+
+.landmark-popup .mapboxgl-popup-tip {
+    border-top-color: rgba(255, 255, 255, 0.95) !important;
+}
+
+/* Prevent map interaction conflicts */
+.mapboxgl-canvas-container {
+    position: relative;
+}
+
+.mapboxgl-marker {
+    z-index: 1;
+    position: relative;
 }
 
 /* Header Styles */

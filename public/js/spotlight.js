@@ -255,19 +255,43 @@ class SpotlightController {
                 const icon = this.getSpecificLandmarkIcon(landmark.name, landmark.type);
                 el.innerHTML = icon;
 
-                // Add hover effect
-                el.addEventListener('mouseenter', () => {
+                // Add hover effect with event prevention
+                el.addEventListener('mouseenter', (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
                     el.style.transform = 'scale(1.1)';
                     el.style.boxShadow = '0 4px 15px rgba(0,0,0,0.3)';
                 });
 
-                el.addEventListener('mouseleave', () => {
+                el.addEventListener('mouseleave', (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
                     el.style.transform = 'scale(1)';
                     el.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
                 });
 
-                // Prevent map jumping on click
+                // Prevent map jumping on all mouse events
                 el.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                });
+
+                el.addEventListener('mouseover', (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                });
+
+                el.addEventListener('mouseout', (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                });
+
+                el.addEventListener('mousedown', (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                });
+
+                el.addEventListener('mouseup', (e) => {
                     e.stopPropagation();
                     e.preventDefault();
                 });
@@ -299,11 +323,25 @@ class SpotlightController {
                     </div>
                 `;
 
-                // Add marker to map
-                const marker = new mapboxgl.Marker(el)
+                // Add marker to map with proper event isolation
+                const marker = new mapboxgl.Marker({
+                    element: el,
+                    draggable: false
+                })
                     .setLngLat([landmark.lng, landmark.lat])
-                    .setPopup(new mapboxgl.Popup({ offset: 25 }).setHTML(popupContent))
+                    .setPopup(new mapboxgl.Popup({
+                        offset: 25,
+                        closeButton: true,
+                        closeOnClick: false,
+                        className: 'landmark-popup'
+                    }).setHTML(popupContent))
                     .addTo(this.map);
+
+                // Prevent marker from interfering with map events
+                const markerElement = marker.getElement();
+                markerElement.style.pointerEvents = 'auto';
+                markerElement.addEventListener('mousedown', (e) => e.stopPropagation());
+                markerElement.addEventListener('touchstart', (e) => e.stopPropagation());
 
                 // Store marker reference for cleanup
                 this.landmarkMarkers.push(marker);
