@@ -170,7 +170,7 @@ Make it detailed and practical with specific times and recommendations.`;
             content: prompt
           }
         ],
-        max_tokens: 4000,
+        max_tokens: 6000,
         temperature: 0.7
       }, {
         headers: {
