@@ -63,19 +63,19 @@ class SpotlightController {
 
         // Handle icon display - use innerHTML for images, textContent for emojis
         const iconElement = document.getElementById('routeAgentIcon');
-        const iconValue = agentEmojis[agent];
 
-        // Check if it's an image path or emoji
+        // Use custom PNG icons with proper styling from images/icons/
         if (agent === 'adventure') {
-            iconElement.innerHTML = '<img src="/adventure.png" alt="Adventure" style="width: 48px; height: 48px; vertical-align: middle;">';
+            iconElement.innerHTML = '<img src="images/icons/adventure_icon.png" alt="Adventure" style="width: 40px; height: 40px; object-fit: contain;">';
         } else if (agent === 'culture') {
-            iconElement.innerHTML = '<img src="/culture.png" alt="Culture" style="width: 48px; height: 48px; vertical-align: middle;">';
+            iconElement.innerHTML = '<img src="images/icons/culture_icon.png" alt="Culture" style="width: 40px; height: 40px; object-fit: contain;">';
         } else if (agent === 'food') {
-            iconElement.innerHTML = '<img src="/food.png" alt="Food" style="width: 48px; height: 48px; vertical-align: middle;">';
-        } else if (agent === 'hidden') {
-            iconElement.textContent = '💎';
+            iconElement.innerHTML = '<img src="images/icons/food_icon.png" alt="Food" style="width: 40px; height: 40px; object-fit: contain;">';
+        } else if (agent === 'hidden-gems') {
+            iconElement.innerHTML = '<img src="images/icons/hidden_gem_icon.png" alt="Hidden Gems" style="width: 40px; height: 40px; object-fit: contain;">';
         } else {
-            iconElement.textContent = iconValue;
+            // Fallback to emoji
+            iconElement.textContent = agentEmojis[agent] || '🗺️';
         }
         document.getElementById('routeTitle').textContent = agentNames[agent];
         document.getElementById('routeSubtitle').textContent = `${origin} → ${destination}`;
@@ -220,6 +220,7 @@ class SpotlightController {
 
             const data = await response.json();
             const landmarks = data.landmarks || [];
+            console.log(`📍 Loaded ${landmarks.length} landmarks:`, landmarks.map(l => l.name));
 
             // Define landmark colors by type
             const typeColors = {
@@ -2191,6 +2192,14 @@ class SpotlightController {
         // Normalize name for comparison
         const name = landmarkName.toLowerCase();
 
+        // First check if we have a custom image for this landmark
+        const customImage = this.getCustomLandmarkImage(landmarkName);
+        console.log(`🔍 Checking landmark: "${landmarkName}" -> Custom image: ${customImage}`);
+        if (customImage) {
+            console.log(`✅ Using custom image for ${landmarkName}: ${customImage}`);
+            return `<img src="${customImage}" alt="${landmarkName}" style="width: 32px; height: 32px; object-fit: cover; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">`;
+        }
+
         // Specific landmark icons
         const specificLandmarks = {
             // Famous towers and monuments
@@ -2219,6 +2228,7 @@ class SpotlightController {
             'trevi fountain': '⛲',
             'ponte vecchio': '🌉',
             'duomo': '⛪',
+            'duomo di milano': '⛪',
             'basilica': '⛪',
 
             // French landmarks
@@ -2354,54 +2364,91 @@ class SpotlightController {
         // Normalize landmark name for comparison
         const name = landmarkName.toLowerCase();
 
-        // Map your custom images to landmark names
+        // Map ALL custom landmark images to their names
         const imageMapping = {
-            // Direct matches
+            // Greek landmarks
+            'acropolis': 'acropolis_athens.png',
+            'acropolis of athens': 'acropolis_athens.png',
+            'parthenon': 'parthenon.png',
+
+            // Spanish landmarks
+            'alhambra': 'alhambra_granada.png',
+            'sagrada familia': 'sagrada_familia.png',
+
+            // French landmarks
+            'arc de triomphe': 'arc_de_triomphe.png',
             'eiffel tower': 'eiffel_tower.png',
             'mont saint-michel': 'mont_saint_michel.png',
-            'colosseum': 'colosseum.png',
-            'leaning tower of pisa': 'pisa.png',
-            'sagrada familia': 'sagrada_familia.png',
-            'alhambra': 'alhambra_granada.png',
-            'neuschwanstein castle': 'neuschwanstein_castle.png',
-            'brandenburg gate': 'brandenburg_gate.png',
-            'big ben': 'big_ben.png',
-            'tower bridge': 'tower_bridge.png',
-            'stonehenge': 'stonehenge.png',
+            'mont saint michel': 'mont_saint_michel.png',
             'notre-dame': 'notre_dame.png',
             'notre dame': 'notre_dame.png',
-            'arc de triomphe': 'arc_de_triomphe.png',
             'palace of versailles': 'versailles.png',
             'versailles': 'versailles.png',
-            'trevi fountain': 'trevi_fountain.png',
+
+            // Belgian landmarks
+            'atomium': 'atomium_brussels.png',
+
+            // UK landmarks
+            'big ben': 'big_ben.png',
+            'edinburgh castle': 'edinburgh_castle.png',
+            'stonehenge': 'stonehenge.png',
+            'tower bridge': 'tower_bridge.png',
+
+            // German landmarks
+            'brandenburg gate': 'brandenburg_gate.png',
+            'cologne cathedral': 'cologne_cathedral.png',
+            'neuschwanstein castle': 'neuschwanstein_castle.png',
+            'neuschwanstein': 'neuschwanstein_castle.png',
+
+            // Czech landmarks
+            'charles bridge': 'charles_bridge_prague.png',
+
+            // Irish landmarks
+            'cliffs of moher': 'cliffs_of_moher.png',
+
+            // Italian landmarks
+            'colosseum': 'colosseum.png',
             'duomo di milano': 'duomo_milano.png',
             'duomo': 'duomo_milano.png',
+            'milan cathedral': 'duomo_milano.png',
+            'leaning tower of pisa': 'pisa.png',
+            'pisa': 'pisa.png',
+            'tower of pisa': 'pisa.png',
             'st. mark\'s basilica': 'st_mark_venice.png',
             'st marks basilica': 'st_mark_venice.png',
-            'vatican': 'st_peter.png',
+            'san marco': 'st_mark_venice.png',
             'st. peter\'s basilica': 'st_peter.png',
             'st peters basilica': 'st_peter.png',
-            'acropolis of athens': 'acropolis_athens.png',
-            'acropolis': 'acropolis_athens.png',
-            'parthenon': 'parthenon.png',
-            'charles bridge': 'charles_bridge_prague.png',
-            'cologne cathedral': 'cologne_cathedral.png',
-            'edinburgh castle': 'edinburgh_castle.png',
+            'vatican': 'st_peter.png',
+            'trevi fountain': 'trevi_fountain.png',
+
+            // Norwegian landmarks
+            'geirangerfjord': 'geirangerfjord_norway.png',
+
+            // Austrian landmarks
             'hallstatt': 'hallstatt_village_austria.png',
             'schönbrunn palace': 'schonnbrun_vienna.png',
             'schönbrunn': 'schonnbrun_vienna.png',
             'schonbrunn palace': 'schonnbrun_vienna.png',
             'schonbrunn': 'schonnbrun_vienna.png',
-            'atomium': 'atomium_brussels.png',
+
+            // Dutch landmarks
             'kinderdijk windmills': 'kinderdijk_windmills.png',
+            'kinderdijk': 'kinderdijk_windmills.png',
+
+            // Danish landmarks
             'the little mermaid': 'little_mermaid_copenhagen.png',
             'little mermaid': 'little_mermaid_copenhagen.png',
-            'geirangerfjord': 'geirangerfjord_norway.png',
-            'cliffs of moher': 'cliffs_of_moher.png',
+
+            // Portuguese landmarks
+            'pena palace': 'pena_palace.png',
+            'jerónimos monastery': 'pena_palace.png',
+            'jeronimos monastery': 'pena_palace.png',
+
+            // Russian landmarks
             'st. basil\'s cathedral': 'st_basils_moscow.png',
             'st basils cathedral': 'st_basils_moscow.png',
-            'pena palace': 'pena_palace.png',
-            'jerónimos monastery': 'pena_palace.png'
+            'saint basils': 'st_basils_moscow.png'
         };
 
         // Check direct matches first

@@ -73,11 +73,11 @@ class RoadTripPlanner {
     setupEventListeners() {
         console.log('🔥 Setting up event listeners...');
 
-        // Agent selection buttons
-        const agentBtns = document.querySelectorAll('.agent-btn');
-        console.log('🔥 Found agent buttons:', agentBtns.length);
-        agentBtns.forEach(btn => {
-            btn.addEventListener('click', () => this.toggleAgent(btn));
+        // Theme selection cards (updated from agent buttons)
+        const themeCards = document.querySelectorAll('.theme-card');
+        console.log('🔥 Found theme cards:', themeCards.length);
+        themeCards.forEach(card => {
+            card.addEventListener('click', () => this.toggleAgent(card));
         });
 
         // Budget selection buttons
@@ -121,19 +121,51 @@ class RoadTripPlanner {
         }
     }
 
-    toggleAgent(btn) {
-        const agent = btn.dataset.agent;
-        
-        if (btn.classList.contains('active')) {
+    toggleAgent(card) {
+        const agent = card.dataset.agent;
+
+        // Add ripple effect animation
+        this.addRippleEffect(card);
+
+        if (card.classList.contains('active')) {
             // Ensure at least one agent remains selected
             if (this.selectedAgents.length > 1) {
-                btn.classList.remove('active');
+                card.classList.remove('active');
                 this.selectedAgents = this.selectedAgents.filter(a => a !== agent);
             }
         } else {
-            btn.classList.add('active');
+            card.classList.add('active');
             this.selectedAgents.push(agent);
         }
+    }
+
+    addRippleEffect(element) {
+        // Create ripple element
+        const ripple = document.createElement('span');
+        ripple.classList.add('ripple');
+
+        // Position the ripple
+        const rect = element.getBoundingClientRect();
+        const size = Math.max(rect.width, rect.height);
+        ripple.style.width = ripple.style.height = size + 'px';
+        ripple.style.left = (rect.width / 2 - size / 2) + 'px';
+        ripple.style.top = (rect.height / 2 - size / 2) + 'px';
+
+        // Add ripple styles
+        ripple.style.position = 'absolute';
+        ripple.style.borderRadius = '50%';
+        ripple.style.background = 'rgba(255, 255, 255, 0.3)';
+        ripple.style.pointerEvents = 'none';
+        ripple.style.transform = 'scale(0)';
+        ripple.style.animation = 'ripple 0.6s linear';
+
+        // Add to element and remove after animation
+        element.appendChild(ripple);
+        setTimeout(() => {
+            if (ripple.parentNode) {
+                ripple.parentNode.removeChild(ripple);
+            }
+        }, 600);
     }
 
     selectBudget(btn) {
@@ -1272,13 +1304,15 @@ class RoadTripPlanner {
     }
 
     getAgentEmoji(agent) {
-        const emojis = {
-            adventure: '🏔️',
-            culture: '🏛️',
-            food: '🍽️',
-            hidden: '💎'
+        // Return custom PNG icons instead of emojis
+        const icons = {
+            adventure: '<img src="images/icons/adventure_icon.png" alt="Adventure" style="width: 60px; height: 60px; vertical-align: middle;">',
+            culture: '<img src="images/icons/culture_icon.png" alt="Culture" style="width: 60px; height: 60px; vertical-align: middle;">',
+            food: '<img src="images/icons/food_icon.png" alt="Food" style="width: 60px; height: 60px; vertical-align: middle;">',
+            'hidden-gems': '<img src="images/icons/hidden_gem_icon.png" alt="Hidden Gems" style="width: 60px; height: 60px; vertical-align: middle;">',
+            hidden: '<img src="images/icons/hidden_gem_icon.png" alt="Hidden Gems" style="width: 60px; height: 60px; vertical-align: middle;">'
         };
-        return emojis[agent] || '📍';
+        return icons[agent] || '📍';
     }
 
     getAgentColor(agent) {

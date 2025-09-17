@@ -1335,6 +1335,218 @@ const europeanLandmarks = [
     image_url: "https://images.unsplash.com/photo-1539650116574-75c0c6d73a0e?w=500",
     rating: 4.7,
     visit_duration: 120
+  },
+
+  // Additional landmarks with custom images
+  {
+    id: 16,
+    name: "Duomo di Milano",
+    type: "cultural",
+    lat: 45.4642,
+    lng: 9.1900,
+    country: "Italy",
+    city: "Milan",
+    icon_type: "cathedral",
+    description: "Gothic cathedral with elaborate spires and stunning facade",
+    image_url: "https://images.unsplash.com/photo-1539650116574-75c0c6d73a0e?w=500",
+    rating: 4.7,
+    visit_duration: 150
+  },
+  {
+    id: 17,
+    name: "Notre-Dame de Paris",
+    type: "cultural",
+    lat: 48.8530,
+    lng: 2.3499,
+    country: "France",
+    city: "Paris",
+    icon_type: "cathedral",
+    description: "Medieval Catholic cathedral on the Île de la Cité",
+    image_url: "https://images.unsplash.com/photo-1539650116574-75c0c6d73a0e?w=500",
+    rating: 4.6,
+    visit_duration: 120
+  },
+  {
+    id: 18,
+    name: "Trevi Fountain",
+    type: "monument",
+    lat: 41.9009,
+    lng: 12.4833,
+    country: "Italy",
+    city: "Rome",
+    icon_type: "fountain",
+    description: "Baroque fountain and one of Rome's most famous landmarks",
+    image_url: "https://images.unsplash.com/photo-1539650116574-75c0c6d73a0e?w=500",
+    rating: 4.4,
+    visit_duration: 45
+  },
+  {
+    id: 19,
+    name: "St. Mark's Basilica",
+    type: "cultural",
+    lat: 45.4345,
+    lng: 12.3398,
+    country: "Italy",
+    city: "Venice",
+    icon_type: "cathedral",
+    description: "Byzantine cathedral with stunning mosaics",
+    image_url: "https://images.unsplash.com/photo-1539650116574-75c0c6d73a0e?w=500",
+    rating: 4.6,
+    visit_duration: 120
+  },
+  {
+    id: 20,
+    name: "Charles Bridge",
+    type: "monument",
+    lat: 50.0865,
+    lng: 14.4114,
+    country: "Czech Republic",
+    city: "Prague",
+    icon_type: "bridge",
+    description: "Historic stone bridge connecting Prague's Old and New Towns",
+    image_url: "https://images.unsplash.com/photo-1539650116574-75c0c6d73a0e?w=500",
+    rating: 4.5,
+    visit_duration: 60
+  },
+  {
+    id: 21,
+    name: "Cologne Cathedral",
+    type: "cultural",
+    lat: 50.9413,
+    lng: 6.9583,
+    country: "Germany",
+    city: "Cologne",
+    icon_type: "cathedral",
+    description: "Gothic cathedral and UNESCO World Heritage Site",
+    image_url: "https://images.unsplash.com/photo-1539650116574-75c0c6d73a0e?w=500",
+    rating: 4.6,
+    visit_duration: 120
+  },
+  {
+    id: 22,
+    name: "Edinburgh Castle",
+    type: "historic",
+    lat: 55.9486,
+    lng: -3.1999,
+    country: "United Kingdom",
+    city: "Edinburgh",
+    icon_type: "castle",
+    description: "Historic fortress dominating Edinburgh's skyline",
+    image_url: "https://images.unsplash.com/photo-1539650116574-75c0c6d73a0e?w=500",
+    rating: 4.5,
+    visit_duration: 180
+  },
+  {
+    id: 23,
+    name: "Big Ben",
+    type: "monument",
+    lat: 51.4994,
+    lng: -0.1245,
+    country: "United Kingdom",
+    city: "London",
+    icon_type: "clock",
+    description: "Iconic clock tower at the Palace of Westminster",
+    image_url: "https://images.unsplash.com/photo-1539650116574-75c0c6d73a0e?w=500",
+    rating: 4.4,
+    visit_duration: 60
+  },
+  {
+    id: 24,
+    name: "Schönbrunn Palace",
+    type: "historic",
+    lat: 48.1847,
+    lng: 16.3119,
+    country: "Austria",
+    city: "Vienna",
+    icon_type: "palace",
+    description: "Imperial summer palace with baroque gardens",
+    image_url: "https://images.unsplash.com/photo-1539650116574-75c0c6d73a0e?w=500",
+    rating: 4.6,
+    visit_duration: 180
+  },
+  {
+    id: 25,
+    name: "Atomium",
+    type: "monument",
+    lat: 50.8950,
+    lng: 4.3415,
+    country: "Belgium",
+    city: "Brussels",
+    icon_type: "structure",
+    description: "Iconic building representing an iron crystal magnified 165 billion times",
+    image_url: "https://images.unsplash.com/photo-1539650116574-75c0c6d73a0e?w=500",
+    rating: 4.2,
+    visit_duration: 90
+  },
+  {
+    id: 26,
+    name: "Little Mermaid",
+    type: "monument",
+    lat: 55.6930,
+    lng: 12.5993,
+    country: "Denmark",
+    city: "Copenhagen",
+    icon_type: "statue",
+    description: "Bronze statue commemorating Hans Christian Andersen's fairy tale",
+    image_url: "https://images.unsplash.com/photo-1539650116574-75c0c6d73a0e?w=500",
+    rating: 3.8,
+    visit_duration: 30
+  },
+  {
+    id: 27,
+    name: "Pena Palace",
+    type: "historic",
+    lat: 38.7876,
+    lng: -9.3906,
+    country: "Portugal",
+    city: "Sintra",
+    icon_type: "palace",
+    description: "Romantic palace with eclectic architectural styles",
+    image_url: "https://images.unsplash.com/photo-1539650116574-75c0c6d73a0e?w=500",
+    rating: 4.6,
+    visit_duration: 150
+  },
+  {
+    id: 28,
+    name: "Cliffs of Moher",
+    type: "natural",
+    lat: 52.9715,
+    lng: -9.4265,
+    country: "Ireland",
+    city: "County Clare",
+    icon_type: "cliff",
+    description: "Spectacular sea cliffs rising 214m from the Atlantic Ocean",
+    image_url: "https://images.unsplash.com/photo-1539650116574-75c0c6d73a0e?w=500",
+    rating: 4.7,
+    visit_duration: 120
+  },
+  {
+    id: 29,
+    name: "Geirangerfjord",
+    type: "natural",
+    lat: 62.1049,
+    lng: 7.0045,
+    country: "Norway",
+    city: "Geiranger",
+    icon_type: "fjord",
+    description: "UNESCO World Heritage fjord with dramatic waterfalls",
+    image_url: "https://images.unsplash.com/photo-1539650116574-75c0c6d73a0e?w=500",
+    rating: 4.8,
+    visit_duration: 240
+  },
+  {
+    id: 30,
+    name: "Parthenon",
+    type: "historic",
+    lat: 37.9715,
+    lng: 23.7267,
+    country: "Greece",
+    city: "Athens",
+    icon_type: "temple",
+    description: "Ancient temple dedicated to the goddess Athena",
+    image_url: "https://images.unsplash.com/photo-1539650116574-75c0c6d73a0e?w=500",
+    rating: 4.6,
+    visit_duration: 90
   }
 ];
 
@@ -1350,8 +1562,8 @@ app.get('/api/landmarks/region', (req, res) => {
       filtered = filtered.filter(landmark =>
         landmark.lat <= parseFloat(north) &&
         landmark.lat >= parseFloat(south) &&
-        landmark.lng <= parseFloat(east) &&
-        landmark.lng >= parseFloat(west)
+        landmark.lng >= parseFloat(west) &&
+        landmark.lng <= parseFloat(east)
       );
     }
 

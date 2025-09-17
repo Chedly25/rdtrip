@@ -5,9 +5,10 @@
 (function() {
     // Map emojis to their image files
     const emojiToImage = {
-        '🏔️': { src: '/adventure.png', alt: 'Adventure', size: 48 },
-        '🏛️': { src: '/culture.png', alt: 'Culture', size: 48 },
-        '🍽️': { src: '/food.png', alt: 'Food', size: 48 }
+        '🏔️': { src: 'images/icons/adventure_icon.png', alt: 'Adventure', size: 60 },
+        '🏛️': { src: 'images/icons/culture_icon.png', alt: 'Culture', size: 60 },
+        '🍽️': { src: 'images/icons/food_icon.png', alt: 'Food', size: 60 },
+        '💎': { src: 'images/icons/hidden_gem_icon.png', alt: 'Hidden Gems', size: 60 }
     };
 
     /**

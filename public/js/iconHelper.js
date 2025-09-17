@@ -7,26 +7,28 @@ class IconHelper {
     constructor() {
         // Map of icon types to their image files
         this.iconMap = {
-            'adventure': '/adventure.png',
-            'culture': '/culture.png',
-            'food': '/food.png'
+            'adventure': 'images/icons/adventure_icon.png',
+            'culture': 'images/icons/culture_icon.png',
+            'food': 'images/icons/food_icon.png',
+            'hidden-gems': 'images/icons/hidden_gem_icon.png'
         };
 
         // Map of emojis to icon types
         this.emojiMap = {
             '🏔️': 'adventure',
             '🏛️': 'culture',
-            '🍽️': 'food'
+            '🍽️': 'food',
+            '💎': 'hidden-gems'
         };
     }
 
     /**
      * Creates an img element for an icon type
      * @param {string} iconType - The type of icon (adventure, culture, food)
-     * @param {number} size - Size in pixels (default: 20)
+     * @param {number} size - Size in pixels (default: 60)
      * @returns {HTMLElement} - IMG element
      */
-    createIconElement(iconType, size = 20) {
+    createIconElement(iconType, size = 60) {
         const img = document.createElement('img');
         img.src = this.iconMap[iconType] || '';
         img.alt = iconType.charAt(0).toUpperCase() + iconType.slice(1);
@@ -43,7 +45,7 @@ class IconHelper {
      * @param {number} size - Size in pixels
      * @returns {HTMLElement|string} - IMG element or original emoji if no replacement
      */
-    replaceEmoji(emoji, size = 20) {
+    replaceEmoji(emoji, size = 60) {
         const iconType = this.emojiMap[emoji];
         if (iconType) {
             return this.createIconElement(iconType, size);
@@ -124,7 +126,7 @@ class IconHelper {
      * @param {number} size - Size in pixels
      * @returns {string} - HTML string
      */
-    renderIconHTML(identifier, size = 20) {
+    renderIconHTML(identifier, size = 60) {
         if (this.isIconIdentifier(identifier)) {
             const type = identifier.replace('icon:', '');
             if (this.iconMap[type]) {

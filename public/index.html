@@ -20,6 +20,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
+    <link rel="stylesheet" href="css/premium-design-system.css">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/navigation-buttons.css">
     <link rel="stylesheet" href="css/results-overlay.css">
@@ -31,7 +32,7 @@
         <!-- Premium Landing Page -->
         <section class="landing-page">
             <!-- Navigation -->
-            <nav class="landing-nav">
+            <nav class="landing-nav premium-nav">
                 <div class="nav-container">
                     <div class="nav-brand">
                         <img src="logo.png" alt="Road Trip Planner" class="nav-logo">
@@ -167,13 +168,13 @@
                                             type="text"
                                             id="destination"
                                             placeholder="Enter European city (e.g., Barcelona, Rome, Amsterdam)"
-                                            class="form-input"
+                                            class="input"
                                         >
                                     </div>
 
                                     <div class="form-group">
                                         <label for="stops" class="form-label">Number of stops</label>
-                                        <select id="stops" class="form-select">
+                                        <select id="stops" class="select">
                                             <option value="2">2 stops</option>
                                             <option value="3" selected>3 stops</option>
                                             <option value="4">4 stops</option>
@@ -205,27 +206,27 @@
 
                                     <div class="form-group">
                                         <label class="form-label">Travel style</label>
-                                        <div class="option-grid agent-selection">
-                                            <button class="option-btn agent-btn active" data-agent="adventure">
-                                                <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHJ4PSI4IiBmaWxsPSIjRkY5MDA5Ii8+CiAgPHBhdGggZD0iTTggMTZMMTYgOEwyNSAxMkwzMiA0VjMySDhWMTZaIiBmaWxsPSIjMEY3NzNEIi8+CiAgPHBhdGggZD0iTTggMjRMMTYgMTZMMjUgMjBMMzIgMTJWMzJIOFYyNFoiIGZpbGw9IiMxNUI5NTUiLz4KICA8Y2lyY2xlIGN4PSIyNiIgY3k9IjEwIiByPSI0IiBmaWxsPSIjRkZEQjQ5Ii8+CiAgPHBhdGggZD0iTTggMzJIMzJMMjggMjRMMjAgMjhMMTIgMjRMOCAzMloiIGZpbGw9IiMzOUJCREYiLz4KICA8dGV4dCB4PSIyMCIgeT0iMzgiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSI4IiBmb250LXdlaWdodD0iYm9sZCIgZmlsbD0iIzFGMkEzNyIgdGV4dC1hbmNob3I9Im1pZGRsZSI+QURWRU5UVVJFPC90ZXh0Pgo8L3N2Zz4K" alt="Adventure" class="option-icon-img">
-                                                <span class="option-text">Adventure</span>
-                                            </button>
-                                            <button class="option-btn agent-btn active" data-agent="culture">
-                                                <span class="option-icon">🏛️</span>
-                                                <span class="option-text">Culture</span>
-                                            </button>
-                                            <button class="option-btn agent-btn active" data-agent="food">
-                                                <span class="option-icon">🍽️</span>
-                                                <span class="option-text">Food</span>
-                                            </button>
-                                            <button class="option-btn agent-btn active" data-agent="hidden-gems">
-                                                <span class="option-icon">💎</span>
-                                                <span class="option-text">Hidden Gems</span>
-                                            </button>
+                                        <div class="theme-grid">
+                                            <div class="theme-card theme-card--adventure active" data-agent="adventure">
+                                                <img src="/images/icons/adventure_icon.png" alt="Adventure" class="theme-icon">
+                                                <h3 class="theme-title">Adventure</h3>
+                                            </div>
+                                            <div class="theme-card theme-card--culture active" data-agent="culture">
+                                                <img src="/images/icons/culture_icon.png" alt="Culture" class="theme-icon">
+                                                <h3 class="theme-title">Culture</h3>
+                                            </div>
+                                            <div class="theme-card theme-card--food active" data-agent="food">
+                                                <img src="/images/icons/food_icon.png" alt="Food" class="theme-icon">
+                                                <h3 class="theme-title">Food</h3>
+                                            </div>
+                                            <div class="theme-card theme-card--hidden-gems active" data-agent="hidden-gems">
+                                                <img src="/images/icons/hidden_gem_icon.png" alt="Hidden Gems" class="theme-icon">
+                                                <h3 class="theme-title">Hidden Gems</h3>
+                                            </div>
                                         </div>
                                     </div>
 
-                                    <button id="generateRoute" class="generate-button">
+                                    <button id="generateRoute" class="btn btn--primary btn--large generate-button">
                                         <span class="btn-content">
                                             <span class="btn-text">Generate Route</span>
                                             <svg class="btn-icon" width="20" height="20" viewBox="0 0 24 24" fill="none">

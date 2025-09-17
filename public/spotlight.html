@@ -15,9 +15,10 @@
     <meta name="description" content="Detailed route view for your AI-powered road trip from Aix-en-Provence.">
     <meta name="theme-color" content="#667eea">
 
-    <link rel="stylesheet" href="css/style.css">
-    <link rel="stylesheet" href="css/spotlight.css">
-    <link rel="stylesheet" href="css/navigation-buttons.css">
+    <link rel="stylesheet" href="css/premium-design-system.css?v=1.1.0">
+    <link rel="stylesheet" href="css/style.css?v=1.1.0">
+    <link rel="stylesheet" href="css/spotlight.css?v=1.1.0">
+    <link rel="stylesheet" href="css/navigation-buttons.css?v=1.1.0">
     <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet">
 </head>
 <body>
@@ -129,6 +130,31 @@
     </script>
     <script src="js/emojiReplacer.js"></script>
     <script type="module" src="js/globalAI.js"></script>
-    <script src="js/spotlight.js"></script>
+    <script>
+        // Debug: Check if premium design system is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            const testElement = document.createElement('div');
+            testElement.className = 'test-premium-styles';
+            testElement.style.cssText = 'position: absolute; top: -9999px; font-family: var(--font-family); background: var(--surface);';
+            document.body.appendChild(testElement);
+
+            const computedStyles = window.getComputedStyle(testElement);
+            const fontFamily = computedStyles.fontFamily;
+            const background = computedStyles.backgroundColor;
+
+            console.log('🎨 Premium Design System Check:');
+            console.log('Font Family:', fontFamily);
+            console.log('Surface Color:', background);
+            console.log('Premium loaded:', fontFamily.includes('system') || fontFamily.includes('SF'));
+
+            document.body.removeChild(testElement);
+
+            // Force visual change for testing
+            if (document.body) {
+                document.body.style.backgroundColor = background || '#F8F9FB';
+            }
+        });
+    </script>
+    <script src="js/spotlight.js?v=1.4.0"></script>
 </body>
 </html>
