@@ -418,7 +418,7 @@ class RoadTripPlanner {
         const budgetInfo = this.calculateBudget(waypoints);
         
         budgetContainer.innerHTML = `
-            <h4>💰 Budget Estimate</h4>
+            <h4><img src="/images/budget/budget.png" alt="Budget" style="width: 20px; height: 20px; margin-right: 8px; vertical-align: middle;"> Budget Estimate</h4>
             <div class="budget-breakdown">
                 <div class="budget-item">
                     <div class="budget-indicator">${budgetInfo.indicator}</div>
@@ -426,7 +426,7 @@ class RoadTripPlanner {
                     <div class="budget-label">Total</div>
                 </div>
                 <div class="budget-item">
-                    <div class="budget-indicator">🏨</div>
+                    <div class="budget-indicator"><img src="/images/budget/comfortable.png" alt="Hotel" style="width: 20px; height: 20px;"></div>
                     <div class="budget-amount">€${budgetInfo.accommodation}</div>
                     <div class="budget-label">Hotels</div>
                 </div>

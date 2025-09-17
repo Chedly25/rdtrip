@@ -1340,7 +1340,7 @@ class SpotlightController {
                                 `).join('') : ''}
                                 ${day.accommodation ? `
                                     <div class="accommodation-section">
-                                        <h5>🏨 Accommodation</h5>
+                                        <h5><img src="/images/budget/comfortable.png" alt="Accommodation" style="width: 18px; height: 18px; margin-right: 6px; vertical-align: middle;"> Accommodation</h5>
                                         <p>${day.accommodation}</p>
                                     </div>
                                 ` : ''}
@@ -1596,8 +1596,8 @@ class SpotlightController {
                             bookingUrl: "#",
                             address: `${city.name} city center`,
                             image: {
-                                url: `https://via.placeholder.com/400x300/4A90E2/white?text=🏨+Hotel`,
-                                thumb: `https://via.placeholder.com/200x150/4A90E2/white?text=🏨`,
+                                url: `https://via.placeholder.com/400x300/4A90E2/white?text=Hotel`,
+                                thumb: `https://via.placeholder.com/200x150/4A90E2/white?text=Hotel`,
                                 alt: `${city.name} - Hotel`,
                                 photographer: 'Placeholder',
                                 source: 'Placeholder'
@@ -1679,7 +1679,7 @@ class SpotlightController {
 
                     <div class="recommendations-grid">
                         <div class="hotels-section">
-                            <h4 class="section-title">🏨 Where to Stay</h4>
+                            <h4 class="section-title"><img src="/images/budget/comfortable.png" alt="Hotels" style="width: 20px; height: 20px; margin-right: 8px; vertical-align: middle;"> Where to Stay</h4>
                             ${this.renderHotelCards(hotels.slice(0, 3))}
                         </div>
 

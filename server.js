@@ -462,8 +462,8 @@ async function getHotelImage(hotelName, city, stars = 3) {
 
   // Fallback to placeholder
   return {
-    url: `https://via.placeholder.com/400x300/4A90E2/white?text=🏨+Hotel`,
-    thumb: `https://via.placeholder.com/200x150/4A90E2/white?text=🏨`,
+    url: `https://via.placeholder.com/400x300/4A90E2/white?text=Hotel`,
+    thumb: `https://via.placeholder.com/200x150/4A90E2/white?text=Hotel`,
     alt: `${hotelName} - Hotel`,
     photographer: 'Placeholder',
     source: 'Placeholder'

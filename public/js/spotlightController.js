@@ -222,7 +222,7 @@ class SpotlightController {
                 <div class="highlight-description">${highlight.description}</div>
                 <div class="highlight-meta">
                     <span class="location">📍 ${highlight.location}</span>
-                    <span class="price">💰 ${highlight.price}</span>
+                    <span class="price"><img src="/images/budget/budget.png" alt="Price" style="width: 16px; height: 16px; margin-right: 4px; vertical-align: middle;"> ${highlight.price}</span>
                     <span class="rating">⭐ ${highlight.rating}</span>
                 </div>
             </div>
@@ -791,7 +791,7 @@ class SpotlightController {
                         <div class="item-description">${restaurant.description}</div>
                         <div class="restaurant-meta">
                             <span class="location">📍 ${restaurant.location}</span>
-                            <span class="price">💰 ${restaurant.price}</span>
+                            <span class="price"><img src="/images/budget/budget.png" alt="Price" style="width: 16px; height: 16px; margin-right: 4px; vertical-align: middle;"> ${restaurant.price}</span>
                             <span class="rating">⭐ ${restaurant.rating}</span>
                         </div>
                         <div class="item-tags">
@@ -1599,7 +1599,7 @@ Check out this incredible road trip through Provence!
 
 🗺️ Route: Aix-en-Provence → Avignon → Wine Country → Cassis → Nice
 📅 Duration: 5 days
-💰 Estimated cost: €245 per person
+<img src="/images/budget/budget.png" alt="Price" style="width: 16px; height: 16px; margin-right: 4px; vertical-align: middle;"> Estimated cost: €245 per person
 
 Highlights include:
 🏛️ Palace of the Popes in Avignon
