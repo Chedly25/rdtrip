@@ -221,8 +221,6 @@ class SpotlightController {
             const data = await response.json();
             const landmarks = data.landmarks || [];
 
-            console.log(`🏛️ Adding ${landmarks.length} landmarks to spotlight map`);
-
             // Define landmark colors by type
             const typeColors = {
                 monument: '#FF6B6B',
@@ -235,7 +233,7 @@ class SpotlightController {
             landmarks.forEach(landmark => {
                 const color = typeColors[landmark.type] || '#9333EA';
 
-                // Create custom marker element with icon
+                // Create custom marker element with icon and strict isolation
                 const el = document.createElement('div');
                 el.className = 'landmark-marker-custom';
                 el.style.width = '35px';
@@ -251,49 +249,73 @@ class SpotlightController {
                 el.style.fontSize = '18px';
                 el.style.transition = 'all 0.3s ease';
 
+                // Force isolation from map events
+                el.style.pointerEvents = 'auto';
+                el.style.position = 'relative';
+                el.style.zIndex = '9999';
+
+                // Prevent any focus-related issues
+                el.setAttribute('tabindex', '-1');
+                el.setAttribute('role', 'presentation');
+
                 // Add icon based on specific landmark or type
                 const icon = this.getSpecificLandmarkIcon(landmark.name, landmark.type);
                 el.innerHTML = icon;
 
-                // Add hover effect with event prevention
+
+                // Add hover effect with event prevention and debugging
                 el.addEventListener('mouseenter', (e) => {
+                    console.log(`🖱️ MOUSEENTER on landmark: ${landmark.name}`, e);
                     e.stopPropagation();
                     e.preventDefault();
                     el.style.transform = 'scale(1.1)';
                     el.style.boxShadow = '0 4px 15px rgba(0,0,0,0.3)';
+                    console.log(`✅ MOUSEENTER handled for: ${landmark.name}`);
                 });
 
                 el.addEventListener('mouseleave', (e) => {
+                    console.log(`🖱️ MOUSELEAVE on landmark: ${landmark.name}`, e);
                     e.stopPropagation();
                     e.preventDefault();
                     el.style.transform = 'scale(1)';
                     el.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+                    console.log(`✅ MOUSELEAVE handled for: ${landmark.name}`);
                 });
 
-                // Prevent map jumping on all mouse events
+                // Prevent map jumping on all mouse events with debugging
                 el.addEventListener('click', (e) => {
+                    console.log(`🖱️ CLICK on landmark: ${landmark.name}`, e);
                     e.stopPropagation();
                     e.preventDefault();
+                    console.log(`✅ CLICK handled for: ${landmark.name}`);
                 });
 
                 el.addEventListener('mouseover', (e) => {
+                    console.log(`🖱️ MOUSEOVER on landmark: ${landmark.name}`, e);
                     e.stopPropagation();
                     e.preventDefault();
+                    console.log(`✅ MOUSEOVER handled for: ${landmark.name}`);
                 });
 
                 el.addEventListener('mouseout', (e) => {
+                    console.log(`🖱️ MOUSEOUT on landmark: ${landmark.name}`, e);
                     e.stopPropagation();
                     e.preventDefault();
+                    console.log(`✅ MOUSEOUT handled for: ${landmark.name}`);
                 });
 
                 el.addEventListener('mousedown', (e) => {
+                    console.log(`🖱️ MOUSEDOWN on landmark: ${landmark.name}`, e);
                     e.stopPropagation();
                     e.preventDefault();
+                    console.log(`✅ MOUSEDOWN handled for: ${landmark.name}`);
                 });
 
                 el.addEventListener('mouseup', (e) => {
+                    console.log(`🖱️ MOUSEUP on landmark: ${landmark.name}`, e);
                     e.stopPropagation();
                     e.preventDefault();
+                    console.log(`✅ MOUSEUP handled for: ${landmark.name}`);
                 });
 
                 // Create popup with landmark details
@@ -323,28 +345,121 @@ class SpotlightController {
                     </div>
                 `;
 
-                // Add marker to map with proper event isolation
-                const marker = new mapboxgl.Marker({
-                    element: el,
-                    draggable: false
-                })
-                    .setLngLat([landmark.lng, landmark.lat])
-                    .setPopup(new mapboxgl.Popup({
-                        offset: 25,
-                        closeButton: true,
-                        closeOnClick: false,
-                        className: 'landmark-popup'
-                    }).setHTML(popupContent))
-                    .addTo(this.map);
+                // Try custom overlay approach instead of Mapbox marker
+                console.log(`📍 Creating custom overlay for ${landmark.name} at [${landmark.lng}, ${landmark.lat}]`);
 
-                // Prevent marker from interfering with map events
-                const markerElement = marker.getElement();
-                markerElement.style.pointerEvents = 'auto';
-                markerElement.addEventListener('mousedown', (e) => e.stopPropagation());
-                markerElement.addEventListener('touchstart', (e) => e.stopPropagation());
+                // Check if we have a custom image for this landmark
+                const customImage = this.getCustomLandmarkImage(landmark.name);
 
-                // Store marker reference for cleanup
-                this.landmarkMarkers.push(marker);
+                // Create a completely isolated div that won't interfere with map
+                const overlayEl = document.createElement('div');
+                overlayEl.className = 'landmark-overlay-custom';
+
+                if (customImage) {
+                    // Use custom image as background
+                    overlayEl.style.cssText = `
+                        position: absolute;
+                        width: 50px;
+                        height: 50px;
+                        border-radius: 10px;
+                        background-image: url('${customImage}');
+                        background-size: cover;
+                        background-position: center;
+                        border: 3px solid white;
+                        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+                        cursor: pointer;
+                        transition: all 0.3s ease;
+                        pointer-events: auto;
+                        z-index: 1000;
+                        transform: translate(-50%, -50%);
+                    `;
+                } else {
+                    // Fallback to emoji icon
+                    overlayEl.style.cssText = `
+                        position: absolute;
+                        width: 35px;
+                        height: 35px;
+                        border-radius: 50%;
+                        background-color: ${color};
+                        border: 3px solid white;
+                        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+                        cursor: pointer;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-size: 18px;
+                        transition: all 0.3s ease;
+                        pointer-events: auto;
+                        z-index: 1000;
+                        transform: translate(-50%, -50%);
+                    `;
+                    overlayEl.innerHTML = icon;
+                }
+
+                // Add all our event handlers to the overlay element
+                console.log(`🎯 Setting up overlay element for ${landmark.name}`);
+
+                // Add hover effect with event prevention and debugging
+                overlayEl.addEventListener('mouseenter', (e) => {
+                    console.log(`🖱️ OVERLAY MOUSEENTER on landmark: ${landmark.name}`, e);
+                    e.stopPropagation();
+                    e.preventDefault();
+                    overlayEl.style.transform = 'translate(-50%, -50%) scale(1.1)';
+                    overlayEl.style.boxShadow = '0 4px 15px rgba(0,0,0,0.3)';
+                    console.log(`✅ OVERLAY MOUSEENTER handled for: ${landmark.name}`);
+                });
+
+                overlayEl.addEventListener('mouseleave', (e) => {
+                    console.log(`🖱️ OVERLAY MOUSELEAVE on landmark: ${landmark.name}`, e);
+                    e.stopPropagation();
+                    e.preventDefault();
+                    overlayEl.style.transform = 'translate(-50%, -50%) scale(1)';
+                    overlayEl.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+                    console.log(`✅ OVERLAY MOUSELEAVE handled for: ${landmark.name}`);
+                });
+
+                // Create popup manually when clicked
+                overlayEl.addEventListener('click', (e) => {
+                    console.log(`🖱️ OVERLAY CLICK on landmark: ${landmark.name}`, e);
+                    e.stopPropagation();
+                    e.preventDefault();
+
+                    // Show custom popup
+                    this.showCustomLandmarkPopup(landmark, overlayEl);
+                    console.log(`✅ OVERLAY CLICK handled for: ${landmark.name}`);
+                });
+
+                // Convert lat/lng to screen coordinates and position the overlay
+                const updateOverlayPosition = () => {
+                    const point = this.map.project([landmark.lng, landmark.lat]);
+                    overlayEl.style.left = `${point.x}px`;
+                    overlayEl.style.top = `${point.y}px`;
+                };
+
+                // Position initially
+                updateOverlayPosition();
+
+                // Update position when map moves
+                this.map.on('move', updateOverlayPosition);
+                this.map.on('zoom', updateOverlayPosition);
+
+                // Add to map container
+                const mapContainer = this.map.getContainer();
+                mapContainer.appendChild(overlayEl);
+
+                // Store reference for cleanup
+                this.landmarkMarkers.push({
+                    element: overlayEl,
+                    remove: () => {
+                        this.map.off('move', updateOverlayPosition);
+                        this.map.off('zoom', updateOverlayPosition);
+                        if (overlayEl.parentNode) {
+                            overlayEl.parentNode.removeChild(overlayEl);
+                        }
+                    }
+                });
+
+                console.log(`✅ Custom overlay added for ${landmark.name}`);
             });
 
         } catch (error) {
@@ -1856,7 +1971,7 @@ class SpotlightController {
         }
     }
 
-    addLandmarkToCitiesDisplay(landmark) {
+    async addLandmarkToCitiesDisplay(landmark) {
         const container = document.getElementById('citiesContainer');
         const existingCards = container.querySelectorAll('.city-card');
 
@@ -1866,11 +1981,12 @@ class SpotlightController {
         landmarkCard.style.border = '2px solid #9333EA';
         landmarkCard.style.background = 'linear-gradient(135deg, #f8f4ff 0%, #e6d9ff 100%)';
 
+        // Start with placeholder, then fetch Wikipedia image
         landmarkCard.innerHTML = `
             <div class="city-image-container">
-                <div class="no-image-placeholder">
-                    <div class="no-image-icon">${this.getLandmarkIcon(landmark.type)}</div>
-                    <div class="no-image-text">${landmark.name}</div>
+                <div class="loading-image-placeholder">
+                    <div class="loading-spinner">🔍</div>
+                    <div class="loading-text">Finding image...</div>
                 </div>
             </div>
             <div class="city-content">
@@ -1905,6 +2021,39 @@ class SpotlightController {
             landmarkCard.style.transform = 'scale(1)';
             landmarkCard.style.opacity = '1';
         }, 100);
+
+        // Fetch Wikipedia image for the landmark
+        try {
+            console.log(`🖼️ Fetching Wikipedia image for landmark: ${landmark.name}`);
+            const imageUrl = await this.getWikipediaImage(landmark.name, 800, 600);
+
+            const imageContainer = landmarkCard.querySelector('.city-image-container');
+            if (imageUrl) {
+                console.log(`✅ Found Wikipedia image for ${landmark.name}:`, imageUrl);
+                imageContainer.innerHTML = `
+                    <img src="${imageUrl}" alt="${landmark.name}" class="city-image"
+                         onload="this.classList.add('loaded')"
+                         onerror="this.style.display='none'; this.parentElement.innerHTML='<div class=\\"no-image-placeholder\\"><div class=\\"no-image-icon\\">${this.getLandmarkIcon(landmark.type)}</div><div class=\\"no-image-text\\">${landmark.name}</div></div>';">
+                `;
+            } else {
+                console.log(`❌ No Wikipedia image found for ${landmark.name}, using icon placeholder`);
+                imageContainer.innerHTML = `
+                    <div class="no-image-placeholder">
+                        <div class="no-image-icon">${this.getLandmarkIcon(landmark.type)}</div>
+                        <div class="no-image-text">${landmark.name}</div>
+                    </div>
+                `;
+            }
+        } catch (error) {
+            console.error(`Error fetching Wikipedia image for ${landmark.name}:`, error);
+            const imageContainer = landmarkCard.querySelector('.city-image-container');
+            imageContainer.innerHTML = `
+                <div class="no-image-placeholder">
+                    <div class="no-image-icon">${this.getLandmarkIcon(landmark.type)}</div>
+                    <div class="no-image-text">${landmark.name}</div>
+                </div>
+            `;
+        }
     }
 
     getLandmarkIcon(type) {
@@ -1964,6 +2113,78 @@ class SpotlightController {
                 document.body.removeChild(notification);
             }, 300);
         }, 3000);
+    }
+
+    showCustomLandmarkPopup(landmark, overlayElement) {
+        // Remove any existing popup
+        const existingPopup = document.querySelector('.custom-landmark-popup');
+        if (existingPopup) {
+            existingPopup.remove();
+        }
+
+        // Create custom popup
+        const popup = document.createElement('div');
+        popup.className = 'custom-landmark-popup';
+        popup.style.cssText = `
+            position: absolute;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            z-index: 10000;
+            max-width: 250px;
+            padding: 0;
+            pointer-events: auto;
+        `;
+
+        const icon = this.getSpecificLandmarkIcon(landmark.name, landmark.type);
+        popup.innerHTML = `
+            <div style="padding: 10px;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                    <h3 style="margin: 0; font-size: 16px; font-weight: 600;">
+                        ${icon} ${landmark.name}
+                    </h3>
+                    <button onclick="this.parentElement.parentElement.parentElement.remove()" style="background: none; border: none; font-size: 16px; cursor: pointer; padding: 0; color: #666;">×</button>
+                </div>
+                <p style="margin: 0 0 8px 0; color: #666; font-size: 14px;">
+                    ${landmark.city}, ${landmark.country}
+                </p>
+                ${landmark.description ? `
+                    <p style="margin: 0 0 8px 0; font-size: 13px; line-height: 1.4;">
+                        ${landmark.description}
+                    </p>
+                ` : ''}
+                ${landmark.rating ? `
+                    <div style="display: flex; align-items: center; gap: 5px; font-size: 13px; margin-bottom: 10px;">
+                        <span>⭐ ${landmark.rating}</span>
+                        ${landmark.visit_duration ? `<span>• ${landmark.visit_duration} min</span>` : ''}
+                    </div>
+                ` : ''}
+                <button onclick="window.spotlightController.addLandmarkToRoute('${landmark.name}', ${landmark.lat}, ${landmark.lng}, '${landmark.type}', '${landmark.description || ''}', '${landmark.city}')"
+                        style="background: var(--agent-primary-color, #007AFF); color: white; border: none; padding: 8px 16px; border-radius: 6px; font-size: 13px; cursor: pointer; width: 100%; margin-top: 5px;">
+                    ✚ Add to Route
+                </button>
+            </div>
+        `;
+
+        // Position popup near the overlay element
+        const rect = overlayElement.getBoundingClientRect();
+        const mapContainer = this.map.getContainer();
+        const mapRect = mapContainer.getBoundingClientRect();
+
+        popup.style.left = `${rect.left - mapRect.left + 40}px`;
+        popup.style.top = `${rect.top - mapRect.top - 10}px`;
+
+        // Add popup to map container
+        mapContainer.appendChild(popup);
+
+        // Auto-remove after 10 seconds
+        setTimeout(() => {
+            if (popup.parentNode) {
+                popup.remove();
+            }
+        }, 10000);
     }
 
     getSpecificLandmarkIcon(landmarkName, type) {
@@ -2127,6 +2348,76 @@ class SpotlightController {
 
         // Return type-based icon or default
         return typeIcons[type] || '📍';
+    }
+
+    getCustomLandmarkImage(landmarkName) {
+        // Normalize landmark name for comparison
+        const name = landmarkName.toLowerCase();
+
+        // Map your custom images to landmark names
+        const imageMapping = {
+            // Direct matches
+            'eiffel tower': 'eiffel_tower.png',
+            'mont saint-michel': 'mont_saint_michel.png',
+            'colosseum': 'colosseum.png',
+            'leaning tower of pisa': 'pisa.png',
+            'sagrada familia': 'sagrada_familia.png',
+            'alhambra': 'alhambra_granada.png',
+            'neuschwanstein castle': 'neuschwanstein_castle.png',
+            'brandenburg gate': 'brandenburg_gate.png',
+            'big ben': 'big_ben.png',
+            'tower bridge': 'tower_bridge.png',
+            'stonehenge': 'stonehenge.png',
+            'notre-dame': 'notre_dame.png',
+            'notre dame': 'notre_dame.png',
+            'arc de triomphe': 'arc_de_triomphe.png',
+            'palace of versailles': 'versailles.png',
+            'versailles': 'versailles.png',
+            'trevi fountain': 'trevi_fountain.png',
+            'duomo di milano': 'duomo_milano.png',
+            'duomo': 'duomo_milano.png',
+            'st. mark\'s basilica': 'st_mark_venice.png',
+            'st marks basilica': 'st_mark_venice.png',
+            'vatican': 'st_peter.png',
+            'st. peter\'s basilica': 'st_peter.png',
+            'st peters basilica': 'st_peter.png',
+            'acropolis of athens': 'acropolis_athens.png',
+            'acropolis': 'acropolis_athens.png',
+            'parthenon': 'parthenon.png',
+            'charles bridge': 'charles_bridge_prague.png',
+            'cologne cathedral': 'cologne_cathedral.png',
+            'edinburgh castle': 'edinburgh_castle.png',
+            'hallstatt': 'hallstatt_village_austria.png',
+            'schönbrunn palace': 'schonnbrun_vienna.png',
+            'schönbrunn': 'schonnbrun_vienna.png',
+            'schonbrunn palace': 'schonnbrun_vienna.png',
+            'schonbrunn': 'schonnbrun_vienna.png',
+            'atomium': 'atomium_brussels.png',
+            'kinderdijk windmills': 'kinderdijk_windmills.png',
+            'the little mermaid': 'little_mermaid_copenhagen.png',
+            'little mermaid': 'little_mermaid_copenhagen.png',
+            'geirangerfjord': 'geirangerfjord_norway.png',
+            'cliffs of moher': 'cliffs_of_moher.png',
+            'st. basil\'s cathedral': 'st_basils_moscow.png',
+            'st basils cathedral': 'st_basils_moscow.png',
+            'pena palace': 'pena_palace.png',
+            'jerónimos monastery': 'pena_palace.png'
+        };
+
+        // Check direct matches first
+        if (imageMapping[name]) {
+            return `/images/landmarks/${imageMapping[name]}`;
+        }
+
+        // Check partial matches for complex names
+        for (const [key, image] of Object.entries(imageMapping)) {
+            if (name.includes(key) || key.includes(name)) {
+                return `/images/landmarks/${image}`;
+            }
+        }
+
+        // Return null if no custom image found (will use emoji fallback)
+        return null;
     }
 }
 

@@ -107,9 +107,67 @@
     box-shadow: 0 4px 20px rgba(147, 51, 234, 0.6) !important;
 }
 
+/* Custom image landmark markers */
+.landmark-overlay-custom {
+    transition: all 0.3s ease !important;
+}
+
+.landmark-overlay-custom:hover {
+    transform: translate(-50%, -50%) scale(1.1) !important;
+    box-shadow: 0 6px 25px rgba(0, 0, 0, 0.4) !important;
+    z-index: 1001 !important;
+}
+
+/* Custom image markers with rounded corners and shadow */
+.landmark-overlay-custom[style*="background-image"] {
+    border-radius: 12px !important;
+    overflow: hidden;
+}
+
+.landmark-overlay-custom[style*="background-image"]:before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, transparent 70%, rgba(255,255,255,0.2));
+    pointer-events: none;
+    border-radius: 12px;
+}
+
 /* Ensure landmark markers don't interfere with map events */
 .mapboxgl-marker {
     pointer-events: auto !important;
+}
+
+/* Loading image placeholder for landmarks */
+.loading-image-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: linear-gradient(135deg, #f8f4ff 0%, #e6d9ff 100%);
+    border-radius: 8px;
+    min-height: 120px;
+}
+
+.loading-spinner {
+    font-size: 24px;
+    animation: spin 2s linear infinite;
+    margin-bottom: 8px;
+}
+
+.loading-text {
+    font-size: 12px;
+    color: #9333EA;
+    font-weight: 500;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
 }
 
 .mapboxgl-marker .landmark-marker-custom,
