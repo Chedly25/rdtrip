@@ -39,6 +39,9 @@ class EnhancedRouteResults {
         return `
             <div class="enhanced-results-header">
                 <div class="results-header-content">
+                    <button class="close-results-btn back-button" id="close-enhanced-results">
+                        ← Back to Planner
+                    </button>
                     <div class="route-title-section">
                         <h1 class="route-main-title">Route Results</h1>
                         <div class="route-subtitle">
@@ -49,9 +52,7 @@ class EnhancedRouteResults {
                             </div>
                         </div>
                     </div>
-                    <button class="close-results-btn" id="close-enhanced-results">
-                        ← Back to Planner
-                    </button>
+                    <div class="header-spacer"></div>
                 </div>
             </div>
 
