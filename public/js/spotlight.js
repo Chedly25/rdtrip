@@ -5,6 +5,7 @@ class SpotlightController {
         this.spotlightData = null;
         this.imageCache = new Map(); // Cache for Wikipedia images
         this.landmarkMarkers = []; // Store landmark markers for cleanup
+        this.addedLandmarkMarkers = []; // Store user-added landmark markers separately
         this.agentColors = {
             adventure: '#34C759',
             culture: '#FFD60A',
@@ -139,6 +140,9 @@ class SpotlightController {
         // When map loads, add route and markers
         this.map.on('load', () => {
             this.addRouteToMap();
+
+            // Restore any previously added landmark markers
+            this.restoreAddedLandmarksFromStorage();
         });
 
         // Reload landmarks when map is moved/zoomed
@@ -2019,6 +2023,13 @@ class SpotlightController {
     }
 
     addLandmarkMarkerToRoute(landmark) {
+        // Check if this landmark marker already exists
+        const existingMarker = this.addedLandmarkMarkers.find(({ landmark: l }) => l.name === landmark.name);
+        if (existingMarker) {
+            console.log(`Landmark marker for "${landmark.name}" already exists`);
+            return;
+        }
+
         // Create distinctive marker for added landmarks
         const el = document.createElement('div');
         el.className = 'added-landmark-marker';
@@ -2043,8 +2054,8 @@ class SpotlightController {
         };
         el.innerHTML = iconMap[landmark.type] || '⭐';
 
-        // Add to map
-        new mapboxgl.Marker(el)
+        // Add to map and store reference
+        const marker = new mapboxgl.Marker(el)
             .setLngLat([landmark.lng, landmark.lat])
             .setPopup(new mapboxgl.Popup().setHTML(`
                 <div style="padding: 10px;">
@@ -2053,6 +2064,12 @@ class SpotlightController {
                 </div>
             `))
             .addTo(this.map);
+
+        // Store in separate array for added landmarks
+        this.addedLandmarkMarkers.push({
+            marker: marker,
+            landmark: landmark
+        });
     }
 
     async recalculateRoute(waypoints) {
@@ -2062,6 +2079,30 @@ class SpotlightController {
             await this.createRoute(waypoints, destinationCoords, color);
             this.fitMapToRoute(waypoints, destinationCoords);
             this.updateDistanceStats(waypoints, destinationCoords);
+
+            // Restore added landmark markers after route recalculation
+            this.restoreAddedLandmarkMarkers();
+        }
+    }
+
+    restoreAddedLandmarkMarkers() {
+        // Re-add all stored landmark markers to the map
+        // This ensures they persist through route recalculations
+        this.addedLandmarkMarkers.forEach(({ marker, landmark }) => {
+            // Check if marker still exists on the map, if not, re-add it
+            if (!marker._map) {
+                marker.addTo(this.map);
+            }
+        });
+    }
+
+    restoreAddedLandmarksFromStorage() {
+        // Restore added landmarks from localStorage when page loads
+        if (this.spotlightData?.addedLandmarks && this.spotlightData.addedLandmarks.length > 0) {
+            this.spotlightData.addedLandmarks.forEach(landmark => {
+                // Create markers for each stored landmark
+                this.addLandmarkMarkerToRoute(landmark);
+            });
         }
     }
 
