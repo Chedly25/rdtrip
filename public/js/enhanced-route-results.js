@@ -411,7 +411,7 @@ class EnhancedRouteResults {
             return;
         }
 
-        // Store data for spotlight page
+        // Store data for spotlight page (same format as original)
         const spotlightData = {
             agent: agent,
             destination: this.subtitleElement.querySelector('.destination-city')?.textContent || 'Destination',
@@ -419,14 +419,19 @@ class EnhancedRouteResults {
             waypoints: parsedRecommendations.waypoints || [],
             totalStops: parsedRecommendations.waypoints?.length || 0,
             recommendations: agentResult.recommendations,
-            fullItinerary: parsedRecommendations
+            fullItinerary: parsedRecommendations,
+            // Include full route data for compatibility
+            routeData: this.currentResults
         };
 
-        // Store in localStorage for spotlight page
+        // Store in both localStorage and sessionStorage for reliability
         localStorage.setItem('spotlightData', JSON.stringify(spotlightData));
+        sessionStorage.setItem('spotlightData', JSON.stringify(spotlightData));
 
-        // Navigate to spotlight page
-        window.location.href = 'spotlight.html';
+        console.log('🎯 Spotlight data stored:', spotlightData);
+
+        // Open spotlight page in new tab
+        window.open('spotlight.html', '_blank');
     }
 }
 
