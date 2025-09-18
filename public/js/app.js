@@ -535,8 +535,14 @@ class RoadTripPlanner {
         // Store route in localStorage for other pages
         localStorage.setItem('currentRoute', JSON.stringify(routeData));
 
-        // Show prominent results overlay
-        this.showResultsOverlay(routeData, destinationCoords);
+        // Show enhanced results with Wikipedia images
+        if (window.enhancedRouteResults) {
+            const destination = document.getElementById('destination')?.value || 'Your Destination';
+            window.enhancedRouteResults.show(routeData, destination);
+        } else {
+            // Fallback to original results overlay
+            this.showResultsOverlay(routeData, destinationCoords);
+        }
         
         // Clear existing markers except origin
         const existingMarkers = document.querySelectorAll('.mapboxgl-marker');
