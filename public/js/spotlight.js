@@ -1047,6 +1047,9 @@ class SpotlightController {
         const waypoints = this.extractWaypoints(this.spotlightData.agentData);
         const container = document.getElementById('citiesContainer');
 
+        // Save existing landmark cards before clearing
+        const existingLandmarkCards = Array.from(container.querySelectorAll('.landmark-card'));
+
         // Show loading state first
         container.innerHTML = `
             <div class="cities-loading">
@@ -1107,7 +1110,12 @@ class SpotlightController {
         // Final update - remove any loading indicators
         container.innerHTML = html;
 
-        console.log(`Loaded ${waypoints.length} locations with Wikipedia images`);
+        // Restore landmark cards by re-appending them
+        existingLandmarkCards.forEach(landmarkCard => {
+            container.appendChild(landmarkCard);
+        });
+
+        console.log(`Loaded ${waypoints.length} locations with Wikipedia images and restored ${existingLandmarkCards.length} landmark cards`);
     }
 
     getLocationIcon(locationName) {
@@ -1530,12 +1538,24 @@ class SpotlightController {
                 return;
             }
 
-            // Create Google Maps URL with waypoints
+            // Combine regular waypoints with added landmarks
+            let allWaypoints = [...waypoints];
+            if (this.spotlightData.addedLandmarks && this.spotlightData.addedLandmarks.length > 0) {
+                // Add landmarks to waypoints, sorting by optimal route order if possible
+                const landmarks = this.spotlightData.addedLandmarks.map(landmark => ({
+                    name: `${landmark.name}, ${landmark.city}`,
+                    lat: landmark.lat,
+                    lng: landmark.lng
+                }));
+                allWaypoints = [...allWaypoints, ...landmarks];
+            }
+
+            // Create Google Maps URL with all waypoints
             const origin = 'Aix-en-Provence, France';
             let googleMapsUrl = `https://www.google.com/maps/dir/${encodeURIComponent(origin)}`;
 
-            // Add waypoints
-            waypoints.forEach(wp => {
+            // Add all waypoints (cities + landmarks)
+            allWaypoints.forEach(wp => {
                 googleMapsUrl += `/${encodeURIComponent(wp.name)}`;
             });
 
@@ -1968,6 +1988,17 @@ class SpotlightController {
     }
 
     updateRouteWithLandmark(updatedWaypoints, landmark) {
+        // Initialize addedLandmarks array if it doesn't exist
+        if (!this.spotlightData.addedLandmarks) {
+            this.spotlightData.addedLandmarks = [];
+        }
+
+        // Add landmark to addedLandmarks array (avoid duplicates)
+        const existingIndex = this.spotlightData.addedLandmarks.findIndex(l => l.name === landmark.name);
+        if (existingIndex === -1) {
+            this.spotlightData.addedLandmarks.push(landmark);
+        }
+
         // Update the spotlight data
         this.spotlightData.waypoints = updatedWaypoints;
 
