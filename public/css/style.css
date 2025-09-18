@@ -2909,126 +2909,150 @@ html {
 
 /* ===== NEW FORM DESIGN STYLES ===== */
 
-/* Budget Range Slider Styles */
-.budget-range-container {
+/* Modern Budget Slider Styles */
+.budget-slider-container {
     position: relative;
     width: 100%;
-    padding: 40px 0;
+    padding: 30px 20px;
     background: var(--surface);
     border-radius: 16px;
     border: 1px solid var(--border-light);
 }
 
-.budget-range-track {
-    position: absolute;
-    top: 50%;
-    left: 80px;
-    right: 80px;
-    height: 6px;
+.budget-slider-track {
+    position: relative;
+    height: 8px;
     background: var(--gray-200);
-    border-radius: 3px;
-    transform: translateY(-50%);
-    z-index: 1;
+    border-radius: 4px;
+    margin: 20px 40px;
+    cursor: pointer;
 }
 
-.budget-range-slider {
+.budget-slider-fill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 100%);
+    border-radius: 4px;
+    width: 66.67%; /* Default to "Comfort" position (2/3) */
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.budget-slider-handle {
     position: absolute;
     top: 50%;
-    width: 24px;
-    height: 24px;
-    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-    border: 4px solid white;
+    left: 66.67%; /* Default to "Comfort" position */
+    width: 28px;
+    height: 28px;
+    background: white;
+    border: 4px solid var(--primary);
     border-radius: 50%;
-    box-shadow: 0 4px 16px rgba(5, 18, 38, 0.25), 0 2px 8px rgba(0, 0, 0, 0.1);
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 6px 20px rgba(5, 18, 38, 0.2), 0 2px 8px rgba(0, 0, 0, 0.1);
     transform: translate(-50%, -50%);
-    z-index: 4;
     cursor: grab;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 10;
 }
 
-.budget-range-slider:active {
+.budget-slider-handle:hover {
+    transform: translate(-50%, -50%) scale(1.15);
+    box-shadow: 0 8px 25px rgba(5, 18, 38, 0.3), 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.budget-slider-handle.dragging {
     cursor: grabbing;
-    transform: translate(-50%, -50%) scale(1.1);
+    transform: translate(-50%, -50%) scale(1.2);
+    box-shadow: 0 10px 30px rgba(5, 18, 38, 0.4), 0 6px 16px rgba(0, 0, 0, 0.2);
 }
 
-.budget-range-options {
+.budget-slider-tooltip {
+    position: absolute;
+    bottom: 120%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--gray-900);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.2s ease;
+    pointer-events: none;
+}
+
+.budget-slider-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: var(--gray-900);
+}
+
+.budget-slider-handle:hover .budget-slider-tooltip,
+.budget-slider-handle.dragging .budget-slider-tooltip {
+    opacity: 1;
+    visibility: visible;
+}
+
+.budget-labels {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
-    padding: 0 70px;
-    position: relative;
-    z-index: 2;
+    align-items: center;
+    margin-top: 25px;
+    padding: 0 40px;
 }
 
-.budget-range-option {
+.budget-label {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 12px;
+    gap: 4px;
     cursor: pointer;
     transition: all 0.3s ease;
-    position: relative;
-    padding: 15px 10px;
-    border-radius: 12px;
+    padding: 8px 12px;
+    border-radius: 8px;
     flex: 1;
-    max-width: 120px;
+    max-width: 100px;
 }
 
-.budget-range-dot {
-    width: 16px;
-    height: 16px;
-    background: var(--gray-300);
-    border: 3px solid white;
-    border-radius: 50%;
-    transition: all 0.3s ease;
-    position: relative;
-    z-index: 3;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-}
-
-.budget-range-option.active .budget-range-dot {
-    background: var(--primary);
-    transform: scale(1.2);
-    box-shadow: 0 4px 12px rgba(5, 18, 38, 0.3), 0 0 0 4px rgba(5, 18, 38, 0.1);
-}
-
-.budget-range-label {
-    font-size: 15px;
+.budget-name {
+    font-size: 14px;
     font-weight: 600;
-    color: var(--gray-700);
-    margin: 0;
+    color: var(--gray-600);
     transition: all 0.3s ease;
     text-align: center;
-    line-height: 1.2;
 }
 
-.budget-range-price {
-    font-size: 13px;
+.budget-price {
+    font-size: 12px;
     color: var(--gray-500);
-    margin: 0;
+    font-weight: 500;
     transition: all 0.3s ease;
     text-align: center;
-    font-weight: 500;
 }
 
-.budget-range-option.active .budget-range-label {
+.budget-label.active .budget-name {
     color: var(--primary);
     font-weight: 700;
-    transform: translateY(-2px);
 }
 
-.budget-range-option.active .budget-range-price {
+.budget-label.active .budget-price {
     color: var(--primary);
     font-weight: 600;
 }
 
-.budget-range-option:hover:not(.active) .budget-range-dot {
-    transform: scale(1.1);
-    background: var(--gray-400);
+.budget-label:hover:not(.active) .budget-name {
+    color: var(--gray-700);
 }
 
-.budget-range-option:hover:not(.active) .budget-range-label {
-    color: var(--gray-800);
+.budget-label:hover:not(.active) .budget-price {
+    color: var(--gray-600);
 }
 
 /* Travel Style Grid */

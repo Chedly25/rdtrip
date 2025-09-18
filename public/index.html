@@ -185,29 +185,31 @@
                                     <div class="form-row-options">
                                         <div class="budget-section">
                                             <label class="section-label">Budget Level</label>
-                                            <div class="budget-range-container">
-                                                <div class="budget-range-track"></div>
-                                                <div class="budget-range-slider" id="budgetSlider"></div>
-                                                <div class="budget-range-options">
-                                                    <div class="budget-range-option" data-budget="budget" data-position="0">
-                                                        <div class="budget-range-dot"></div>
-                                                        <span class="budget-range-label">Budget</span>
-                                                        <span class="budget-range-price">€-€€</span>
+                                            <div class="budget-slider-container">
+                                                <div class="budget-slider-track">
+                                                    <div class="budget-slider-fill"></div>
+                                                    <div class="budget-slider-handle" id="budgetHandle">
+                                                        <div class="budget-slider-tooltip">
+                                                            <span class="budget-tooltip-text">Comfort</span>
+                                                        </div>
                                                     </div>
-                                                    <div class="budget-range-option" data-budget="moderate" data-position="1">
-                                                        <div class="budget-range-dot"></div>
-                                                        <span class="budget-range-label">Moderate</span>
-                                                        <span class="budget-range-price">€€-€€€</span>
+                                                </div>
+                                                <div class="budget-labels">
+                                                    <div class="budget-label" data-budget="budget" data-position="0">
+                                                        <span class="budget-name">Budget</span>
+                                                        <span class="budget-price">€-€€</span>
                                                     </div>
-                                                    <div class="budget-range-option active" data-budget="comfort" data-position="2">
-                                                        <div class="budget-range-dot"></div>
-                                                        <span class="budget-range-label">Comfort</span>
-                                                        <span class="budget-range-price">€€€-€€€€</span>
+                                                    <div class="budget-label" data-budget="moderate" data-position="1">
+                                                        <span class="budget-name">Moderate</span>
+                                                        <span class="budget-price">€€-€€€</span>
                                                     </div>
-                                                    <div class="budget-range-option" data-budget="luxury" data-position="3">
-                                                        <div class="budget-range-dot"></div>
-                                                        <span class="budget-range-label">Luxury</span>
-                                                        <span class="budget-range-price">€€€€€</span>
+                                                    <div class="budget-label active" data-budget="comfort" data-position="2">
+                                                        <span class="budget-name">Comfort</span>
+                                                        <span class="budget-price">€€€-€€€€</span>
+                                                    </div>
+                                                    <div class="budget-label" data-budget="luxury" data-position="3">
+                                                        <span class="budget-name">Luxury</span>
+                                                        <span class="budget-price">€€€€€</span>
                                                     </div>
                                                 </div>
                                             </div>

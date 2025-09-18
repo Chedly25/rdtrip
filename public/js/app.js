@@ -84,11 +84,14 @@ class RoadTripPlanner {
             card.addEventListener('click', () => this.toggleAgent(card));
         });
 
-        // Budget selection range options
-        const budgetOptions = document.querySelectorAll('.budget-range-option');
-        console.log('🔥 Found budget range options:', budgetOptions.length);
-        budgetOptions.forEach(option => {
-            option.addEventListener('click', () => this.selectBudget(option));
+        // Budget slider functionality
+        this.setupBudgetSlider();
+
+        // Budget label clicks
+        const budgetLabels = document.querySelectorAll('.budget-label');
+        console.log('🔥 Found budget labels:', budgetLabels.length);
+        budgetLabels.forEach(label => {
+            label.addEventListener('click', () => this.selectBudgetByLabel(label));
         });
 
         // Generate route button
@@ -251,11 +254,11 @@ class RoadTripPlanner {
         });
 
         // Also sync budget state
-        const activeBudgetOption = document.querySelector(`.budget-range-option[data-budget="${this.selectedBudget}"]`);
-        if (activeBudgetOption) {
-            document.querySelectorAll('.budget-range-option').forEach(option => option.classList.remove('active'));
-            activeBudgetOption.classList.add('active');
-            this.updateBudgetSlider(activeBudgetOption);
+        const activeBudgetLabel = document.querySelector(`.budget-label[data-budget="${this.selectedBudget}"]`);
+        if (activeBudgetLabel) {
+            document.querySelectorAll('.budget-label').forEach(label => label.classList.remove('active'));
+            activeBudgetLabel.classList.add('active');
+            this.updateBudgetSlider(activeBudgetLabel);
         }
 
         console.log('🔥 Form state synchronized');
@@ -304,49 +307,140 @@ class RoadTripPlanner {
         }, 600);
     }
 
-    selectBudget(option) {
-        // Remove active class from all budget range options
-        document.querySelectorAll('.budget-range-option').forEach(opt => opt.classList.remove('active'));
+    setupBudgetSlider() {
+        const handle = document.getElementById('budgetHandle');
+        const track = document.querySelector('.budget-slider-track');
+        const fill = document.querySelector('.budget-slider-fill');
+        const tooltip = document.querySelector('.budget-tooltip-text');
 
-        // Add active class to clicked option
-        option.classList.add('active');
-        this.selectedBudget = option.dataset.budget;
+        if (!handle || !track || !fill) return;
 
-        // Update the range slider position
-        this.updateBudgetSlider(option);
+        this.budgetOptions = [
+            { name: 'Budget', budget: 'budget', position: 0 },
+            { name: 'Moderate', budget: 'moderate', position: 1 },
+            { name: 'Comfort', budget: 'comfort', position: 2 },
+            { name: 'Luxury', budget: 'luxury', position: 3 }
+        ];
 
-        // Sync all forms
+        let isDragging = false;
+        let currentPosition = 2; // Default to "Comfort"
+
+        const updateSlider = (position) => {
+            const percentage = (position / (this.budgetOptions.length - 1)) * 100;
+            handle.style.left = `${percentage}%`;
+            fill.style.width = `${percentage}%`;
+
+            const option = this.budgetOptions[position];
+            if (tooltip) tooltip.textContent = option.name;
+
+            // Update active label
+            document.querySelectorAll('.budget-label').forEach(label => label.classList.remove('active'));
+            const activeLabel = document.querySelector(`.budget-label[data-budget="${option.budget}"]`);
+            if (activeLabel) activeLabel.classList.add('active');
+
+            this.selectedBudget = option.budget;
+            currentPosition = position;
+        };
+
+        const getPositionFromEvent = (e) => {
+            const rect = track.getBoundingClientRect();
+            const x = (e.clientX || e.touches[0].clientX) - rect.left;
+            const percentage = Math.max(0, Math.min(1, x / rect.width));
+            return Math.round(percentage * (this.budgetOptions.length - 1));
+        };
+
+        // Mouse/touch events for dragging
+        const startDrag = (e) => {
+            isDragging = true;
+            handle.classList.add('dragging');
+            e.preventDefault();
+
+            const position = getPositionFromEvent(e);
+            updateSlider(position);
+        };
+
+        const drag = (e) => {
+            if (!isDragging) return;
+            e.preventDefault();
+
+            const position = getPositionFromEvent(e);
+            updateSlider(position);
+        };
+
+        const endDrag = () => {
+            if (!isDragging) return;
+            isDragging = false;
+            handle.classList.remove('dragging');
+            this.syncAllFormAgents();
+        };
+
+        // Handle events
+        handle.addEventListener('mousedown', startDrag);
+        handle.addEventListener('touchstart', startDrag, { passive: false });
+        track.addEventListener('click', (e) => {
+            if (!isDragging) {
+                const position = getPositionFromEvent(e);
+                updateSlider(position);
+                this.syncAllFormAgents();
+            }
+        });
+
+        // Global events
+        document.addEventListener('mousemove', drag);
+        document.addEventListener('touchmove', drag, { passive: false });
+        document.addEventListener('mouseup', endDrag);
+        document.addEventListener('touchend', endDrag);
+
+        // Initialize slider position
+        updateSlider(currentPosition);
+    }
+
+    selectBudgetByLabel(label) {
+        const budget = label.dataset.budget;
+        const position = parseInt(label.dataset.position);
+
+        // Update slider
+        const handle = document.getElementById('budgetHandle');
+        const fill = document.querySelector('.budget-slider-fill');
+        const tooltip = document.querySelector('.budget-tooltip-text');
+
+        if (handle && fill) {
+            const percentage = (position / (this.budgetOptions.length - 1)) * 100;
+            handle.style.left = `${percentage}%`;
+            fill.style.width = `${percentage}%`;
+
+            if (tooltip) tooltip.textContent = label.querySelector('.budget-name').textContent;
+        }
+
+        // Update active state
+        document.querySelectorAll('.budget-label').forEach(l => l.classList.remove('active'));
+        label.classList.add('active');
+
+        this.selectedBudget = budget;
         this.syncAllFormAgents();
     }
 
-    updateBudgetSlider(activeOption) {
-        const slider = document.getElementById('budgetSlider');
-        const track = document.querySelector('.budget-range-track');
-        if (!slider || !activeOption || !track) return;
+    updateBudgetSlider(activeLabel) {
+        // This method is kept for compatibility but functionality moved to setupBudgetSlider
+        if (activeLabel) {
+            const position = parseInt(activeLabel.dataset.position);
+            const handle = document.getElementById('budgetHandle');
+            const fill = document.querySelector('.budget-slider-fill');
 
-        const position = parseInt(activeOption.dataset.position);
-        const totalOptions = document.querySelectorAll('.budget-range-option').length;
-
-        // Calculate slider position along the track
-        const percentage = position / (totalOptions - 1);
-        const trackRect = track.getBoundingClientRect();
-        const containerRect = track.parentElement.getBoundingClientRect();
-
-        // Position slider along track with proper offset
-        const trackStart = 80; // left padding of track
-        const trackWidth = trackRect.width;
-        const sliderPosition = trackStart + (trackWidth * percentage);
-
-        slider.style.left = `${sliderPosition}px`;
+            if (handle && fill) {
+                const percentage = (position / 3) * 100;
+                handle.style.left = `${percentage}%`;
+                fill.style.width = `${percentage}%`;
+            }
+        }
     }
 
     initializeBudgetSlider() {
-        // Set initial slider position for the active budget option
-        const activeOption = document.querySelector('.budget-range-option.active');
-        if (activeOption) {
-            // Wait for elements to be rendered
+        // Initialize is now handled in setupBudgetSlider
+        const activeLabel = document.querySelector('.budget-label.active');
+        if (activeLabel) {
             setTimeout(() => {
-                this.updateBudgetSlider(activeOption);
+                this.updateBudgetSlider(activeLabel);
             }, 100);
         }
     }
