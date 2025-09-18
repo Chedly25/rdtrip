@@ -1,14 +1,14 @@
 /* Premium Design System - Custom Deep Tone Theme */
 :root {
-    /* Core Color Palette */
-    --primary: #0C2A66;
-    --primary-hover: #0A2458;
-    --primary-light: rgba(12, 42, 102, 0.1);
-    --secondary: #06402B;
-    --secondary-hover: #053624;
-    --secondary-light: rgba(6, 64, 43, 0.1);
-    --gradient-primary: linear-gradient(135deg, #0C2A66 0%, #06402B 100%);
-    --gradient-soft: linear-gradient(135deg, #0C2A66 0%, #06402B 50%, #0F3D5C 100%);
+    /* Core Color Palette - Darker Tones */
+    --primary: #081D4A;
+    --primary-hover: #061840;
+    --primary-light: rgba(8, 29, 74, 0.1);
+    --secondary: #042A1C;
+    --secondary-hover: #032215;
+    --secondary-light: rgba(4, 42, 28, 0.1);
+    --gradient-primary: linear-gradient(135deg, #081D4A 0%, #042A1C 100%);
+    --gradient-soft: linear-gradient(135deg, #081D4A 0%, #042A1C 50%, #0B2D42 100%);
 
     /* Neutral Colors */
     --white: #ffffff;

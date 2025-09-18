@@ -25,16 +25,16 @@
     --agent-gradient: var(--hidden-gems-gradient);
 }
 
-/* Default theme fallback - using landing page colors */
+/* Default theme fallback - using darker landing page colors */
 :root {
-    --agent-primary-color: #0C2A66;
-    --agent-primary-rgb: 12, 42, 102;
-    --agent-gradient: linear-gradient(135deg, #0C2A66 0%, #06402B 100%);
-    --primary: #0C2A66;
-    --secondary: #06402B;
-    --gradient-primary: linear-gradient(135deg, #0C2A66 0%, #06402B 100%);
-    --hotel-color: #0C2A66;
-    --restaurant-color: #06402B;
+    --agent-primary-color: #081D4A;
+    --agent-primary-rgb: 8, 29, 74;
+    --agent-gradient: linear-gradient(135deg, #081D4A 0%, #042A1C 100%);
+    --primary: #081D4A;
+    --secondary: #042A1C;
+    --gradient-primary: linear-gradient(135deg, #081D4A 0%, #042A1C 100%);
+    --hotel-color: #081D4A;
+    --restaurant-color: #042A1C;
 }
 
 /* Header Styles */
@@ -97,7 +97,10 @@
 }
 
 .agent-icon {
-    font-size: var(--font-size-3xl);
+    font-size: var(--font-size-6xl);
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .spotlight-title {
