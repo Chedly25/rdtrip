@@ -130,8 +130,8 @@
 /* Route Cards Grid */
 .route-cards-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
-    gap: var(--space-6);
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-4);
     margin-bottom: var(--space-8);
 }
 
@@ -147,6 +147,9 @@
     opacity: 0;
     transform: translateY(30px);
     animation: slideUpFade 0.6s ease forwards;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
 }
 
 .enhanced-route-card:nth-child(1) { animation-delay: 0.1s; }
@@ -239,6 +242,9 @@
 /* Route Card Body */
 .route-card-body {
     padding: var(--space-6);
+    flex: 1;
+    display: flex;
+    flex-direction: column;
 }
 
 .route-description {
@@ -254,6 +260,7 @@
     flex-direction: column;
     gap: var(--space-4);
     margin-bottom: var(--space-6);
+    flex: 1;
 }
 
 .enhanced-city-card {
@@ -413,6 +420,12 @@
 }
 
 /* Responsive Design */
+@media (max-width: 1200px) {
+    .route-cards-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
 @media (max-width: 768px) {
     .enhanced-results-header {
         padding: var(--space-4);

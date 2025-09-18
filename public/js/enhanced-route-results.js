@@ -234,21 +234,21 @@ class EnhancedRouteResults {
             const listItems = highlights.match(/[-•*]\s*([^\n\r]+)/g) ||
                             highlights.match(/\d+\.\s*([^\n\r]+)/g);
             if (listItems) {
-                highlights = listItems.map(item => {
+                highlights = listItems.slice(0, 3).map(item => {
                     const cleaned = item.replace(/^[-•*\d.]\s*/, '').trim();
-                    // Truncate to max 60 characters for consistent card height
-                    return cleaned.length > 60 ? cleaned.substring(0, 57) + '...' : cleaned;
+                    // Truncate to max 40 characters for consistent card height
+                    return cleaned.length > 40 ? cleaned.substring(0, 37) + '...' : cleaned;
                 });
             } else {
                 // Keep as single string, but truncate if too long
-                const truncated = highlights.length > 60 ? highlights.substring(0, 57) + '...' : highlights;
+                const truncated = highlights.length > 40 ? highlights.substring(0, 37) + '...' : highlights;
                 highlights = [truncated];
             }
         } else if (Array.isArray(highlights)) {
-            // Truncate each array item
-            highlights = highlights.map(item => {
+            // Truncate each array item and limit to 3 items
+            highlights = highlights.slice(0, 3).map(item => {
                 const str = String(item).trim();
-                return str.length > 60 ? str.substring(0, 57) + '...' : str;
+                return str.length > 40 ? str.substring(0, 37) + '...' : str;
             });
         }
 
