@@ -29,57 +29,18 @@
     <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet">
 
     <script>
-        // Define video control functions globally before HTML loads
-        let currentVideoIndex = 1;
-        let isPlaying = true;
-
-        function switchVideo(index) {
-            currentVideoIndex = index;
-
-            const allVideos = document.querySelectorAll('.hero-video');
-            const allDots = document.querySelectorAll('.video-dot');
-
-            // Hide all videos
-            allVideos.forEach(v => {
-                v.classList.remove('active');
-                v.pause();
-            });
-
-            // Remove active from all dots
-            allDots.forEach(d => d.classList.remove('active'));
-
-            // Show selected video
-            const targetVideo = document.getElementById('heroVideo' + index);
-            const targetDot = allDots[index - 1];
-
-            if (targetVideo) {
-                targetVideo.classList.add('active');
-                if (isPlaying) {
-                    targetVideo.play().catch(e => console.log('Play error:', e));
-                }
+        // Background video auto-play setup
+        document.addEventListener('DOMContentLoaded', function() {
+            const backgroundVideo = document.getElementById('heroBackgroundVideo');
+            if (backgroundVideo) {
+                // Ensure the video loops and plays
+                backgroundVideo.loop = true;
+                backgroundVideo.muted = true;
+                backgroundVideo.play().catch(e => {
+                    console.log('Background video autoplay blocked:', e);
+                });
             }
-
-            if (targetDot) {
-                targetDot.classList.add('active');
-            }
-        }
-
-        function toggleVideoPlay() {
-            const currentVideo = document.getElementById('heroVideo' + currentVideoIndex);
-            const playIcon = document.getElementById('playIcon');
-
-            if (currentVideo) {
-                if (isPlaying) {
-                    currentVideo.pause();
-                    if (playIcon) playIcon.setAttribute('d', 'M8 5v14l11-7z');
-                    isPlaying = false;
-                } else {
-                    currentVideo.play();
-                    if (playIcon) playIcon.setAttribute('d', 'M6 19h4V5H6v14zm8-14v14h4V5h-4z');
-                    isPlaying = true;
-                }
-            }
-        }
+        });
     </script>
 </head>
 <body>
@@ -167,6 +128,14 @@
 
             <!-- Hero Section with Main Form -->
             <section class="hero">
+                <!-- Video Background -->
+                <div class="hero-video-background">
+                    <video id="heroBackgroundVideo" autoplay muted loop playsinline poster="logo.png">
+                        <source src="video 2.mp4" type="video/mp4">
+                    </video>
+                    <div class="hero-video-overlay"></div>
+                </div>
+
                 <div class="hero-container">
                     <div class="hero-content">
                         <div class="hero-text">
@@ -246,33 +215,6 @@
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="hero-media">
-                            <div class="video-showcase">
-                                <div class="video-container">
-                                    <video id="heroVideo1" autoplay muted loop playsinline class="hero-video active">
-                                        <source src="video.mp4" type="video/mp4">
-                                    </video>
-                                    <video id="heroVideo2" muted loop playsinline class="hero-video">
-                                        <source src="video (1).mp4" type="video/mp4">
-                                    </video>
-                                    <video id="heroVideo3" muted loop playsinline class="hero-video">
-                                        <source src="video 2.mp4" type="video/mp4">
-                                    </video>
-                                    <div class="video-overlay">
-                                        <button class="video-play" onclick="toggleVideoPlay()">
-                                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
-                                                <path id="playIcon" d="M8 5v14l11-7z" fill="currentColor"/>
-                                            </svg>
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="video-controls">
-                                    <button class="video-dot active" onclick="switchVideo(1)"></button>
-                                    <button class="video-dot" onclick="switchVideo(2)"></button>
-                                    <button class="video-dot" onclick="switchVideo(3)"></button>
                                 </div>
                             </div>
                         </div>
@@ -362,54 +304,6 @@
     <!-- Scripts -->
     <script>
         // Video functionality
-        let currentVideo = 1;
-        let isPlaying = true;
-
-        function switchVideo(videoNum) {
-            const video1 = document.getElementById('heroVideo1');
-            const video2 = document.getElementById('heroVideo2');
-            const dots = document.querySelectorAll('.video-dot');
-
-            // Update dots
-            dots.forEach((dot, index) => {
-                dot.classList.toggle('active', index + 1 === videoNum);
-            });
-
-            // Switch videos
-            if (videoNum === 1) {
-                video1.classList.add('active');
-                video2.classList.remove('active');
-                if (isPlaying) video1.play();
-            } else {
-                video2.classList.add('active');
-                video1.classList.remove('active');
-                if (isPlaying) video2.play();
-            }
-
-            currentVideo = videoNum;
-        }
-
-        function toggleVideoPlay() {
-            const activeVideo = currentVideo === 1 ?
-                document.getElementById('heroVideo1') :
-                document.getElementById('heroVideo2');
-
-            if (isPlaying) {
-                activeVideo.pause();
-                isPlaying = false;
-            } else {
-                activeVideo.play();
-                isPlaying = true;
-            }
-        }
-
-        function playVideo() {
-            const video2 = document.getElementById('heroVideo2');
-            switchVideo(2);
-            video2.currentTime = 0;
-            video2.play();
-            isPlaying = true;
-        }
 
         function scrollToPlanning() {
             document.getElementById('planning').scrollIntoView({
@@ -418,12 +312,6 @@
             });
         }
 
-        // Auto-switch videos every 10 seconds
-        setInterval(() => {
-            if (isPlaying) {
-                switchVideo(currentVideo === 1 ? 2 : 1);
-            }
-        }, 10000);
 
         // Navigation scroll effect and sticky form
         let stickyFormVisible = false;
@@ -556,26 +444,6 @@
             }
         });
 
-        // Setup auto-rotation when page loads
-        document.addEventListener('DOMContentLoaded', () => {
-            console.log('Setting up video auto-rotation');
-
-            // Start auto-rotation
-            setInterval(() => {
-                if (isPlaying) {
-                    let nextIndex = currentVideoIndex + 1;
-                    if (nextIndex > 3) nextIndex = 1;
-                    console.log('Auto-switching to video', nextIndex);
-                    switchVideo(nextIndex);
-                }
-            }, 8000);
-
-            // Ensure first video starts playing
-            const firstVideo = document.getElementById('heroVideo1');
-            if (firstVideo) {
-                firstVideo.play().catch(e => console.log('Autoplay blocked:', e));
-            }
-        });
 
     </script>
 
