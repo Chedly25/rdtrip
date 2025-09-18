@@ -224,6 +224,27 @@ class EnhancedRouteResults {
         const cityCard = document.createElement('div');
         cityCard.className = 'enhanced-city-card';
 
+        // Debug: log waypoint structure
+        console.log('🏙️ Waypoint data:', waypoint);
+
+        // Extract highlights from various possible locations
+        let highlights = waypoint.highlights || waypoint.activities || waypoint.attractions || waypoint.description;
+
+        // If highlights is a string, try to extract bullet points or activities
+        if (typeof highlights === 'string') {
+            // Look for bullet points or numbered lists
+            const listItems = highlights.match(/[-•*]\s*([^\n\r]+)/g) ||
+                            highlights.match(/\d+\.\s*([^\n\r]+)/g);
+            if (listItems) {
+                highlights = listItems.map(item => item.replace(/^[-•*\d.]\s*/, '').trim());
+            } else {
+                // Keep as single string
+                highlights = [highlights];
+            }
+        }
+
+        console.log('🎯 Extracted highlights:', highlights);
+
         // Create initial structure with placeholder
         cityCard.innerHTML = `
             <div class="city-image-container">
@@ -233,7 +254,7 @@ class EnhancedRouteResults {
             <div class="city-info">
                 <div class="city-name">${waypoint.name}</div>
                 <div class="city-highlights">
-                    ${this.formatCityHighlights(waypoint.highlights)}
+                    ${this.formatCityHighlights(highlights)}
                 </div>
             </div>
         `;
