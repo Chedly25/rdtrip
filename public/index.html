@@ -83,19 +83,22 @@
                         </select>
                         <div class="sticky-budget-section">
                             <div class="sticky-section-label">Budget</div>
-                            <div class="sticky-budget-options">
-                                <button class="sticky-budget-btn active" data-budget="budget" title="Budget">
-                                    <img src="/images/budget/budget.png" alt="Budget">
-                                </button>
-                                <button class="sticky-budget-btn" data-budget="moderate" title="Moderate">
-                                    <img src="/images/budget/moderate.png" alt="Moderate">
-                                </button>
-                                <button class="sticky-budget-btn" data-budget="comfort" title="Comfort">
-                                    <img src="/images/budget/comfortable.png" alt="Comfort">
-                                </button>
-                                <button class="sticky-budget-btn" data-budget="luxury" title="Luxury">
-                                    <img src="/images/budget/luxury.png" alt="Luxury">
-                                </button>
+                            <div class="sticky-budget-scroller">
+                                <div class="sticky-budget-track">
+                                    <div class="sticky-budget-slider" id="stickyBudgetSlider"></div>
+                                    <div class="sticky-budget-option" data-budget="budget" data-position="0">
+                                        <img src="/images/budget/budget.png" alt="Budget">
+                                    </div>
+                                    <div class="sticky-budget-option" data-budget="moderate" data-position="1">
+                                        <img src="/images/budget/moderate.png" alt="Moderate">
+                                    </div>
+                                    <div class="sticky-budget-option active" data-budget="comfort" data-position="2">
+                                        <img src="/images/budget/comfortable.png" alt="Comfort">
+                                    </div>
+                                    <div class="sticky-budget-option" data-budget="luxury" data-position="3">
+                                        <img src="/images/budget/luxury.png" alt="Luxury">
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div class="sticky-divider"></div>
@@ -182,36 +185,75 @@
                                     <div class="form-row-options">
                                         <div class="budget-section">
                                             <label class="section-label">Budget Level</label>
-                                            <div class="budget-icons">
-                                                <button class="budget-icon-btn active" data-budget="budget" title="Budget">
-                                                    <img src="/images/budget/budget.png" alt="Budget">
-                                                </button>
-                                                <button class="budget-icon-btn" data-budget="moderate" title="Moderate">
-                                                    <img src="/images/budget/moderate.png" alt="Moderate">
-                                                </button>
-                                                <button class="budget-icon-btn" data-budget="comfort" title="Comfort">
-                                                    <img src="/images/budget/comfortable.png" alt="Comfort">
-                                                </button>
-                                                <button class="budget-icon-btn" data-budget="luxury" title="Luxury">
-                                                    <img src="/images/budget/luxury.png" alt="Luxury">
-                                                </button>
+                                            <div class="budget-scroller">
+                                                <div class="budget-track">
+                                                    <div class="budget-slider" id="budgetSlider"></div>
+                                                    <div class="budget-option" data-budget="budget" data-position="0">
+                                                        <img src="/images/budget/budget.png" alt="Budget">
+                                                        <span class="budget-label">Budget</span>
+                                                        <span class="budget-desc">€-€€</span>
+                                                    </div>
+                                                    <div class="budget-option" data-budget="moderate" data-position="1">
+                                                        <img src="/images/budget/moderate.png" alt="Moderate">
+                                                        <span class="budget-label">Moderate</span>
+                                                        <span class="budget-desc">€€-€€€</span>
+                                                    </div>
+                                                    <div class="budget-option active" data-budget="comfort" data-position="2">
+                                                        <img src="/images/budget/comfortable.png" alt="Comfort">
+                                                        <span class="budget-label">Comfort</span>
+                                                        <span class="budget-desc">€€€-€€€€</span>
+                                                    </div>
+                                                    <div class="budget-option" data-budget="luxury" data-position="3">
+                                                        <img src="/images/budget/luxury.png" alt="Luxury">
+                                                        <span class="budget-label">Luxury</span>
+                                                        <span class="budget-desc">€€€€€</span>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                         <div class="theme-section">
                                             <label class="section-label">Travel Style</label>
-                                            <div class="theme-icons">
-                                                <button class="theme-icon-btn active" data-agent="adventure" title="Adventure">
-                                                    <img src="/images/icons/adventure_icon.png" alt="Adventure">
-                                                </button>
-                                                <button class="theme-icon-btn active" data-agent="culture" title="Culture">
-                                                    <img src="/images/icons/culture_icon.png" alt="Culture">
-                                                </button>
-                                                <button class="theme-icon-btn active" data-agent="food" title="Food">
-                                                    <img src="/images/icons/food_icon.png" alt="Food">
-                                                </button>
-                                                <button class="theme-icon-btn active" data-agent="hidden-gems" title="Hidden Gems">
-                                                    <img src="/images/icons/hidden_gem_icon.png" alt="Hidden Gems">
-                                                </button>
+                                            <div class="travel-style-grid">
+                                                <div class="travel-style-card active" data-agent="adventure">
+                                                    <div class="travel-style-image">
+                                                        <img src="/images/travel_style/adventure.png" alt="Adventure">
+                                                    </div>
+                                                    <div class="travel-style-content">
+                                                        <h3 class="travel-style-title">Adventure</h3>
+                                                        <p class="travel-style-desc">Outdoor activities and thrilling experiences</p>
+                                                    </div>
+                                                    <div class="travel-style-checkmark">✓</div>
+                                                </div>
+                                                <div class="travel-style-card active" data-agent="culture">
+                                                    <div class="travel-style-image">
+                                                        <img src="/images/travel_style/culture.png" alt="Culture">
+                                                    </div>
+                                                    <div class="travel-style-content">
+                                                        <h3 class="travel-style-title">Culture</h3>
+                                                        <p class="travel-style-desc">Museums, art, and historical landmarks</p>
+                                                    </div>
+                                                    <div class="travel-style-checkmark">✓</div>
+                                                </div>
+                                                <div class="travel-style-card active" data-agent="food">
+                                                    <div class="travel-style-image">
+                                                        <img src="/images/travel_style/food.png" alt="Food">
+                                                    </div>
+                                                    <div class="travel-style-content">
+                                                        <h3 class="travel-style-title">Food</h3>
+                                                        <p class="travel-style-desc">Culinary delights and local cuisine</p>
+                                                    </div>
+                                                    <div class="travel-style-checkmark">✓</div>
+                                                </div>
+                                                <div class="travel-style-card active" data-agent="hidden-gems">
+                                                    <div class="travel-style-image">
+                                                        <img src="/images/travel_style/hidden-gem.png" alt="Hidden Gems">
+                                                    </div>
+                                                    <div class="travel-style-content">
+                                                        <h3 class="travel-style-title">Hidden Gems</h3>
+                                                        <p class="travel-style-desc">Off-the-beaten-path discoveries</p>
+                                                    </div>
+                                                    <div class="travel-style-checkmark">✓</div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -365,47 +407,78 @@
                 });
             }
 
-            // Sync budget selections
-            const mainBudgetBtns = document.querySelectorAll('.budget-icon-btn');
-            const stickyBudgetBtns = document.querySelectorAll('.sticky-budget-btn');
+            // Sync budget scroller selections
+            const mainBudgetOptions = document.querySelectorAll('.budget-option');
+            const stickyBudgetOptions = document.querySelectorAll('.sticky-budget-option');
+            const budgetSlider = document.getElementById('budgetSlider');
+            const stickyBudgetSlider = document.getElementById('stickyBudgetSlider');
 
-            mainBudgetBtns.forEach((btn, index) => {
-                btn.addEventListener('click', () => {
-                    const budget = btn.dataset.budget;
+            function updateBudgetSlider(activeOption, slider) {
+                if (!activeOption || !slider) return;
+                const position = parseInt(activeOption.dataset.position);
+                const optionRect = activeOption.getBoundingClientRect();
+                const containerRect = activeOption.parentElement.getBoundingClientRect();
+                const leftPosition = optionRect.left - containerRect.left + (optionRect.width / 2) - 30;
+                slider.style.left = `${leftPosition}px`;
+            }
+
+            mainBudgetOptions.forEach((option) => {
+                option.addEventListener('click', () => {
+                    const budget = option.dataset.budget;
                     // Update main form
-                    mainBudgetBtns.forEach(mBtn => {
-                        mBtn.classList.toggle('active', mBtn.dataset.budget === budget);
+                    mainBudgetOptions.forEach(opt => {
+                        opt.classList.toggle('active', opt.dataset.budget === budget);
                     });
                     // Update sticky form
-                    stickyBudgetBtns.forEach(sBtn => {
-                        sBtn.classList.toggle('active', sBtn.dataset.budget === budget);
+                    stickyBudgetOptions.forEach(opt => {
+                        opt.classList.toggle('active', opt.dataset.budget === budget);
                     });
+
+                    // Update sliders
+                    const activeMain = document.querySelector('.budget-option.active');
+                    const activeSticky = document.querySelector('.sticky-budget-option.active');
+                    updateBudgetSlider(activeMain, budgetSlider);
+                    updateBudgetSlider(activeSticky, stickyBudgetSlider);
                 });
             });
 
-            stickyBudgetBtns.forEach((btn, index) => {
-                btn.addEventListener('click', () => {
-                    const budget = btn.dataset.budget;
+            stickyBudgetOptions.forEach((option) => {
+                option.addEventListener('click', () => {
+                    const budget = option.dataset.budget;
                     // Update sticky form
-                    stickyBudgetBtns.forEach(sBtn => {
-                        sBtn.classList.toggle('active', sBtn.dataset.budget === budget);
+                    stickyBudgetOptions.forEach(opt => {
+                        opt.classList.toggle('active', opt.dataset.budget === budget);
                     });
                     // Update main form
-                    mainBudgetBtns.forEach(mBtn => {
-                        mBtn.classList.toggle('active', mBtn.dataset.budget === budget);
+                    mainBudgetOptions.forEach(opt => {
+                        opt.classList.toggle('active', opt.dataset.budget === budget);
                     });
+
+                    // Update sliders
+                    const activeMain = document.querySelector('.budget-option.active');
+                    const activeSticky = document.querySelector('.sticky-budget-option.active');
+                    updateBudgetSlider(activeMain, budgetSlider);
+                    updateBudgetSlider(activeSticky, stickyBudgetSlider);
                 });
             });
 
-            // Sync theme selections
-            const mainThemeBtns = document.querySelectorAll('.theme-icon-btn');
+            // Initialize budget sliders on page load
+            setTimeout(() => {
+                const activeMain = document.querySelector('.budget-option.active');
+                const activeSticky = document.querySelector('.sticky-budget-option.active');
+                updateBudgetSlider(activeMain, budgetSlider);
+                updateBudgetSlider(activeSticky, stickyBudgetSlider);
+            }, 100);
+
+            // Sync travel style card selections
+            const mainTravelCards = document.querySelectorAll('.travel-style-card');
             const stickyThemeBtns = document.querySelectorAll('.sticky-theme-btn');
 
-            mainThemeBtns.forEach((btn) => {
-                btn.addEventListener('click', () => {
-                    const agent = btn.dataset.agent;
-                    const isActive = !btn.classList.contains('active');
-                    btn.classList.toggle('active', isActive);
+            mainTravelCards.forEach((card) => {
+                card.addEventListener('click', () => {
+                    const agent = card.dataset.agent;
+                    const isActive = !card.classList.contains('active');
+                    card.classList.toggle('active', isActive);
 
                     stickyThemeBtns.forEach(sBtn => {
                         if (sBtn.dataset.agent === agent) {
@@ -421,9 +494,9 @@
                     const isActive = !btn.classList.contains('active');
                     btn.classList.toggle('active', isActive);
 
-                    mainThemeBtns.forEach(mBtn => {
-                        if (mBtn.dataset.agent === agent) {
-                            mBtn.classList.toggle('active', isActive);
+                    mainTravelCards.forEach(card => {
+                        if (card.dataset.agent === agent) {
+                            card.classList.toggle('active', isActive);
                         }
                     });
                 });

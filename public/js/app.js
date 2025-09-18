@@ -4,7 +4,7 @@ class RoadTripPlanner {
         console.log('🔥 RoadTripPlanner constructor called');
         this.map = null;
         this.selectedAgents = ['adventure', 'culture', 'food', 'hidden-gems'];
-        this.selectedBudget = 'budget';
+        this.selectedBudget = 'comfort';
         this.currentRoute = null;
         this.chatMessages = [];
         this.routeAgent = null;
@@ -76,18 +76,18 @@ class RoadTripPlanner {
     setupEventListeners() {
         console.log('🔥 Setting up event listeners...');
 
-        // Theme selection icon buttons (updated from theme cards)
-        const themeButtons = document.querySelectorAll('.theme-icon-btn');
-        console.log('🔥 Found theme icon buttons:', themeButtons.length);
-        themeButtons.forEach(btn => {
-            btn.addEventListener('click', () => this.toggleAgent(btn));
+        // Theme selection travel style cards (updated from icon buttons)
+        const travelCards = document.querySelectorAll('.travel-style-card');
+        console.log('🔥 Found travel style cards:', travelCards.length);
+        travelCards.forEach(card => {
+            card.addEventListener('click', () => this.toggleAgent(card));
         });
 
-        // Budget selection icon buttons
-        const budgetButtons = document.querySelectorAll('.budget-icon-btn');
-        console.log('🔥 Found budget icon buttons:', budgetButtons.length);
-        budgetButtons.forEach(btn => {
-            btn.addEventListener('click', () => this.selectBudget(btn));
+        // Budget selection scroller options
+        const budgetOptions = document.querySelectorAll('.budget-option');
+        console.log('🔥 Found budget options:', budgetOptions.length);
+        budgetOptions.forEach(option => {
+            option.addEventListener('click', () => this.selectBudget(option));
         });
 
         // Generate route button
@@ -210,18 +210,18 @@ class RoadTripPlanner {
     }
 
     syncAllFormAgents() {
-        // Sync both main form and sticky form theme buttons
-        const allThemeButtons = document.querySelectorAll('.theme-icon-btn, .sticky-theme-btn');
-        allThemeButtons.forEach(btn => {
-            const agent = btn.dataset.agent;
+        // Sync both main form travel style cards and sticky form theme buttons
+        const allThemeElements = document.querySelectorAll('.travel-style-card, .sticky-theme-btn');
+        allThemeElements.forEach(element => {
+            const agent = element.dataset.agent;
             if (this.selectedAgents.includes(agent)) {
-                btn.classList.add('active');
+                element.classList.add('active');
                 // Force immediate style update
-                btn.style.pointerEvents = 'auto';
+                element.style.pointerEvents = 'auto';
             } else {
-                btn.classList.remove('active');
+                element.classList.remove('active');
                 // Force immediate style update
-                btn.style.pointerEvents = 'auto';
+                element.style.pointerEvents = 'auto';
             }
         });
 
@@ -241,19 +241,19 @@ class RoadTripPlanner {
         this.syncAllFormAgents();
 
         // Debug: Check if sync worked
-        const allThemeButtons = document.querySelectorAll('.theme-icon-btn, .sticky-theme-btn');
-        allThemeButtons.forEach(btn => {
-            const agent = btn.dataset.agent;
-            const hasActive = btn.classList.contains('active');
+        const allThemeElements = document.querySelectorAll('.travel-style-card, .sticky-theme-btn');
+        allThemeElements.forEach(element => {
+            const agent = element.dataset.agent;
+            const hasActive = element.classList.contains('active');
             const shouldBeActive = this.selectedAgents.includes(agent);
-            console.log(`🔥 DEBUG: Button ${agent} - hasActive: ${hasActive}, shouldBeActive: ${shouldBeActive}`);
+            console.log(`🔥 DEBUG: Element ${agent} - hasActive: ${hasActive}, shouldBeActive: ${shouldBeActive}`);
         });
 
         // Also sync budget state
-        const activeBudgetBtn = document.querySelector(`.budget-icon-btn[data-budget="${this.selectedBudget}"]`);
-        if (activeBudgetBtn) {
-            document.querySelectorAll('.budget-icon-btn').forEach(btn => btn.classList.remove('active'));
-            activeBudgetBtn.classList.add('active');
+        const activeBudgetOption = document.querySelector(`.budget-option[data-budget="${this.selectedBudget}"]`);
+        if (activeBudgetOption) {
+            document.querySelectorAll('.budget-option').forEach(option => option.classList.remove('active'));
+            activeBudgetOption.classList.add('active');
         }
 
         console.log('🔥 Form state synchronized');
@@ -302,13 +302,13 @@ class RoadTripPlanner {
         }, 600);
     }
 
-    selectBudget(btn) {
-        // Remove active class from all budget buttons
-        document.querySelectorAll('.budget-icon-btn').forEach(b => b.classList.remove('active'));
-        
-        // Add active class to clicked button
-        btn.classList.add('active');
-        this.selectedBudget = btn.dataset.budget;
+    selectBudget(option) {
+        // Remove active class from all budget options
+        document.querySelectorAll('.budget-option').forEach(opt => opt.classList.remove('active'));
+
+        // Add active class to clicked option
+        option.classList.add('active');
+        this.selectedBudget = option.dataset.budget;
     }
 
     async generateRoute() {
