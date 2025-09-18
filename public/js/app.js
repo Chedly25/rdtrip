@@ -19,6 +19,9 @@ class RoadTripPlanner {
         this.setupEventListeners();
         await this.loadEnhancedFeatures();
         this.setupRouteUpdateListener();
+
+        // Initialize form state synchronization
+        this.initializeFormState();
     }
 
     async loadEnhancedFeatures() {
@@ -73,17 +76,17 @@ class RoadTripPlanner {
     setupEventListeners() {
         console.log('🔥 Setting up event listeners...');
 
-        // Theme selection cards (updated from agent buttons)
-        const themeCards = document.querySelectorAll('.theme-card');
-        console.log('🔥 Found theme cards:', themeCards.length);
-        themeCards.forEach(card => {
-            card.addEventListener('click', () => this.toggleAgent(card));
+        // Theme selection icon buttons (updated from theme cards)
+        const themeButtons = document.querySelectorAll('.theme-icon-btn');
+        console.log('🔥 Found theme icon buttons:', themeButtons.length);
+        themeButtons.forEach(btn => {
+            btn.addEventListener('click', () => this.toggleAgent(btn));
         });
 
-        // Budget selection buttons
-        const budgetBtns = document.querySelectorAll('.budget-btn');
-        console.log('🔥 Found budget buttons:', budgetBtns.length);
-        budgetBtns.forEach(btn => {
+        // Budget selection icon buttons
+        const budgetButtons = document.querySelectorAll('.budget-icon-btn');
+        console.log('🔥 Found budget icon buttons:', budgetButtons.length);
+        budgetButtons.forEach(btn => {
             btn.addEventListener('click', () => this.selectBudget(btn));
         });
 
@@ -107,6 +110,9 @@ class RoadTripPlanner {
             }
         });
 
+        // Sticky form event listeners
+        this.setupStickyFormListeners();
+
         // Note: Export buttons and chat are now handled in the results overlay
         // These elements no longer exist in the main form
 
@@ -121,22 +127,150 @@ class RoadTripPlanner {
         }
     }
 
+    setupStickyFormListeners() {
+        // Sticky form budget buttons
+        const stickyBudgetButtons = document.querySelectorAll('.sticky-budget-btn');
+        console.log('🔥 Found sticky budget buttons:', stickyBudgetButtons.length);
+        stickyBudgetButtons.forEach(btn => {
+            btn.addEventListener('click', () => this.selectBudget(btn));
+        });
+
+        // Sticky form theme buttons
+        const stickyThemeButtons = document.querySelectorAll('.sticky-theme-btn');
+        console.log('🔥 Found sticky theme buttons:', stickyThemeButtons.length);
+        stickyThemeButtons.forEach(btn => {
+            btn.addEventListener('click', () => this.toggleAgent(btn));
+        });
+    }
+
     toggleAgent(card) {
         const agent = card.dataset.agent;
+
+        if (!agent) {
+            console.error('🔥 No agent data found on card');
+            return;
+        }
+
+        console.log('🔥 TOGGLE AGENT CALLED:', agent);
+        console.log('🔥 Button element:', card);
+        console.log('🔥 Button classes:', card.className);
+        console.log('🔥 Button parent:', card.parentElement?.className);
+        console.log('🔥 Current selectedAgents before toggle:', this.selectedAgents);
+        console.log('🔥 Button currently has active class:', card.classList.contains('active'));
 
         // Add ripple effect animation
         this.addRippleEffect(card);
 
-        if (card.classList.contains('active')) {
-            // Ensure at least one agent remains selected
+        // Use JavaScript state instead of CSS class to determine current state
+        // because something is interfering with the CSS classes
+        const isCurrentlyActive = this.selectedAgents.includes(agent);
+
+        if (isCurrentlyActive) {
+            // Trying to deselect - ensure at least one agent remains selected
+            console.log('🔥 Trying to deselect. Current array length:', this.selectedAgents.length);
             if (this.selectedAgents.length > 1) {
+                // Remove from UI and array
                 card.classList.remove('active');
                 this.selectedAgents = this.selectedAgents.filter(a => a !== agent);
+                console.log('🔥 ✅ Deselected agent:', agent, 'Remaining:', this.selectedAgents);
+            } else {
+                console.log('🔥 ❌ Cannot deselect last agent:', agent, 'Must have at least one');
+                // Keep it active - don't allow deselection of the last one
+                return;
             }
         } else {
+            // Trying to select - add to UI and array (avoid duplicates)
+            console.log('🔥 Trying to select agent:', agent);
             card.classList.add('active');
-            this.selectedAgents.push(agent);
+            if (!this.selectedAgents.includes(agent)) {
+                this.selectedAgents.push(agent);
+                console.log('🔥 ✅ Selected agent:', agent, 'All selected:', this.selectedAgents);
+            } else {
+                console.log('🔥 ⚠️ Agent already in array:', agent, 'Current array:', this.selectedAgents);
+            }
         }
+
+        console.log('🔥 Final selectedAgents after toggle:', this.selectedAgents);
+
+        // Sync all forms to ensure consistency
+        this.syncAllFormAgents();
+    }
+
+    syncStickyFormAgents() {
+        // Sync sticky form theme buttons with main form
+        const stickyThemeButtons = document.querySelectorAll('.sticky-theme-btn');
+        stickyThemeButtons.forEach(btn => {
+            const agent = btn.dataset.agent;
+            if (this.selectedAgents.includes(agent)) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+    }
+
+    syncAllFormAgents() {
+        // Sync both main form and sticky form theme buttons
+        const allThemeButtons = document.querySelectorAll('.theme-icon-btn, .sticky-theme-btn');
+        allThemeButtons.forEach(btn => {
+            const agent = btn.dataset.agent;
+            if (this.selectedAgents.includes(agent)) {
+                btn.classList.add('active');
+                // Force immediate style update
+                btn.style.pointerEvents = 'auto';
+            } else {
+                btn.classList.remove('active');
+                // Force immediate style update
+                btn.style.pointerEvents = 'auto';
+            }
+        });
+
+        // Force a repaint to ensure CSS changes take effect
+        requestAnimationFrame(() => {
+            allThemeButtons.forEach(btn => {
+                btn.offsetHeight; // Trigger reflow
+            });
+        });
+    }
+
+    initializeFormState() {
+        console.log('🔥 Initializing form state...');
+        console.log('🔥 Initial selectedAgents:', this.selectedAgents);
+
+        // Ensure CSS state matches JavaScript state on load
+        this.syncAllFormAgents();
+
+        // Debug: Check if sync worked
+        const allThemeButtons = document.querySelectorAll('.theme-icon-btn, .sticky-theme-btn');
+        allThemeButtons.forEach(btn => {
+            const agent = btn.dataset.agent;
+            const hasActive = btn.classList.contains('active');
+            const shouldBeActive = this.selectedAgents.includes(agent);
+            console.log(`🔥 DEBUG: Button ${agent} - hasActive: ${hasActive}, shouldBeActive: ${shouldBeActive}`);
+        });
+
+        // Also sync budget state
+        const activeBudgetBtn = document.querySelector(`.budget-icon-btn[data-budget="${this.selectedBudget}"]`);
+        if (activeBudgetBtn) {
+            document.querySelectorAll('.budget-icon-btn').forEach(btn => btn.classList.remove('active'));
+            activeBudgetBtn.classList.add('active');
+        }
+
+        console.log('🔥 Form state synchronized');
+
+        // Add a delayed check to see if something is removing the classes
+        setTimeout(() => {
+            console.log('🔥 DELAYED CHECK: Checking if active classes are still there...');
+            allThemeButtons.forEach(btn => {
+                const agent = btn.dataset.agent;
+                const hasActive = btn.classList.contains('active');
+                const shouldBeActive = this.selectedAgents.includes(agent);
+                console.log(`🔥 DELAYED: Button ${agent} - hasActive: ${hasActive}, shouldBeActive: ${shouldBeActive}`);
+                if (shouldBeActive && !hasActive) {
+                    console.log(`🔥 ❌ PROBLEM: ${agent} button lost its active class!`);
+                }
+            });
+        }, 1000);
     }
 
     addRippleEffect(element) {
@@ -170,7 +304,7 @@ class RoadTripPlanner {
 
     selectBudget(btn) {
         // Remove active class from all budget buttons
-        document.querySelectorAll('.budget-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.budget-icon-btn').forEach(b => b.classList.remove('active'));
         
         // Add active class to clicked button
         btn.classList.add('active');
@@ -1647,17 +1781,22 @@ class RoadTripPlanner {
 
     setLoading(isLoading) {
         const btn = document.getElementById('generateRoute');
-        const spinner = btn.querySelector('.btn-spinner');
-        const text = btn.querySelector('.btn-text');
+        if (!btn) return;
+
+        const svg = btn.querySelector('svg');
 
         if (isLoading) {
             btn.disabled = true;
-            spinner.classList.remove('hidden');
-            text.textContent = 'Generating...';
+            btn.style.opacity = '0.7';
+            if (svg) {
+                svg.style.animation = 'spin 1s linear infinite';
+            }
         } else {
             btn.disabled = false;
-            spinner.classList.add('hidden');
-            text.textContent = 'Generate Route';
+            btn.style.opacity = '1';
+            if (svg) {
+                svg.style.animation = '';
+            }
         }
     }
 
@@ -1672,7 +1811,7 @@ class RoadTripPlanner {
             <div class="results-overlay" id="resultsOverlay">
                 <div class="results-overlay-header">
                     <div class="header-content">
-                        <img src="tiguan.png" alt="Road Trip" class="header-icon">
+                        <img src="logo.png" alt="Road Trip Planner" class="header-logo">
                         <div class="header-text">
                             <h1>Route Results</h1>
                             <div class="route-path">

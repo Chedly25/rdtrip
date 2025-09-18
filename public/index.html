@@ -25,6 +25,7 @@
     <link rel="stylesheet" href="css/navigation-buttons.css">
     <link rel="stylesheet" href="css/results-overlay.css">
     <link rel="stylesheet" href="css/landmarks-overlay.css">
+    <link rel="stylesheet" href="css/sticky-form.css">
     <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet">
 </head>
 <body>
@@ -46,11 +47,79 @@
                 </div>
             </nav>
 
-            <!-- Hero Section -->
+            <!-- Sticky Search Form -->
+            <div id="stickySearchForm" class="sticky-search-form">
+                <div class="sticky-form-container">
+                    <div class="sticky-brand">
+                        <img src="logo.png" alt="Road Trip Planner" class="sticky-logo">
+                    </div>
+                    <div class="sticky-form-content">
+                        <input
+                            type="text"
+                            id="stickyDestination"
+                            placeholder="Destination"
+                            class="sticky-input"
+                        >
+                        <select id="stickyStops" class="sticky-select">
+                            <option value="2">2 stops</option>
+                            <option value="3" selected>3 stops</option>
+                            <option value="4">4 stops</option>
+                            <option value="5">5 stops</option>
+                        </select>
+                        <div class="sticky-budget-section">
+                            <div class="sticky-section-label">Budget</div>
+                            <div class="sticky-budget-options">
+                                <button class="sticky-budget-btn active" data-budget="budget" title="Budget">
+                                    <img src="/images/budget/budget.png" alt="Budget">
+                                </button>
+                                <button class="sticky-budget-btn" data-budget="moderate" title="Moderate">
+                                    <img src="/images/budget/moderate.png" alt="Moderate">
+                                </button>
+                                <button class="sticky-budget-btn" data-budget="comfort" title="Comfort">
+                                    <img src="/images/budget/comfortable.png" alt="Comfort">
+                                </button>
+                                <button class="sticky-budget-btn" data-budget="luxury" title="Luxury">
+                                    <img src="/images/budget/luxury.png" alt="Luxury">
+                                </button>
+                            </div>
+                        </div>
+                        <div class="sticky-divider"></div>
+                        <div class="sticky-theme-section">
+                            <div class="sticky-section-label">Style</div>
+                            <div class="sticky-theme-options">
+                                <button class="sticky-theme-btn active" data-agent="adventure" title="Adventure">
+                                    <img src="/images/icons/adventure_icon.png" alt="Adventure">
+                                </button>
+                                <button class="sticky-theme-btn active" data-agent="culture" title="Culture">
+                                    <img src="/images/icons/culture_icon.png" alt="Culture">
+                                </button>
+                                <button class="sticky-theme-btn active" data-agent="food" title="Food">
+                                    <img src="/images/icons/food_icon.png" alt="Food">
+                                </button>
+                                <button class="sticky-theme-btn active" data-agent="hidden-gems" title="Hidden Gems">
+                                    <img src="/images/icons/hidden_gem_icon.png" alt="Hidden Gems">
+                                </button>
+                            </div>
+                        </div>
+                        <button id="stickyGenerateRoute" class="sticky-generate-btn" title="Generate Route">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                <path d="M9 20l-5.447-2.724A1 1 0 013 16.382V7.618a1 1 0 01.553-.894L9 4l6 3 5.447-2.724A1 1 0 0121 5.118v8.764a1 1 0 01-.553.894L15 17l-6-3z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="m9 4 6 16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hero Section with Main Form -->
             <section class="hero">
                 <div class="hero-container">
                     <div class="hero-content">
                         <div class="hero-text">
+                            <div class="hero-brand">
+                                <img src="logo.png" alt="Road Trip Planner" class="hero-logo">
+                                <div class="hero-brand-text">RoadTrip</div>
+                            </div>
                             <h1 class="hero-title">
                                 <span class="hero-title-main">Discover Europe</span>
                                 <span class="hero-title-sub">one perfect route at a time</span>
@@ -59,19 +128,71 @@
                                 AI-powered journey planning from Aix-en-Provence to your dream destinations.
                                 Curated experiences, hidden gems, and seamless routes crafted just for you.
                             </p>
-                            <div class="hero-actions">
-                                <button class="hero-cta primary" onclick="scrollToPlanning()">
-                                    Start Planning
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                                        <path d="M5 12h14m-7-7l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                                    </svg>
-                                </button>
-                                <button class="hero-cta secondary" onclick="playVideo()">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                                        <path d="M8 5v14l11-7z" fill="currentColor"/>
-                                    </svg>
-                                    Watch Demo
-                                </button>
+
+                            <!-- Main Search Form -->
+                            <div class="hero-form-wrapper">
+                                <div class="hero-form">
+                                    <div class="form-row-main">
+                                        <div class="form-field-destination">
+                                            <input
+                                                type="text"
+                                                id="destination"
+                                                placeholder="Where do you want to go? (e.g., Barcelona, Rome)"
+                                                class="hero-input"
+                                            >
+                                        </div>
+                                        <div class="form-field-stops">
+                                            <select id="stops" class="hero-select">
+                                                <option value="2">2 stops</option>
+                                                <option value="3" selected>3 stops</option>
+                                                <option value="4">4 stops</option>
+                                                <option value="5">5 stops</option>
+                                            </select>
+                                        </div>
+                                        <button id="generateRoute" class="hero-generate-btn" title="Generate Route AI">
+                                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                                                <path d="M9 20l-5.447-2.724A1 1 0 013 16.382V7.618a1 1 0 01.553-.894L9 4l6 3 5.447-2.724A1 1 0 0121 5.118v8.764a1 1 0 01-.553.894L15 17l-6-3z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                                <path d="m9 4 6 16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    <div class="form-row-options">
+                                        <div class="budget-section">
+                                            <label class="section-label">Budget Level</label>
+                                            <div class="budget-icons">
+                                                <button class="budget-icon-btn active" data-budget="budget" title="Budget">
+                                                    <img src="/images/budget/budget.png" alt="Budget">
+                                                </button>
+                                                <button class="budget-icon-btn" data-budget="moderate" title="Moderate">
+                                                    <img src="/images/budget/moderate.png" alt="Moderate">
+                                                </button>
+                                                <button class="budget-icon-btn" data-budget="comfort" title="Comfort">
+                                                    <img src="/images/budget/comfortable.png" alt="Comfort">
+                                                </button>
+                                                <button class="budget-icon-btn" data-budget="luxury" title="Luxury">
+                                                    <img src="/images/budget/luxury.png" alt="Luxury">
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="theme-section">
+                                            <label class="section-label">Travel Style</label>
+                                            <div class="theme-icons">
+                                                <button class="theme-icon-btn active" data-agent="adventure" title="Adventure">
+                                                    <img src="/images/icons/adventure_icon.png" alt="Adventure">
+                                                </button>
+                                                <button class="theme-icon-btn active" data-agent="culture" title="Culture">
+                                                    <img src="/images/icons/culture_icon.png" alt="Culture">
+                                                </button>
+                                                <button class="theme-icon-btn active" data-agent="food" title="Food">
+                                                    <img src="/images/icons/food_icon.png" alt="Food">
+                                                </button>
+                                                <button class="theme-icon-btn active" data-agent="hidden-gems" title="Hidden Gems">
+                                                    <img src="/images/icons/hidden_gem_icon.png" alt="Hidden Gems">
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div class="hero-media">
@@ -149,96 +270,28 @@
                 </div>
             </section>
 
-            <!-- Planning Section -->
-            <section id="planning" class="planning-section">
-                <div class="planning-container">
-                    <div class="planning-header">
-                        <h2 class="planning-title">Plan Your Perfect Journey</h2>
-                        <p class="planning-subtitle">Tell us your preferences and let our AI create an unforgettable experience</p>
+            <!-- About Section -->
+            <section id="planning" class="about-section">
+                <div class="about-container">
+                    <div class="about-header">
+                        <h2 class="about-title">How It Works</h2>
+                        <p class="about-subtitle">Effortless AI-powered planning in three simple steps</p>
                     </div>
-
-                    <div class="planning-layout">
-                        <!-- Premium Form -->
-                        <div class="planning-form-wrapper">
-                            <div class="planning-form">
-                                <div class="form-section">
-                                    <div class="form-group">
-                                        <label for="destination" class="form-label">Where do you want to go?</label>
-                                        <input
-                                            type="text"
-                                            id="destination"
-                                            placeholder="Enter European city (e.g., Barcelona, Rome, Amsterdam)"
-                                            class="input"
-                                        >
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label for="stops" class="form-label">Number of stops</label>
-                                        <select id="stops" class="select">
-                                            <option value="2">2 stops</option>
-                                            <option value="3" selected>3 stops</option>
-                                            <option value="4">4 stops</option>
-                                            <option value="5">5 stops</option>
-                                        </select>
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label class="form-label">Budget preference</label>
-                                        <div class="option-grid budget-selection">
-                                            <button class="option-btn budget-btn active" data-budget="budget">
-                                                <span class="option-icon"><img src="/images/budget/budget.png" alt="Budget" style="width: 24px; height: 24px;"></span>
-                                                <span class="option-text">Budget</span>
-                                            </button>
-                                            <button class="option-btn budget-btn" data-budget="moderate">
-                                                <span class="option-icon"><img src="/images/budget/moderate.png" alt="Moderate" style="width: 24px; height: 24px;"></span>
-                                                <span class="option-text">Moderate</span>
-                                            </button>
-                                            <button class="option-btn budget-btn" data-budget="comfort">
-                                                <span class="option-icon"><img src="/images/budget/comfortable.png" alt="Comfort" style="width: 24px; height: 24px;"></span>
-                                                <span class="option-text">Comfort</span>
-                                            </button>
-                                            <button class="option-btn budget-btn" data-budget="luxury">
-                                                <span class="option-icon"><img src="/images/budget/luxury.png" alt="Luxury" style="width: 24px; height: 24px;"></span>
-                                                <span class="option-text">Luxury</span>
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <div class="form-group">
-                                        <label class="form-label">Travel style</label>
-                                        <div class="theme-grid">
-                                            <div class="theme-card theme-card--adventure active" data-agent="adventure">
-                                                <img src="/images/icons/adventure_icon.png" alt="Adventure" class="theme-icon">
-                                                <h3 class="theme-title">Adventure</h3>
-                                            </div>
-                                            <div class="theme-card theme-card--culture active" data-agent="culture">
-                                                <img src="/images/icons/culture_icon.png" alt="Culture" class="theme-icon">
-                                                <h3 class="theme-title">Culture</h3>
-                                            </div>
-                                            <div class="theme-card theme-card--food active" data-agent="food">
-                                                <img src="/images/icons/food_icon.png" alt="Food" class="theme-icon">
-                                                <h3 class="theme-title">Food</h3>
-                                            </div>
-                                            <div class="theme-card theme-card--hidden-gems active" data-agent="hidden-gems">
-                                                <img src="/images/icons/hidden_gem_icon.png" alt="Hidden Gems" class="theme-icon">
-                                                <h3 class="theme-title">Hidden Gems</h3>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <button id="generateRoute" class="btn btn--primary btn--large generate-button">
-                                        <span class="btn-content">
-                                            <span class="btn-text">Generate Route</span>
-                                            <svg class="btn-icon" width="20" height="20" viewBox="0 0 24 24" fill="none">
-                                                <path d="M5 12h14m-7-7l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                                            </svg>
-                                        </span>
-                                        <div class="btn-spinner hidden">
-                                            <div class="spinner"></div>
-                                        </div>
-                                    </button>
-                                </div>
-                            </div>
+                    <div class="about-steps">
+                        <div class="step">
+                            <div class="step-number">1</div>
+                            <h3>Choose Your Destination</h3>
+                            <p>Enter any European city and select your preferences for budget and travel style</p>
+                        </div>
+                        <div class="step">
+                            <div class="step-number">2</div>
+                            <h3>AI Creates Your Route</h3>
+                            <p>Our intelligent system generates the perfect route with curated stops and experiences</p>
+                        </div>
+                        <div class="step">
+                            <div class="step-number">3</div>
+                            <h3>Start Your Journey</h3>
+                            <p>Export to Google Maps or Waze and embark on your perfectly planned adventure</p>
                         </div>
                     </div>
                 </div>
@@ -314,13 +367,134 @@
             }
         }, 10000);
 
-        // Navigation scroll effect
+        // Navigation scroll effect and sticky form
+        let stickyFormVisible = false;
+        const stickyForm = document.getElementById('stickySearchForm');
+        const heroSection = document.querySelector('.hero');
+
         window.addEventListener('scroll', () => {
             const nav = document.querySelector('.landing-nav');
-            if (window.scrollY > 100) {
+            const scrollY = window.scrollY;
+
+            // Navigation scroll effect
+            if (scrollY > 100) {
                 nav.classList.add('scrolled');
             } else {
                 nav.classList.remove('scrolled');
+            }
+
+            // Sticky form visibility - show when scrolling AWAY from hero form
+            const heroOffset = heroSection ? heroSection.offsetTop + heroSection.offsetHeight - 100 : 600;
+            if (scrollY > heroOffset && !stickyFormVisible) {
+                stickyForm.classList.add('active');
+                stickyFormVisible = true;
+            } else if (scrollY <= heroOffset && stickyFormVisible) {
+                stickyForm.classList.remove('active');
+                stickyFormVisible = false;
+            }
+        });
+
+        // Sync form values between main and sticky forms
+        function syncFormValues() {
+            const mainDestination = document.getElementById('destination');
+            const stickyDestination = document.getElementById('stickyDestination');
+            const mainStops = document.getElementById('stops');
+            const stickyStops = document.getElementById('stickyStops');
+
+            if (mainDestination && stickyDestination) {
+                mainDestination.addEventListener('input', () => {
+                    stickyDestination.value = mainDestination.value;
+                });
+                stickyDestination.addEventListener('input', () => {
+                    mainDestination.value = stickyDestination.value;
+                });
+            }
+
+            if (mainStops && stickyStops) {
+                mainStops.addEventListener('change', () => {
+                    stickyStops.value = mainStops.value;
+                });
+                stickyStops.addEventListener('change', () => {
+                    mainStops.value = stickyStops.value;
+                });
+            }
+
+            // Sync budget selections
+            const mainBudgetBtns = document.querySelectorAll('.budget-icon-btn');
+            const stickyBudgetBtns = document.querySelectorAll('.sticky-budget-btn');
+
+            mainBudgetBtns.forEach((btn, index) => {
+                btn.addEventListener('click', () => {
+                    const budget = btn.dataset.budget;
+                    // Update main form
+                    mainBudgetBtns.forEach(mBtn => {
+                        mBtn.classList.toggle('active', mBtn.dataset.budget === budget);
+                    });
+                    // Update sticky form
+                    stickyBudgetBtns.forEach(sBtn => {
+                        sBtn.classList.toggle('active', sBtn.dataset.budget === budget);
+                    });
+                });
+            });
+
+            stickyBudgetBtns.forEach((btn, index) => {
+                btn.addEventListener('click', () => {
+                    const budget = btn.dataset.budget;
+                    // Update sticky form
+                    stickyBudgetBtns.forEach(sBtn => {
+                        sBtn.classList.toggle('active', sBtn.dataset.budget === budget);
+                    });
+                    // Update main form
+                    mainBudgetBtns.forEach(mBtn => {
+                        mBtn.classList.toggle('active', mBtn.dataset.budget === budget);
+                    });
+                });
+            });
+
+            // Sync theme selections
+            const mainThemeBtns = document.querySelectorAll('.theme-icon-btn');
+            const stickyThemeBtns = document.querySelectorAll('.sticky-theme-btn');
+
+            mainThemeBtns.forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    const agent = btn.dataset.agent;
+                    const isActive = !btn.classList.contains('active');
+                    btn.classList.toggle('active', isActive);
+
+                    stickyThemeBtns.forEach(sBtn => {
+                        if (sBtn.dataset.agent === agent) {
+                            sBtn.classList.toggle('active', isActive);
+                        }
+                    });
+                });
+            });
+
+            stickyThemeBtns.forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    const agent = btn.dataset.agent;
+                    const isActive = !btn.classList.contains('active');
+                    btn.classList.toggle('active', isActive);
+
+                    mainThemeBtns.forEach(mBtn => {
+                        if (mBtn.dataset.agent === agent) {
+                            mBtn.classList.toggle('active', isActive);
+                        }
+                    });
+                });
+            });
+        }
+
+        // Connect sticky generate button to main generate function
+        document.addEventListener('DOMContentLoaded', () => {
+            syncFormValues();
+
+            const stickyGenerateBtn = document.getElementById('stickyGenerateRoute');
+            const mainGenerateBtn = document.getElementById('generateRoute');
+
+            if (stickyGenerateBtn && mainGenerateBtn) {
+                stickyGenerateBtn.addEventListener('click', () => {
+                    mainGenerateBtn.click();
+                });
             }
         });
 

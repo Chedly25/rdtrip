@@ -172,8 +172,8 @@ body {
 }
 
 .nav-logo {
-    width: 40px;
-    height: 40px;
+    width: 64px;
+    height: 64px;
     object-fit: contain;
     filter: drop-shadow(0 2px 8px rgba(102, 126, 234, 0.2));
     transition: all var(--transition-normal);
@@ -182,6 +182,52 @@ body {
 .nav-logo:hover {
     transform: scale(1.05) rotate(-5deg);
     filter: drop-shadow(0 4px 12px rgba(102, 126, 234, 0.3));
+}
+
+/* Header Logo for Results Overlay */
+.header-logo {
+    width: 80px;
+    height: 80px;
+    object-fit: contain;
+    filter: drop-shadow(0 4px 16px rgba(102, 126, 234, 0.3));
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 8px;
+}
+
+/* Hero Brand Section */
+.hero-brand {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 32px;
+    justify-content: center;
+}
+
+.hero-logo {
+    width: 72px;
+    height: 72px;
+    object-fit: contain;
+    filter: drop-shadow(0 4px 16px rgba(102, 126, 234, 0.2));
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 8px;
+    transition: all 0.3s ease;
+}
+
+.hero-logo:hover {
+    transform: scale(1.05) rotate(2deg);
+    filter: drop-shadow(0 6px 20px rgba(102, 126, 234, 0.3));
+}
+
+.hero-brand-text {
+    font-size: 2.5rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: -0.02em;
 }
 
 .nav-title {
@@ -1149,8 +1195,17 @@ body {
     }
 
     .nav-logo {
-        width: 32px;
-        height: 32px;
+        width: 48px;
+        height: 48px;
+    }
+
+    .hero-logo {
+        width: 56px;
+        height: 56px;
+    }
+
+    .hero-brand-text {
+        font-size: 2rem;
     }
 
     .nav-title {
