@@ -420,6 +420,10 @@ class EnhancedRouteResults {
             totalStops: parsedRecommendations.waypoints?.length || 0,
             recommendations: agentResult.recommendations,
             fullItinerary: parsedRecommendations,
+            // Include agentData that spotlight.js expects
+            agentData: {
+                recommendations: agentResult.recommendations
+            },
             // Include full route data for compatibility
             routeData: this.currentResults
         };
