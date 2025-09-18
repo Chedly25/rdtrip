@@ -130,8 +130,8 @@
 /* Route Cards Grid */
 .route-cards-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: var(--space-4);
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-6);
     margin-bottom: var(--space-8);
 }
 
@@ -419,12 +419,7 @@
     transform: translateY(-2px);
 }
 
-/* Responsive Design */
-@media (max-width: 1200px) {
-    .route-cards-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
+/* Responsive Design - No need for 1200px breakpoint since we're already using 2 columns */
 
 @media (max-width: 768px) {
     .enhanced-results-header {
