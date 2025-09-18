@@ -25,13 +25,16 @@
     --agent-gradient: var(--hidden-gems-gradient);
 }
 
-/* Default theme fallback */
+/* Default theme fallback - using landing page colors */
 :root {
-    --agent-primary-color: var(--primary-blue);
-    --agent-primary-rgb: 64, 119, 245;
-    --agent-gradient: var(--hidden-gems-gradient);
-    --hotel-color: #0077BE;
-    --restaurant-color: #FF6B35;
+    --agent-primary-color: #0C2A66;
+    --agent-primary-rgb: 12, 42, 102;
+    --agent-gradient: linear-gradient(135deg, #0C2A66 0%, #06402B 100%);
+    --primary: #0C2A66;
+    --secondary: #06402B;
+    --gradient-primary: linear-gradient(135deg, #0C2A66 0%, #06402B 100%);
+    --hotel-color: #0C2A66;
+    --restaurant-color: #06402B;
 }
 
 /* Header Styles */
@@ -145,47 +148,125 @@
 
 /* Main Layout */
 .spotlight-main {
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: var(--space-8);
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-12);
+    height: calc(100vh - 120px);
+    padding: 0;
     font-family: var(--font-family);
-}
-
-/* Route Overview */
-.route-overview {
-    background: var(--white);
-    border-radius: var(--rounded-large);
-    padding: var(--space-10);
-    box-shadow: var(--shadow-medium);
-    border: 1px solid var(--border-subtle);
-    position: relative;
     overflow: hidden;
 }
 
-.route-overview::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: var(--agent-gradient);
+.spotlight-layout {
+    display: flex;
+    height: 100%;
+    width: 100%;
+    max-width: 100vw;
 }
 
-.overview-content {
-    display: grid;
-    grid-template-columns: 300px 1fr;
-    gap: var(--space-10);
-    align-items: start;
+/* Left Information Panel */
+.info-panel {
+    width: 400px;
+    min-width: 400px;
+    height: 100%;
+    background: var(--white);
+    border-right: 1px solid var(--border-subtle);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: var(--shadow-medium);
+}
+
+/* Table of Contents Navigation */
+.toc-nav {
+    background: var(--surface);
+    padding: var(--space-6);
+    border-bottom: 1px solid var(--border-subtle);
+    flex-shrink: 0;
+}
+
+.toc-nav h3 {
+    font-size: var(--font-size-lg);
+    font-weight: 700;
+    color: var(--text-main);
+    margin: 0 0 var(--space-4) 0;
+    letter-spacing: -0.025em;
+}
+
+.toc-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.toc-link {
+    display: block;
+    padding: var(--space-3) var(--space-4);
+    color: var(--text-soft);
+    text-decoration: none;
+    border-radius: var(--rounded);
+    font-weight: 500;
+    font-size: var(--font-size-base);
+    transition: all var(--transition-base);
+    border: 1px solid transparent;
+}
+
+.toc-link:hover {
+    background: var(--surface-elevated);
+    color: var(--text-main);
+    transform: translateX(4px);
+}
+
+.toc-link.active {
+    background: var(--agent-gradient);
+    color: var(--white);
+    font-weight: 600;
+    box-shadow: var(--shadow-base);
+}
+
+/* Panel Content */
+.panel-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--space-6);
+}
+
+.panel-section {
+    display: none;
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+.panel-section.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.panel-section h2 {
+    font-size: var(--font-size-2xl);
+    font-weight: 700;
+    color: var(--text-main);
+    margin: 0 0 var(--space-6) 0;
+    letter-spacing: -0.025em;
+    padding-bottom: var(--space-3);
+    border-bottom: 2px solid var(--border-subtle);
+}
+
+.route-description {
+    color: var(--text-soft);
+    font-size: var(--font-size-base);
+    line-height: 1.6;
+    margin-top: var(--space-4);
 }
 
 .route-stats {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-6);
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-4);
+    margin-bottom: var(--space-6);
 }
 
 .stat-item {
@@ -221,51 +302,47 @@
     letter-spacing: 0.05em;
 }
 
-/* Spotlight Map */
-.spotlight-map-container {
+/* Map Container */
+.map-container {
+    flex: 1;
+    height: 100%;
+    position: relative;
     background: var(--surface);
-    border-radius: var(--rounded);
-    overflow: hidden;
-    box-shadow: var(--shadow-medium);
-    border: 1px solid var(--border-subtle);
 }
 
 .spotlight-map {
     width: 100%;
-    height: 500px;
-    border-radius: var(--rounded);
+    height: 100%;
+    border: none;
+    border-radius: 0;
 }
 
-/* Section Styles */
-.cities-section,
-.hotels-restaurants-section,
-.itinerary-section {
-    background: var(--white);
-    border-radius: var(--rounded-large);
-    padding: var(--space-10);
-    box-shadow: var(--shadow-medium);
-    border: 1px solid var(--border-subtle);
+/* Panel Section Adjustments */
+.panel-section .section-header {
+    margin-bottom: var(--space-6);
 }
 
-.cities-section h2,
-.hotels-restaurants-section h2,
-.itinerary-section h2 {
-    font-size: var(--font-size-3xl);
-    font-weight: 700;
-    color: var(--text-main);
-    margin-bottom: var(--space-8);
-    letter-spacing: -0.025em;
+.panel-section .section-controls {
+    flex-direction: column;
+    gap: var(--space-3);
+    align-items: stretch;
 }
 
-/* Cities Section */
-.cities-container {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-    gap: var(--space-8);
+.panel-section .filter-select,
+.panel-section .load-recommendations-btn,
+.panel-section .generate-itinerary-btn {
+    width: 100%;
 }
 
-.city-card {
-    background: var(--white);
+/* Cities Section - Panel Layout */
+.panel-section .cities-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+}
+
+.panel-section .city-card {
+    background: var(--surface);
     border-radius: var(--rounded);
     overflow: hidden;
     border: 1px solid var(--border-subtle);
@@ -291,10 +368,10 @@
     border-color: var(--border-medium);
 }
 
-.city-image-container {
+.panel-section .city-image-container {
     width: 100%;
-    height: 200px;
-    background: var(--surface);
+    height: 150px;
+    background: var(--surface-elevated);
     overflow: hidden;
     position: relative;
 }
@@ -315,15 +392,15 @@
     transform: scale(1.05);
 }
 
-.city-content {
-    padding: var(--space-8);
+.panel-section .city-content {
+    padding: var(--space-5);
 }
 
-.city-card h3 {
-    font-size: var(--font-size-xl);
+.panel-section .city-card h3 {
+    font-size: var(--font-size-lg);
     font-weight: 700;
     color: var(--text-main);
-    margin-bottom: var(--space-3);
+    margin-bottom: var(--space-2);
     letter-spacing: -0.025em;
 }
 
@@ -1122,14 +1199,14 @@
 
 /* Responsive Design */
 @media (max-width: 1200px) {
-    .overview-content {
-        grid-template-columns: 1fr;
-        gap: var(--space-8);
+    .info-panel {
+        width: 350px;
+        min-width: 350px;
     }
 
     .route-stats {
-        flex-direction: row;
-        justify-content: space-around;
+        grid-template-columns: repeat(3, 1fr);
+        gap: var(--space-3);
     }
 
     .recommendations-grid {
@@ -1156,13 +1233,37 @@
         width: 100%;
     }
 
-    .spotlight-main {
-        padding: var(--space-5);
-        gap: var(--space-8);
+    .spotlight-layout {
+        flex-direction: column;
     }
 
-    .cities-container {
-        grid-template-columns: 1fr;
+    .info-panel {
+        width: 100%;
+        min-width: unset;
+        height: 50vh;
+        border-right: none;
+        border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .map-container {
+        height: 50vh;
+    }
+
+    .route-stats {
+        grid-template-columns: repeat(3, 1fr);
+        gap: var(--space-2);
+    }
+
+    .stat-item {
+        padding: var(--space-4);
+    }
+
+    .toc-nav {
+        padding: var(--space-4);
+    }
+
+    .panel-content {
+        padding: var(--space-4);
     }
 
     .section-header {

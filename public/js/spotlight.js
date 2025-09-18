@@ -30,6 +30,7 @@ class SpotlightController {
 
         // Initialize the page
         this.setupHeader();
+        this.setupNavigation();
         this.initMap();
         this.displayCities();
         this.setupEventListeners();
@@ -122,8 +123,10 @@ class SpotlightController {
         this.map = new mapboxgl.Map({
             container: 'spotlightMap',
             style: 'mapbox://styles/mapbox/light-v11',
-            center: [5.4474, 43.5297], // Aix-en-Provence coordinates
-            zoom: 6,
+            center: [10.4515, 51.1657], // Center of Europe
+            zoom: 4, // Zoom level to show most of Europe
+            minZoom: 3,
+            maxZoom: 15,
             // Disable telemetry collection to prevent ad-blocker issues
             collectResourceTiming: false
         });
@@ -356,6 +359,29 @@ class SpotlightController {
                 const overlayEl = document.createElement('div');
                 overlayEl.className = 'landmark-overlay-custom';
 
+                // Create a label container for the landmark name
+                const labelContainer = document.createElement('div');
+                labelContainer.className = 'landmark-label';
+                labelContainer.style.cssText = `
+                    position: absolute;
+                    top: -35px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    background: rgba(255, 255, 255, 0.95);
+                    color: #333;
+                    padding: 4px 8px;
+                    border-radius: 4px;
+                    font-size: 12px;
+                    font-weight: 600;
+                    white-space: nowrap;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+                    opacity: 0;
+                    transition: opacity 0.2s ease;
+                    pointer-events: none;
+                    z-index: 1001;
+                `;
+                labelContainer.textContent = landmark.name;
+
                 if (customImage) {
                     // Use custom image as background
                     overlayEl.style.cssText = `
@@ -397,6 +423,9 @@ class SpotlightController {
                     overlayEl.innerHTML = icon;
                 }
 
+                // Add the label to the overlay
+                overlayEl.appendChild(labelContainer);
+
                 // Add all our event handlers to the overlay element
                 console.log(`🎯 Setting up overlay element for ${landmark.name}`);
 
@@ -407,6 +436,7 @@ class SpotlightController {
                     e.preventDefault();
                     overlayEl.style.transform = 'translate(-50%, -50%) scale(1.1)';
                     overlayEl.style.boxShadow = '0 4px 15px rgba(0,0,0,0.3)';
+                    labelContainer.style.opacity = '1';
                     console.log(`✅ OVERLAY MOUSEENTER handled for: ${landmark.name}`);
                 });
 
@@ -416,6 +446,7 @@ class SpotlightController {
                     e.preventDefault();
                     overlayEl.style.transform = 'translate(-50%, -50%) scale(1)';
                     overlayEl.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+                    labelContainer.style.opacity = '0';
                     console.log(`✅ OVERLAY MOUSELEAVE handled for: ${landmark.name}`);
                 });
 
@@ -1132,6 +1163,32 @@ class SpotlightController {
                 }
             }
         }
+    }
+
+    setupNavigation() {
+        // Set up table of contents navigation
+        const tocLinks = document.querySelectorAll('.toc-link');
+        const panelSections = document.querySelectorAll('.panel-section');
+
+        tocLinks.forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+
+                // Remove active class from all links and sections
+                tocLinks.forEach(l => l.classList.remove('active'));
+                panelSections.forEach(s => s.classList.remove('active'));
+
+                // Add active class to clicked link
+                link.classList.add('active');
+
+                // Show corresponding section
+                const targetId = link.getAttribute('href').substring(1);
+                const targetSection = document.getElementById(targetId);
+                if (targetSection) {
+                    targetSection.classList.add('active');
+                }
+            });
+        });
     }
 
     setupEventListeners() {

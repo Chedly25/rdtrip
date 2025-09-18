@@ -43,77 +43,96 @@
 
         <!-- Main Content -->
         <main class="spotlight-main">
-            <!-- Route Overview -->
-            <section class="route-overview">
-                <div class="overview-content">
-                    <div class="route-stats">
-                        <div class="stat-item">
-                            <span class="stat-number" id="totalStops">3</span>
-                            <span class="stat-label">Stops</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-number" id="estimatedDays">5</span>
-                            <span class="stat-label">Days</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-number" id="totalDistance">--</span>
-                            <span class="stat-label">Distance</span>
-                        </div>
-                    </div>
-                    
-                    <!-- Map Container -->
-                    <div class="spotlight-map-container">
-                        <div id="spotlightMap" class="spotlight-map"></div>
-                    </div>
-                </div>
-            </section>
+            <div class="spotlight-layout">
+                <!-- Left Information Panel -->
+                <div class="info-panel">
+                    <!-- Table of Contents -->
+                    <nav class="toc-nav">
+                        <h3>Navigate Route</h3>
+                        <ul class="toc-list">
+                            <li><a href="#overview" class="toc-link active">Route Overview</a></li>
+                            <li><a href="#cities" class="toc-link">Cities & Highlights</a></li>
+                            <li><a href="#stay-dine" class="toc-link">Stay & Dine</a></li>
+                            <li><a href="#itinerary" class="toc-link">Detailed Itinerary</a></li>
+                        </ul>
+                    </nav>
 
-            <!-- Cities Overview -->
-            <section class="cities-section">
-                <h2>Cities & Highlights</h2>
-                <div id="citiesContainer" class="cities-container">
-                    <!-- Cities will be populated by JavaScript -->
-                </div>
-            </section>
+                    <!-- Panel Content -->
+                    <div class="panel-content">
+                        <!-- Route Overview Section -->
+                        <section id="overview" class="panel-section active">
+                            <h2>Route Overview</h2>
+                            <div class="route-stats">
+                                <div class="stat-item">
+                                    <span class="stat-number" id="totalStops">3</span>
+                                    <span class="stat-label">Stops</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-number" id="estimatedDays">5</span>
+                                    <span class="stat-label">Days</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-number" id="totalDistance">--</span>
+                                    <span class="stat-label">Distance</span>
+                                </div>
+                            </div>
+                            <p class="route-description">Explore your carefully crafted route through Europe's most captivating destinations.</p>
+                        </section>
 
-            <!-- Hotels & Restaurants Section -->
-            <section class="hotels-restaurants-section">
-                <div class="section-header">
-                    <h2><img src="/images/budget/comfortable.png" alt="Stay" style="width: 20px; height: 20px; margin-right: 8px; vertical-align: middle;"> Stay & 🍽️ Dine</h2>
-                    <div class="section-controls">
-                        <select id="budgetFilter" class="filter-select">
-                            <option value="budget">Budget (€-€€)</option>
-                            <option value="mid" selected>Mid-range (€€-€€€)</option>
-                            <option value="luxury">Luxury (€€€-€€€€)</option>
-                        </select>
-                        <button id="loadHotelsRestaurants" class="load-recommendations-btn">
-                            <span class="btn-text">Load Recommendations</span>
-                            <div class="btn-spinner hidden"></div>
-                        </button>
-                    </div>
-                </div>
-                <div id="hotelsRestaurantsContainer" class="hotels-restaurants-container">
-                    <div class="recommendations-placeholder">
-                        <p>Click "Load Recommendations" to discover the best hotels and restaurants for each city on your route.</p>
-                    </div>
-                </div>
-            </section>
+                        <!-- Cities Overview Section -->
+                        <section id="cities" class="panel-section">
+                            <h2>Cities & Highlights</h2>
+                            <div id="citiesContainer" class="cities-container">
+                                <!-- Cities will be populated by JavaScript -->
+                            </div>
+                        </section>
 
-            <!-- Day-by-Day Itinerary -->
-            <section class="itinerary-section">
-                <div class="itinerary-header">
-                    <h2>Detailed Itinerary</h2>
-                    <button id="generateItinerary" class="generate-itinerary-btn">
-                        <span class="btn-text">Generate Day-by-Day Plan</span>
-                        <div class="btn-spinner hidden"></div>
-                    </button>
-                </div>
-                <div id="itineraryContainer" class="itinerary-container">
-                    <div class="itinerary-placeholder">
-                        <p>Click "Generate Day-by-Day Plan" to get a detailed itinerary with schedules, activities, and recommendations for each day of your trip.</p>
+                        <!-- Hotels & Restaurants Section -->
+                        <section id="stay-dine" class="panel-section">
+                            <div class="section-header">
+                                <h2><img src="/images/budget/comfortable.png" alt="Stay" style="width: 20px; height: 20px; margin-right: 8px; vertical-align: middle;"> Stay & Dine</h2>
+                                <div class="section-controls">
+                                    <select id="budgetFilter" class="filter-select">
+                                        <option value="budget">Budget (€-€€)</option>
+                                        <option value="mid" selected>Mid-range (€€-€€€)</option>
+                                        <option value="luxury">Luxury (€€€-€€€€)</option>
+                                    </select>
+                                    <button id="loadHotelsRestaurants" class="load-recommendations-btn">
+                                        <span class="btn-text">Load Recommendations</span>
+                                        <div class="btn-spinner hidden"></div>
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="hotelsRestaurantsContainer" class="hotels-restaurants-container">
+                                <div class="recommendations-placeholder">
+                                    <p>Click "Load Recommendations" to discover the best hotels and restaurants for each city on your route.</p>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- Day-by-Day Itinerary Section -->
+                        <section id="itinerary" class="panel-section">
+                            <div class="itinerary-header">
+                                <h2>Detailed Itinerary</h2>
+                                <button id="generateItinerary" class="generate-itinerary-btn">
+                                    <span class="btn-text">Generate Day-by-Day Plan</span>
+                                    <div class="btn-spinner hidden"></div>
+                                </button>
+                            </div>
+                            <div id="itineraryContainer" class="itinerary-container">
+                                <div class="itinerary-placeholder">
+                                    <p>Click "Generate Day-by-Day Plan" to get a detailed itinerary with schedules, activities, and recommendations for each day of your trip.</p>
+                                </div>
+                            </div>
+                        </section>
                     </div>
                 </div>
-            </section>
+
+                <!-- Right Map Container -->
+                <div class="map-container">
+                    <div id="spotlightMap" class="spotlight-map"></div>
+                </div>
+            </div>
         </main>
     </div>
 
