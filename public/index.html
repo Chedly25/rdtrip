@@ -27,6 +27,60 @@
     <link rel="stylesheet" href="css/landmarks-overlay.css">
     <link rel="stylesheet" href="css/sticky-form.css">
     <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet">
+
+    <script>
+        // Define video control functions globally before HTML loads
+        let currentVideoIndex = 1;
+        let isPlaying = true;
+
+        function switchVideo(index) {
+            currentVideoIndex = index;
+
+            const allVideos = document.querySelectorAll('.hero-video');
+            const allDots = document.querySelectorAll('.video-dot');
+
+            // Hide all videos
+            allVideos.forEach(v => {
+                v.classList.remove('active');
+                v.pause();
+            });
+
+            // Remove active from all dots
+            allDots.forEach(d => d.classList.remove('active'));
+
+            // Show selected video
+            const targetVideo = document.getElementById('heroVideo' + index);
+            const targetDot = allDots[index - 1];
+
+            if (targetVideo) {
+                targetVideo.classList.add('active');
+                if (isPlaying) {
+                    targetVideo.play().catch(e => console.log('Play error:', e));
+                }
+            }
+
+            if (targetDot) {
+                targetDot.classList.add('active');
+            }
+        }
+
+        function toggleVideoPlay() {
+            const currentVideo = document.getElementById('heroVideo' + currentVideoIndex);
+            const playIcon = document.getElementById('playIcon');
+
+            if (currentVideo) {
+                if (isPlaying) {
+                    currentVideo.pause();
+                    if (playIcon) playIcon.setAttribute('d', 'M8 5v14l11-7z');
+                    isPlaying = false;
+                } else {
+                    currentVideo.play();
+                    if (playIcon) playIcon.setAttribute('d', 'M6 19h4V5H6v14zm8-14v14h4V5h-4z');
+                    isPlaying = true;
+                }
+            }
+        }
+    </script>
 </head>
 <body>
     <div class="app-container">
@@ -204,6 +258,9 @@
                                     <video id="heroVideo2" muted loop playsinline class="hero-video">
                                         <source src="video (1).mp4" type="video/mp4">
                                     </video>
+                                    <video id="heroVideo3" muted loop playsinline class="hero-video">
+                                        <source src="video 2.mp4" type="video/mp4">
+                                    </video>
                                     <div class="video-overlay">
                                         <button class="video-play" onclick="toggleVideoPlay()">
                                             <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
@@ -215,6 +272,7 @@
                                 <div class="video-controls">
                                     <button class="video-dot active" onclick="switchVideo(1)"></button>
                                     <button class="video-dot" onclick="switchVideo(2)"></button>
+                                    <button class="video-dot" onclick="switchVideo(3)"></button>
                                 </div>
                             </div>
                         </div>
@@ -495,6 +553,27 @@
                 stickyGenerateBtn.addEventListener('click', () => {
                     mainGenerateBtn.click();
                 });
+            }
+        });
+
+        // Setup auto-rotation when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('Setting up video auto-rotation');
+
+            // Start auto-rotation
+            setInterval(() => {
+                if (isPlaying) {
+                    let nextIndex = currentVideoIndex + 1;
+                    if (nextIndex > 3) nextIndex = 1;
+                    console.log('Auto-switching to video', nextIndex);
+                    switchVideo(nextIndex);
+                }
+            }, 8000);
+
+            // Ensure first video starts playing
+            const firstVideo = document.getElementById('heroVideo1');
+            if (firstVideo) {
+                firstVideo.play().catch(e => console.log('Autoplay blocked:', e));
             }
         });
 

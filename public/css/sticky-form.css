@@ -57,8 +57,8 @@
 
 .hero-input:focus,
 .hero-select:focus {
-    border-color: #667eea;
-    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15);
+    border-color: #0C2A66;
+    box-shadow: 0 0 0 4px rgba(12, 42, 102, 0.15);
     transform: translateY(-1px);
 }
 
@@ -78,14 +78,14 @@
     height: 60px;
     border: none;
     border-radius: 16px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #0C2A66 0%, #06402B 100%);
     color: white;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 8px 24px rgba(12, 42, 102, 0.4);
     position: relative;
     overflow: hidden;
     flex-shrink: 0;
@@ -104,7 +104,7 @@
 
 .hero-generate-btn:hover {
     transform: translateY(-3px) scale(1.05);
-    box-shadow: 0 12px 35px rgba(102, 126, 234, 0.5);
+    box-shadow: 0 12px 35px rgba(12, 42, 102, 0.5);
 }
 
 .hero-generate-btn:hover::before {
@@ -188,7 +188,7 @@
 
 .budget-icon-btn.active {
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+    box-shadow: 0 4px 12px rgba(12, 42, 102, 0.2);
 }
 
 .budget-icon-btn:not(.active) {
@@ -335,13 +335,13 @@
     background: rgba(255, 255, 255, 0.8);
     border-radius: 20px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
-    border: 1px solid rgba(102, 126, 234, 0.1);
+    border: 1px solid rgba(12, 42, 102, 0.1);
 }
 
 .step-number {
     width: 60px;
     height: 60px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #0C2A66 0%, #06402B 100%);
     color: white;
     border-radius: 50%;
     display: flex;
@@ -407,7 +407,7 @@
     width: 48px;
     height: 48px;
     border-radius: 8px;
-    filter: drop-shadow(0 2px 8px rgba(102, 126, 234, 0.2));
+    filter: drop-shadow(0 2px 8px rgba(12, 42, 102, 0.2));
 }
 
 .sticky-form-content {
@@ -444,8 +444,8 @@
 
 .sticky-input:focus,
 .sticky-select:focus {
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    border-color: #0C2A66;
+    box-shadow: 0 0 0 3px rgba(12, 42, 102, 0.1);
 }
 
 .sticky-select {
@@ -512,8 +512,8 @@
 }
 
 .sticky-budget-btn.active {
-    background: rgba(102, 126, 234, 0.08);
-    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
+    background: rgba(12, 42, 102, 0.08);
+    box-shadow: 0 2px 8px rgba(12, 42, 102, 0.15);
 }
 
 .sticky-budget-btn:not(.active) {
@@ -571,14 +571,14 @@
     height: 48px;
     border: none;
     border-radius: 12px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #0C2A66 0%, #06402B 100%);
     color: white;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 4px 16px rgba(12, 42, 102, 0.3);
     position: relative;
     overflow: hidden;
 }
@@ -596,7 +596,7 @@
 
 .sticky-generate-btn:hover {
     transform: translateY(-2px) scale(1.05);
-    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 8px 25px rgba(12, 42, 102, 0.4);
 }
 
 .sticky-generate-btn:hover::before {
@@ -644,7 +644,7 @@
 
 .generate-button:hover {
     transform: translateY(-2px);
-    box-shadow: 0 12px 40px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 12px 40px rgba(12, 42, 102, 0.3);
 }
 
 .generate-button:hover .btn-icon {
@@ -705,13 +705,13 @@
 .budget-btn:hover,
 .theme-card:hover {
     transform: translateY(-2px) scale(1.02);
-    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.15);
+    box-shadow: 0 8px 25px rgba(12, 42, 102, 0.15);
 }
 
 .budget-btn:hover .option-icon img,
 .theme-card:hover .theme-icon {
     transform: scale(1.1);
-    filter: drop-shadow(0 2px 8px rgba(102, 126, 234, 0.3));
+    filter: drop-shadow(0 2px 8px rgba(12, 42, 102, 0.3));
 }
 
 /* Responsive design */
