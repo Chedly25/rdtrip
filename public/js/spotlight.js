@@ -65,15 +65,15 @@ class SpotlightController {
         // Handle icon display - use innerHTML for images, textContent for emojis
         const iconElement = document.getElementById('routeAgentIcon');
 
-        // Use custom PNG icons with bigger styling from images/icons/
+        // Use custom PNG icons with much bigger styling from images/icons/
         if (agent === 'adventure') {
-            iconElement.innerHTML = '<img src="images/icons/adventure_icon.png" alt="Adventure" style="width: 60px; height: 60px; object-fit: contain;">';
+            iconElement.innerHTML = '<img src="images/icons/adventure_icon.png" alt="Adventure" style="width: 80px; height: 80px; object-fit: contain;">';
         } else if (agent === 'culture') {
-            iconElement.innerHTML = '<img src="images/icons/culture_icon.png" alt="Culture" style="width: 60px; height: 60px; object-fit: contain;">';
+            iconElement.innerHTML = '<img src="images/icons/culture_icon.png" alt="Culture" style="width: 80px; height: 80px; object-fit: contain;">';
         } else if (agent === 'food') {
-            iconElement.innerHTML = '<img src="images/icons/food_icon.png" alt="Food" style="width: 60px; height: 60px; object-fit: contain;">';
+            iconElement.innerHTML = '<img src="images/icons/food_icon.png" alt="Food" style="width: 80px; height: 80px; object-fit: contain;">';
         } else if (agent === 'hidden-gems') {
-            iconElement.innerHTML = '<img src="images/icons/hidden_gem_icon.png" alt="Hidden Gems" style="width: 60px; height: 60px; object-fit: contain;">';
+            iconElement.innerHTML = '<img src="images/icons/hidden_gem_icon.png" alt="Hidden Gems" style="width: 80px; height: 80px; object-fit: contain;">';
         } else {
             // Fallback to emoji
             iconElement.textContent = agentEmojis[agent] || '🗺️';
