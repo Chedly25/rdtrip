@@ -37,7 +37,17 @@
                         <button id="exportWazeSpotlight" class="nav-action-btn">Waze</button>
                     </div>
                 </div>
-                <p id="routeSubtitle" class="route-subtitle">Aix-en-Provence → Barcelona</p>
+                <p id="routeSubtitle" class="route-subtitle">
+                    <span class="route-city">
+                        <img src="https://flagcdn.com/24x18/fr.png" alt="France" class="country-flag">
+                        Aix-en-Provence
+                    </span>
+                    <span class="route-arrow">→</span>
+                    <span class="route-city">
+                        <img src="https://flagcdn.com/24x18/es.png" alt="Spain" class="country-flag">
+                        Barcelona
+                    </span>
+                </p>
             </div>
         </header>
 
@@ -92,11 +102,26 @@
                             <div class="section-header">
                                 <h2><img src="/images/budget/comfortable.png" alt="Stay" style="width: 20px; height: 20px; margin-right: 8px; vertical-align: middle;"> Stay & Dine</h2>
                                 <div class="section-controls">
+                                    <!-- Hidden original select for compatibility -->
                                     <select id="budgetFilter" class="filter-select">
                                         <option value="budget">Budget (€-€€)</option>
                                         <option value="mid" selected>Mid-range (€€-€€€)</option>
                                         <option value="luxury">Luxury (€€€-€€€€)</option>
                                     </select>
+
+                                    <!-- Custom Dropdown -->
+                                    <div class="custom-dropdown" id="customBudgetDropdown">
+                                        <button class="custom-dropdown-toggle" type="button">
+                                            <span class="dropdown-text">Mid-range (€€-€€€)</span>
+                                            <span class="custom-dropdown-arrow">▼</span>
+                                        </button>
+                                        <div class="custom-dropdown-menu">
+                                            <div class="custom-dropdown-option" data-value="budget">Budget (€-€€)</div>
+                                            <div class="custom-dropdown-option selected" data-value="mid">Mid-range (€€-€€€)</div>
+                                            <div class="custom-dropdown-option" data-value="luxury">Luxury (€€€-€€€€)</div>
+                                        </div>
+                                    </div>
+
                                     <button id="loadHotelsRestaurants" class="load-recommendations-btn">
                                         <span class="btn-text">Load Recommendations</span>
                                         <div class="btn-spinner hidden"></div>

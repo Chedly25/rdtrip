@@ -79,7 +79,9 @@ class SpotlightController {
             iconElement.textContent = agentEmojis[agent] || '🗺️';
         }
         document.getElementById('routeTitle').textContent = agentNames[agent];
-        document.getElementById('routeSubtitle').textContent = `${origin} → ${destination}`;
+
+        // Update route subtitle with country flags
+        this.updateRouteSubtitle(origin, destination);
 
         // Apply color theme to the page
         this.applyColorTheme(agent);
@@ -1222,6 +1224,9 @@ class SpotlightController {
             const container = document.getElementById('hotelsRestaurantsContainer');
             container.innerHTML = '<div class="recommendations-placeholder"><p>Click "Load Recommendations" to discover the best hotels and restaurants for each city on your route.</p></div>';
         });
+
+        // Custom dropdown functionality
+        this.setupCustomDropdown();
     }
 
     async generateDetailedItinerary() {
@@ -2522,6 +2527,124 @@ class SpotlightController {
 
         // Return null if no custom image found (will use emoji fallback)
         return null;
+    }
+
+    updateRouteSubtitle(origin, destination) {
+        // Map cities to their country codes
+        const cityToCountry = {
+            'aix-en-provence': 'fr',
+            'marseille': 'fr',
+            'nice': 'fr',
+            'lyon': 'fr',
+            'paris': 'fr',
+            'barcelona': 'es',
+            'madrid': 'es',
+            'valencia': 'es',
+            'sevilla': 'es',
+            'rome': 'it',
+            'florence': 'it',
+            'venice': 'it',
+            'milan': 'it',
+            'amsterdam': 'nl',
+            'rotterdam': 'nl',
+            'berlin': 'de',
+            'munich': 'de',
+            'cologne': 'de',
+            'vienna': 'at',
+            'salzburg': 'at',
+            'prague': 'cz',
+            'budapest': 'hu',
+            'warsaw': 'pl',
+            'krakow': 'pl',
+            'riga': 'lv',
+            'tallinn': 'ee',
+            'vilnius': 'lt',
+            'helsinki': 'fi',
+            'stockholm': 'se',
+            'copenhagen': 'dk',
+            'oslo': 'no',
+            'zurich': 'ch',
+            'geneva': 'ch',
+            'brussels': 'be',
+            'lisbon': 'pt',
+            'porto': 'pt',
+            'dublin': 'ie',
+            'london': 'gb',
+            'edinburgh': 'gb'
+        };
+
+        const originCountry = cityToCountry[origin.toLowerCase()] || 'eu';
+        const destCountry = cityToCountry[destination.toLowerCase()] || 'eu';
+
+        const routeSubtitle = document.getElementById('routeSubtitle');
+        if (routeSubtitle) {
+            routeSubtitle.innerHTML = `
+                <span class="route-city">
+                    <img src="https://flagcdn.com/24x18/${originCountry}.png" alt="${origin} flag" class="country-flag">
+                    ${origin}
+                </span>
+                <span class="route-arrow">→</span>
+                <span class="route-city">
+                    <img src="https://flagcdn.com/24x18/${destCountry}.png" alt="${destination} flag" class="country-flag">
+                    ${destination}
+                </span>
+            `;
+        }
+    }
+
+    setupCustomDropdown() {
+        const dropdown = document.getElementById('customBudgetDropdown');
+        const toggle = dropdown.querySelector('.custom-dropdown-toggle');
+        const menu = dropdown.querySelector('.custom-dropdown-menu');
+        const options = dropdown.querySelectorAll('.custom-dropdown-option');
+        const hiddenSelect = document.getElementById('budgetFilter');
+        const dropdownText = toggle.querySelector('.dropdown-text');
+
+        // Toggle dropdown
+        toggle.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropdown.classList.toggle('open');
+        });
+
+        // Handle option selection
+        options.forEach(option => {
+            option.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+
+                const value = option.dataset.value;
+                const text = option.textContent;
+
+                // Update visual state
+                options.forEach(opt => opt.classList.remove('selected'));
+                option.classList.add('selected');
+                dropdownText.textContent = text;
+
+                // Update hidden select
+                hiddenSelect.value = value;
+
+                // Trigger change event
+                hiddenSelect.dispatchEvent(new Event('change'));
+
+                // Close dropdown
+                dropdown.classList.remove('open');
+            });
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!dropdown.contains(e.target)) {
+                dropdown.classList.remove('open');
+            }
+        });
+
+        // Close dropdown on escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && dropdown.classList.contains('open')) {
+                dropdown.classList.remove('open');
+            }
+        });
     }
 }
 
