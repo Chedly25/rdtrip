@@ -22,6 +22,7 @@ class RoadTripPlanner {
 
         // Initialize form state synchronization
         this.initializeFormState();
+        this.initializeBudgetSlider();
     }
 
     async loadEnhancedFeatures() {
@@ -320,19 +321,34 @@ class RoadTripPlanner {
 
     updateBudgetSlider(activeOption) {
         const slider = document.getElementById('budgetSlider');
-        if (!slider || !activeOption) return;
+        const track = document.querySelector('.budget-range-track');
+        if (!slider || !activeOption || !track) return;
 
         const position = parseInt(activeOption.dataset.position);
         const totalOptions = document.querySelectorAll('.budget-range-option').length;
-        const container = activeOption.parentElement;
-        const containerWidth = container.offsetWidth;
-        const optionWidth = activeOption.offsetWidth;
 
-        // Calculate slider position as percentage
-        const percentage = (position / (totalOptions - 1)) * 100;
-        const leftOffset = (containerWidth - 120) * (percentage / 100) + 60; // 60px padding from left
+        // Calculate slider position along the track
+        const percentage = position / (totalOptions - 1);
+        const trackRect = track.getBoundingClientRect();
+        const containerRect = track.parentElement.getBoundingClientRect();
 
-        slider.style.left = `${leftOffset}px`;
+        // Position slider along track with proper offset
+        const trackStart = 80; // left padding of track
+        const trackWidth = trackRect.width;
+        const sliderPosition = trackStart + (trackWidth * percentage);
+
+        slider.style.left = `${sliderPosition}px`;
+    }
+
+    initializeBudgetSlider() {
+        // Set initial slider position for the active budget option
+        const activeOption = document.querySelector('.budget-range-option.active');
+        if (activeOption) {
+            // Wait for elements to be rendered
+            setTimeout(() => {
+                this.updateBudgetSlider(activeOption);
+            }, 100);
+        }
     }
 
     async generateRoute() {
