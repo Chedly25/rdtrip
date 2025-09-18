@@ -2909,42 +2909,51 @@ html {
 
 /* ===== NEW FORM DESIGN STYLES ===== */
 
-/* Budget Scroller Styles */
-.budget-scroller, .sticky-budget-scroller {
+/* Budget Range Slider Styles */
+.budget-range-container {
     position: relative;
     width: 100%;
-    padding: 20px 0;
+    padding: 30px 0;
     background: var(--surface);
     border-radius: 16px;
     border: 1px solid var(--border-light);
-    overflow-x: auto;
-    overflow-y: hidden;
 }
 
-.budget-track, .sticky-budget-track {
-    position: relative;
-    display: flex;
-    align-items: center;
-    gap: 30px;
-    padding: 0 30px;
-    min-width: max-content;
-}
-
-.budget-slider, .sticky-budget-slider {
+.budget-range-track {
     position: absolute;
     top: 50%;
+    left: 60px;
+    right: 60px;
+    height: 4px;
+    background: var(--border-light);
+    border-radius: 2px;
     transform: translateY(-50%);
-    width: 60px;
-    height: 60px;
-    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-    border-radius: 50%;
-    box-shadow: 0 8px 25px rgba(5, 18, 38, 0.3), 0 4px 12px rgba(0, 0, 0, 0.1);
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    z-index: 2;
-    pointer-events: none;
 }
 
-.budget-option, .sticky-budget-option {
+.budget-range-slider {
+    position: absolute;
+    top: 50%;
+    width: 20px;
+    height: 20px;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+    border: 3px solid white;
+    border-radius: 50%;
+    box-shadow: 0 4px 12px rgba(5, 18, 38, 0.3);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: translate(-50%, -50%);
+    z-index: 3;
+    cursor: pointer;
+}
+
+.budget-range-options {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 50px;
+    position: relative;
+}
+
+.budget-range-option {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -2952,26 +2961,29 @@ html {
     cursor: pointer;
     transition: all 0.3s ease;
     position: relative;
-    z-index: 3;
+    z-index: 2;
     padding: 10px;
     border-radius: 12px;
-    min-width: 80px;
+    flex: 1;
+    max-width: 120px;
 }
 
-.budget-option img, .sticky-budget-option img {
-    width: 40px;
-    height: 40px;
-    object-fit: contain;
+.budget-range-dot {
+    width: 12px;
+    height: 12px;
+    background: var(--border-light);
+    border-radius: 50%;
     transition: all 0.3s ease;
-    filter: grayscale(0.7) opacity(0.6);
+    position: relative;
 }
 
-.budget-option.active img, .sticky-budget-option.active img {
-    filter: grayscale(0) opacity(1);
-    transform: scale(1.1);
+.budget-range-option.active .budget-range-dot {
+    background: var(--primary);
+    transform: scale(1.3);
+    box-shadow: 0 0 0 3px rgba(5, 18, 38, 0.2);
 }
 
-.budget-label {
+.budget-range-label {
     font-size: 14px;
     font-weight: 600;
     color: var(--gray-700);
@@ -2980,7 +2992,7 @@ html {
     text-align: center;
 }
 
-.budget-desc {
+.budget-range-price {
     font-size: 12px;
     color: var(--gray-500);
     margin: 0;
@@ -2988,27 +3000,32 @@ html {
     text-align: center;
 }
 
-.budget-option.active .budget-label {
+.budget-range-option.active .budget-range-label {
     color: var(--primary);
-    transform: translateY(-2px);
+    font-weight: 700;
 }
 
-.budget-option.active .budget-desc {
+.budget-range-option.active .budget-range-price {
     color: var(--primary);
-    font-weight: 500;
+    font-weight: 600;
 }
 
-.budget-option:hover img, .sticky-budget-option:hover img {
-    transform: scale(1.05);
-    filter: grayscale(0.3) opacity(0.8);
+.budget-range-option:hover .budget-range-dot {
+    transform: scale(1.2);
+    background: var(--gray-400);
+}
+
+.budget-range-option:hover .budget-range-label {
+    color: var(--gray-800);
 }
 
 /* Travel Style Grid */
 .travel-style-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
     margin-top: 16px;
+    max-width: 600px;
 }
 
 .travel-style-card {
@@ -3038,7 +3055,7 @@ html {
 .travel-style-image {
     position: relative;
     width: 100%;
-    height: 160px;
+    height: 120px;
     overflow: hidden;
 }
 
@@ -3054,25 +3071,25 @@ html {
 }
 
 .travel-style-content {
-    padding: 20px;
+    padding: 16px;
     background: var(--surface);
     position: relative;
     z-index: 2;
 }
 
 .travel-style-title {
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 700;
     color: var(--gray-800);
-    margin: 0 0 8px 0;
+    margin: 0 0 6px 0;
     transition: color 0.3s ease;
 }
 
 .travel-style-desc {
-    font-size: 14px;
+    font-size: 12px;
     color: var(--gray-600);
     margin: 0;
-    line-height: 1.4;
+    line-height: 1.3;
     transition: color 0.3s ease;
 }
 
@@ -3136,17 +3153,72 @@ html {
     height: 32px;
 }
 
+/* Form Layout Fixes */
+.hero-form-wrapper {
+    width: 100%;
+    max-width: 900px; /* Wider to allow video background to show */
+}
+
+.hero-form {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    padding: 32px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.form-row-main {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 24px;
+    align-items: center;
+}
+
+.form-row-options {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.budget-section, .theme-section {
+    width: 100%;
+}
+
+.section-label {
+    display: block;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--gray-800);
+    margin-bottom: 12px;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
+    .hero-form-wrapper {
+        max-width: 100%;
+        padding: 0 16px;
+    }
+
+    .hero-form {
+        padding: 24px;
+    }
+
     .travel-style-grid {
         grid-template-columns: 1fr;
         gap: 16px;
     }
 
-    .budget-track, .sticky-budget-track {
+    .budget-range-options {
         padding: 0 20px;
-        gap: 20px;
+        gap: 10px;
     }
+
+    .form-row-main {
+        flex-direction: column;
+        gap: 12px;
+    }
+}
 
     .budget-option, .sticky-budget-option {
         min-width: 60px;

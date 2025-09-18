@@ -83,9 +83,9 @@ class RoadTripPlanner {
             card.addEventListener('click', () => this.toggleAgent(card));
         });
 
-        // Budget selection scroller options
-        const budgetOptions = document.querySelectorAll('.budget-option');
-        console.log('🔥 Found budget options:', budgetOptions.length);
+        // Budget selection range options
+        const budgetOptions = document.querySelectorAll('.budget-range-option');
+        console.log('🔥 Found budget range options:', budgetOptions.length);
         budgetOptions.forEach(option => {
             option.addEventListener('click', () => this.selectBudget(option));
         });
@@ -250,10 +250,11 @@ class RoadTripPlanner {
         });
 
         // Also sync budget state
-        const activeBudgetOption = document.querySelector(`.budget-option[data-budget="${this.selectedBudget}"]`);
+        const activeBudgetOption = document.querySelector(`.budget-range-option[data-budget="${this.selectedBudget}"]`);
         if (activeBudgetOption) {
-            document.querySelectorAll('.budget-option').forEach(option => option.classList.remove('active'));
+            document.querySelectorAll('.budget-range-option').forEach(option => option.classList.remove('active'));
             activeBudgetOption.classList.add('active');
+            this.updateBudgetSlider(activeBudgetOption);
         }
 
         console.log('🔥 Form state synchronized');
@@ -303,12 +304,35 @@ class RoadTripPlanner {
     }
 
     selectBudget(option) {
-        // Remove active class from all budget options
-        document.querySelectorAll('.budget-option').forEach(opt => opt.classList.remove('active'));
+        // Remove active class from all budget range options
+        document.querySelectorAll('.budget-range-option').forEach(opt => opt.classList.remove('active'));
 
         // Add active class to clicked option
         option.classList.add('active');
         this.selectedBudget = option.dataset.budget;
+
+        // Update the range slider position
+        this.updateBudgetSlider(option);
+
+        // Sync all forms
+        this.syncAllFormAgents();
+    }
+
+    updateBudgetSlider(activeOption) {
+        const slider = document.getElementById('budgetSlider');
+        if (!slider || !activeOption) return;
+
+        const position = parseInt(activeOption.dataset.position);
+        const totalOptions = document.querySelectorAll('.budget-range-option').length;
+        const container = activeOption.parentElement;
+        const containerWidth = container.offsetWidth;
+        const optionWidth = activeOption.offsetWidth;
+
+        // Calculate slider position as percentage
+        const percentage = (position / (totalOptions - 1)) * 100;
+        const leftOffset = (containerWidth - 120) * (percentage / 100) + 60; // 60px padding from left
+
+        slider.style.left = `${leftOffset}px`;
     }
 
     async generateRoute() {
