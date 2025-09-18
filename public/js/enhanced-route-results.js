@@ -224,8 +224,6 @@ class EnhancedRouteResults {
         const cityCard = document.createElement('div');
         cityCard.className = 'enhanced-city-card';
 
-        // Debug: log waypoint structure
-        console.log('🏙️ Waypoint data:', waypoint);
 
         // Extract highlights from various possible locations
         let highlights = waypoint.highlights || waypoint.activities || waypoint.attractions || waypoint.description;
@@ -236,14 +234,24 @@ class EnhancedRouteResults {
             const listItems = highlights.match(/[-•*]\s*([^\n\r]+)/g) ||
                             highlights.match(/\d+\.\s*([^\n\r]+)/g);
             if (listItems) {
-                highlights = listItems.map(item => item.replace(/^[-•*\d.]\s*/, '').trim());
+                highlights = listItems.map(item => {
+                    const cleaned = item.replace(/^[-•*\d.]\s*/, '').trim();
+                    // Truncate to max 60 characters for consistent card height
+                    return cleaned.length > 60 ? cleaned.substring(0, 57) + '...' : cleaned;
+                });
             } else {
-                // Keep as single string
-                highlights = [highlights];
+                // Keep as single string, but truncate if too long
+                const truncated = highlights.length > 60 ? highlights.substring(0, 57) + '...' : highlights;
+                highlights = [truncated];
             }
+        } else if (Array.isArray(highlights)) {
+            // Truncate each array item
+            highlights = highlights.map(item => {
+                const str = String(item).trim();
+                return str.length > 60 ? str.substring(0, 57) + '...' : str;
+            });
         }
 
-        console.log('🎯 Extracted highlights:', highlights);
 
         // Create initial structure with placeholder
         cityCard.innerHTML = `
