@@ -1507,7 +1507,7 @@ class DestinationManager {
         }
     }
 
-    directMapUpdate() {
+    async directMapUpdate() {
         console.log('🗺️ DIRECT MAP UPDATE: Starting direct map update...');
 
         // Direct map update when global functions aren't available
@@ -1532,17 +1532,34 @@ class DestinationManager {
         }
 
         // Try to update existing spotlight route instead of clearing everything
-        if (window.spotlightController && window.spotlightController.waypoints) {
+        if (window.spotlightController) {
             console.log('🗺️ DIRECT MAP: Updating spotlight controller waypoints directly');
             try {
-                window.spotlightController.waypoints = this.destinations;
-                if (typeof window.spotlightController.renderCities === 'function') {
-                    window.spotlightController.renderCities();
+                // Update both spotlightData.waypoints and waypoints property
+                if (window.spotlightController.spotlightData) {
+                    window.spotlightController.spotlightData.waypoints = this.destinations;
+                    console.log('🗺️ DIRECT MAP: Updated spotlightData.waypoints');
                 }
-                if (typeof window.spotlightController.updateMapMarkers === 'function') {
-                    window.spotlightController.updateMapMarkers();
+
+                // Also update localStorage so changes persist
+                const existingData = JSON.parse(localStorage.getItem('spotlightData') || '{}');
+                existingData.waypoints = this.destinations;
+                localStorage.setItem('spotlightData', JSON.stringify(existingData));
+                console.log('🗺️ DIRECT MAP: Updated localStorage spotlightData');
+
+                // Call spotlight's displayCities method to re-render
+                if (typeof window.spotlightController.displayCities === 'function') {
+                    await window.spotlightController.displayCities();
+                    console.log('🗺️ DIRECT MAP: Called spotlight displayCities()');
                 }
-                console.log('🗺️ DIRECT MAP: Successfully updated spotlight waypoints');
+
+                // Call recalculateRoute with new waypoints if available
+                if (typeof window.spotlightController.recalculateRoute === 'function') {
+                    await window.spotlightController.recalculateRoute(this.destinations);
+                    console.log('🗺️ DIRECT MAP: Called spotlight recalculateRoute()');
+                }
+
+                console.log('🗺️ DIRECT MAP: Successfully updated spotlight waypoints and route');
                 return;
             } catch (error) {
                 console.warn('🗺️ DIRECT MAP: Failed to update spotlight waypoints:', error);

@@ -473,6 +473,40 @@
     animation: slideIn 0.3s ease forwards;
 }
 
+/* Wikipedia Image Styles for City Cards */
+.city-image {
+    width: 80px;
+    height: 80px;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    flex-shrink: 0;
+    margin-right: var(--space-4);
+    float: left;
+}
+
+.city-image img.city-thumbnail {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.city-card:hover .city-image img.city-thumbnail {
+    transform: scale(1.1);
+}
+
+/* Make sure city cards have proper flex layout with images */
+.city-card {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-4);
+}
+
+.city-info {
+    flex: 1;
+    min-width: 0; /* Allows text to truncate properly */
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .edit-route-button span {
@@ -498,5 +532,12 @@
 
     .remove-city-btn {
         right: 10px;
+    }
+
+    /* Smaller images on mobile */
+    .city-image {
+        width: 60px;
+        height: 60px;
+        margin-right: var(--space-3);
     }
 }
