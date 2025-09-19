@@ -278,19 +278,26 @@ class SpotlightController {
                         if (error) {
                             console.error(`Failed to load image ${iconId} from ${imageUrl}:`, error);
                         } else if (image) {
-                            // Create a canvas to resize the image
+                            // Resize the image to 40x40 pixels
+                            const size = 40;
                             const canvas = document.createElement('canvas');
-                            const ctx = canvas.getContext('2d');
-                            const size = 32; // 32px icons
                             canvas.width = size;
                             canvas.height = size;
+                            const context = canvas.getContext('2d');
 
-                            // Draw the resized image
-                            ctx.drawImage(image, 0, 0, size, size);
+                            // Create ImageBitmap from the loaded image for proper resizing
+                            createImageBitmap(image, { resizeWidth: size, resizeHeight: size }).then(bitmap => {
+                                context.drawImage(bitmap, 0, 0);
 
-                            // Add the resized image to the map
-                            this.map.addImage(iconId, canvas);
-                            console.log(`Successfully loaded image ${iconId}`);
+                                // Get the image data in the format Mapbox expects
+                                const imageData = context.getImageData(0, 0, size, size);
+
+                                // Add the resized image to the map with proper format
+                                this.map.addImage(iconId, imageData, { pixelRatio: 1 });
+                                console.log(`Successfully loaded image ${iconId}`);
+                            }).catch(err => {
+                                console.error(`Failed to process image ${iconId}:`, err);
+                            });
                         }
                         resolve(); // Resolve regardless of success/failure
                     });
