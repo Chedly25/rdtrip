@@ -318,17 +318,23 @@ class DestinationManager {
         const dragHandle = document.createElement('div');
         dragHandle.className = 'drag-handle';
         dragHandle.innerHTML = '⋮⋮';
-        dragHandle.draggable = true;
         dragHandle.title = 'Drag to reorder';
+        // Don't make the handle itself draggable - let the card handle it
+        // dragHandle.draggable = true;
         console.log(`🎯 ADD DRAG HANDLE: Created drag handle for ${index}`);
 
         // Make the entire card draggable when the handle is present
         card.draggable = true;
         card.style.cursor = 'move';
+        card.setAttribute('draggable', 'true'); // Ensure HTML attribute is set
         console.log(`🎯 ADD DRAG HANDLE: Made card ${index} draggable`);
 
         // Clear any existing event listeners
         this.removeAllDragListeners(card);
+
+        // Remove any conflicting event listeners that might prevent dragging
+        card.removeEventListener('mousedown', this.preventDragConflicts);
+        card.removeEventListener('touchstart', this.preventDragConflicts);
 
         // Create unique bound methods for this specific card
         const dragStartHandler = (e) => {
@@ -336,30 +342,49 @@ class DestinationManager {
             console.log(`🎯 DRAG START: index ${index}, destination: ${this.destinations[index]?.name}`);
             console.log(`🎯 DRAG START: Event target:`, e.target);
             console.log(`🎯 DRAG START: Card element:`, card);
+            console.log(`🎯 DRAG START: Event type:`, e.type);
+            console.log(`🎯 DRAG START: Card draggable:`, card.draggable);
 
-            e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/html', card.outerHTML);
-            this.draggedItem = index;
-            card.classList.add('dragging');
-            console.log(`🎯 DRAG START: Set draggedItem to ${index}, added dragging class`);
+            // Ensure this is actually a drag event
+            if (!e.dataTransfer) {
+                console.warn(`🎯 DRAG START: No dataTransfer available, not a drag event`);
+                return;
+            }
 
-            // Prevent default to ensure drag works
-            e.stopPropagation();
+            try {
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', index.toString()); // Use text/plain for better compatibility
+                this.draggedItem = index;
+                card.classList.add('dragging');
+                console.log(`🎯 DRAG START: Set draggedItem to ${index}, added dragging class`);
 
-            // Create drag image
-            const dragImage = card.cloneNode(true);
-            dragImage.style.transform = 'rotate(5deg)';
-            dragImage.style.opacity = '0.8';
-            document.body.appendChild(dragImage);
-            e.dataTransfer.setDragImage(dragImage, e.offsetX, e.offsetY);
-            console.log(`🎯 DRAG START: Created and set drag image`);
+                // Don't prevent default - let the drag event proceed naturally
+                // e.stopPropagation();
 
-            setTimeout(() => {
-                if (document.body.contains(dragImage)) {
-                    document.body.removeChild(dragImage);
-                    console.log(`🎯 DRAG START: Removed temporary drag image`);
+                // Create simple drag image
+                try {
+                    const dragImage = card.cloneNode(true);
+                    dragImage.style.transform = 'rotate(3deg)';
+                    dragImage.style.opacity = '0.8';
+                    dragImage.style.position = 'absolute';
+                    dragImage.style.top = '-1000px';
+                    dragImage.style.pointerEvents = 'none';
+                    document.body.appendChild(dragImage);
+                    e.dataTransfer.setDragImage(dragImage, 50, 25);
+                    console.log(`🎯 DRAG START: Created and set drag image`);
+
+                    setTimeout(() => {
+                        if (document.body.contains(dragImage)) {
+                            document.body.removeChild(dragImage);
+                            console.log(`🎯 DRAG START: Removed temporary drag image`);
+                        }
+                    }, 100);
+                } catch (dragImageError) {
+                    console.warn(`🎯 DRAG START: Failed to create drag image:`, dragImageError);
                 }
-            }, 0);
+            } catch (error) {
+                console.error(`🎯 DRAG START: Error in drag start handler:`, error);
+            }
         };
 
         const dragEndHandler = (e) => {
@@ -404,21 +429,59 @@ class DestinationManager {
             drop: dropHandler
         };
 
-        // Add event listeners
+        // Add event listeners with better options
         console.log(`🎯 ADD DRAG HANDLE: Adding event listeners to card ${index}`);
-        card.addEventListener('dragstart', dragStartHandler, { passive: false });
-        card.addEventListener('dragend', dragEndHandler);
-        card.addEventListener('dragover', dragOverHandler);
-        card.addEventListener('drop', dropHandler);
-        console.log(`🎯 ADD DRAG HANDLE: Event listeners added to card ${index}`);
 
-        // Visual feedback on hover
-        dragHandle.addEventListener('mousedown', () => {
+        // Use capture phase and ensure events aren't passive
+        const eventOptions = { capture: false, passive: false };
+
+        card.addEventListener('dragstart', dragStartHandler, eventOptions);
+        card.addEventListener('dragend', dragEndHandler, eventOptions);
+        card.addEventListener('dragover', dragOverHandler, eventOptions);
+        card.addEventListener('drop', dropHandler, eventOptions);
+        card.addEventListener('dragenter', (e) => {
+            e.preventDefault();
+            console.log(`🎯 DRAG ENTER: Card ${index}`);
+        }, eventOptions);
+        card.addEventListener('dragleave', (e) => {
+            console.log(`🎯 DRAG LEAVE: Card ${index}`);
+        }, eventOptions);
+
+        console.log(`🎯 ADD DRAG HANDLE: Event listeners added to card ${index} with options:`, eventOptions);
+
+        // Test drag start with mousedown event
+        card.addEventListener('mousedown', (e) => {
+            console.log(`🎯 MOUSE DOWN: Card ${index}, preparing for potential drag`);
+            console.log(`🎯 MOUSE DOWN: Target:`, e.target);
+            console.log(`🎯 MOUSE DOWN: Card draggable:`, card.draggable);
+        }, eventOptions);
+
+        // Visual feedback on hover and ensure drag handle doesn't interfere
+        dragHandle.addEventListener('mousedown', (e) => {
+            console.log(`🎯 DRAG HANDLE MOUSEDOWN: Starting drag on handle for card ${index}`);
             card.style.cursor = 'grabbing';
+            // Don't prevent default - let the drag start naturally
         });
 
         dragHandle.addEventListener('mouseup', () => {
-            card.style.cursor = '';
+            console.log(`🎯 DRAG HANDLE MOUSEUP: Ending drag on handle for card ${index}`);
+            card.style.cursor = 'move';
+        });
+
+        // Allow pointer events on drag handle but ensure it doesn't interfere with dragging
+        dragHandle.style.pointerEvents = 'auto';
+        dragHandle.style.cursor = 'grab';
+
+        // Add visual feedback when hovering over drag handle
+        dragHandle.addEventListener('mouseenter', () => {
+            dragHandle.style.cursor = 'grab';
+            card.style.cursor = 'grab';
+        });
+
+        dragHandle.addEventListener('mouseleave', () => {
+            if (!card.classList.contains('dragging')) {
+                card.style.cursor = 'move';
+            }
         });
 
         // Store the index on the card for easier access
@@ -1307,6 +1370,8 @@ class DestinationManager {
         console.log('🗺️ AVAILABLE OBJECTS:');
         console.log('  - window.updateMapRoute:', typeof window.updateMapRoute);
         console.log('  - window.spotlightMapController:', !!window.spotlightMapController);
+        console.log('  - window.spotlightController:', !!window.spotlightController);
+        console.log('  - window.spotlightController.map:', !!(window.spotlightController && window.spotlightController.map));
         console.log('  - window.map:', !!window.map);
         console.log('  - window.updateSpotlightRoute:', typeof window.updateSpotlightRoute);
 
@@ -1326,22 +1391,42 @@ class DestinationManager {
                 }
             }
 
-            // Strategy 2: Spotlight map controller
-            if (window.spotlightMapController && window.spotlightMapController.updateRoute) {
-                console.log('📍 UPDATE MAP: Using spotlight map controller');
+            // Strategy 2: Spotlight controller with map
+            if (window.spotlightController && window.spotlightController.map) {
+                console.log('📍 UPDATE MAP: Using spotlight controller with direct map access');
                 try {
-                    window.spotlightMapController.updateRoute(this.destinations);
-                    console.log('📍 UPDATE MAP: Spotlight map controller called successfully');
+                    // Use spotlight controller's map directly
+                    window.map = window.spotlightController.map; // Set global reference for compatibility
+                    this.directMapUpdate();
+                    console.log('📍 UPDATE MAP: Spotlight controller map update called successfully');
                     updated = true;
                 } catch (err) {
-                    console.error('📍 UPDATE MAP: Spotlight map controller failed:', err);
+                    console.error('📍 UPDATE MAP: Spotlight controller map update failed:', err);
                 }
             }
 
-            // Strategy 3: Direct map update
-            if (window.map) {
-                console.log('📍 UPDATE MAP: Using direct map update');
+            // Strategy 2b: Legacy spotlight map controller
+            if (!updated && window.spotlightMapController && window.spotlightMapController.updateRoute) {
+                console.log('📍 UPDATE MAP: Using legacy spotlight map controller');
                 try {
+                    window.spotlightMapController.updateRoute(this.destinations);
+                    console.log('📍 UPDATE MAP: Legacy spotlight map controller called successfully');
+                    updated = true;
+                } catch (err) {
+                    console.error('📍 UPDATE MAP: Legacy spotlight map controller failed:', err);
+                }
+            }
+
+            // Strategy 3: Direct map update (window.map or spotlight map)
+            const mapInstance = window.map || (window.spotlightController && window.spotlightController.map);
+            if (mapInstance) {
+                console.log('📍 UPDATE MAP: Using direct map update with map instance');
+                try {
+                    // Ensure window.map points to the right instance
+                    if (!window.map && window.spotlightController && window.spotlightController.map) {
+                        window.map = window.spotlightController.map;
+                        console.log('📍 UPDATE MAP: Set window.map to spotlight controller map');
+                    }
                     this.directMapUpdate();
                     console.log('📍 UPDATE MAP: Direct map update called successfully');
                     updated = true;
@@ -1773,6 +1858,22 @@ class DestinationManager {
             if (e.key === 'Escape' && this.isEditing) {
                 this.toggleEditMode();
             }
+        });
+
+        // Global drag event listeners for debugging
+        document.addEventListener('dragstart', (e) => {
+            console.log(`🎯 GLOBAL DRAG START: Element:`, e.target);
+            console.log(`🎯 GLOBAL DRAG START: Is city card:`, e.target.classList.contains('city-card'));
+        });
+
+        document.addEventListener('dragover', (e) => {
+            // Prevent default to allow drop
+            e.preventDefault();
+        });
+
+        document.addEventListener('drop', (e) => {
+            console.log(`🎯 GLOBAL DROP: Element:`, e.target);
+            e.preventDefault();
         });
     }
 
