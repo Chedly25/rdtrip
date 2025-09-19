@@ -4,7 +4,9 @@ class SpotlightController {
         this.map = null;
         this.spotlightData = null;
         this.imageCache = new Map(); // Cache for Wikipedia images
-        this.landmarkMarkers = []; // Store landmark markers for cleanup
+        this.landmarkClickHandler = null; // Store landmark click handler for cleanup
+        this.landmarkHoverHandler = null; // Store landmark hover handler for cleanup
+        this.landmarkLeaveHandler = null; // Store landmark leave handler for cleanup
         this.addedLandmarkMarkers = []; // Store user-added landmark markers separately
         this.agentColors = {
             adventure: '#34C759',
@@ -206,9 +208,16 @@ class SpotlightController {
 
     async loadLandmarksOnMap() {
         try {
-            // Clear existing landmark markers (but NOT user-added ones)
-            this.landmarkMarkers.forEach(marker => marker.remove());
-            this.landmarkMarkers = [];
+            // Remove existing landmark layers if they exist
+            if (this.map.getLayer('landmark-labels')) {
+                this.map.removeLayer('landmark-labels');
+            }
+            if (this.map.getLayer('landmarks')) {
+                this.map.removeLayer('landmarks');
+            }
+            if (this.map.getSource('landmarks')) {
+                this.map.removeSource('landmarks');
+            }
 
             // Get map bounds
             const bounds = this.map.getBounds();
@@ -232,77 +241,126 @@ class SpotlightController {
                 natural: '#95E77E'
             };
 
-            // Add landmark markers to map using Mapbox marker API
-            landmarks.forEach(landmark => {
-                const color = typeColors[landmark.type] || '#9333EA';
-                const icon = this.getSpecificLandmarkIcon(landmark.name, landmark.type);
+            // Convert landmarks to GeoJSON features
+            const landmarkFeatures = landmarks.map(landmark => ({
+                type: 'Feature',
+                properties: {
+                    id: landmark.name,
+                    name: landmark.name,
+                    city: landmark.city,
+                    country: landmark.country,
+                    description: landmark.description || '',
+                    rating: landmark.rating || '',
+                    visit_duration: landmark.visit_duration || '',
+                    type: landmark.type,
+                    color: typeColors[landmark.type] || '#9333EA',
+                    icon: this.getSpecificLandmarkIcon(landmark.name, landmark.type)
+                },
+                geometry: {
+                    type: 'Point',
+                    coordinates: [landmark.lng, landmark.lat]
+                }
+            }));
 
-                // Create simple marker element
-                const el = document.createElement('div');
-                el.className = 'landmark-marker';
-                el.style.cssText = `
-                    width: 35px;
-                    height: 35px;
-                    border-radius: 50%;
-                    background-color: ${color};
-                    border: 3px solid white;
-                    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-                    cursor: pointer;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 18px;
-                    transition: all 0.3s ease;
-                `;
-                el.innerHTML = icon;
+            // Add GeoJSON source
+            this.map.addSource('landmarks', {
+                type: 'geojson',
+                data: {
+                    type: 'FeatureCollection',
+                    features: landmarkFeatures
+                }
+            });
+
+            // Add symbol layer for landmarks
+            this.map.addLayer({
+                id: 'landmarks',
+                type: 'circle',
+                source: 'landmarks',
+                paint: {
+                    'circle-radius': 16,
+                    'circle-color': ['get', 'color'],
+                    'circle-stroke-width': 3,
+                    'circle-stroke-color': '#ffffff',
+                    'circle-opacity': 0.9
+                }
+            });
+
+            // Add text labels for landmarks
+            this.map.addLayer({
+                id: 'landmark-labels',
+                type: 'symbol',
+                source: 'landmarks',
+                layout: {
+                    'text-field': ['get', 'icon'],
+                    'text-size': 16,
+                    'text-anchor': 'center',
+                    'text-allow-overlap': true,
+                    'text-ignore-placement': true
+                },
+                paint: {
+                    'text-color': '#ffffff'
+                }
+            });
+
+            // Set up click handler for landmarks
+            this.map.off('click', 'landmarks', this.landmarkClickHandler);
+            this.landmarkClickHandler = (e) => {
+                const feature = e.features[0];
+                const props = feature.properties;
 
                 // Create popup content
                 const popupContent = `
                     <div style="padding: 10px; max-width: 250px;">
                         <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600;">
-                            ${icon} ${landmark.name}
+                            ${props.icon} ${props.name}
                         </h3>
                         <p style="margin: 0 0 8px 0; color: #666; font-size: 14px;">
-                            ${landmark.city}, ${landmark.country}
+                            ${props.city}, ${props.country}
                         </p>
-                        ${landmark.description ? `
+                        ${props.description ? `
                             <p style="margin: 0 0 8px 0; font-size: 13px; line-height: 1.4;">
-                                ${landmark.description}
+                                ${props.description}
                             </p>
                         ` : ''}
-                        ${landmark.rating ? `
+                        ${props.rating ? `
                             <div style="display: flex; align-items: center; gap: 5px; font-size: 13px; margin-bottom: 10px;">
-                                <span>★ ${landmark.rating}</span>
-                                ${landmark.visit_duration ? `<span>• ${landmark.visit_duration} min</span>` : ''}
+                                <span>★ ${props.rating}</span>
+                                ${props.visit_duration ? `<span>• ${props.visit_duration} min</span>` : ''}
                             </div>
                         ` : ''}
-                        <button onclick="window.spotlightController.addLandmarkToRoute('${landmark.name}', ${landmark.lat}, ${landmark.lng}, '${landmark.type}', '${landmark.description || ''}', '${landmark.city}')"
+                        <button onclick="window.spotlightController.addLandmarkToRoute('${props.name}', ${feature.geometry.coordinates[1]}, ${feature.geometry.coordinates[0]}, '${props.type}', '${props.description}', '${props.city}')"
                                 style="background: var(--agent-primary-color, #007AFF); color: white; border: none; padding: 8px 16px; border-radius: 6px; font-size: 13px; cursor: pointer; width: 100%; margin-top: 5px;">
                             + Add to Route
                         </button>
                     </div>
                 `;
 
-                // Create Mapbox marker with popup
-                const marker = new mapboxgl.Marker(el)
-                    .setLngLat([landmark.lng, landmark.lat])
-                    .setPopup(new mapboxgl.Popup({ offset: 25 }).setHTML(popupContent))
+                new mapboxgl.Popup()
+                    .setLngLat(feature.geometry.coordinates)
+                    .setHTML(popupContent)
                     .addTo(this.map);
+            };
 
-                // Add hover effects (using filter instead of transform to avoid positioning issues)
-                el.addEventListener('mouseenter', () => {
-                    el.style.filter = 'brightness(1.2)';
-                    el.style.boxShadow = '0 4px 15px rgba(0,0,0,0.3)';
-                });
+            this.map.on('click', 'landmarks', this.landmarkClickHandler);
 
-                el.addEventListener('mouseleave', () => {
-                    el.style.filter = 'brightness(1)';
-                    el.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
-                });
+            // Set up hover effects
+            this.map.off('mouseenter', 'landmarks', this.landmarkHoverHandler);
+            this.map.off('mouseleave', 'landmarks', this.landmarkLeaveHandler);
 
-                // Store marker for cleanup
-                this.landmarkMarkers.push(marker);
-            });
+            this.landmarkHoverHandler = () => {
+                this.map.getCanvas().style.cursor = 'pointer';
+                this.map.setPaintProperty('landmarks', 'circle-opacity', 1);
+                this.map.setPaintProperty('landmarks', 'circle-radius', 18);
+            };
+
+            this.landmarkLeaveHandler = () => {
+                this.map.getCanvas().style.cursor = '';
+                this.map.setPaintProperty('landmarks', 'circle-opacity', 0.9);
+                this.map.setPaintProperty('landmarks', 'circle-radius', 16);
+            };
+
+            this.map.on('mouseenter', 'landmarks', this.landmarkHoverHandler);
+            this.map.on('mouseleave', 'landmarks', this.landmarkLeaveHandler);
 
         } catch (error) {
             console.error('Error loading landmarks:', error);
