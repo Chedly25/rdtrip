@@ -602,6 +602,17 @@ class LandmarksOverlay {
                 this.updateSelectedLandmarksList();
                 this.displayCurrentRoute();
                 this.redrawRouteOnMap();
+
+                // Also update the main spotlight map with the new route including landmarks
+                if (window.spotlightController && typeof window.spotlightController.recalculateRoute === 'function') {
+                    console.log('🗺️ LANDMARK: Updating main spotlight map with landmark route');
+                    try {
+                        await window.spotlightController.recalculateRoute();
+                    } catch (error) {
+                        console.warn('🗺️ LANDMARK: Failed to update main map:', error);
+                    }
+                }
+
                 this.hideLandmarkDetail();
 
                 document.getElementById('saveUpdatedRoute').classList.remove('disabled');
