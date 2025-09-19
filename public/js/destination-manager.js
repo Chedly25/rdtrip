@@ -59,9 +59,44 @@ class DestinationManager {
             this.finalDestination = spotlightData.destination || '';
             console.log('📊 Loaded destinations from storage:', this.destinations.length, 'destinations');
             console.log('📊 Destinations:', this.destinations.map(d => d.name));
+
+            // Enrich initial destinations with Wikipedia images if not already enriched
+            this.enrichInitialDestinations();
         } else {
             console.log('📊 No waypoints found in storage data');
         }
+    }
+
+    async enrichInitialDestinations() {
+        console.log('🖼️ ENRICH INITIAL: Starting to enrich initial destinations with Wikipedia images...');
+
+        for (let i = 0; i < this.destinations.length; i++) {
+            const destination = this.destinations[i];
+
+            // Skip if already has Wikipedia image
+            if (destination.wikipediaImage) {
+                console.log(`🖼️ ENRICH INITIAL: ${destination.name} already has Wikipedia image, skipping`);
+                continue;
+            }
+
+            console.log(`🖼️ ENRICH INITIAL: Fetching Wikipedia image for ${destination.name}...`);
+
+            try {
+                const wikipediaImage = await this.getWikipediaImage(destination.name);
+                if (wikipediaImage) {
+                    this.destinations[i].wikipediaImage = wikipediaImage;
+                    console.log(`🖼️ ENRICH INITIAL: Successfully added Wikipedia image for ${destination.name}`);
+                } else {
+                    console.log(`🖼️ ENRICH INITIAL: No Wikipedia image found for ${destination.name}`);
+                }
+            } catch (error) {
+                console.warn(`🖼️ ENRICH INITIAL: Failed to fetch Wikipedia image for ${destination.name}:`, error);
+            }
+        }
+
+        // Re-render destinations with new images
+        console.log('🖼️ ENRICH INITIAL: Re-rendering destinations with Wikipedia images...');
+        this.renderDestinations();
     }
 
     initializeUI() {
@@ -1484,9 +1519,41 @@ class DestinationManager {
         console.log('🗺️ DIRECT MAP: Map instance found, updating...');
         console.log('🗺️ DIRECT MAP: Destinations to map:', this.destinations.map(d => ({ name: d.name, coords: d.coordinates })));
 
-        // Clear existing markers and route
+        // Check if spotlight controller has an updateRoute method we can use instead
+        if (window.spotlightController && typeof window.spotlightController.updateRoute === 'function') {
+            console.log('🗺️ DIRECT MAP: Using spotlight controller updateRoute method');
+            try {
+                window.spotlightController.updateRoute(this.destinations);
+                console.log('🗺️ DIRECT MAP: Successfully updated route via spotlight controller');
+                return;
+            } catch (error) {
+                console.warn('🗺️ DIRECT MAP: Spotlight controller updateRoute failed:', error);
+            }
+        }
+
+        // Try to update existing spotlight route instead of clearing everything
+        if (window.spotlightController && window.spotlightController.waypoints) {
+            console.log('🗺️ DIRECT MAP: Updating spotlight controller waypoints directly');
+            try {
+                window.spotlightController.waypoints = this.destinations;
+                if (typeof window.spotlightController.renderCities === 'function') {
+                    window.spotlightController.renderCities();
+                }
+                if (typeof window.spotlightController.updateMapMarkers === 'function') {
+                    window.spotlightController.updateMapMarkers();
+                }
+                console.log('🗺️ DIRECT MAP: Successfully updated spotlight waypoints');
+                return;
+            } catch (error) {
+                console.warn('🗺️ DIRECT MAP: Failed to update spotlight waypoints:', error);
+            }
+        }
+
+        console.log('🗺️ DIRECT MAP: Falling back to custom map updates...');
+
+        // Clear only our custom markers, not spotlight markers
         if (window.mapMarkers) {
-            console.log('🗺️ DIRECT MAP: Clearing', window.mapMarkers.length, 'existing markers');
+            console.log('🗺️ DIRECT MAP: Clearing', window.mapMarkers.length, 'existing custom markers');
             window.mapMarkers.forEach(marker => marker.remove());
             window.mapMarkers = [];
         }
