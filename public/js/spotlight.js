@@ -2979,15 +2979,22 @@ class SpotlightController {
         // Hardcode start point as Aix-en-Provence
         const startPoint = { name: 'Aix-en-Provence', lat: 43.5297, lng: 5.4474, type: 'start' };
 
-        // Find destination (last point)
-        const destinationPoint = waypoints.find(wp => wp.type === 'destination');
+        // Try to find destination (last waypoint in original route or explicitly marked destination)
+        let destinationPoint = waypoints.find(wp => wp.type === 'destination');
+
+        // If no explicit destination found, use the last waypoint in the list as destination
+        if (!destinationPoint && waypoints.length > 0) {
+            destinationPoint = waypoints[waypoints.length - 1];
+            console.log('🚀 SPOTLIGHT OPTIMIZATION: Using last waypoint as destination:', destinationPoint.name);
+        }
+
         if (!destinationPoint) {
             console.log('🚀 SPOTLIGHT OPTIMIZATION: No destination found, using basic optimization');
             return waypoints;
         }
 
         // Get intermediate waypoints (everything except destination)
-        const intermediatePoints = waypoints.filter(wp => wp.type !== 'destination');
+        const intermediatePoints = waypoints.filter(wp => wp !== destinationPoint && wp.name !== destinationPoint.name);
 
         // Optimize intermediate points using nearest neighbor from start to destination
         const optimizedRoute = this.optimizeFromStartToEndSpotlight(startPoint, intermediatePoints, destinationPoint);
