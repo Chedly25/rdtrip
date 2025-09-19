@@ -1502,33 +1502,28 @@ class SpotlightController {
 
     exportToGoogleMaps() {
         try {
-            const waypoints = this.extractWaypoints(this.spotlightData.agentData);
             const destination = this.spotlightData.destination;
 
-            if (waypoints.length === 0) {
+            // Use the same method that maintains proper waypoint order including landmarks
+            const allWaypoints = this.getAllCombinedWaypoints();
+
+            if (allWaypoints.length === 0) {
                 alert('No waypoints found for this route. Please generate a route first.');
                 return;
             }
 
-            // Combine regular waypoints with added landmarks
-            let allWaypoints = [...waypoints];
-            if (this.spotlightData.addedLandmarks && this.spotlightData.addedLandmarks.length > 0) {
-                // Add landmarks to waypoints, sorting by optimal route order if possible
-                const landmarks = this.spotlightData.addedLandmarks.map(landmark => ({
-                    name: `${landmark.name}, ${landmark.city}`,
-                    lat: landmark.lat,
-                    lng: landmark.lng
-                }));
-                allWaypoints = [...allWaypoints, ...landmarks];
-            }
-
-            // Create Google Maps URL with all waypoints
+            // Create Google Maps URL with all waypoints in the correct order
             const origin = 'Aix-en-Provence, France';
             let googleMapsUrl = `https://www.google.com/maps/dir/${encodeURIComponent(origin)}`;
 
-            // Add all waypoints (cities + landmarks)
+            // Add all waypoints (cities + landmarks) in their optimized order
             allWaypoints.forEach(wp => {
-                googleMapsUrl += `/${encodeURIComponent(wp.name)}`;
+                // Format the waypoint name properly
+                let waypointName = wp.name;
+                if (wp.city && !wp.name.includes(wp.city)) {
+                    waypointName = `${wp.name}, ${wp.city}`;
+                }
+                googleMapsUrl += `/${encodeURIComponent(waypointName)}`;
             });
 
             googleMapsUrl += `/${encodeURIComponent(destination)}`;
@@ -1544,18 +1539,27 @@ class SpotlightController {
 
     exportToWaze() {
         try {
-            const waypoints = this.extractWaypoints(this.spotlightData.agentData);
             const destination = this.spotlightData.destination;
 
-            if (waypoints.length === 0) {
+            // Use the same method that maintains proper waypoint order including landmarks
+            const allWaypoints = this.getAllCombinedWaypoints();
+
+            if (allWaypoints.length === 0) {
                 alert('No waypoints found for this route. Please generate a route first.');
                 return;
             }
 
             // Waze doesn't support multiple waypoints well, so we'll create a route to the final destination
-            // and show a message about waypoints
-            const waypointNames = waypoints.map(wp => wp.name).join(', ');
-            const confirmMessage = `Waze will navigate directly to ${destination}.\n\nPlanned stops along the way: ${waypointNames}\n\nContinue?`;
+            // and show a message about waypoints in their proper order
+            const waypointNames = allWaypoints.map(wp => {
+                // Format the waypoint name properly
+                if (wp.city && !wp.name.includes(wp.city)) {
+                    return `${wp.name}, ${wp.city}`;
+                }
+                return wp.name;
+            }).join(', ');
+
+            const confirmMessage = `Waze will navigate directly to ${destination}.\n\nPlanned stops along the way (in order): ${waypointNames}\n\nContinue?`;
 
             if (!confirm(confirmMessage)) {
                 return;
