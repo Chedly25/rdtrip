@@ -539,7 +539,8 @@ class DestinationManager {
             const addBtn = document.createElement('button');
             addBtn.className = 'add-stop-btn';
             addBtn.innerHTML = '+ Add Stop Here';
-            addBtn.onclick = () => this.showAddDestinationModal(index);
+            // FIX: Use index + 1 for "Add Stop Here" to insert AFTER this city
+            addBtn.onclick = () => this.showAddDestinationModal(index + 1);
 
             // Insert after each card except the last one
             if (index < cityCards.length - 1) {
@@ -1530,15 +1531,24 @@ class DestinationManager {
         console.log('🗺️ DIRECT MAP: Map instance found, updating...');
         console.log('🗺️ DIRECT MAP: Destinations to map:', this.destinations.map(d => ({ name: d.name, coords: d.coordinates })));
 
-        // Check if spotlight controller has an updateRoute method we can use instead
-        if (window.spotlightController && typeof window.spotlightController.updateRoute === 'function') {
-            console.log('🗺️ DIRECT MAP: Using spotlight controller updateRoute method');
+        // Check if spotlight controller has a recalculateRoute method we can use instead
+        if (window.spotlightController && typeof window.spotlightController.recalculateRoute === 'function') {
+            console.log('🗺️ DIRECT MAP: Using spotlight controller recalculateRoute method');
             try {
-                window.spotlightController.updateRoute(this.destinations);
+                // Convert destinations to waypoint format that spotlight expects
+                const waypoints = this.destinations.map(dest => ({
+                    name: dest.name,
+                    lat: dest.coordinates ? dest.coordinates[1] : 0,
+                    lng: dest.coordinates ? dest.coordinates[0] : 0,
+                    description: dest.description || '',
+                    activities: dest.activities || dest.highlights || []
+                }));
+
+                await window.spotlightController.recalculateRoute(waypoints);
                 console.log('🗺️ DIRECT MAP: Successfully updated route via spotlight controller');
                 return;
             } catch (error) {
-                console.warn('🗺️ DIRECT MAP: Spotlight controller updateRoute failed:', error);
+                console.warn('🗺️ DIRECT MAP: Spotlight controller recalculateRoute failed:', error);
             }
         }
 
