@@ -780,6 +780,51 @@ class DestinationManager {
         return sentences.slice(0, 3).map(s => s.trim().substring(0, 60) + '...');
     }
 
+    // Wikipedia image fetching (adapted from enhanced-route-results.js)
+    async getWikipediaImage(locationName, width = 800, height = 600) {
+        const cacheKey = `${locationName}_${width}x${height}`;
+        if (this.imageCache && this.imageCache.has(cacheKey)) {
+            return this.imageCache.get(cacheKey);
+        }
+
+        // Initialize cache if not exists
+        if (!this.imageCache) {
+            this.imageCache = new Map();
+        }
+
+        try {
+            // Clean location name for Wikipedia search
+            const cleanName = locationName.replace(/[,\(\)]/g, '').trim();
+
+            const response = await fetch(
+                `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(cleanName)}`,
+                { headers: { 'Accept': 'application/json' } }
+            );
+
+            if (response.ok) {
+                const data = await response.json();
+
+                if (data.thumbnail && data.thumbnail.source) {
+                    let imageUrl = data.thumbnail.source;
+
+                    // Resize image URL
+                    if (width && height) {
+                        imageUrl = imageUrl.replace(/\/\d+px-/, `/${width}px-`);
+                    }
+
+                    this.imageCache.set(cacheKey, imageUrl);
+                    return imageUrl;
+                }
+            }
+        } catch (error) {
+            console.warn(`Could not fetch Wikipedia image for ${locationName}:`, error);
+        }
+
+        // Cache null result to avoid repeated failed requests
+        this.imageCache.set(cacheKey, null);
+        return null;
+    }
+
     showOptimizationToolbar() {
         const toolbar = document.createElement('div');
         toolbar.id = 'optimization-toolbar';
@@ -1288,6 +1333,25 @@ class DestinationManager {
 
         if (card) {
             card.classList.add('dragging');
+
+            // Create a custom drag image
+            const dragImage = card.cloneNode(true);
+            dragImage.style.opacity = '0.8';
+            dragImage.style.transform = 'rotate(5deg)';
+            dragImage.style.pointerEvents = 'none';
+            dragImage.style.position = 'absolute';
+            dragImage.style.top = '-1000px';
+            document.body.appendChild(dragImage);
+
+            // Set the custom drag image
+            e.dataTransfer.setDragImage(dragImage, e.offsetX, e.offsetY);
+
+            // Remove the temporary element after a short delay
+            setTimeout(() => {
+                if (document.body.contains(dragImage)) {
+                    document.body.removeChild(dragImage);
+                }
+            }, 100);
         }
 
         console.log(`🎯 Drag started for item ${index}: ${this.destinations[index]?.name}`);

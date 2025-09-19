@@ -105,11 +105,13 @@
 }
 
 .city-card.dragging {
-    opacity: 0.5;
-    transform: scale(0.95);
+    opacity: 0.6;
+    transform: scale(0.95) rotate(2deg);
     cursor: grabbing;
     z-index: 1000;
     pointer-events: none;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+    transition: none; /* Disable transitions during drag */
 }
 
 .city-card.drag-over {
