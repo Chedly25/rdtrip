@@ -5,6 +5,7 @@
 
 class DestinationManager {
     constructor() {
+        console.log('🔧 DESTINATION MANAGER: Constructor called');
         this.destinations = [];
         this.origin = '';
         this.finalDestination = '';
@@ -13,6 +14,7 @@ class DestinationManager {
         this.mapInstance = null;
         this.routeLayer = null;
 
+        console.log('🔧 DESTINATION MANAGER: Calling init()...');
         this.init();
     }
 
@@ -30,13 +32,24 @@ class DestinationManager {
     }
 
     loadRouteData() {
+        console.log('📊 LOAD ROUTE DATA: Starting...');
         // Load from localStorage or sessionStorage
-        const spotlightData = JSON.parse(localStorage.getItem('spotlightData') || sessionStorage.getItem('spotlightData') || '{}');
+        const localData = localStorage.getItem('spotlightData');
+        const sessionData = sessionStorage.getItem('spotlightData');
+        console.log('📊 LocalStorage data:', localData ? 'exists' : 'empty');
+        console.log('📊 SessionStorage data:', sessionData ? 'exists' : 'empty');
+
+        const spotlightData = JSON.parse(localData || sessionData || '{}');
+        console.log('📊 Parsed spotlight data:', spotlightData);
 
         if (spotlightData.waypoints) {
             this.destinations = [...spotlightData.waypoints];
             this.origin = spotlightData.origin || 'Aix-en-Provence';
             this.finalDestination = spotlightData.destination || '';
+            console.log('📊 Loaded destinations from storage:', this.destinations.length, 'destinations');
+            console.log('📊 Destinations:', this.destinations.map(d => d.name));
+        } else {
+            console.log('📊 No waypoints found in storage data');
         }
     }
 
@@ -159,25 +172,34 @@ class DestinationManager {
     }
 
     enterEditMode() {
-        console.log('🎬 Entering edit mode...');
+        console.log('🎬 ENTER EDIT MODE: Starting...');
 
         // Add remove buttons to all city cards
         const cityCards = document.querySelectorAll('.city-card');
+        console.log(`🎬 EDIT MODE: Found ${cityCards.length} city cards`);
+        console.log(`🎬 EDIT MODE: City cards:`, cityCards);
+
         cityCards.forEach((card, index) => {
+            console.log(`🎬 EDIT MODE: Processing card ${index}:`, card);
+            console.log(`🎬 EDIT MODE: Adding remove button to card ${index}`);
             this.addRemoveButton(card, index);
+            console.log(`🎬 EDIT MODE: Adding drag handle to card ${index}`);
             this.addDragHandle(card, index);
         });
 
         // Add main "Add Destination" button
+        console.log(`🎬 EDIT MODE: Adding main destination button`);
         this.addMainDestinationButton();
 
         // Add "Add Stop" buttons between cities
+        console.log(`🎬 EDIT MODE: Adding insert buttons`);
         this.addInsertButtons();
 
         // Show optimization toolbar
+        console.log(`🎬 EDIT MODE: Showing optimization toolbar`);
         this.showOptimizationToolbar();
 
-        console.log('✅ Edit mode activated');
+        console.log('✅ EDIT MODE: Edit mode activated successfully');
     }
 
     addMainDestinationButton() {
@@ -236,29 +258,40 @@ class DestinationManager {
     }
 
     addDragHandle(card, index) {
+        console.log(`🎯 ADD DRAG HANDLE: Adding to card at index ${index}`);
         // Skip if already has a drag handle
-        if (card.querySelector('.drag-handle')) return;
+        if (card.querySelector('.drag-handle')) {
+            console.log(`🎯 ADD DRAG HANDLE: Card ${index} already has drag handle, skipping`);
+            return;
+        }
 
         const dragHandle = document.createElement('div');
         dragHandle.className = 'drag-handle';
         dragHandle.innerHTML = '⋮⋮';
         dragHandle.draggable = true;
         dragHandle.title = 'Drag to reorder';
+        console.log(`🎯 ADD DRAG HANDLE: Created drag handle for ${index}`);
 
         // Make the entire card draggable when the handle is present
         card.draggable = true;
         card.style.cursor = 'move';
+        console.log(`🎯 ADD DRAG HANDLE: Made card ${index} draggable`);
 
         // Clear any existing event listeners
         this.removeAllDragListeners(card);
 
         // Create unique bound methods for this specific card
         const dragStartHandler = (e) => {
+            console.log(`🎯 DRAG START HANDLER: Triggered for index ${index}`);
             console.log(`🎯 DRAG START: index ${index}, destination: ${this.destinations[index]?.name}`);
+            console.log(`🎯 DRAG START: Event target:`, e.target);
+            console.log(`🎯 DRAG START: Card element:`, card);
+
             e.dataTransfer.effectAllowed = 'move';
             e.dataTransfer.setData('text/html', card.outerHTML);
             this.draggedItem = index;
             card.classList.add('dragging');
+            console.log(`🎯 DRAG START: Set draggedItem to ${index}, added dragging class`);
 
             // Prevent default to ensure drag works
             e.stopPropagation();
@@ -269,8 +302,14 @@ class DestinationManager {
             dragImage.style.opacity = '0.8';
             document.body.appendChild(dragImage);
             e.dataTransfer.setDragImage(dragImage, e.offsetX, e.offsetY);
+            console.log(`🎯 DRAG START: Created and set drag image`);
 
-            setTimeout(() => document.body.removeChild(dragImage), 0);
+            setTimeout(() => {
+                if (document.body.contains(dragImage)) {
+                    document.body.removeChild(dragImage);
+                    console.log(`🎯 DRAG START: Removed temporary drag image`);
+                }
+            }, 0);
         };
 
         const dragEndHandler = (e) => {
@@ -292,12 +331,18 @@ class DestinationManager {
         const dropHandler = (e) => {
             e.preventDefault();
             e.stopPropagation();
+            console.log(`🎯 DROP HANDLER: Triggered for index ${index}`);
             console.log(`🎯 DROP: on index ${index}, dragged item: ${this.draggedItem}`);
+            console.log(`🎯 DROP: Event details:`, e);
+            console.log(`🎯 DROP: Destinations before reorder:`, this.destinations.map(d => d.name));
 
             card.classList.remove('drag-over');
 
             if (this.draggedItem !== null && this.draggedItem !== index) {
+                console.log(`🎯 DROP: Valid drop detected, calling reorderDestinations(${this.draggedItem}, ${index})`);
                 this.reorderDestinations(this.draggedItem, index);
+            } else {
+                console.log(`🎯 DROP: Invalid drop - draggedItem: ${this.draggedItem}, dropIndex: ${index}`);
             }
         };
 
@@ -310,10 +355,12 @@ class DestinationManager {
         };
 
         // Add event listeners
+        console.log(`🎯 ADD DRAG HANDLE: Adding event listeners to card ${index}`);
         card.addEventListener('dragstart', dragStartHandler, { passive: false });
         card.addEventListener('dragend', dragEndHandler);
         card.addEventListener('dragover', dragOverHandler);
         card.addEventListener('drop', dropHandler);
+        console.log(`🎯 ADD DRAG HANDLE: Event listeners added to card ${index}`);
 
         // Visual feedback on hover
         dragHandle.addEventListener('mousedown', () => {
@@ -708,23 +755,29 @@ class DestinationManager {
     }
 
     async addCustomDestination(cityName) {
+        console.log(`🌍 ADD CUSTOM DESTINATION: Starting with cityName: '${cityName}'`);
+
         if (!cityName) {
             // Get city name from input if not provided
             cityName = document.getElementById('destination-search-input')?.value?.trim();
+            console.log(`🌍 ADD CUSTOM: Got city name from input: '${cityName}'`);
         }
 
         if (!cityName) {
+            console.log(`🌍 ADD CUSTOM: No city name provided, showing alert`);
             alert('Please enter a city name');
             return;
         }
 
-        console.log(`🌍 Adding custom destination: ${cityName}`);
+        console.log(`🌍 ADD CUSTOM: Adding custom destination: ${cityName}`);
+        console.log(`🌍 ADD CUSTOM: Current destinations before add:`, this.destinations.map(d => d.name));
 
         // Show loading state
         const addBtn = document.querySelector('.btn-add');
         const originalText = addBtn.textContent;
         addBtn.innerHTML = '<div class="btn-spinner"></div> Adding City...';
         addBtn.disabled = true;
+        console.log(`🌍 ADD CUSTOM: Set loading state on button`);
 
         try {
             // Create destination with default coordinates (will be updated)
@@ -734,19 +787,28 @@ class DestinationManager {
                 highlights: ['Loading city information...'],
                 isCustom: true
             };
+            console.log(`🌍 ADD CUSTOM: Created new destination object:`, newDestination);
 
             // Add to destinations immediately for UX
             const modal = document.getElementById('add-destination-modal');
             const insertIndex = parseInt(modal.dataset.insertIndex) || this.destinations.length;
+            console.log(`🌍 ADD CUSTOM: Insert index: ${insertIndex}`);
 
             this.destinations.splice(insertIndex, 0, newDestination);
+            console.log(`🌍 ADD CUSTOM: Added to destinations array at index ${insertIndex}`);
+            console.log(`🌍 ADD CUSTOM: New destinations array:`, this.destinations.map(d => d.name));
+
+            console.log(`🌍 ADD CUSTOM: Calling renderDestinations...`);
             this.renderDestinations();
+            console.log(`🌍 ADD CUSTOM: Calling updateRoute...`);
             this.updateRoute();
 
             // Close modal
+            console.log(`🌍 ADD CUSTOM: Closing modal...`);
             this.closeAddModal();
 
             // Enrich with APIs in background
+            console.log(`🌍 ADD CUSTOM: Starting background enrichment...`);
             await this.enrichCustomDestination(newDestination);
 
         } catch (error) {
@@ -1147,49 +1209,80 @@ class DestinationManager {
     }
 
     updateMapRoute() {
-        console.log('🗺️ Updating map route with', this.destinations.length, 'destinations');
+        console.log('🗺️ UPDATE MAP ROUTE: Starting with', this.destinations.length, 'destinations');
+        console.log('🗺️ UPDATE MAP ROUTE: Destinations to map:', this.destinations.map(d => ({ name: d.name, coords: d.coordinates })));
+
+        // Check what map objects are available
+        console.log('🗺️ AVAILABLE OBJECTS:');
+        console.log('  - window.updateMapRoute:', typeof window.updateMapRoute);
+        console.log('  - window.spotlightMapController:', !!window.spotlightMapController);
+        console.log('  - window.map:', !!window.map);
+        console.log('  - window.updateSpotlightRoute:', typeof window.updateSpotlightRoute);
+
         try {
             // Try multiple map update strategies
             let updated = false;
 
             // Strategy 1: Global updateMapRoute function
             if (typeof window.updateMapRoute === 'function') {
-                console.log('📍 Using global updateMapRoute function');
-                window.updateMapRoute(this.destinations);
-                updated = true;
+                console.log('📍 UPDATE MAP: Using global updateMapRoute function');
+                try {
+                    window.updateMapRoute(this.destinations);
+                    console.log('📍 UPDATE MAP: Global updateMapRoute called successfully');
+                    updated = true;
+                } catch (err) {
+                    console.error('📍 UPDATE MAP: Global updateMapRoute failed:', err);
+                }
             }
 
             // Strategy 2: Spotlight map controller
             if (window.spotlightMapController && window.spotlightMapController.updateRoute) {
-                console.log('📍 Using spotlight map controller');
-                window.spotlightMapController.updateRoute(this.destinations);
-                updated = true;
+                console.log('📍 UPDATE MAP: Using spotlight map controller');
+                try {
+                    window.spotlightMapController.updateRoute(this.destinations);
+                    console.log('📍 UPDATE MAP: Spotlight map controller called successfully');
+                    updated = true;
+                } catch (err) {
+                    console.error('📍 UPDATE MAP: Spotlight map controller failed:', err);
+                }
             }
 
             // Strategy 3: Direct map update
             if (window.map) {
-                console.log('📍 Using direct map update');
-                this.directMapUpdate();
-                updated = true;
+                console.log('📍 UPDATE MAP: Using direct map update');
+                try {
+                    this.directMapUpdate();
+                    console.log('📍 UPDATE MAP: Direct map update called successfully');
+                    updated = true;
+                } catch (err) {
+                    console.error('📍 UPDATE MAP: Direct map update failed:', err);
+                }
             }
 
             // Strategy 4: Custom event dispatch
             if (!updated) {
-                console.log('📍 Triggering custom map update event');
+                console.log('📍 UPDATE MAP: Triggering custom map update event');
                 const event = new CustomEvent('routeUpdated', {
                     detail: { destinations: this.destinations }
                 });
                 document.dispatchEvent(event);
+                console.log('📍 UPDATE MAP: Custom event dispatched');
 
                 // Also try to update via spotlight.js if available
                 if (window.updateSpotlightRoute) {
-                    window.updateSpotlightRoute(this.destinations);
+                    console.log('📍 UPDATE MAP: Calling window.updateSpotlightRoute');
+                    try {
+                        window.updateSpotlightRoute(this.destinations);
+                        console.log('📍 UPDATE MAP: window.updateSpotlightRoute called successfully');
+                    } catch (err) {
+                        console.error('📍 UPDATE MAP: window.updateSpotlightRoute failed:', err);
+                    }
                 }
             }
 
-            console.log('✅ Map route update completed');
+            console.log('✅ UPDATE MAP: Map route update completed, updated =', updated);
         } catch (error) {
-            console.warn('⚠️ Map update failed:', error);
+            console.error('⚠️ UPDATE MAP: Map update failed with error:', error);
         }
     }
 
@@ -1333,47 +1426,76 @@ class DestinationManager {
     }
 
     renderDestinations() {
-        console.log('🔄 Rendering destinations:', this.destinations);
+        console.log('🔄 RENDER DESTINATIONS: Starting render...');
+        console.log('🔄 RENDER: Destinations to render:', this.destinations.length);
+        console.log('🔄 RENDER: Destination names:', this.destinations.map(d => d.name));
+        console.log('🔄 RENDER: Full destinations:', this.destinations);
+
         const container = document.getElementById('citiesContainer');
+        console.log('🔄 RENDER: Cities container found:', !!container);
+
         if (!container) {
-            console.warn('❌ Cities container not found!');
-            console.log('🔍 Available elements with "cities":', document.querySelectorAll('[id*="cities"]'));
+            console.warn('❌ RENDER: Cities container not found!');
+            console.log('🔍 RENDER: Available elements with "cities":', document.querySelectorAll('[id*="cities"]'));
+            console.log('🔍 RENDER: All elements with city-related classes:', document.querySelectorAll('.city-card, .cities-container, .cities-section'));
             return;
         }
 
+        console.log('🔄 RENDER: Container found, clearing contents...');
         // Clear container completely
         container.innerHTML = '';
+        console.log('🔄 RENDER: Container cleared');
 
         // Re-render all city cards with current destinations
+        console.log('🔄 RENDER: Creating city cards...');
         this.destinations.forEach((dest, index) => {
+            console.log(`🔄 RENDER: Creating card ${index} for ${dest.name}`);
             const cityCard = this.createCityCard(dest, index);
+            console.log(`🔄 RENDER: Created card for ${dest.name}:`, cityCard);
             container.appendChild(cityCard);
+            console.log(`🔄 RENDER: Appended card ${index} to container`);
         });
+
+        console.log('🔄 RENDER: All cards created and appended');
+        console.log('🔄 RENDER: Container now has', container.children.length, 'children');
 
         // Re-apply edit mode if active
         if (this.isEditing) {
+            console.log('🔄 RENDER: Edit mode is active, re-applying edit controls...');
             setTimeout(() => {
+                console.log('🔄 RENDER: Calling enterEditMode()...');
                 this.enterEditMode();
             }, 100);
+        } else {
+            console.log('🔄 RENDER: Edit mode not active');
         }
 
-        console.log('✅ Rendered', this.destinations.length, 'destinations');
+        console.log('✅ RENDER: Rendered', this.destinations.length, 'destinations successfully');
     }
 
     createCityCard(destination, index) {
+        console.log(`🏠 CREATE CITY CARD: Creating card for ${destination.name} at index ${index}`);
+        console.log(`🏠 CREATE CARD: Destination data:`, destination);
+
         const cityCard = document.createElement('div');
         cityCard.className = 'city-card';
         cityCard.dataset.index = index;
+        console.log(`🏠 CREATE CARD: Created div element with class 'city-card'`);
 
         // Create city card content matching the existing structure
+        const highlights = this.formatCityHighlights(destination.highlights || destination.description);
+        console.log(`🏠 CREATE CARD: Formatted highlights:`, highlights);
+
         cityCard.innerHTML = `
             <div class="city-info">
                 <h3 class="city-name">${destination.name}</h3>
                 <div class="city-highlights">
-                    ${this.formatCityHighlights(destination.highlights || destination.description)}
+                    ${highlights}
                 </div>
             </div>
         `;
+        console.log(`🏠 CREATE CARD: Set innerHTML for ${destination.name}`);
+        console.log(`🏠 CREATE CARD: Final card structure:`, cityCard.outerHTML);
 
         return cityCard;
     }
@@ -1529,41 +1651,72 @@ class DestinationManager {
     }
 
     reorderDestinations(fromIndex, toIndex) {
-        console.log(`🔄 Reordering: moving ${fromIndex} to ${toIndex}`);
+        console.log(`🔄 REORDER DESTINATIONS: Starting reorder from ${fromIndex} to ${toIndex}`);
+        console.log(`🔄 REORDER: Current destinations:`, this.destinations.map(d => d.name));
+        console.log(`🔄 REORDER: Moving destination: ${this.destinations[fromIndex]?.name}`);
 
-        if (fromIndex === toIndex) return;
+        if (fromIndex === toIndex) {
+            console.log(`🔄 REORDER: Indices are the same, skipping`);
+            return;
+        }
 
         // Move the destination
         const draggedDestination = this.destinations[fromIndex];
-        this.destinations.splice(fromIndex, 1);
-        this.destinations.splice(toIndex, 0, draggedDestination);
+        console.log(`🔄 REORDER: Extracted destination:`, draggedDestination);
 
-        console.log('🔄 New order:', this.destinations.map(d => d.name));
+        this.destinations.splice(fromIndex, 1);
+        console.log(`🔄 REORDER: After removing from ${fromIndex}:`, this.destinations.map(d => d.name));
+
+        this.destinations.splice(toIndex, 0, draggedDestination);
+        console.log(`🔄 REORDER: After inserting at ${toIndex}:`, this.destinations.map(d => d.name));
+
+        console.log('🔄 REORDER: New order final:', this.destinations.map(d => d.name));
 
         // Re-render and update everything
+        console.log('🔄 REORDER: Calling renderDestinations...');
         this.renderDestinations();
+        console.log('🔄 REORDER: Calling updateRoute...');
         this.updateRoute();
+        console.log('🔄 REORDER: Reorder complete');
     }
 }
 
 // Initialize when DOM is ready
 let destinationManager;
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('🔍 Destination Manager: Checking page for initialization...');
-    console.log('Current path:', window.location.pathname);
-    console.log('Page title:', document.title);
+    console.log('🔍 INITIALIZATION: DOM Content Loaded - Checking page for initialization...');
+    console.log('🔍 INIT: Current path:', window.location.pathname);
+    console.log('🔍 INIT: Page title:', document.title);
+    console.log('🔍 INIT: Document ready state:', document.readyState);
+
+    // Log all potential spotlight page indicators
+    console.log('🔍 INIT: Page indicators:');
+    console.log('  - Path includes spotlight:', window.location.pathname.includes('spotlight'));
+    console.log('  - .spotlight-main element:', !!document.querySelector('.spotlight-main'));
+    console.log('  - #citiesContainer element:', !!document.querySelector('#citiesContainer'));
+    console.log('  - .cities-container element:', !!document.querySelector('.cities-container'));
+    console.log('  - .city-card elements:', document.querySelectorAll('.city-card').length);
 
     // Check multiple conditions to ensure we're on the right page
     const isSpotlightPage = window.location.pathname.includes('spotlight') ||
                            document.querySelector('.spotlight-main') ||
                            document.querySelector('#citiesContainer');
 
+    console.log('🔍 INIT: Is spotlight page?', isSpotlightPage);
+
     if (isSpotlightPage) {
-        console.log('✅ Destination Manager: Initializing on spotlight page');
-        destinationManager = new DestinationManager();
-        window.destinationManager = destinationManager; // Make globally accessible
+        console.log('✅ INITIALIZATION: Detected spotlight page - Initializing Destination Manager...');
+        try {
+            destinationManager = new DestinationManager();
+            window.destinationManager = destinationManager; // Make globally accessible
+            console.log('✅ INITIALIZATION: Destination Manager initialized successfully');
+            console.log('🔍 INIT: Global destinationManager object:', window.destinationManager);
+        } catch (error) {
+            console.error('❌ INITIALIZATION: Failed to initialize Destination Manager:', error);
+        }
     } else {
-        console.log('❌ Destination Manager: Not a spotlight page, skipping initialization');
+        console.log('❌ INITIALIZATION: Not a spotlight page, skipping initialization');
+        console.log('🔍 INIT: Available elements:', document.body.innerHTML.substring(0, 500) + '...');
     }
 });
 
