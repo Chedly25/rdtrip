@@ -1600,16 +1600,24 @@ class DestinationManager {
                 // Call recalculateRoute with new waypoints if available
                 if (typeof window.spotlightController.recalculateRoute === 'function') {
                     // Convert destinations to waypoint format that spotlight expects
-                    const waypoints = this.destinations.map(dest => ({
-                        name: dest.name,
-                        lat: dest.coordinates ? dest.coordinates[1] : 0,
-                        lng: dest.coordinates ? dest.coordinates[0] : 0,
-                        description: dest.description || '',
-                        activities: dest.activities || dest.highlights || []
-                    }));
+                    const waypoints = this.destinations
+                        .filter(dest => dest.coordinates && dest.coordinates[0] !== 0 && dest.coordinates[1] !== 0)
+                        .map(dest => ({
+                            name: dest.name,
+                            lat: dest.coordinates[1],
+                            lng: dest.coordinates[0],
+                            description: dest.description || '',
+                            activities: dest.activities || dest.highlights || []
+                        }));
 
-                    await window.spotlightController.recalculateRoute(waypoints);
-                    console.log('🗺️ DIRECT MAP: Called spotlight recalculateRoute() with formatted waypoints');
+                    console.log('🗺️ DIRECT MAP: Filtered waypoints with valid coordinates:', waypoints.map(w => `${w.name}: [${w.lng}, ${w.lat}]`));
+
+                    if (waypoints.length > 0) {
+                        await window.spotlightController.recalculateRoute(waypoints);
+                        console.log('🗺️ DIRECT MAP: Called spotlight recalculateRoute() with formatted waypoints');
+                    } else {
+                        console.warn('🗺️ DIRECT MAP: No destinations with valid coordinates found');
+                    }
                 }
 
                 console.log('🗺️ DIRECT MAP: Successfully updated spotlight waypoints and route');
@@ -1826,6 +1834,35 @@ class DestinationManager {
             console.log(`🔄 RENDER: Appended card ${index} to container`);
         });
 
+        // Add click event listeners for modal functionality
+        container.querySelectorAll('.city-card').forEach(card => {
+            card.addEventListener('click', (e) => {
+                // Only trigger modal if not clicking on control buttons
+                if (e.target.closest('.add-stop-btn, .move-up-btn, .move-down-btn, .remove-btn')) {
+                    return;
+                }
+
+                const cityName = card.getAttribute('data-city-name');
+                const cityImage = card.getAttribute('data-city-image');
+                const cityDescription = card.getAttribute('data-city-description');
+                const cityActivities = card.getAttribute('data-city-activities');
+
+                let activities = [];
+                try {
+                    if (cityActivities) {
+                        activities = JSON.parse(decodeURIComponent(cityActivities));
+                    }
+                } catch (err) {
+                    console.warn('Could not parse activities:', err);
+                }
+
+                // Use spotlight modal if available
+                if (window.spotlightController && typeof window.spotlightController.showCityModal === 'function') {
+                    window.spotlightController.showCityModal(cityName, cityImage, cityDescription, activities);
+                }
+            });
+        });
+
         console.log('🔄 RENDER: All cards created and appended');
         console.log('🔄 RENDER: Container now has', container.children.length, 'children');
 
@@ -1857,20 +1894,33 @@ class DestinationManager {
         console.log(`🏠 CREATE CARD: Formatted highlights:`, highlights);
         console.log(`🏠 CREATE CARD: Wikipedia image for ${destination.name}:`, destination.wikipediaImage);
 
-        // Create city card with Wikipedia image if available
+        // Use spotlight.js compatible structure with data attributes for modal
+        cityCard.setAttribute('data-city-name', destination.name);
+        cityCard.setAttribute('data-city-image', destination.wikipediaImage || '');
+        cityCard.setAttribute('data-city-description', destination.description || '');
+        cityCard.setAttribute('data-city-activities', encodeURIComponent(JSON.stringify(destination.activities || destination.highlights || [])));
+        cityCard.style.cursor = 'pointer';
+
         const imageSection = destination.wikipediaImage ? `
-            <div class="city-image">
-                <img src="${destination.wikipediaImage}" alt="${destination.name}" class="city-thumbnail" onerror="this.style.display='none'">
+            <div class="city-image-container">
+                <img src="${destination.wikipediaImage}" alt="${destination.name}" class="city-image"
+                     onload="this.classList.add('loaded')"
+                     onerror="this.style.display='none'">
             </div>
-        ` : '';
+        ` : `
+            <div class="city-image-container">
+                <div class="no-image-placeholder">
+                    <div class="no-image-icon">🏛️</div>
+                    <div class="no-image-text">${destination.name}</div>
+                </div>
+            </div>
+        `;
 
         cityCard.innerHTML = `
             ${imageSection}
-            <div class="city-info">
-                <h3 class="city-name">${destination.name}</h3>
-                <div class="city-highlights">
-                    ${highlights}
-                </div>
+            <div class="city-content">
+                <h3>${destination.name}</h3>
+                ${highlights}
             </div>
         `;
         console.log(`🏠 CREATE CARD: Set innerHTML for ${destination.name} with image:`, !!destination.wikipediaImage);
@@ -1881,11 +1931,11 @@ class DestinationManager {
 
     formatCityHighlights(highlights) {
         if (!highlights) {
-            return '<p>Beautiful destination with unique attractions</p>';
+            return '<p class="no-activities">Click to see details</p>';
         }
 
         if (Array.isArray(highlights)) {
-            return `<ul>${highlights.slice(0, 3).map(h => `<li>${h}</li>`).join('')}</ul>`;
+            return `<ul class="city-activities">${highlights.slice(0, 3).map(h => `<li>${h}</li>`).join('')}</ul>`;
         }
 
         if (typeof highlights === 'string') {
@@ -1897,7 +1947,7 @@ class DestinationManager {
                     const cleaned = item.replace(/^[-•*\\d.]\\s*/, '').trim();
                     return cleaned.length > 40 ? cleaned.substring(0, 37) + '...' : cleaned;
                 });
-                return `<ul>${items.map(item => `<li>${item}</li>`).join('')}</ul>`;
+                return `<ul class="city-activities">${items.map(item => `<li>${item}</li>`).join('')}</ul>`;
             } else {
                 const truncated = highlights.length > 100 ? highlights.substring(0, 97) + '...' : highlights;
                 return `<p>${truncated}</p>`;
