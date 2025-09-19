@@ -127,6 +127,8 @@ class DestinationManager {
     }
 
     enterEditMode() {
+        console.log('🎬 Entering edit mode...');
+
         // Add remove buttons to all city cards
         const cityCards = document.querySelectorAll('.city-card');
         cityCards.forEach((card, index) => {
@@ -134,24 +136,61 @@ class DestinationManager {
             this.addDragHandle(card, index);
         });
 
+        // Add main "Add Destination" button
+        this.addMainDestinationButton();
+
         // Add "Add Stop" buttons between cities
         this.addInsertButtons();
 
         // Show optimization toolbar
         this.showOptimizationToolbar();
+
+        console.log('✅ Edit mode activated');
+    }
+
+    addMainDestinationButton() {
+        const citiesContainer = document.getElementById('cities-container');
+        if (!citiesContainer) return;
+
+        // Check if button already exists
+        if (document.getElementById('main-add-destination-btn')) return;
+
+        const mainAddBtn = document.createElement('button');
+        mainAddBtn.id = 'main-add-destination-btn';
+        mainAddBtn.className = 'add-destination-main';
+        mainAddBtn.innerHTML = `
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 5v14m-7-7h14"/>
+            </svg>
+            Add New Destination
+        `;
+        mainAddBtn.onclick = () => this.showAddDestinationModal(this.destinations.length);
+
+        // Add at the end of the cities container
+        citiesContainer.appendChild(mainAddBtn);
     }
 
     exitEditMode() {
+        console.log('🎬 Exiting edit mode...');
+
         // Remove all edit controls
         document.querySelectorAll('.remove-city-btn').forEach(btn => btn.remove());
         document.querySelectorAll('.drag-handle').forEach(handle => handle.remove());
         document.querySelectorAll('.add-stop-btn').forEach(btn => btn.remove());
+
+        // Remove main add destination button
+        const mainAddBtn = document.getElementById('main-add-destination-btn');
+        if (mainAddBtn) {
+            mainAddBtn.remove();
+        }
 
         // Hide optimization toolbar
         this.hideOptimizationToolbar();
 
         // Save changes
         this.saveRoute();
+
+        console.log('✅ Edit mode deactivated');
     }
 
     addRemoveButton(card, index) {
@@ -219,26 +258,27 @@ class DestinationManager {
     }
 
     removeDestination(index) {
+        console.log(`🗑️ Removing destination at index ${index}:`, this.destinations[index]);
+
         // Confirm removal
         if (!confirm(`Remove ${this.destinations[index].name} from your route?`)) {
             return;
         }
 
+        const removedCity = this.destinations[index];
+
         // Remove from array
         this.destinations.splice(index, 1);
+        console.log('✅ Destination removed. Remaining destinations:', this.destinations);
 
-        // Animate removal
-        const cityCards = document.querySelectorAll('.city-card');
-        const cardToRemove = cityCards[index];
+        // Immediately re-render and update
+        this.renderDestinations();
+        this.updateRoute();
 
-        cardToRemove.style.transform = 'translateX(100%)';
-        cardToRemove.style.opacity = '0';
+        // Also update the detailed itinerary if it exists
+        this.updateDetailedItinerary();
 
-        setTimeout(() => {
-            // Recalculate and update UI
-            this.updateRoute();
-            this.renderDestinations();
-        }, 300);
+        console.log(`✅ Successfully removed ${removedCity.name} from route`);
     }
 
     showAddDestinationModal(insertIndex) {
@@ -430,7 +470,7 @@ class DestinationManager {
         document.getElementById('search-suggestions').innerHTML = '';
     }
 
-    addSelectedDestination() {
+    async addSelectedDestination() {
         if (!this.selectedDestination) {
             alert('Please select a destination');
             return;
@@ -439,25 +479,109 @@ class DestinationManager {
         const modal = document.getElementById('add-destination-modal');
         const insertIndex = parseInt(modal.dataset.insertIndex) || 0;
 
-        // Enhance destination with description
-        const enhancedDestination = {
-            ...this.selectedDestination,
-            description: `Beautiful ${this.selectedDestination.name} with amazing attractions and experiences`,
-            highlights: [`Explore ${this.selectedDestination.name}`, `Local cuisine`, `Historic sites`],
-            added: new Date().toISOString()
-        };
+        // Show loading state
+        const addButton = modal.querySelector('.btn-add');
+        const originalText = addButton.innerHTML;
+        addButton.innerHTML = '<div class="btn-spinner"></div> Adding...';
+        addButton.disabled = true;
 
-        // Add to destinations array
-        this.destinations.splice(insertIndex, 0, enhancedDestination);
+        try {
+            // Enhance destination with AI-generated description
+            const enhancedDestination = await this.enrichDestinationData(this.selectedDestination);
 
-        console.log(`✅ Added ${enhancedDestination.name} to route at position ${insertIndex}`);
+            // Add to destinations array
+            this.destinations.splice(insertIndex, 0, enhancedDestination);
 
-        // Close modal
-        this.closeAddModal();
+            console.log(`✅ Added ${enhancedDestination.name} to route at position ${insertIndex}`);
 
-        // Update route
-        this.updateRoute();
-        this.renderDestinations();
+            // Close modal
+            this.closeAddModal();
+
+            // Update route
+            this.updateRoute();
+            this.renderDestinations();
+            this.updateDetailedItinerary();
+
+        } catch (error) {
+            console.error('❌ Error adding destination:', error);
+
+            // Fallback: add basic destination
+            const basicDestination = {
+                ...this.selectedDestination,
+                description: `Beautiful ${this.selectedDestination.name} with amazing attractions and experiences`,
+                highlights: [`Explore ${this.selectedDestination.name}`, `Local cuisine`, `Historic sites`],
+                added: new Date().toISOString()
+            };
+
+            this.destinations.splice(insertIndex, 0, basicDestination);
+            this.closeAddModal();
+            this.updateRoute();
+            this.renderDestinations();
+            this.updateDetailedItinerary();
+        } finally {
+            // Restore button state
+            addButton.innerHTML = originalText;
+            addButton.disabled = false;
+        }
+    }
+
+    async enrichDestinationData(destination) {
+        console.log(`🤖 Enriching data for ${destination.name}...`);
+
+        try {
+            // Call Perplexity API for rich destination description
+            const response = await fetch('/api/perplexity', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    query: `Provide 3-4 key highlights and attractions for ${destination.name}. Focus on must-see places, activities, and unique experiences. Format as bullet points.`
+                })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                const highlights = this.parseHighlightsFromAI(data.content);
+
+                return {
+                    ...destination,
+                    description: `Discover ${destination.name}, a captivating destination with rich culture and amazing attractions`,
+                    highlights: highlights,
+                    aiGenerated: true,
+                    added: new Date().toISOString()
+                };
+            } else {
+                throw new Error('Perplexity API request failed');
+            }
+        } catch (error) {
+            console.warn('⚠️ AI enrichment failed, using fallback data:', error);
+
+            // Fallback to basic destination data
+            return {
+                ...destination,
+                description: `Beautiful ${destination.name} with amazing attractions and experiences`,
+                highlights: [`Explore ${destination.name}`, `Local cuisine`, `Historic sites`, `Local culture`],
+                added: new Date().toISOString()
+            };
+        }
+    }
+
+    parseHighlightsFromAI(content) {
+        // Extract bullet points or numbered items from AI response
+        const bulletPoints = content.match(/[-•*]\\s*([^\\n\\r]+)/g) ||
+                           content.match(/\\d+\\.\\s*([^\\n\\r]+)/g) ||
+                           content.split('.').filter(item => item.trim().length > 10);
+
+        if (bulletPoints && bulletPoints.length > 0) {
+            return bulletPoints.slice(0, 4).map(point => {
+                const cleaned = point.replace(/^[-•*\\d.]\\s*/, '').trim();
+                return cleaned.length > 60 ? cleaned.substring(0, 57) + '...' : cleaned;
+            });
+        }
+
+        // Fallback highlights
+        return ['Historic landmarks', 'Local cuisine', 'Cultural attractions', 'Scenic views'];
     }
 
     closeAddModal() {
@@ -796,24 +920,89 @@ class DestinationManager {
         console.log('💾 Route metadata updated in storage');
     }
 
+    updateDetailedItinerary() {
+        // Clear existing itinerary if present
+        const itineraryContainer = document.getElementById('itineraryContainer');
+        if (itineraryContainer) {
+            itineraryContainer.innerHTML = `
+                <div class="itinerary-placeholder">
+                    <p>Route updated! Click "Generate Day-by-Day Plan" to get a detailed itinerary with your new destinations.</p>
+                </div>
+            `;
+        }
+    }
+
     renderDestinations() {
+        console.log('🔄 Rendering destinations:', this.destinations);
         const container = document.getElementById('cities-container');
-        if (!container) return;
+        if (!container) {
+            console.warn('❌ Cities container not found!');
+            return;
+        }
+
+        // Clear container completely
+        container.innerHTML = '';
 
         // Re-render all city cards with current destinations
-        container.innerHTML = this.destinations.map((dest, index) => `
-            <div class="city-card" data-index="${index}">
-                <div class="city-info">
-                    <h3>${dest.name}</h3>
-                    <p>${dest.description || 'Amazing destination'}</p>
-                </div>
-            </div>
-        `).join('');
+        this.destinations.forEach((dest, index) => {
+            const cityCard = this.createCityCard(dest, index);
+            container.appendChild(cityCard);
+        });
 
         // Re-apply edit mode if active
         if (this.isEditing) {
-            this.enterEditMode();
+            setTimeout(() => {
+                this.enterEditMode();
+            }, 100);
         }
+
+        console.log('✅ Rendered', this.destinations.length, 'destinations');
+    }
+
+    createCityCard(destination, index) {
+        const cityCard = document.createElement('div');
+        cityCard.className = 'city-card';
+        cityCard.dataset.index = index;
+
+        // Create city card content matching the existing structure
+        cityCard.innerHTML = `
+            <div class="city-info">
+                <h3 class="city-name">${destination.name}</h3>
+                <div class="city-highlights">
+                    ${this.formatCityHighlights(destination.highlights || destination.description)}
+                </div>
+            </div>
+        `;
+
+        return cityCard;
+    }
+
+    formatCityHighlights(highlights) {
+        if (!highlights) {
+            return '<p>Beautiful destination with unique attractions</p>';
+        }
+
+        if (Array.isArray(highlights)) {
+            return `<ul>${highlights.slice(0, 3).map(h => `<li>${h}</li>`).join('')}</ul>`;
+        }
+
+        if (typeof highlights === 'string') {
+            // Look for bullet points or numbered lists
+            const listItems = highlights.match(/[-•*]\\s*([^\\n\\r]+)/g) ||
+                            highlights.match(/\\d+\\.\\s*([^\\n\\r]+)/g);
+            if (listItems) {
+                const items = listItems.slice(0, 3).map(item => {
+                    const cleaned = item.replace(/^[-•*\\d.]\\s*/, '').trim();
+                    return cleaned.length > 40 ? cleaned.substring(0, 37) + '...' : cleaned;
+                });
+                return `<ul>${items.map(item => `<li>${item}</li>`).join('')}</ul>`;
+            } else {
+                const truncated = highlights.length > 100 ? highlights.substring(0, 97) + '...' : highlights;
+                return `<p>${truncated}</p>`;
+            }
+        }
+
+        return '<p>Beautiful destination with unique attractions</p>';
     }
 
     // Drag and Drop Handlers
