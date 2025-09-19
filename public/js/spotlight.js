@@ -2066,7 +2066,13 @@ class SpotlightController {
                 return passedWaypoints;
             }
 
-            // PRIORITY 1: If landmarks overlay has an optimized route, use it directly
+            // PRIORITY 1: If we have optimized waypoints stored in spotlightData (from adding landmarks)
+            if (this.spotlightData?.waypoints && Array.isArray(this.spotlightData.waypoints) && this.spotlightData.waypoints.length > 0) {
+                // These are already optimized waypoints that include landmarks in the correct order
+                return this.spotlightData.waypoints;
+            }
+
+            // PRIORITY 2: If landmarks overlay has an optimized route, use it directly
             if (window.landmarksOverlay?.currentRoute?.waypoints && Array.isArray(window.landmarksOverlay.currentRoute.waypoints)) {
                 const optimizedWaypoints = window.landmarksOverlay.currentRoute.waypoints
                     .filter(wp => wp && wp.name && wp.lng != null && wp.lat != null)
@@ -2102,7 +2108,7 @@ class SpotlightController {
                 allWaypoints.push(...cityWaypoints);
             }
 
-            // 3. Add landmarks from selected landmarks (fallback approach)
+            // 4. Add landmarks from selected landmarks (fallback approach)
             if (window.landmarksOverlay?.selectedLandmarks) {
                 const landmarkWaypoints = window.landmarksOverlay.landmarks
                     .filter(landmark => window.landmarksOverlay.selectedLandmarks.has(landmark.id))
@@ -2115,7 +2121,7 @@ class SpotlightController {
                 allWaypoints.push(...landmarkWaypoints);
             }
 
-            // 4. Add landmarks that were added via the spotlight page
+            // 5. Add landmarks that were added via the spotlight page
             if (this.spotlightData?.addedLandmarks && this.spotlightData.addedLandmarks.length > 0) {
                 const addedLandmarkWaypoints = this.spotlightData.addedLandmarks.map(landmark => ({
                     name: landmark.name,
@@ -2129,7 +2135,7 @@ class SpotlightController {
                 allWaypoints.push(...addedLandmarkWaypoints);
             }
 
-            // 5. If waypoints were passed directly (for backward compatibility), add them too
+            // 6. If waypoints were passed directly (for backward compatibility), add them too
             if (passedWaypoints && Array.isArray(passedWaypoints)) {
                 const formattedPassed = passedWaypoints
                     .filter(wp => wp && wp.name)
