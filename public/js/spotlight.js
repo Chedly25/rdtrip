@@ -1099,14 +1099,22 @@ class SpotlightController {
                             let activities = waypoint.activities || [];
 
                             if ((!activities || activities.length === 0) && waypoint.description) {
-                                // Try to extract activities from description
-                                const descLines = waypoint.description.split(/[.!?]/)
-                                    .filter(line => line.trim())
-                                    .slice(0, 3)
-                                    .map(line => line.trim());
+                                // Try to extract bullet points from description
+                                const bulletMatch = waypoint.description.match(/[-•*]\s*([^\\n\\r]+)/g);
+                                if (bulletMatch && bulletMatch.length > 0) {
+                                    activities = bulletMatch.slice(0, 3).map(item =>
+                                        item.replace(/^[-•*]\\s*/, '').trim()
+                                    );
+                                } else {
+                                    // Fallback: split by sentences
+                                    const descLines = waypoint.description.split(/[.!?]/)
+                                        .filter(line => line.trim() && line.length > 10)
+                                        .slice(0, 3)
+                                        .map(line => line.trim());
 
-                                if (descLines.length > 0) {
-                                    activities = descLines;
+                                    if (descLines.length > 0) {
+                                        activities = descLines;
+                                    }
                                 }
                             }
 
