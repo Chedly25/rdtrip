@@ -2975,7 +2975,8 @@ class SpotlightController {
 
         console.log('🚀 SPOTLIGHT OPTIMIZATION: Optimizing route with', waypoints.length, 'waypoints');
         console.log('🚀 SPOTLIGHT OPTIMIZATION: Input order:', waypoints.map(wp => wp.name));
-        console.log('🚀 SPOTLIGHT OPTIMIZATION: Waypoint types:', waypoints.map(wp => `${wp.name}: ${wp.type}`));
+        console.log('🚀 SPOTLIGHT OPTIMIZATION: Waypoint types:');
+        waypoints.forEach(wp => console.log(`  - ${wp.name}: ${wp.type || 'undefined'}`));
 
         // Hardcode start point as Aix-en-Provence
         const startPoint = { name: 'Aix-en-Provence', lat: 43.5297, lng: 5.4474, type: 'start' };
