@@ -618,9 +618,16 @@ class LandmarksOverlay {
                 }
             }
 
-            // Client-side optimal insertion instead of relying on server
-            const optimalPosition = this.findOptimalInsertPosition(combinedWaypoints, landmark);
-            console.log('🗺️ LANDMARK ADD: Optimal position calculated:', optimalPosition, 'out of', combinedWaypoints.length);
+            // Include destination in optimization to prevent landmarks from always appearing before destination
+            const destinationCoords = { name: 'Barcelona', lat: 41.3851, lng: 2.1734, type: 'destination' };
+            const waypointsWithDestination = [...combinedWaypoints, destinationCoords];
+
+            console.log('🗺️ LANDMARK ADD: Including destination in optimization');
+            console.log('🗺️ LANDMARK ADD: Waypoints with destination:', waypointsWithDestination.map(wp => wp.name));
+
+            // Client-side optimal insertion considering full route including destination
+            const optimalPosition = this.findOptimalInsertPosition(waypointsWithDestination, landmark);
+            console.log('🗺️ LANDMARK ADD: Optimal position calculated:', optimalPosition, 'out of', waypointsWithDestination.length);
 
             // Create landmark waypoint
             const landmarkWaypoint = {
@@ -634,13 +641,16 @@ class LandmarksOverlay {
                 image_url: landmark.image_url
             };
 
-            // Insert landmark at optimal position
-            combinedWaypoints.splice(optimalPosition, 0, landmarkWaypoint);
+            // Insert landmark at optimal position in the full route (including destination)
+            waypointsWithDestination.splice(optimalPosition, 0, landmarkWaypoint);
+
+            // Remove destination from waypoints for storage (it will be added back by spotlight controller)
+            const finalWaypoints = waypointsWithDestination.filter(wp => wp.type !== 'destination');
 
             // Update route directly without server optimization
             this.currentRoute = {
                 ...this.currentRoute,
-                waypoints: combinedWaypoints
+                waypoints: finalWaypoints
             };
 
             this.selectedLandmarks.add(landmarkId);
