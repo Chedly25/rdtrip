@@ -1977,8 +1977,8 @@ class SpotlightController {
         // Update localStorage
         localStorage.setItem('spotlightData', JSON.stringify(this.spotlightData));
 
-        // Add landmark marker to map with special styling
-        this.addLandmarkMarkerToRoute(landmark);
+        // Skip adding duplicate marker - landmark already displayed via native layer
+        // this.addLandmarkMarkerToRoute(landmark);
 
         // Recalculate and redraw route
         this.recalculateRoute(updatedWaypoints);
