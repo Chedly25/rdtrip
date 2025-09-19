@@ -2984,20 +2984,26 @@ class SpotlightController {
         // Try to find destination (prefer cities over landmarks as destination)
         let destinationPoint = waypoints.find(wp => wp.type === 'destination');
 
-        // If no explicit destination found, prioritize cities over landmarks as destination
+        // If no explicit destination found, determine the true destination
         if (!destinationPoint && waypoints.length > 0) {
-            // First, try to find a city type to use as destination
-            const cityWaypoints = waypoints.filter(wp => wp.type === 'city');
-            console.log('🚀 SPOTLIGHT OPTIMIZATION: Found', cityWaypoints.length, 'city waypoints:', cityWaypoints.map(wp => wp.name));
+            // Strategy: Find the original route destination (usually the last city added to the route)
+            // Landmarks should NEVER be destinations - they are waypoints along the route
 
-            if (cityWaypoints.length > 0) {
-                // Use the last city as destination (cities are usually the main travel destinations)
-                destinationPoint = cityWaypoints[cityWaypoints.length - 1];
-                console.log('🚀 SPOTLIGHT OPTIMIZATION: Using last city as destination:', destinationPoint.name);
+            // First, separate landmarks from cities/locations
+            const landmarkWaypoints = waypoints.filter(wp => wp.type === 'cultural' || wp.isLandmark === true);
+            const nonLandmarkWaypoints = waypoints.filter(wp => wp.type !== 'cultural' && wp.isLandmark !== true);
+
+            console.log('🚀 SPOTLIGHT OPTIMIZATION: Found', landmarkWaypoints.length, 'landmarks:', landmarkWaypoints.map(wp => wp.name));
+            console.log('🚀 SPOTLIGHT OPTIMIZATION: Found', nonLandmarkWaypoints.length, 'non-landmarks:', nonLandmarkWaypoints.map(wp => wp.name));
+
+            // Use the last non-landmark waypoint as destination (this preserves the user's original destination)
+            if (nonLandmarkWaypoints.length > 0) {
+                destinationPoint = nonLandmarkWaypoints[nonLandmarkWaypoints.length - 1];
+                console.log('🚀 SPOTLIGHT OPTIMIZATION: Using last non-landmark as destination:', destinationPoint.name);
             } else {
-                // Fallback: use the last waypoint in the list as destination
+                // Extreme fallback: use the last waypoint in the list as destination
                 destinationPoint = waypoints[waypoints.length - 1];
-                console.log('🚀 SPOTLIGHT OPTIMIZATION: No cities found, using last waypoint as destination:', destinationPoint.name);
+                console.log('🚀 SPOTLIGHT OPTIMIZATION: Emergency fallback, using last waypoint as destination:', destinationPoint.name);
             }
         }
 
