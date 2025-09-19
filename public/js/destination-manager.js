@@ -303,7 +303,11 @@ class DestinationManager {
             </svg>
             Add New Destination
         `;
-        mainAddBtn.onclick = () => this.showAddDestinationModal(this.destinations.length);
+        mainAddBtn.onclick = () => {
+            // For "Add New Destination", find optimal position instead of just adding at end
+            const optimalIndex = this.findOptimalInsertPosition();
+            this.showAddDestinationModal(optimalIndex);
+        };
 
         // Add at the end of the cities container
         citiesContainer.appendChild(mainAddBtn);
@@ -969,8 +973,15 @@ class DestinationManager {
 
             // Add to destinations immediately for UX
             const modal = document.getElementById('add-destination-modal');
-            const insertIndex = parseInt(modal.dataset.insertIndex) || this.destinations.length;
-            console.log(`🌍 ADD CUSTOM: Insert index: ${insertIndex}`);
+            let insertIndex = parseInt(modal.dataset.insertIndex) || this.destinations.length;
+            console.log(`🌍 ADD CUSTOM: Original insert index: ${insertIndex}`);
+
+            // If this was called from "Add New Destination" (at the end), calculate optimal position
+            if (insertIndex === this.destinations.length && this.destinations.length > 0) {
+                const optimalIndex = this.findOptimalInsertPositionForDestination(newDestination);
+                console.log(`🌍 ADD CUSTOM: Using optimal position ${optimalIndex} instead of ${insertIndex}`);
+                insertIndex = optimalIndex;
+            }
 
             this.destinations.splice(insertIndex, 0, newDestination);
             console.log(`🌍 ADD CUSTOM: Added to destinations array at index ${insertIndex}`);
@@ -1535,10 +1546,33 @@ class DestinationManager {
         if (window.spotlightController) {
             console.log('🗺️ DIRECT MAP: Updating spotlight controller waypoints directly');
             try {
-                // Update both spotlightData.waypoints and waypoints property
+                // Update both spotlightData.waypoints and agentData
                 if (window.spotlightController.spotlightData) {
                     window.spotlightController.spotlightData.waypoints = this.destinations;
                     console.log('🗺️ DIRECT MAP: Updated spotlightData.waypoints');
+
+                    // Also update agentData so displayCities() works correctly
+                    if (window.spotlightController.spotlightData.agentData) {
+                        // Convert destinations back to the JSON format that agentData.recommendations expects
+                        const waypointsForAgent = this.destinations.map(dest => ({
+                            name: dest.name,
+                            coordinates: dest.coordinates || [0, 0],
+                            description: dest.description || '',
+                            activities: dest.activities || dest.highlights || [],
+                            duration: dest.duration || '1-2 days'
+                        }));
+
+                        // Update the recommendations JSON within agentData
+                        const agentData = window.spotlightController.spotlightData.agentData;
+                        const updatedRecommendations = JSON.stringify({
+                            waypoints: waypointsForAgent,
+                            description: agentData.recommendations.includes('description') ?
+                                JSON.parse(agentData.recommendations.replace(/```json\s*/g, '').replace(/```\s*/g, '')).description :
+                                'Updated route with new destinations'
+                        });
+                        agentData.recommendations = `\`\`\`json\n${updatedRecommendations}\n\`\`\``;
+                        console.log('🗺️ DIRECT MAP: Updated agentData.recommendations');
+                    }
                 }
 
                 // Also update localStorage so changes persist
@@ -1999,6 +2033,93 @@ class DestinationManager {
             });
             delete card._dragHandlers;
         }
+    }
+
+    findOptimalInsertPosition() {
+        // If no destinations yet, add at the beginning
+        if (this.destinations.length === 0) {
+            return 0;
+        }
+
+        // For now, return the end position (this will be enhanced when we know the destination)
+        // The real optimization happens in addCustomDestination when we have coordinates
+        return this.destinations.length;
+    }
+
+    findOptimalInsertPositionForDestination(newDestination) {
+        // Similar to spotlight's insertLandmarkOptimally method
+        if (this.destinations.length === 0) {
+            return 0;
+        }
+
+        if (!newDestination.coordinates) {
+            // If no coordinates, add at end
+            return this.destinations.length;
+        }
+
+        const newLat = newDestination.coordinates[1];
+        const newLng = newDestination.coordinates[0];
+        const originLat = 43.5297; // Aix-en-Provence
+        const originLng = 5.4474;
+
+        let bestPosition = 0;
+        let minAdditionalDistance = Infinity;
+
+        // Calculate distances for each possible insertion position
+        for (let i = 0; i <= this.destinations.length; i++) {
+            let additionalDistance = 0;
+
+            if (i === 0) {
+                // Insert at beginning
+                const distanceFromOrigin = this.calculateHaversineDistance(originLat, originLng, newLat, newLng);
+                const distanceToFirst = this.destinations.length > 0 && this.destinations[0].coordinates ?
+                    this.calculateHaversineDistance(newLat, newLng, this.destinations[0].coordinates[1], this.destinations[0].coordinates[0]) : 0;
+                const originalDistanceToFirst = this.destinations.length > 0 && this.destinations[0].coordinates ?
+                    this.calculateHaversineDistance(originLat, originLng, this.destinations[0].coordinates[1], this.destinations[0].coordinates[0]) : 0;
+                additionalDistance = distanceFromOrigin + distanceToFirst - originalDistanceToFirst;
+            } else if (i === this.destinations.length) {
+                // Insert at end
+                if (this.destinations[i-1].coordinates) {
+                    additionalDistance = this.calculateHaversineDistance(
+                        this.destinations[i-1].coordinates[1],
+                        this.destinations[i-1].coordinates[0],
+                        newLat,
+                        newLng
+                    );
+                }
+            } else {
+                // Insert between waypoints
+                if (this.destinations[i-1].coordinates && this.destinations[i].coordinates) {
+                    const distanceFromPrev = this.calculateHaversineDistance(
+                        this.destinations[i-1].coordinates[1],
+                        this.destinations[i-1].coordinates[0],
+                        newLat,
+                        newLng
+                    );
+                    const distanceToNext = this.calculateHaversineDistance(
+                        newLat,
+                        newLng,
+                        this.destinations[i].coordinates[1],
+                        this.destinations[i].coordinates[0]
+                    );
+                    const originalDistance = this.calculateHaversineDistance(
+                        this.destinations[i-1].coordinates[1],
+                        this.destinations[i-1].coordinates[0],
+                        this.destinations[i].coordinates[1],
+                        this.destinations[i].coordinates[0]
+                    );
+                    additionalDistance = distanceFromPrev + distanceToNext - originalDistance;
+                }
+            }
+
+            if (additionalDistance < minAdditionalDistance) {
+                minAdditionalDistance = additionalDistance;
+                bestPosition = i;
+            }
+        }
+
+        console.log(`🎯 OPTIMAL POSITION: Best position for ${newDestination.name} is index ${bestPosition} (saves ${(minAdditionalDistance).toFixed(1)} km)`);
+        return bestPosition;
     }
 
     reorderDestinations(fromIndex, toIndex) {
