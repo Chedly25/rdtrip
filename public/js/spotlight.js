@@ -130,6 +130,8 @@ class SpotlightController {
             zoom: 4, // Zoom level to show most of Europe
             minZoom: 3,
             maxZoom: 15,
+            // Force 2D projection instead of 3D globe
+            projection: 'mercator',
             // Disable telemetry collection to prevent ad-blocker issues
             collectResourceTiming: false
         });
@@ -145,13 +147,9 @@ class SpotlightController {
             this.restoreAddedLandmarksFromStorage();
         });
 
-        // Reload landmarks when map is moved/zoomed
-        let landmarkTimeout;
-        this.map.on('moveend', () => {
-            clearTimeout(landmarkTimeout);
-            landmarkTimeout = setTimeout(() => {
-                this.loadLandmarksOnMap();
-            }, 500); // Debounce to avoid too many API calls
+        // Load landmarks once when map is ready (no reloading on movement)
+        this.map.on('load', () => {
+            this.loadLandmarksOnMap();
         });
     }
 
@@ -203,9 +201,6 @@ class SpotlightController {
             
             // Update distance in stats
             this.updateDistanceStats(waypoints, destinationCoords);
-
-            // Load and display European landmarks on the map
-            await this.loadLandmarksOnMap();
         }
     }
 
@@ -237,82 +232,31 @@ class SpotlightController {
                 natural: '#95E77E'
             };
 
-            // Add landmark markers to map
+            // Add landmark markers to map using Mapbox marker API
             landmarks.forEach(landmark => {
                 const color = typeColors[landmark.type] || '#9333EA';
-
-                // Create custom marker element with icon and strict isolation
-                const el = document.createElement('div');
-                el.className = 'landmark-marker-custom';
-                el.style.width = '35px';
-                el.style.height = '35px';
-                el.style.borderRadius = '50%';
-                el.style.backgroundColor = color;
-                el.style.border = '3px solid white';
-                el.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
-                el.style.cursor = 'pointer';
-                el.style.display = 'flex';
-                el.style.alignItems = 'center';
-                el.style.justifyContent = 'center';
-                el.style.fontSize = '18px';
-                el.style.transition = 'all 0.3s ease';
-
-                // Force isolation from map events
-                el.style.pointerEvents = 'auto';
-                el.style.position = 'relative';
-                el.style.zIndex = '9999';
-
-                // Prevent any focus-related issues
-                el.setAttribute('tabindex', '-1');
-                el.setAttribute('role', 'presentation');
-
-                // Add icon based on specific landmark or type
                 const icon = this.getSpecificLandmarkIcon(landmark.name, landmark.type);
+
+                // Create simple marker element
+                const el = document.createElement('div');
+                el.className = 'landmark-marker';
+                el.style.cssText = `
+                    width: 35px;
+                    height: 35px;
+                    border-radius: 50%;
+                    background-color: ${color};
+                    border: 3px solid white;
+                    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 18px;
+                    transition: all 0.3s ease;
+                `;
                 el.innerHTML = icon;
 
-
-                // Add hover effect with event prevention and debugging
-                el.addEventListener('mouseenter', (e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    el.style.transform = 'scale(1.1)';
-                    el.style.boxShadow = '0 4px 15px rgba(0,0,0,0.3)';
-                });
-
-                el.addEventListener('mouseleave', (e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    el.style.transform = 'scale(1)';
-                    el.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
-                });
-
-                // Prevent map jumping on all mouse events with debugging
-                el.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                });
-
-                el.addEventListener('mouseover', (e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                });
-
-                el.addEventListener('mouseout', (e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                });
-
-                el.addEventListener('mousedown', (e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                });
-
-                el.addEventListener('mouseup', (e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                });
-
-                // Create popup with landmark details
+                // Create popup content
                 const popupContent = `
                     <div style="padding: 10px; max-width: 250px;">
                         <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600;">
@@ -328,151 +272,36 @@ class SpotlightController {
                         ` : ''}
                         ${landmark.rating ? `
                             <div style="display: flex; align-items: center; gap: 5px; font-size: 13px; margin-bottom: 10px;">
-                                <span>⭐ ${landmark.rating}</span>
+                                <span>★ ${landmark.rating}</span>
                                 ${landmark.visit_duration ? `<span>• ${landmark.visit_duration} min</span>` : ''}
                             </div>
                         ` : ''}
                         <button onclick="window.spotlightController.addLandmarkToRoute('${landmark.name}', ${landmark.lat}, ${landmark.lng}, '${landmark.type}', '${landmark.description || ''}', '${landmark.city}')"
                                 style="background: var(--agent-primary-color, #007AFF); color: white; border: none; padding: 8px 16px; border-radius: 6px; font-size: 13px; cursor: pointer; width: 100%; margin-top: 5px;">
-                            ✚ Add to Route
+                            + Add to Route
                         </button>
                     </div>
                 `;
 
-                // Try custom overlay approach instead of Mapbox marker
+                // Create Mapbox marker with popup
+                const marker = new mapboxgl.Marker(el)
+                    .setLngLat([landmark.lng, landmark.lat])
+                    .setPopup(new mapboxgl.Popup({ offset: 25 }).setHTML(popupContent))
+                    .addTo(this.map);
 
-                // Check if we have a custom image for this landmark
-                const customImage = this.getCustomLandmarkImage(landmark.name);
-
-                // Create a completely isolated div that won't interfere with map
-                const overlayEl = document.createElement('div');
-                overlayEl.className = 'landmark-overlay-custom';
-
-                // Create a label container for the landmark name
-                const labelContainer = document.createElement('div');
-                labelContainer.className = 'landmark-label';
-                labelContainer.style.cssText = `
-                    position: absolute;
-                    top: -35px;
-                    left: 50%;
-                    transform: translateX(-50%);
-                    background: rgba(255, 255, 255, 0.95);
-                    color: #333;
-                    padding: 4px 8px;
-                    border-radius: 4px;
-                    font-size: 12px;
-                    font-weight: 600;
-                    white-space: nowrap;
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-                    opacity: 0;
-                    transition: opacity 0.2s ease;
-                    pointer-events: none;
-                    z-index: 1001;
-                `;
-                labelContainer.textContent = landmark.name;
-
-                if (customImage) {
-                    // Use custom image as background
-                    overlayEl.style.cssText = `
-                        position: absolute;
-                        width: 50px;
-                        height: 50px;
-                        border-radius: 10px;
-                        background-image: url('${customImage}');
-                        background-size: cover;
-                        background-position: center;
-                        border: 3px solid white;
-                        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-                        cursor: pointer;
-                        transition: all 0.3s ease;
-                        pointer-events: auto;
-                        z-index: 1000;
-                        transform: translate(-50%, -50%);
-                    `;
-                } else {
-                    // Fallback to emoji icon
-                    overlayEl.style.cssText = `
-                        position: absolute;
-                        width: 35px;
-                        height: 35px;
-                        border-radius: 50%;
-                        background-color: ${color};
-                        border: 3px solid white;
-                        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-                        cursor: pointer;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        font-size: 18px;
-                        transition: all 0.3s ease;
-                        pointer-events: auto;
-                        z-index: 1000;
-                        transform: translate(-50%, -50%);
-                    `;
-                    overlayEl.innerHTML = icon;
-                }
-
-                // Add the label to the overlay
-                overlayEl.appendChild(labelContainer);
-
-                // Add all our event handlers to the overlay element
-
-                // Add hover effect with event prevention and debugging
-                overlayEl.addEventListener('mouseenter', (e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    overlayEl.style.transform = 'translate(-50%, -50%) scale(1.1)';
-                    overlayEl.style.boxShadow = '0 4px 15px rgba(0,0,0,0.3)';
-                    labelContainer.style.opacity = '1';
+                // Add hover effects
+                el.addEventListener('mouseenter', () => {
+                    el.style.transform = 'scale(1.1)';
+                    el.style.boxShadow = '0 4px 15px rgba(0,0,0,0.3)';
                 });
 
-                overlayEl.addEventListener('mouseleave', (e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    overlayEl.style.transform = 'translate(-50%, -50%) scale(1)';
-                    overlayEl.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
-                    labelContainer.style.opacity = '0';
+                el.addEventListener('mouseleave', () => {
+                    el.style.transform = 'scale(1)';
+                    el.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
                 });
 
-                // Create popup manually when clicked
-                overlayEl.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-
-                    // Show custom popup
-                    this.showCustomLandmarkPopup(landmark, overlayEl);
-                });
-
-                // Convert lat/lng to screen coordinates and position the overlay
-                const updateOverlayPosition = () => {
-                    const point = this.map.project([landmark.lng, landmark.lat]);
-                    overlayEl.style.left = `${point.x}px`;
-                    overlayEl.style.top = `${point.y}px`;
-                };
-
-                // Position initially
-                updateOverlayPosition();
-
-                // Update position when map moves
-                this.map.on('move', updateOverlayPosition);
-                this.map.on('zoom', updateOverlayPosition);
-
-                // Add to map container
-                const mapContainer = this.map.getContainer();
-                mapContainer.appendChild(overlayEl);
-
-                // Store reference for cleanup
-                this.landmarkMarkers.push({
-                    element: overlayEl,
-                    remove: () => {
-                        this.map.off('move', updateOverlayPosition);
-                        this.map.off('zoom', updateOverlayPosition);
-                        if (overlayEl.parentNode) {
-                            overlayEl.parentNode.removeChild(overlayEl);
-                        }
-                    }
-                });
-
+                // Store marker for cleanup
+                this.landmarkMarkers.push(marker);
             });
 
         } catch (error) {
@@ -2057,7 +1886,7 @@ class SpotlightController {
             cultural: '🎭',
             natural: '🏔️'
         };
-        el.innerHTML = iconMap[landmark.type] || '⭐';
+        el.innerHTML = iconMap[landmark.type] || '★';
 
         // Add to map and store reference
         const marker = new mapboxgl.Marker(el)
@@ -2224,7 +2053,7 @@ class SpotlightController {
                 </div>
             </div>
             <div class="city-content">
-                <h3>⭐ ${landmark.name}</h3>
+                <h3>★ ${landmark.name}</h3>
                 <p class="city-description">${landmark.description}</p>
                 <div class="landmark-details">
                     <span class="landmark-type">${landmark.type.charAt(0).toUpperCase() + landmark.type.slice(1)}</span>
@@ -2294,7 +2123,7 @@ class SpotlightController {
             cultural: '🎭',
             natural: '🏔️'
         };
-        return icons[type] || '⭐';
+        return icons[type] || '★';
     }
 
     updateStatsWithLandmark(landmark) {
@@ -2346,77 +2175,6 @@ class SpotlightController {
         }, 3000);
     }
 
-    showCustomLandmarkPopup(landmark, overlayElement) {
-        // Remove any existing popup
-        const existingPopup = document.querySelector('.custom-landmark-popup');
-        if (existingPopup) {
-            existingPopup.remove();
-        }
-
-        // Create custom popup
-        const popup = document.createElement('div');
-        popup.className = 'custom-landmark-popup';
-        popup.style.cssText = `
-            position: absolute;
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 12px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(10px);
-            z-index: 10000;
-            max-width: 250px;
-            padding: 0;
-            pointer-events: auto;
-        `;
-
-        const icon = this.getSpecificLandmarkIcon(landmark.name, landmark.type);
-        popup.innerHTML = `
-            <div style="padding: 10px;">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-                    <h3 style="margin: 0; font-size: 16px; font-weight: 600;">
-                        ${icon} ${landmark.name}
-                    </h3>
-                    <button onclick="this.parentElement.parentElement.parentElement.remove()" style="background: none; border: none; font-size: 16px; cursor: pointer; padding: 0; color: #666;">×</button>
-                </div>
-                <p style="margin: 0 0 8px 0; color: #666; font-size: 14px;">
-                    ${landmark.city}, ${landmark.country}
-                </p>
-                ${landmark.description ? `
-                    <p style="margin: 0 0 8px 0; font-size: 13px; line-height: 1.4;">
-                        ${landmark.description}
-                    </p>
-                ` : ''}
-                ${landmark.rating ? `
-                    <div style="display: flex; align-items: center; gap: 5px; font-size: 13px; margin-bottom: 10px;">
-                        <span>⭐ ${landmark.rating}</span>
-                        ${landmark.visit_duration ? `<span>• ${landmark.visit_duration} min</span>` : ''}
-                    </div>
-                ` : ''}
-                <button onclick="window.spotlightController.addLandmarkToRoute('${landmark.name}', ${landmark.lat}, ${landmark.lng}, '${landmark.type}', '${landmark.description || ''}', '${landmark.city}')"
-                        style="background: var(--agent-primary-color, #007AFF); color: white; border: none; padding: 8px 16px; border-radius: 6px; font-size: 13px; cursor: pointer; width: 100%; margin-top: 5px;">
-                    ✚ Add to Route
-                </button>
-            </div>
-        `;
-
-        // Position popup near the overlay element
-        const rect = overlayElement.getBoundingClientRect();
-        const mapContainer = this.map.getContainer();
-        const mapRect = mapContainer.getBoundingClientRect();
-
-        popup.style.left = `${rect.left - mapRect.left + 40}px`;
-        popup.style.top = `${rect.top - mapRect.top - 10}px`;
-
-        // Add popup to map container
-        mapContainer.appendChild(popup);
-
-        // Auto-remove after 10 seconds
-        setTimeout(() => {
-            if (popup.parentNode) {
-                popup.remove();
-            }
-        }, 10000);
-    }
 
     getSpecificLandmarkIcon(landmarkName, type) {
         // Normalize name for comparison
