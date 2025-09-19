@@ -1074,7 +1074,12 @@ class SpotlightController {
             const imageUrl = await this.getWikipediaImage(waypoint.name, 800, 600);
 
             html += `
-                <div class="city-card" onclick="window.spotlightController.showCityModal('${waypoint.name}', '${imageUrl || ''}', '${(waypoint.description || '').replace(/'/g, '\\\'').replace(/"/g, '&quot;')}', ${JSON.stringify(waypoint.activities || []).replace(/'/g, '\\\'').replace(/"/g, '&quot;')})">
+                <div class="city-card"
+                     data-city-name="${waypoint.name.replace(/"/g, '&quot;')}"
+                     data-city-image="${imageUrl || ''}"
+                     data-city-description="${(waypoint.description || '').replace(/"/g, '&quot;')}"
+                     data-city-activities="${encodeURIComponent(JSON.stringify(waypoint.activities || []))}"
+                     style="cursor: pointer;">
                     <div class="city-image-container">
                         ${imageUrl ? `
                             <img src="${imageUrl}" alt="${waypoint.name}" class="city-image"
@@ -1115,6 +1120,27 @@ class SpotlightController {
         // Restore landmark cards by re-appending them
         existingLandmarkCards.forEach(landmarkCard => {
             container.appendChild(landmarkCard);
+        });
+
+        // Add click event listeners to all city cards
+        container.querySelectorAll('.city-card').forEach(card => {
+            card.addEventListener('click', (e) => {
+                const cityName = card.getAttribute('data-city-name');
+                const cityImage = card.getAttribute('data-city-image');
+                const cityDescription = card.getAttribute('data-city-description');
+                const cityActivities = card.getAttribute('data-city-activities');
+
+                let activities = [];
+                try {
+                    if (cityActivities) {
+                        activities = JSON.parse(decodeURIComponent(cityActivities));
+                    }
+                } catch (err) {
+                    console.warn('Could not parse activities:', err);
+                }
+
+                this.showCityModal(cityName, cityImage, cityDescription, activities);
+            });
         });
 
         console.log(`Loaded ${waypoints.length} locations with Wikipedia images and restored ${existingLandmarkCards.length} landmark cards`);
