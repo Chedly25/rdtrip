@@ -2979,13 +2979,22 @@ class SpotlightController {
         // Hardcode start point as Aix-en-Provence
         const startPoint = { name: 'Aix-en-Provence', lat: 43.5297, lng: 5.4474, type: 'start' };
 
-        // Try to find destination (last waypoint in original route or explicitly marked destination)
+        // Try to find destination (prefer cities over landmarks as destination)
         let destinationPoint = waypoints.find(wp => wp.type === 'destination');
 
-        // If no explicit destination found, use the last waypoint in the list as destination
+        // If no explicit destination found, prioritize cities over landmarks as destination
         if (!destinationPoint && waypoints.length > 0) {
-            destinationPoint = waypoints[waypoints.length - 1];
-            console.log('🚀 SPOTLIGHT OPTIMIZATION: Using last waypoint as destination:', destinationPoint.name);
+            // First, try to find a city type to use as destination
+            const cityWaypoints = waypoints.filter(wp => wp.type === 'city');
+            if (cityWaypoints.length > 0) {
+                // Use the last city as destination (cities are usually the main travel destinations)
+                destinationPoint = cityWaypoints[cityWaypoints.length - 1];
+                console.log('🚀 SPOTLIGHT OPTIMIZATION: Using last city as destination:', destinationPoint.name);
+            } else {
+                // Fallback: use the last waypoint in the list as destination
+                destinationPoint = waypoints[waypoints.length - 1];
+                console.log('🚀 SPOTLIGHT OPTIMIZATION: Using last waypoint as destination:', destinationPoint.name);
+            }
         }
 
         if (!destinationPoint) {
@@ -2995,6 +3004,9 @@ class SpotlightController {
 
         // Get intermediate waypoints (everything except destination)
         const intermediatePoints = waypoints.filter(wp => wp !== destinationPoint && wp.name !== destinationPoint.name);
+
+        console.log('🚀 SPOTLIGHT OPTIMIZATION: Destination:', destinationPoint.name, '(type:', destinationPoint.type + ')');
+        console.log('🚀 SPOTLIGHT OPTIMIZATION: Intermediate points:', intermediatePoints.map(wp => `${wp.name} (${wp.type})`));
 
         // Optimize intermediate points using nearest neighbor from start to destination
         const optimizedRoute = this.optimizeFromStartToEndSpotlight(startPoint, intermediatePoints, destinationPoint);
