@@ -915,10 +915,18 @@ class DestinationManager {
         console.log(`🌍 ADD CUSTOM: Set loading state on button`);
 
         try {
-            // Create destination with default coordinates (will be updated)
+            // Try to get coordinates for the city from our database first
+            const europeanCities = this.getEuropeanCitiesDatabase();
+            const cityData = europeanCities.find(city =>
+                city.name.toLowerCase() === cityName.toLowerCase()
+            );
+            const coordinates = cityData ? cityData.coords : [0, 0];
+            console.log(`🌍 ADD CUSTOM: Found coordinates for ${cityName}:`, coordinates);
+
+            // Create destination with proper coordinates if available
             const newDestination = {
                 name: cityName,
-                coordinates: [0, 0], // Default coordinates
+                coordinates: coordinates,
                 highlights: ['Loading city information...'],
                 isCustom: true
             };
@@ -944,7 +952,9 @@ class DestinationManager {
 
             // Enrich with APIs in background
             console.log(`🌍 ADD CUSTOM: Starting background enrichment...`);
-            await this.enrichCustomDestination(newDestination);
+            // Get the actual added destination from the array (not the original object)
+            const addedDestination = this.destinations[insertIndex];
+            await this.enrichCustomDestination(addedDestination);
 
         } catch (error) {
             console.error('❌ ADD CUSTOM: Error adding custom destination:', error);
@@ -1705,8 +1715,17 @@ class DestinationManager {
         // Create city card content matching the existing structure
         const highlights = this.formatCityHighlights(destination.highlights || destination.description);
         console.log(`🏠 CREATE CARD: Formatted highlights:`, highlights);
+        console.log(`🏠 CREATE CARD: Wikipedia image for ${destination.name}:`, destination.wikipediaImage);
+
+        // Create city card with Wikipedia image if available
+        const imageSection = destination.wikipediaImage ? `
+            <div class="city-image">
+                <img src="${destination.wikipediaImage}" alt="${destination.name}" class="city-thumbnail" onerror="this.style.display='none'">
+            </div>
+        ` : '';
 
         cityCard.innerHTML = `
+            ${imageSection}
             <div class="city-info">
                 <h3 class="city-name">${destination.name}</h3>
                 <div class="city-highlights">
@@ -1714,7 +1733,7 @@ class DestinationManager {
                 </div>
             </div>
         `;
-        console.log(`🏠 CREATE CARD: Set innerHTML for ${destination.name}`);
+        console.log(`🏠 CREATE CARD: Set innerHTML for ${destination.name} with image:`, !!destination.wikipediaImage);
         console.log(`🏠 CREATE CARD: Final card structure:`, cityCard.outerHTML);
 
         return cityCard;
