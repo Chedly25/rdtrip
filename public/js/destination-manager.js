@@ -1890,7 +1890,8 @@ class DestinationManager {
         console.log(`🏠 CREATE CARD: Created div element with class 'city-card'`);
 
         // Create city card content matching the existing structure
-        const highlights = this.formatCityHighlights(destination.highlights || destination.description);
+        const highlightsData = destination.activities || destination.highlights || destination.description;
+        const highlights = this.formatCityHighlights(highlightsData);
         console.log(`🏠 CREATE CARD: Formatted highlights:`, highlights);
         console.log(`🏠 CREATE CARD: Wikipedia image for ${destination.name}:`, destination.wikipediaImage);
 
