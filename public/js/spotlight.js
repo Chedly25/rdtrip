@@ -2975,6 +2975,7 @@ class SpotlightController {
 
         console.log('🚀 SPOTLIGHT OPTIMIZATION: Optimizing route with', waypoints.length, 'waypoints');
         console.log('🚀 SPOTLIGHT OPTIMIZATION: Input order:', waypoints.map(wp => wp.name));
+        console.log('🚀 SPOTLIGHT OPTIMIZATION: Waypoint types:', waypoints.map(wp => `${wp.name}: ${wp.type}`));
 
         // Hardcode start point as Aix-en-Provence
         const startPoint = { name: 'Aix-en-Provence', lat: 43.5297, lng: 5.4474, type: 'start' };
@@ -2986,6 +2987,8 @@ class SpotlightController {
         if (!destinationPoint && waypoints.length > 0) {
             // First, try to find a city type to use as destination
             const cityWaypoints = waypoints.filter(wp => wp.type === 'city');
+            console.log('🚀 SPOTLIGHT OPTIMIZATION: Found', cityWaypoints.length, 'city waypoints:', cityWaypoints.map(wp => wp.name));
+
             if (cityWaypoints.length > 0) {
                 // Use the last city as destination (cities are usually the main travel destinations)
                 destinationPoint = cityWaypoints[cityWaypoints.length - 1];
@@ -2993,7 +2996,7 @@ class SpotlightController {
             } else {
                 // Fallback: use the last waypoint in the list as destination
                 destinationPoint = waypoints[waypoints.length - 1];
-                console.log('🚀 SPOTLIGHT OPTIMIZATION: Using last waypoint as destination:', destinationPoint.name);
+                console.log('🚀 SPOTLIGHT OPTIMIZATION: No cities found, using last waypoint as destination:', destinationPoint.name);
             }
         }
 
