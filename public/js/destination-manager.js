@@ -993,6 +993,17 @@ class DestinationManager {
             console.log(`🌍 ADD CUSTOM: Calling updateRoute...`);
             this.updateRoute();
 
+            // Direct map update (same approach as landmarks)
+            if (window.spotlightController && typeof window.spotlightController.recalculateRoute === 'function') {
+                console.log(`🌍 ADD CUSTOM: Calling direct map recalculation...`);
+                try {
+                    await window.spotlightController.recalculateRoute();
+                    console.log(`🌍 ADD CUSTOM: Map recalculation completed successfully`);
+                } catch (error) {
+                    console.warn(`🌍 ADD CUSTOM: Map recalculation failed:`, error);
+                }
+            }
+
             // Close modal
             console.log(`🌍 ADD CUSTOM: Closing modal...`);
             this.closeAddModal();
