@@ -233,6 +233,17 @@ class SpotlightController {
             const data = await response.json();
             const landmarks = data.landmarks || [];
 
+            // Clean up existing landmarks layers and sources if they exist
+            if (this.map.getLayer('landmarks')) {
+                this.map.removeLayer('landmarks');
+            }
+            if (this.map.getLayer('landmarks-fallback')) {
+                this.map.removeLayer('landmarks-fallback');
+            }
+            if (this.map.getSource('landmarks')) {
+                this.map.removeSource('landmarks');
+            }
+
             // Define landmark colors by type
             const typeColors = {
                 monument: '#FF6B6B',
@@ -261,7 +272,18 @@ class SpotlightController {
 
                     this.map.loadImage(imagePath, (error, image) => {
                         if (!error && image) {
-                            this.map.addImage(iconId, image);
+                            // Create a canvas to resize the image
+                            const canvas = document.createElement('canvas');
+                            const ctx = canvas.getContext('2d');
+                            const size = 32; // 32px icons
+                            canvas.width = size;
+                            canvas.height = size;
+
+                            // Draw the resized image
+                            ctx.drawImage(image, 0, 0, size, size);
+
+                            // Add the resized image to the map
+                            this.map.addImage(iconId, canvas);
                         }
                         resolve(); // Resolve regardless of success/failure
                     });
@@ -312,7 +334,7 @@ class SpotlightController {
                 filter: ['==', ['get', 'hasImage'], true],
                 layout: {
                     'icon-image': ['get', 'iconId'],
-                    'icon-size': 0.6,
+                    'icon-size': 1.0,
                     'icon-allow-overlap': true,
                     'icon-ignore-placement': true
                 }
