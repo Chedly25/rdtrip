@@ -52,8 +52,21 @@ class DestinationManager {
     }
 
     addEditModeButton() {
+        console.log('🔧 Adding edit mode button...');
         const headerNav = document.querySelector('.header-nav');
-        if (!headerNav) return;
+        console.log('Header nav found:', !!headerNav);
+
+        if (!headerNav) {
+            console.warn('❌ Header nav not found!');
+            return;
+        }
+
+        // Check if button already exists
+        const existingButton = document.getElementById('edit-route-btn');
+        if (existingButton) {
+            console.log('⚠️ Edit button already exists, skipping');
+            return;
+        }
 
         const editButton = document.createElement('button');
         editButton.id = 'edit-route-btn';
@@ -68,11 +81,19 @@ class DestinationManager {
 
         editButton.addEventListener('click', () => this.toggleEditMode());
 
-        // Insert after the back button
+        // Insert after the back button in the header nav
         const backButton = document.querySelector('.back-button');
-        if (backButton && backButton.parentNode) {
-            backButton.parentNode.insertBefore(editButton, backButton.nextSibling);
+        console.log('Back button found:', !!backButton);
+
+        if (backButton) {
+            console.log('✅ Inserting edit button after back button');
+            backButton.insertAdjacentElement('afterend', editButton);
+        } else {
+            console.log('⚠️ Back button not found, using fallback insertion');
+            headerNav.insertBefore(editButton, headerNav.firstChild);
         }
+
+        console.log('✅ Edit button added to page');
     }
 
     toggleEditMode() {
@@ -888,10 +909,21 @@ class DestinationManager {
 // Initialize when DOM is ready
 let destinationManager;
 document.addEventListener('DOMContentLoaded', () => {
-    // Only initialize on spotlight page
-    if (window.location.pathname.includes('spotlight')) {
+    console.log('🔍 Destination Manager: Checking page for initialization...');
+    console.log('Current path:', window.location.pathname);
+    console.log('Page title:', document.title);
+
+    // Check multiple conditions to ensure we're on the right page
+    const isSpotlightPage = window.location.pathname.includes('spotlight') ||
+                           document.querySelector('.spotlight-main') ||
+                           document.querySelector('#cities-container');
+
+    if (isSpotlightPage) {
+        console.log('✅ Destination Manager: Initializing on spotlight page');
         destinationManager = new DestinationManager();
         window.destinationManager = destinationManager; // Make globally accessible
+    } else {
+        console.log('❌ Destination Manager: Not a spotlight page, skipping initialization');
     }
 });
 
