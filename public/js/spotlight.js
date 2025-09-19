@@ -2111,7 +2111,21 @@ class SpotlightController {
                 allWaypoints.push(...landmarkWaypoints);
             }
 
-            // 4. If waypoints were passed directly (for backward compatibility), add them too
+            // 4. Add landmarks that were added via the spotlight page
+            if (this.spotlightData?.addedLandmarks && this.spotlightData.addedLandmarks.length > 0) {
+                const addedLandmarkWaypoints = this.spotlightData.addedLandmarks.map(landmark => ({
+                    name: landmark.name,
+                    lng: landmark.lng,
+                    lat: landmark.lat,
+                    type: landmark.type || 'landmark',
+                    city: landmark.city,
+                    description: landmark.description,
+                    isLandmark: true
+                }));
+                allWaypoints.push(...addedLandmarkWaypoints);
+            }
+
+            // 5. If waypoints were passed directly (for backward compatibility), add them too
             if (passedWaypoints && Array.isArray(passedWaypoints)) {
                 const formattedPassed = passedWaypoints
                     .filter(wp => wp && wp.name)
