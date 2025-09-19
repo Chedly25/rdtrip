@@ -2700,3 +2700,189 @@ body.map-fullscreen .spotlight-map-section.fullscreen {
   overflow: hidden;
   box-shadow: var(--shadow-modern);
 }
+
+/* ===== CHARACTER METRICS CARDS ===== */
+.route-metrics-card {
+  background: var(--glass-bg);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  margin-top: var(--space-4);
+  margin-bottom: var(--space-3);
+}
+
+.metrics-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border-primary);
+}
+
+.metrics-icon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary-50);
+  border-radius: var(--radius-md);
+  font-size: 18px;
+}
+
+.metrics-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--space-3);
+}
+
+.metric-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.metric-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.metric-value {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* Metric visualizations */
+.metric-rating {
+  display: flex;
+  gap: 2px;
+}
+
+.metric-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--gray-200);
+  transition: all 0.2s ease;
+}
+
+.metric-dot.filled {
+  background: var(--primary-600);
+  transform: scale(1.2);
+}
+
+.metric-bar {
+  position: relative;
+  width: 100%;
+  height: 6px;
+  background: var(--gray-200);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.metric-bar-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary-500), var(--primary-600));
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.metric-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-1) var(--space-2);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.metric-badge.level-low {
+  background: var(--success-50);
+  color: var(--success-700);
+}
+
+.metric-badge.level-medium {
+  background: var(--warning-50);
+  color: var(--warning-700);
+}
+
+.metric-badge.level-high {
+  background: var(--danger-50);
+  color: var(--danger-700);
+}
+
+/* Split metrics */
+.metric-split {
+  display: flex;
+  gap: var(--space-1);
+  align-items: center;
+}
+
+.metric-split-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.85rem;
+}
+
+.metric-split-bar {
+  width: 40px;
+  height: 4px;
+  background: var(--gray-200);
+  border-radius: 2px;
+  position: relative;
+  overflow: hidden;
+}
+
+.metric-split-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  background: var(--primary-500);
+  border-radius: 2px;
+}
+
+/* Adventure metrics specific */
+.adventure-metrics .metrics-icon {
+  background: #34C75920;
+  color: #34C759;
+}
+
+/* Food metrics specific */
+.food-metrics .metrics-icon {
+  background: #FF3B3020;
+  color: #FF3B30;
+}
+
+/* Culture metrics specific */
+.culture-metrics .metrics-icon {
+  background: #FF950020;
+  color: #FF9500;
+}
+
+/* Hidden gems metrics specific */
+.hidden-gems-metrics .metrics-icon {
+  background: #9333ea20;
+  color: #9333ea;
+}

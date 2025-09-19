@@ -14,46 +14,245 @@ const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY;
 // For demo purposes - in production, get your own key from https://unsplash.com/developers
 const UNSPLASH_ACCESS_KEY = process.env.UNSPLASH_ACCESS_KEY || 'lEwczWVNzGvFAp1BtKgfV5KOtJrFbMdaDFEfL4Z6qHQ';
 
-// AI Agent configurations
+// AI Agent configurations with enhanced metrics
 const agents = {
   adventure: {
     name: "Adventure Agent",
     color: "#34C759",
-    prompt: "You are an adventure travel expert. Create a route with CITIES (not specific attractions) that are gateways to outdoor activities, hiking, mountains, and nature. Each waypoint must be a CITY NAME like 'Chamonix' or 'Interlaken', not 'Mont Blanc' or 'Jungfrau'. List activities as things to do IN that city."
+    icon: "⛰️",
+    prompt: `You are an adventure travel expert. Create a route with CITIES (not specific attractions) that are gateways to outdoor activities, hiking, mountains, and nature. Each waypoint must be a CITY NAME like 'Chamonix' or 'Interlaken', not 'Mont Blanc' or 'Jungfrau'.
+
+For the route, also provide these ADVENTURE METRICS in your response:
+- Physical Difficulty: Rate 1-5 (1=easy walks, 5=technical climbing/extreme sports)
+- Gear Requirements: "Basic" (comfortable shoes), "Moderate" (hiking boots, layers), or "Extensive" (technical gear, equipment rental needed)
+- Weather Dependency: "Low", "Moderate", or "High" (how much weather affects activities)
+- Average Outdoor Hours: Number of hours per day spent on outdoor activities
+- Equipment Rental Costs: Estimated daily cost range for gear rental if needed
+
+List activities as things to do IN that city with difficulty levels.`,
+    metricsExtractor: (response) => ({
+      physicalDifficulty: extractRating(response, /Physical Difficulty:?\s*(\d)/i, 3),
+      gearRequirement: extractLevel(response, /Gear Requirements?:?\s*(\w+)/i, ["Basic", "Moderate", "Extensive"], "Moderate"),
+      weatherDependency: extractLevel(response, /Weather Dependency:?\s*(\w+)/i, ["Low", "Moderate", "High"], "Moderate"),
+      outdoorHours: extractNumber(response, /Outdoor Hours:?\s*(\d+)/i, 6),
+      equipmentCost: extractRange(response, /Equipment.*Cost:?\s*€?(\d+)-?(\d+)?/i, "€20-50")
+    })
   },
   culture: {
     name: "Culture Agent",
     color: "#FFD60A",
-    prompt: "You are a cultural travel expert. Create a route with CITIES (not specific monuments) rich in history, art, and culture. Each waypoint must be a CITY NAME like 'Florence' or 'Avignon', not 'Uffizi Gallery' or 'Papal Palace'. List cultural sites as things to see IN that city."
+    icon: "🏛️",
+    prompt: `You are a cultural travel expert. Create a route with CITIES (not specific monuments) rich in history, art, and culture. Each waypoint must be a CITY NAME like 'Florence' or 'Avignon', not 'Uffizi Gallery' or 'Papal Palace'.
+
+For the route, also provide these CULTURE METRICS in your response:
+- UNESCO Sites: Total count across the route
+- Museum Density: Average museums/cultural sites per day (number)
+- Historical Periods: List which periods are covered (Medieval, Renaissance, Modern, etc.)
+- Audio Guide Availability: Percentage of sites with audio guides (0-100%)
+- Focus Split: Percentage breakdown - Art (%), History (%), Architecture (%) - must total 100%
+
+List cultural sites as things to see IN that city with historical context.`,
+    metricsExtractor: (response) => ({
+      unescoSites: extractNumber(response, /UNESCO Sites?:?\s*(\d+)/i, 0),
+      museumDensity: extractNumber(response, /Museum Density:?\s*(\d+)/i, 3),
+      historicalPeriods: extractList(response, /Historical Periods?:?\s*([^.]+)/i, ["Medieval", "Renaissance"]),
+      audioGuideAvailability: extractPercentage(response, /Audio Guide.*:?\s*(\d+)%?/i, 70),
+      focusSplit: extractFocusSplit(response)
+    })
   },
   food: {
     name: "Food Agent",
     color: "#FF3B30",
-    prompt: "You are a culinary travel expert. Create a route with CITIES (not specific restaurants) known for their food scene. Each waypoint must be a CITY NAME like 'Lyon' or 'San Sebastian', not specific restaurants or markets. List culinary experiences as things to try IN that city."
+    icon: "🍽️",
+    prompt: `You are a culinary travel expert. Create a route with CITIES (not specific restaurants) known for their food scene. Each waypoint must be a CITY NAME like 'Lyon' or 'San Sebastian', not specific restaurants or markets.
+
+For the route, also provide these FOOD METRICS in your response:
+- Michelin Stars: Total count of Michelin-starred restaurants across the route
+- Booking Timeline: "Days ahead", "Weeks ahead", or "Months ahead" for popular restaurants
+- Price Distribution: Street food (%), Casual dining (%), Fine dining (%) - must total 100%
+- Regional Cuisines: Number of distinct regional cuisine types you'll experience
+- Experience Types: Count of Markets, Cooking Classes, Tastings, Restaurant visits
+
+List culinary experiences as things to try IN that city with price ranges.`,
+    metricsExtractor: (response) => ({
+      michelinStars: extractNumber(response, /Michelin Stars?:?\s*(\d+)/i, 0),
+      bookingTimeline: extractLevel(response, /Booking.*:?\s*(Days?|Weeks?|Months?)/i, ["Days", "Weeks", "Months"], "Weeks"),
+      priceDistribution: extractPriceDistribution(response),
+      cuisineTypes: extractNumber(response, /Regional Cuisines?:?\s*(\d+)/i, 3),
+      experienceTypes: extractExperienceTypes(response)
+    })
   },
   "hidden-gems": {
     name: "Hidden Gems Agent",
     color: "#9333ea",
-    prompt: "You are a hidden gems travel expert. Create a route with LESSER-KNOWN CITIES that have authentic charm, character, and local flavor but are not famous tourist destinations. Focus on charming small towns, overlooked villages, and underrated cities. For example: L'Isle-sur-la-Sorgue instead of Avignon, Pienza instead of Florence, or Guimarães instead of Porto. Each waypoint must be a CITY NAME that tourists typically miss. Explain what makes each place special and worth the detour - unique local markets, artisan workshops, architectural gems, natural beauty, or authentic local life."
+    icon: "💎",
+    prompt: `You are a hidden gems travel expert. Create a route with LESSER-KNOWN CITIES that have authentic charm, character, and local flavor but are not famous tourist destinations. Focus on charming small towns, overlooked villages, and underrated cities.
+
+For the route, also provide these HIDDEN GEMS METRICS in your response:
+- Tourist Density: Rate 1-5 (1=completely off beaten path, 5=getting discovered)
+- Language Requirement: "None", "Basic", or "Moderate" (local language needed)
+- Payment Acceptance: Cash (%) vs Card (%) - must total 100%
+- Local Dependency: "Low", "Moderate", or "High" (need for local contacts/guides)
+- Transport Access: Public transport (%) vs Car required (%) - must total 100%
+
+Each waypoint must be a CITY NAME that tourists typically miss. Explain what makes each place special.`,
+    metricsExtractor: (response) => ({
+      touristDensity: extractRating(response, /Tourist Density:?\s*(\d)/i, 2),
+      languageRequirement: extractLevel(response, /Language.*:?\s*(\w+)/i, ["None", "Basic", "Moderate"], "Basic"),
+      paymentAcceptance: extractPaymentSplit(response),
+      localDependency: extractLevel(response, /Local Dependency:?\s*(\w+)/i, ["Low", "Moderate", "High"], "Moderate"),
+      transportAccess: extractTransportSplit(response)
+    })
   }
 };
+
+// Helper functions for extracting metrics from AI responses
+function extractRating(text, pattern, defaultValue) {
+  const match = text.match(pattern);
+  return match ? parseInt(match[1]) : defaultValue;
+}
+
+function extractNumber(text, pattern, defaultValue) {
+  const match = text.match(pattern);
+  return match ? parseInt(match[1]) : defaultValue;
+}
+
+function extractLevel(text, pattern, levels, defaultValue) {
+  const match = text.match(pattern);
+  if (match) {
+    const value = match[1].trim();
+    return levels.find(l => l.toLowerCase() === value.toLowerCase()) || defaultValue;
+  }
+  return defaultValue;
+}
+
+function extractRange(text, pattern, defaultValue) {
+  const match = text.match(pattern);
+  if (match && match[1]) {
+    return match[2] ? `€${match[1]}-${match[2]}` : `€${match[1]}`;
+  }
+  return defaultValue;
+}
+
+function extractPercentage(text, pattern, defaultValue) {
+  const match = text.match(pattern);
+  return match ? parseInt(match[1]) : defaultValue;
+}
+
+function extractList(text, pattern, defaultValue) {
+  const match = text.match(pattern);
+  if (match) {
+    return match[1].split(',').map(s => s.trim()).filter(s => s);
+  }
+  return defaultValue;
+}
+
+function extractFocusSplit(text) {
+  const artMatch = text.match(/Art:?\s*(\d+)%?/i);
+  const historyMatch = text.match(/History:?\s*(\d+)%?/i);
+  const architectureMatch = text.match(/Architecture:?\s*(\d+)%?/i);
+
+  let art = artMatch ? parseInt(artMatch[1]) : 30;
+  let history = historyMatch ? parseInt(historyMatch[1]) : 40;
+  let architecture = architectureMatch ? parseInt(architectureMatch[1]) : 30;
+
+  // Normalize to 100%
+  const total = art + history + architecture;
+  if (total !== 100) {
+    const factor = 100 / total;
+    art = Math.round(art * factor);
+    history = Math.round(history * factor);
+    architecture = Math.round(architecture * factor);
+  }
+
+  return { art, history, architecture };
+}
+
+function extractPriceDistribution(text) {
+  const streetMatch = text.match(/Street.*:?\s*(\d+)%?/i);
+  const casualMatch = text.match(/Casual.*:?\s*(\d+)%?/i);
+  const fineMatch = text.match(/Fine.*:?\s*(\d+)%?/i);
+
+  let street = streetMatch ? parseInt(streetMatch[1]) : 30;
+  let casual = casualMatch ? parseInt(casualMatch[1]) : 50;
+  let fine = fineMatch ? parseInt(fineMatch[1]) : 20;
+
+  // Normalize to 100%
+  const total = street + casual + fine;
+  if (total !== 100) {
+    const factor = 100 / total;
+    street = Math.round(street * factor);
+    casual = Math.round(casual * factor);
+    fine = Math.round(fine * factor);
+  }
+
+  return { street, casual, fine };
+}
+
+function extractExperienceTypes(text) {
+  const marketsMatch = text.match(/Markets?:?\s*(\d+)/i);
+  const classesMatch = text.match(/Classes?:?\s*(\d+)/i);
+  const tastingsMatch = text.match(/Tastings?:?\s*(\d+)/i);
+
+  return {
+    markets: marketsMatch ? parseInt(marketsMatch[1]) : 2,
+    classes: classesMatch ? parseInt(classesMatch[1]) : 1,
+    tastings: tastingsMatch ? parseInt(tastingsMatch[1]) : 3
+  };
+}
+
+function extractPaymentSplit(text) {
+  const cashMatch = text.match(/Cash:?\s*(\d+)%?/i);
+  const cardMatch = text.match(/Card:?\s*(\d+)%?/i);
+
+  let cash = cashMatch ? parseInt(cashMatch[1]) : 60;
+  let card = cardMatch ? parseInt(cardMatch[1]) : 40;
+
+  // Normalize to 100%
+  const total = cash + card;
+  if (total !== 100) {
+    const factor = 100 / total;
+    cash = Math.round(cash * factor);
+    card = Math.round(card * factor);
+  }
+
+  return { cash, card };
+}
+
+function extractTransportSplit(text) {
+  const publicMatch = text.match(/Public.*:?\s*(\d+)%?/i);
+  const carMatch = text.match(/Car.*:?\s*(\d+)%?/i);
+
+  let publicTransport = publicMatch ? parseInt(publicMatch[1]) : 40;
+  let car = carMatch ? parseInt(carMatch[1]) : 60;
+
+  // Normalize to 100%
+  const total = publicTransport + car;
+  if (total !== 100) {
+    const factor = 100 / total;
+    publicTransport = Math.round(publicTransport * factor);
+    car = Math.round(car * factor);
+  }
+
+  return { publicTransport, car };
+}
 
 // Generate route with AI agents
 app.post('/api/generate-route', async (req, res) => {
   try {
     const { destination, stops = 3, agents: selectedAgents = ['adventure', 'culture', 'food'], budget = 'budget' } = req.body;
-    
+
     if (!destination) {
       return res.status(400).json({ error: 'Destination is required' });
     }
 
     // Process with selected agents
-    const agentPromises = selectedAgents.map(agentType => 
-      queryPerplexity(agents[agentType], destination, stops, budget)
+    const agentPromises = selectedAgents.map(agentType =>
+      queryPerplexityWithMetrics(agents[agentType], destination, stops, budget)
     );
 
     const agentResults = await Promise.all(agentPromises);
-    
+
     // Combine results
     const route = {
       origin: "Aix-en-Provence, France",
@@ -62,7 +261,13 @@ app.post('/api/generate-route', async (req, res) => {
       budget: budget,
       agentResults: agentResults.map((result, index) => ({
         agent: selectedAgents[index],
-        recommendations: result
+        agentConfig: {
+          name: agents[selectedAgents[index]].name,
+          color: agents[selectedAgents[index]].color,
+          icon: agents[selectedAgents[index]].icon
+        },
+        recommendations: result.recommendations,
+        metrics: result.metrics
       }))
     };
 
@@ -597,6 +802,18 @@ async function getCityImages(city) {
       source: 'Placeholder'
     }];
   }
+}
+
+async function queryPerplexityWithMetrics(agent, destination, stops, budget = 'budget') {
+  const responseText = await queryPerplexity(agent, destination, stops, budget);
+
+  // Extract metrics from the response
+  const metrics = agent.metricsExtractor ? agent.metricsExtractor(responseText) : {};
+
+  return {
+    recommendations: responseText,
+    metrics: metrics
+  };
 }
 
 async function queryPerplexity(agent, destination, stops, budget = 'budget') {
