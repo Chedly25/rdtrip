@@ -2155,6 +2155,12 @@ class SpotlightController {
 
     getAllCombinedWaypoints(passedWaypoints = null) {
         try {
+            // PRIORITY 0: If optimized waypoints are explicitly passed, use them directly
+            if (passedWaypoints && Array.isArray(passedWaypoints) && passedWaypoints.length > 0) {
+                console.log('🎯 SPOTLIGHT: Using explicitly passed optimized waypoints:', passedWaypoints.map(wp => wp.name));
+                return passedWaypoints;
+            }
+
             // PRIORITY 1: If landmarks overlay has an optimized route, use it directly
             if (window.landmarksOverlay?.currentRoute?.waypoints && Array.isArray(window.landmarksOverlay.currentRoute.waypoints)) {
                 const optimizedWaypoints = window.landmarksOverlay.currentRoute.waypoints
