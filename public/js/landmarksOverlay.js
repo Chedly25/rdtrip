@@ -603,11 +603,32 @@ class LandmarksOverlay {
                 this.displayCurrentRoute();
                 this.redrawRouteOnMap();
 
-                // Also update the main spotlight map with the new route including landmarks
+                // Also update the main spotlight map with the combined route (cities + landmarks)
                 if (window.spotlightController && typeof window.spotlightController.recalculateRoute === 'function') {
-                    console.log('🗺️ LANDMARK: Updating main spotlight map with landmark route');
+                    console.log('🗺️ LANDMARK: Updating main spotlight map with combined cities and landmarks');
                     try {
-                        await window.spotlightController.recalculateRoute();
+                        // Get cities from destination manager if available
+                        const cities = window.destinationManager?.destinations || [];
+
+                        // Extract waypoints from current route (includes landmarks)
+                        const routeWaypoints = this.extractWaypoints(this.currentRoute) || [];
+
+                        // Combine cities and landmarks for spotlight
+                        const allWaypoints = [
+                            ...cities.map(dest => ({
+                                name: dest.name,
+                                coordinates: dest.coordinates,
+                                type: 'city'
+                            })),
+                            ...routeWaypoints.map(wp => ({
+                                name: wp.name,
+                                coordinates: [wp.lng, wp.lat],
+                                type: 'landmark'
+                            }))
+                        ];
+
+                        console.log('🗺️ LANDMARK: Combined waypoints:', allWaypoints);
+                        await window.spotlightController.recalculateRoute(allWaypoints);
                     } catch (error) {
                         console.warn('🗺️ LANDMARK: Failed to update main map:', error);
                     }

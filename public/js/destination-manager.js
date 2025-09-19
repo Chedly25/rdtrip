@@ -993,12 +993,18 @@ class DestinationManager {
             console.log(`🌍 ADD CUSTOM: Calling updateRoute...`);
             this.updateRoute();
 
-            // Direct map update (same approach as landmarks)
+            // Direct map update (same approach as landmarks) - include current destinations as waypoints
             if (window.spotlightController && typeof window.spotlightController.recalculateRoute === 'function') {
-                console.log(`🌍 ADD CUSTOM: Calling direct map recalculation...`);
+                console.log(`🌍 ADD CUSTOM: Calling direct map recalculation with destinations...`);
                 try {
-                    await window.spotlightController.recalculateRoute();
-                    console.log(`🌍 ADD CUSTOM: Map recalculation completed successfully`);
+                    // Convert destinations to waypoints format for spotlight
+                    const waypoints = this.destinations.map(dest => ({
+                        name: dest.name,
+                        coordinates: dest.coordinates,
+                        type: 'city'
+                    }));
+                    await window.spotlightController.recalculateRoute(waypoints);
+                    console.log(`🌍 ADD CUSTOM: Map recalculation completed successfully with ${waypoints.length} cities`);
                 } catch (error) {
                     console.warn(`🌍 ADD CUSTOM: Map recalculation failed:`, error);
                 }
