@@ -1048,7 +1048,8 @@ class SpotlightController {
     }
 
     async displayCities() {
-        const waypoints = this.extractWaypoints(this.spotlightData.agentData);
+        // Get all waypoints in optimized order (cities + landmarks + original waypoints)
+        const waypoints = this.getAllCombinedWaypoints();
         const container = document.getElementById('citiesContainer');
 
         // Save existing landmark cards before clearing
@@ -1073,8 +1074,15 @@ class SpotlightController {
             // Get real Wikipedia image for this location
             const imageUrl = await this.getWikipediaImage(waypoint.name, 800, 600);
 
+            // Check if this is a landmark for special styling
+            const isLandmark = waypoint.type === 'landmark' || waypoint.isLandmark;
+            const cardClass = isLandmark ? 'city-card landmark-card' : 'city-card';
+            const cardStyle = isLandmark ?
+                'cursor: pointer; border: 2px solid #9333EA; background: linear-gradient(135deg, #f8f4ff 0%, #e6d9ff 100%);' :
+                'cursor: pointer;';
+
             html += `
-                <div class="city-card"
+                <div class="${cardClass}"
                      data-city-name="${waypoint.name.replace(/"/g, '&quot;')}"
                      data-city-image="${imageUrl || ''}"
                      data-city-description="${(waypoint.description || '').replace(/"/g, '&quot;')}"
@@ -1946,8 +1954,9 @@ class SpotlightController {
             button.textContent = '⏳ Adding...';
             button.disabled = true;
 
-            // Get current waypoints
-            const currentWaypoints = this.extractWaypoints(this.spotlightData.agentData);
+            // Get ALL current waypoints (including cities and existing landmarks)
+            const currentWaypoints = this.getAllCombinedWaypoints();
+            console.log(`🔍 BEFORE OPTIMIZATION: Current waypoints for landmark placement:`, currentWaypoints.map(w => w.name));
 
             // Create new landmark waypoint
             const landmarkWaypoint = {
@@ -2039,6 +2048,11 @@ class SpotlightController {
         // Insert at optimal position
         const updatedWaypoints = [...waypoints];
         updatedWaypoints.splice(bestPosition, 0, landmark);
+
+        console.log(`🎯 Landmark optimization: "${landmark.name}" inserted at position ${bestPosition} out of ${waypoints.length + 1} possible positions`);
+        console.log(`📍 Current waypoints:`, waypoints.map(w => w.name));
+        console.log(`🗺️ Updated waypoints:`, updatedWaypoints.map(w => w.name));
+
         return updatedWaypoints;
     }
 
@@ -2123,16 +2137,93 @@ class SpotlightController {
         });
     }
 
-    async recalculateRoute(waypoints) {
+    async recalculateRoute(waypoints = null) {
         const destinationCoords = await this.geocodeDestination(this.spotlightData.destination);
         if (destinationCoords) {
+            // Gather all waypoints from all systems
+            const allWaypoints = this.getAllCombinedWaypoints(waypoints);
+
             const color = this.agentColors[this.spotlightData.agent];
-            await this.createRoute(waypoints, destinationCoords, color);
-            this.fitMapToRoute(waypoints, destinationCoords);
-            this.updateDistanceStats(waypoints, destinationCoords);
+            await this.createRoute(allWaypoints, destinationCoords, color);
+            this.fitMapToRoute(allWaypoints, destinationCoords);
+            this.updateDistanceStats(allWaypoints, destinationCoords);
 
             // Restore added landmark markers after route recalculation
             this.restoreAddedLandmarkMarkers();
+        }
+    }
+
+    getAllCombinedWaypoints(passedWaypoints = null) {
+        const allWaypoints = [];
+
+        try {
+            // 1. Start with original route waypoints from spotlight data
+            const originalWaypoints = this.extractWaypoints(this.spotlightData.agentData) || [];
+            allWaypoints.push(...originalWaypoints);
+
+            // 2. Add cities from destination manager if available
+            if (window.destinationManager?.destinations && Array.isArray(window.destinationManager.destinations)) {
+                const cityWaypoints = window.destinationManager.destinations
+                    .filter(dest => dest && dest.coordinates && Array.isArray(dest.coordinates))
+                    .map(dest => ({
+                        name: dest.name,
+                        lng: dest.coordinates[0],
+                        lat: dest.coordinates[1],
+                        type: 'city'
+                    }));
+                allWaypoints.push(...cityWaypoints);
+                console.log('Added cities from destination manager:', cityWaypoints.length);
+            }
+
+            // 3. Add landmarks from current route (user-added landmarks)
+            if (window.landmarksOverlay?.currentRoute && typeof window.landmarksOverlay.extractWaypoints === 'function') {
+                const landmarkWaypoints = window.landmarksOverlay.extractWaypoints(window.landmarksOverlay.currentRoute) || [];
+                const formattedLandmarks = landmarkWaypoints
+                    .filter(wp => wp && wp.name && wp.lng != null && wp.lat != null)
+                    .map(wp => ({
+                        name: wp.name,
+                        lng: wp.lng,
+                        lat: wp.lat,
+                        type: 'landmark'
+                    }));
+                allWaypoints.push(...formattedLandmarks);
+                console.log('Added landmarks from overlay:', formattedLandmarks.length);
+            }
+
+            // 4. If waypoints were passed directly (for backward compatibility), add them too
+            if (passedWaypoints && Array.isArray(passedWaypoints)) {
+                const formattedPassed = passedWaypoints
+                    .filter(wp => wp && wp.name)
+                    .map(wp => ({
+                        name: wp.name,
+                        lng: wp.lng || wp.coordinates?.[0] || 0,
+                        lat: wp.lat || wp.coordinates?.[1] || 0,
+                        type: wp.type || 'waypoint'
+                    }));
+                allWaypoints.push(...formattedPassed);
+                console.log('Added passed waypoints:', formattedPassed.length);
+            }
+
+            // Remove duplicates based on name and coordinates
+            const uniqueWaypoints = [];
+            const seen = new Set();
+
+            allWaypoints.forEach(wp => {
+                if (wp && wp.name && wp.lng != null && wp.lat != null) {
+                    const key = `${wp.name}-${wp.lng}-${wp.lat}`;
+                    if (!seen.has(key)) {
+                        seen.add(key);
+                        uniqueWaypoints.push(wp);
+                    }
+                }
+            });
+
+            console.log('Combined waypoints:', uniqueWaypoints);
+            return uniqueWaypoints;
+        } catch (error) {
+            console.warn('Error in getAllCombinedWaypoints:', error);
+            // Fallback to original waypoints only
+            return this.extractWaypoints(this.spotlightData.agentData) || [];
         }
     }
 

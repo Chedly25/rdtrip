@@ -1653,33 +1653,55 @@ app.post('/api/route/add-landmark', async (req, res) => {
 
 // Helper function to find optimal position to insert landmark
 function findOptimalInsertPosition(waypoints, landmark) {
-  if (waypoints.length < 2) return waypoints.length;
+  console.log('🎯 OPTIMIZATION: Finding optimal position for landmark:', landmark.name);
+  console.log('🎯 OPTIMIZATION: Current waypoints:', waypoints.map(wp => `${wp.name} (${wp.lat}, ${wp.lng})`));
+
+  if (waypoints.length < 2) {
+    console.log('🎯 OPTIMIZATION: Less than 2 waypoints, inserting at end');
+    return waypoints.length;
+  }
 
   let minDetour = Infinity;
   let bestPosition = waypoints.length;
+  let detourAnalysis = [];
 
   for (let i = 0; i <= waypoints.length; i++) {
     const prevPoint = i > 0 ? waypoints[i-1] : null;
     const nextPoint = i < waypoints.length ? waypoints[i] : null;
 
     let detour = 0;
+    let description = '';
 
     if (prevPoint && nextPoint) {
       // Calculate detour: distance(prev->landmark) + distance(landmark->next) - distance(prev->next)
       const originalDistance = calculateDistance(prevPoint, nextPoint);
       const newDistance = calculateDistance(prevPoint, landmark) + calculateDistance(landmark, nextPoint);
       detour = newDistance - originalDistance;
+      description = `Between ${prevPoint.name} and ${nextPoint.name}`;
     } else if (prevPoint) {
       detour = calculateDistance(prevPoint, landmark);
+      description = `After ${prevPoint.name} (end)`;
     } else if (nextPoint) {
       detour = calculateDistance(landmark, nextPoint);
+      description = `Before ${nextPoint.name} (start)`;
+    } else {
+      description = 'Only waypoint';
     }
+
+    detourAnalysis.push({
+      position: i,
+      detour: detour.toFixed(2),
+      description: description
+    });
 
     if (detour < minDetour) {
       minDetour = detour;
       bestPosition = i;
     }
   }
+
+  console.log('🎯 OPTIMIZATION: Detour analysis:', detourAnalysis);
+  console.log('🎯 OPTIMIZATION: Best position:', bestPosition, 'with detour:', minDetour.toFixed(2), 'km');
 
   return bestPosition;
 }

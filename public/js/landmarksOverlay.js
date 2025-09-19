@@ -578,68 +578,86 @@ class LandmarksOverlay {
         if (!landmarkId) return;
 
         try {
-            const response = await fetch('/api/route/add-landmark', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    originalRoute: this.currentRoute,
-                    landmarkId: landmarkId
-                })
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to add landmark to route');
+            // Find the landmark in the available landmarks
+            const landmark = this.landmarks.find(l => l.id === landmarkId);
+            if (!landmark) {
+                console.error('🗺️ LANDMARK ADD: Landmark not found');
+                return;
             }
 
-            const data = await response.json();
+            // Get combined waypoints (cities + landmarks) for optimal insertion
+            let combinedWaypoints = this.currentRoute.waypoints || [];
+            console.log('🗺️ LANDMARK ADD: Original route waypoints:', combinedWaypoints.map(wp => `${wp.name} (${wp.lat}, ${wp.lng})`));
 
-            if (data.success) {
-                this.currentRoute = data.route;
-                this.selectedLandmarks.add(landmarkId);
+            // Add cities from destination manager if available
+            if (window.destinationManager?.destinations && Array.isArray(window.destinationManager.destinations)) {
+                const cityWaypoints = window.destinationManager.destinations
+                    .filter(dest => dest && dest.coordinates && Array.isArray(dest.coordinates))
+                    .map(dest => ({
+                        name: dest.name,
+                        lng: dest.coordinates[0],
+                        lat: dest.coordinates[1],
+                        type: 'city'
+                    }));
 
-                this.updateSelectedLandmarksList();
-                this.displayCurrentRoute();
-                this.redrawRouteOnMap();
+                // Deduplicate waypoints - remove cities that already exist in original route
+                const existingNames = new Set(combinedWaypoints.map(wp => wp.name.toLowerCase()));
+                const newCityWaypoints = cityWaypoints.filter(city => !existingNames.has(city.name.toLowerCase()));
 
-                // Also update the main spotlight map with the combined route (cities + landmarks)
-                if (window.spotlightController && typeof window.spotlightController.recalculateRoute === 'function') {
-                    console.log('🗺️ LANDMARK: Updating main spotlight map with combined cities and landmarks');
-                    try {
-                        // Get cities from destination manager if available
-                        const cities = window.destinationManager?.destinations || [];
+                combinedWaypoints = [...combinedWaypoints, ...newCityWaypoints];
+                console.log('🗺️ LANDMARK ADD: Added cities (deduplicated):', newCityWaypoints.length, 'of', cityWaypoints.length);
+                console.log('🗺️ LANDMARK ADD: All cities found:', cityWaypoints.map(wp => wp.name));
+                console.log('🗺️ LANDMARK ADD: Cities added (new only):', newCityWaypoints.map(wp => wp.name));
+            }
 
-                        // Extract waypoints from current route (includes landmarks)
-                        const routeWaypoints = this.extractWaypoints(this.currentRoute) || [];
+            // Client-side optimal insertion instead of relying on server
+            const optimalPosition = this.findOptimalInsertPosition(combinedWaypoints, landmark);
+            console.log('🗺️ LANDMARK ADD: Optimal position calculated:', optimalPosition, 'out of', combinedWaypoints.length);
 
-                        // Combine cities and landmarks for spotlight
-                        const allWaypoints = [
-                            ...cities.map(dest => ({
-                                name: dest.name,
-                                coordinates: dest.coordinates,
-                                type: 'city'
-                            })),
-                            ...routeWaypoints.map(wp => ({
-                                name: wp.name,
-                                coordinates: [wp.lng, wp.lat],
-                                type: 'landmark'
-                            }))
-                        ];
+            // Create landmark waypoint
+            const landmarkWaypoint = {
+                name: landmark.name,
+                lat: landmark.lat,
+                lng: landmark.lng,
+                type: 'landmark',
+                landmark_id: landmark.id,
+                visit_duration: landmark.visit_duration,
+                description: landmark.description,
+                image_url: landmark.image_url
+            };
 
-                        console.log('🗺️ LANDMARK: Combined waypoints:', allWaypoints);
-                        await window.spotlightController.recalculateRoute(allWaypoints);
-                    } catch (error) {
-                        console.warn('🗺️ LANDMARK: Failed to update main map:', error);
-                    }
+            // Insert landmark at optimal position
+            combinedWaypoints.splice(optimalPosition, 0, landmarkWaypoint);
+
+            // Update route directly without server optimization
+            this.currentRoute = {
+                ...this.currentRoute,
+                waypoints: combinedWaypoints
+            };
+
+            this.selectedLandmarks.add(landmarkId);
+            console.log('🗺️ LANDMARK ADD: Landmark added at position', optimalPosition, 'without server optimization');
+
+            this.updateSelectedLandmarksList();
+            this.displayCurrentRoute();
+
+            // Update both landmarks overlay map AND main spotlight map with combined data
+            this.redrawRouteOnMap(); // Updates landmarks overlay
+
+            // Update main spotlight map - let spotlight controller gather all data internally
+            if (window.spotlightController && typeof window.spotlightController.recalculateRoute === 'function') {
+                console.log('🗺️ LANDMARK: Updating main spotlight map');
+                try {
+                    await window.spotlightController.recalculateRoute();
+                    console.log('🗺️ LANDMARK: Main map updated');
+                } catch (error) {
+                    console.warn('🗺️ LANDMARK: Failed to update main map:', error);
                 }
-
-                this.hideLandmarkDetail();
-
-                document.getElementById('saveUpdatedRoute').classList.remove('disabled');
-
-                this.showNotification(`${data.landmark.name} added to route!`, 'success');
             }
+
+            this.hideLandmarkDetail();
+            document.getElementById('saveUpdatedRoute').classList.remove('disabled');
+            this.showNotification(`${landmark.name} added to route!`, 'success');
 
         } catch (error) {
             console.error('Error adding landmark:', error);
@@ -770,6 +788,72 @@ class LandmarksOverlay {
         setTimeout(() => {
             notification.remove();
         }, 3000);
+    }
+
+    // Client-side optimization functions
+    findOptimalInsertPosition(waypoints, landmark) {
+        console.log('🎯 CLIENT OPTIMIZATION: Finding optimal position for landmark:', landmark.name);
+        console.log('🎯 CLIENT OPTIMIZATION: Current waypoints:', waypoints.map(wp => `${wp.name} (${wp.lat}, ${wp.lng})`));
+
+        if (waypoints.length < 2) {
+            console.log('🎯 CLIENT OPTIMIZATION: Less than 2 waypoints, inserting at end');
+            return waypoints.length;
+        }
+
+        let minDetour = Infinity;
+        let bestPosition = waypoints.length;
+        let detourAnalysis = [];
+
+        for (let i = 0; i <= waypoints.length; i++) {
+            const prevPoint = i > 0 ? waypoints[i-1] : null;
+            const nextPoint = i < waypoints.length ? waypoints[i] : null;
+
+            let detour = 0;
+            let description = '';
+
+            if (prevPoint && nextPoint) {
+                // Calculate detour: distance(prev->landmark) + distance(landmark->next) - distance(prev->next)
+                const originalDistance = this.calculateDistance(prevPoint, nextPoint);
+                const newDistance = this.calculateDistance(prevPoint, landmark) + this.calculateDistance(landmark, nextPoint);
+                detour = newDistance - originalDistance;
+                description = `Between ${prevPoint.name} and ${nextPoint.name}`;
+            } else if (prevPoint) {
+                detour = this.calculateDistance(prevPoint, landmark);
+                description = `After ${prevPoint.name} (end)`;
+            } else if (nextPoint) {
+                detour = this.calculateDistance(landmark, nextPoint);
+                description = `Before ${nextPoint.name} (start)`;
+            } else {
+                description = 'Only waypoint';
+            }
+
+            detourAnalysis.push({
+                position: i,
+                detour: detour.toFixed(2),
+                description: description
+            });
+
+            if (detour < minDetour) {
+                minDetour = detour;
+                bestPosition = i;
+            }
+        }
+
+        console.log('🎯 CLIENT OPTIMIZATION: Detour analysis:', detourAnalysis);
+        console.log('🎯 CLIENT OPTIMIZATION: Best position:', bestPosition, 'with detour:', minDetour.toFixed(2), 'km');
+
+        return bestPosition;
+    }
+
+    calculateDistance(point1, point2) {
+        const R = 6371; // Earth's radius in km
+        const dLat = (point2.lat - point1.lat) * Math.PI / 180;
+        const dLng = (point2.lng - point1.lng) * Math.PI / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                  Math.cos(point1.lat * Math.PI / 180) * Math.cos(point2.lat * Math.PI / 180) *
+                  Math.sin(dLng/2) * Math.sin(dLng/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        return R * c;
     }
 }
 

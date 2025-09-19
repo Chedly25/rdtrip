@@ -993,18 +993,12 @@ class DestinationManager {
             console.log(`🌍 ADD CUSTOM: Calling updateRoute...`);
             this.updateRoute();
 
-            // Direct map update (same approach as landmarks) - include current destinations as waypoints
+            // Direct map update - let spotlight controller gather all data internally
             if (window.spotlightController && typeof window.spotlightController.recalculateRoute === 'function') {
-                console.log(`🌍 ADD CUSTOM: Calling direct map recalculation with destinations...`);
+                console.log(`🌍 ADD CUSTOM: Calling map recalculation...`);
                 try {
-                    // Convert destinations to waypoints format for spotlight
-                    const waypoints = this.destinations.map(dest => ({
-                        name: dest.name,
-                        coordinates: dest.coordinates,
-                        type: 'city'
-                    }));
-                    await window.spotlightController.recalculateRoute(waypoints);
-                    console.log(`🌍 ADD CUSTOM: Map recalculation completed successfully with ${waypoints.length} cities`);
+                    await window.spotlightController.recalculateRoute();
+                    console.log(`🌍 ADD CUSTOM: Map recalculation completed successfully`);
                 } catch (error) {
                     console.warn(`🌍 ADD CUSTOM: Map recalculation failed:`, error);
                 }
@@ -1552,16 +1546,7 @@ class DestinationManager {
         if (window.spotlightController && typeof window.spotlightController.recalculateRoute === 'function') {
             console.log('🗺️ DIRECT MAP: Using spotlight controller recalculateRoute method');
             try {
-                // Convert destinations to waypoint format that spotlight expects
-                const waypoints = this.destinations.map(dest => ({
-                    name: dest.name,
-                    lat: dest.coordinates ? dest.coordinates[1] : 0,
-                    lng: dest.coordinates ? dest.coordinates[0] : 0,
-                    description: dest.description || '',
-                    activities: dest.activities || dest.highlights || []
-                }));
-
-                await window.spotlightController.recalculateRoute(waypoints);
+                await window.spotlightController.recalculateRoute();
                 console.log('🗺️ DIRECT MAP: Successfully updated route via spotlight controller');
                 return;
             } catch (error) {
@@ -1614,27 +1599,10 @@ class DestinationManager {
                     console.log('🗺️ DIRECT MAP: Called spotlight displayCities()');
                 }
 
-                // Call recalculateRoute with new waypoints if available
+                // Call recalculateRoute to update the map
                 if (typeof window.spotlightController.recalculateRoute === 'function') {
-                    // Convert destinations to waypoint format that spotlight expects
-                    const waypoints = this.destinations
-                        .filter(dest => dest.coordinates && dest.coordinates[0] !== 0 && dest.coordinates[1] !== 0)
-                        .map(dest => ({
-                            name: dest.name,
-                            lat: dest.coordinates[1],
-                            lng: dest.coordinates[0],
-                            description: dest.description || '',
-                            activities: dest.activities || dest.highlights || []
-                        }));
-
-                    console.log('🗺️ DIRECT MAP: Filtered waypoints with valid coordinates:', waypoints.map(w => `${w.name}: [${w.lng}, ${w.lat}]`));
-
-                    if (waypoints.length > 0) {
-                        await window.spotlightController.recalculateRoute(waypoints);
-                        console.log('🗺️ DIRECT MAP: Called spotlight recalculateRoute() with formatted waypoints');
-                    } else {
-                        console.warn('🗺️ DIRECT MAP: No destinations with valid coordinates found');
-                    }
+                    await window.spotlightController.recalculateRoute();
+                    console.log('🗺️ DIRECT MAP: Called spotlight recalculateRoute()');
                 }
 
                 console.log('🗺️ DIRECT MAP: Successfully updated spotlight waypoints and route');
