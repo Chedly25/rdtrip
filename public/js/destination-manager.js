@@ -247,30 +247,73 @@ class DestinationManager {
 
         // Make the entire card draggable when the handle is present
         card.draggable = true;
+        card.style.cursor = 'move';
 
-        // Clear any existing event listeners and add new ones
-        card.removeEventListener('dragstart', card._boundDragStart);
-        card.removeEventListener('dragend', card._boundDragEnd);
-        card.removeEventListener('dragover', card._boundDragOver);
-        card.removeEventListener('drop', card._boundDrop);
+        // Clear any existing event listeners
+        this.removeAllDragListeners(card);
 
-        // Create bound methods to maintain proper context
-        card._boundDragStart = (e) => {
-            console.log(`🎯 Starting drag for index ${index}, destination: ${this.destinations[index]?.name}`);
-            this.handleDragStart(e, index);
+        // Create unique bound methods for this specific card
+        const dragStartHandler = (e) => {
+            console.log(`🎯 DRAG START: index ${index}, destination: ${this.destinations[index]?.name}`);
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', card.outerHTML);
+            this.draggedItem = index;
+            card.classList.add('dragging');
+
+            // Prevent default to ensure drag works
+            e.stopPropagation();
+
+            // Create drag image
+            const dragImage = card.cloneNode(true);
+            dragImage.style.transform = 'rotate(5deg)';
+            dragImage.style.opacity = '0.8';
+            document.body.appendChild(dragImage);
+            e.dataTransfer.setDragImage(dragImage, e.offsetX, e.offsetY);
+
+            setTimeout(() => document.body.removeChild(dragImage), 0);
         };
-        card._boundDragEnd = (e) => this.handleDragEnd(e);
-        card._boundDragOver = (e) => this.handleDragOver(e);
-        card._boundDrop = (e) => {
-            console.log(`🎯 Dropping on index ${index}, destination: ${this.destinations[index]?.name}`);
-            this.handleDrop(e, index);
+
+        const dragEndHandler = (e) => {
+            console.log(`🎯 DRAG END: index ${index}`);
+            card.classList.remove('dragging');
+            document.querySelectorAll('.city-card.drag-over').forEach(c => c.classList.remove('drag-over'));
+            this.draggedItem = null;
+        };
+
+        const dragOverHandler = (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            if (!card.classList.contains('dragging')) {
+                document.querySelectorAll('.city-card.drag-over').forEach(c => c.classList.remove('drag-over'));
+                card.classList.add('drag-over');
+            }
+        };
+
+        const dropHandler = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log(`🎯 DROP: on index ${index}, dragged item: ${this.draggedItem}`);
+
+            card.classList.remove('drag-over');
+
+            if (this.draggedItem !== null && this.draggedItem !== index) {
+                this.reorderDestinations(this.draggedItem, index);
+            }
+        };
+
+        // Store handlers on the card for cleanup
+        card._dragHandlers = {
+            dragstart: dragStartHandler,
+            dragend: dragEndHandler,
+            dragover: dragOverHandler,
+            drop: dropHandler
         };
 
         // Add event listeners
-        card.addEventListener('dragstart', card._boundDragStart);
-        card.addEventListener('dragend', card._boundDragEnd);
-        card.addEventListener('dragover', card._boundDragOver);
-        card.addEventListener('drop', card._boundDrop);
+        card.addEventListener('dragstart', dragStartHandler, { passive: false });
+        card.addEventListener('dragend', dragEndHandler);
+        card.addEventListener('dragover', dragOverHandler);
+        card.addEventListener('drop', dropHandler);
 
         // Visual feedback on hover
         dragHandle.addEventListener('mousedown', () => {
@@ -1474,6 +1517,32 @@ class DestinationManager {
                 this.toggleEditMode();
             }
         });
+    }
+
+    removeAllDragListeners(card) {
+        if (card._dragHandlers) {
+            Object.entries(card._dragHandlers).forEach(([event, handler]) => {
+                card.removeEventListener(event, handler);
+            });
+            delete card._dragHandlers;
+        }
+    }
+
+    reorderDestinations(fromIndex, toIndex) {
+        console.log(`🔄 Reordering: moving ${fromIndex} to ${toIndex}`);
+
+        if (fromIndex === toIndex) return;
+
+        // Move the destination
+        const draggedDestination = this.destinations[fromIndex];
+        this.destinations.splice(fromIndex, 1);
+        this.destinations.splice(toIndex, 0, draggedDestination);
+
+        console.log('🔄 New order:', this.destinations.map(d => d.name));
+
+        // Re-render and update everything
+        this.renderDestinations();
+        this.updateRoute();
     }
 }
 
