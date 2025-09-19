@@ -927,4 +927,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-export { DestinationManager };
+// Export for module systems if available
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { DestinationManager };
+}
