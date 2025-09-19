@@ -209,8 +209,8 @@ class SpotlightController {
     async loadLandmarksOnMap() {
         try {
             // Remove existing landmark layers if they exist
-            if (this.map.getLayer('landmark-labels')) {
-                this.map.removeLayer('landmark-labels');
+            if (this.map.getLayer('landmarks-fallback')) {
+                this.map.removeLayer('landmarks-fallback');
             }
             if (this.map.getLayer('landmarks')) {
                 this.map.removeLayer('landmarks');
@@ -241,26 +241,59 @@ class SpotlightController {
                 natural: '#95E77E'
             };
 
-            // Convert landmarks to GeoJSON features
-            const landmarkFeatures = landmarks.map(landmark => ({
-                type: 'Feature',
-                properties: {
-                    id: landmark.name,
-                    name: landmark.name,
-                    city: landmark.city,
-                    country: landmark.country,
-                    description: landmark.description || '',
-                    rating: landmark.rating || '',
-                    visit_duration: landmark.visit_duration || '',
-                    type: landmark.type,
-                    color: typeColors[landmark.type] || '#9333EA',
-                    icon: this.getSpecificLandmarkIcon(landmark.name, landmark.type)
-                },
-                geometry: {
-                    type: 'Point',
-                    coordinates: [landmark.lng, landmark.lat]
+            // First, load landmark images as map icons
+            const imagesToLoad = [];
+            landmarks.forEach(landmark => {
+                const imagePath = this.getCustomLandmarkImage(landmark.name);
+                if (imagePath) {
+                    const iconId = `landmark-${landmark.name.toLowerCase().replace(/\s+/g, '-')}`;
+                    imagesToLoad.push({ iconId, imagePath });
                 }
+            });
+
+            // Load all images first
+            await Promise.all(imagesToLoad.map(({ iconId, imagePath }) => {
+                return new Promise((resolve) => {
+                    if (this.map.hasImage(iconId)) {
+                        resolve();
+                        return;
+                    }
+
+                    this.map.loadImage(`images/landmarks/${imagePath}`, (error, image) => {
+                        if (!error && image) {
+                            this.map.addImage(iconId, image);
+                        }
+                        resolve(); // Resolve regardless of success/failure
+                    });
+                });
             }));
+
+            // Convert landmarks to GeoJSON features
+            const landmarkFeatures = landmarks.map(landmark => {
+                const imagePath = this.getCustomLandmarkImage(landmark.name);
+                const iconId = imagePath ? `landmark-${landmark.name.toLowerCase().replace(/\s+/g, '-')}` : null;
+
+                return {
+                    type: 'Feature',
+                    properties: {
+                        id: landmark.name,
+                        name: landmark.name,
+                        city: landmark.city,
+                        country: landmark.country,
+                        description: landmark.description || '',
+                        rating: landmark.rating || '',
+                        visit_duration: landmark.visit_duration || '',
+                        type: landmark.type,
+                        color: typeColors[landmark.type] || '#9333EA',
+                        iconId: iconId,
+                        hasImage: !!iconId
+                    },
+                    geometry: {
+                        type: 'Point',
+                        coordinates: [landmark.lng, landmark.lat]
+                    }
+                };
+            });
 
             // Add GeoJSON source
             this.map.addSource('landmarks', {
@@ -271,11 +304,26 @@ class SpotlightController {
                 }
             });
 
-            // Add symbol layer for landmarks
+            // Add symbol layer for landmarks with images
             this.map.addLayer({
                 id: 'landmarks',
+                type: 'symbol',
+                source: 'landmarks',
+                filter: ['==', ['get', 'hasImage'], true],
+                layout: {
+                    'icon-image': ['get', 'iconId'],
+                    'icon-size': 0.6,
+                    'icon-allow-overlap': true,
+                    'icon-ignore-placement': true
+                }
+            });
+
+            // Add fallback circle layer for landmarks without images
+            this.map.addLayer({
+                id: 'landmarks-fallback',
                 type: 'circle',
                 source: 'landmarks',
+                filter: ['==', ['get', 'hasImage'], false],
                 paint: {
                     'circle-radius': 16,
                     'circle-color': ['get', 'color'],
@@ -285,34 +333,19 @@ class SpotlightController {
                 }
             });
 
-            // Add text labels for landmarks
-            this.map.addLayer({
-                id: 'landmark-labels',
-                type: 'symbol',
-                source: 'landmarks',
-                layout: {
-                    'text-field': ['get', 'icon'],
-                    'text-size': 16,
-                    'text-anchor': 'center',
-                    'text-allow-overlap': true,
-                    'text-ignore-placement': true
-                },
-                paint: {
-                    'text-color': '#ffffff'
-                }
-            });
-
-            // Set up click handler for landmarks
+            // Set up click handlers for both landmark layers
             this.map.off('click', 'landmarks', this.landmarkClickHandler);
+            this.map.off('click', 'landmarks-fallback', this.landmarkClickHandler);
+
             this.landmarkClickHandler = (e) => {
                 const feature = e.features[0];
                 const props = feature.properties;
 
-                // Create popup content
+                // Create popup content (no icon needed since we show images)
                 const popupContent = `
                     <div style="padding: 10px; max-width: 250px;">
                         <h3 style="margin: 0 0 8px 0; font-size: 16px; font-weight: 600;">
-                            ${props.icon} ${props.name}
+                            ${props.name}
                         </h3>
                         <p style="margin: 0 0 8px 0; color: #666; font-size: 14px;">
                             ${props.city}, ${props.country}
@@ -342,25 +375,36 @@ class SpotlightController {
             };
 
             this.map.on('click', 'landmarks', this.landmarkClickHandler);
+            this.map.on('click', 'landmarks-fallback', this.landmarkClickHandler);
 
-            // Set up hover effects
+            // Set up hover effects for both layers
             this.map.off('mouseenter', 'landmarks', this.landmarkHoverHandler);
             this.map.off('mouseleave', 'landmarks', this.landmarkLeaveHandler);
+            this.map.off('mouseenter', 'landmarks-fallback', this.landmarkHoverHandler);
+            this.map.off('mouseleave', 'landmarks-fallback', this.landmarkLeaveHandler);
 
             this.landmarkHoverHandler = () => {
                 this.map.getCanvas().style.cursor = 'pointer';
-                this.map.setPaintProperty('landmarks', 'circle-opacity', 1);
-                this.map.setPaintProperty('landmarks', 'circle-radius', 18);
+                // Icon hover effect for image landmarks
+                this.map.setLayoutProperty('landmarks', 'icon-size', 0.7);
+                // Circle hover effect for fallback landmarks
+                this.map.setPaintProperty('landmarks-fallback', 'circle-opacity', 1);
+                this.map.setPaintProperty('landmarks-fallback', 'circle-radius', 18);
             };
 
             this.landmarkLeaveHandler = () => {
                 this.map.getCanvas().style.cursor = '';
-                this.map.setPaintProperty('landmarks', 'circle-opacity', 0.9);
-                this.map.setPaintProperty('landmarks', 'circle-radius', 16);
+                // Reset icon size for image landmarks
+                this.map.setLayoutProperty('landmarks', 'icon-size', 0.6);
+                // Reset circle properties for fallback landmarks
+                this.map.setPaintProperty('landmarks-fallback', 'circle-opacity', 0.9);
+                this.map.setPaintProperty('landmarks-fallback', 'circle-radius', 16);
             };
 
             this.map.on('mouseenter', 'landmarks', this.landmarkHoverHandler);
             this.map.on('mouseleave', 'landmarks', this.landmarkLeaveHandler);
+            this.map.on('mouseenter', 'landmarks-fallback', this.landmarkHoverHandler);
+            this.map.on('mouseleave', 'landmarks-fallback', this.landmarkLeaveHandler);
 
         } catch (error) {
             console.error('Error loading landmarks:', error);
