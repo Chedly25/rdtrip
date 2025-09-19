@@ -633,8 +633,27 @@ class LandmarksOverlay {
             // Add landmark to combined waypoints
             const allWaypoints = [...combinedWaypoints, landmarkWaypoint];
 
-            // Include destination for full route optimization
-            const destinationCoords = { name: 'Venice', lat: 45.4408, lng: 12.3155, type: 'destination' };
+            // Get the actual destination from spotlight data (not hardcoded)
+            let destinationCoords = { name: 'Venice', lat: 45.4408, lng: 12.3155, type: 'destination' }; // fallback
+
+            // Try to get the real destination from spotlight controller
+            if (window.spotlightController?.spotlightData?.destination) {
+                const destination = window.spotlightController.spotlightData.destination;
+                console.log('🚀 DETECTED DESTINATION:', destination);
+
+                // Try to geocode the destination to get coordinates
+                if (destination.toLowerCase().includes('venice') || destination.toLowerCase().includes('venise')) {
+                    destinationCoords = { name: 'Venice', lat: 45.4408, lng: 12.3155, type: 'destination' };
+                } else if (destination.toLowerCase().includes('genoa') || destination.toLowerCase().includes('genova')) {
+                    destinationCoords = { name: 'Genoa', lat: 44.4056, lng: 8.9463, type: 'destination' };
+                } else if (destination.toLowerCase().includes('milan') || destination.toLowerCase().includes('milano')) {
+                    destinationCoords = { name: 'Milan', lat: 45.4642, lng: 9.1900, type: 'destination' };
+                } else {
+                    // Use fallback coordinates for unknown destinations
+                    console.log('🚀 UNKNOWN DESTINATION, using Venice as fallback');
+                }
+            }
+
             const fullRoute = [...allWaypoints, destinationCoords];
 
             console.log('🗺️ LANDMARK ADD: Full route before optimization:', fullRoute.map(wp => wp.name));
@@ -912,18 +931,16 @@ class LandmarksOverlay {
             let nearestIndex = 0;
             let nearestDistance = this.calculateDistance(current, remaining[0]);
 
-            // For the last remaining point, consider distance to destination as well
-            if (remaining.length === 1) {
-                const distanceToDestination = this.calculateDistance(remaining[0], destination);
-                console.log('🚀 NEAREST NEIGHBOR: Last point', remaining[0].name, 'distance to destination:', distanceToDestination.toFixed(2), 'km');
-            } else {
-                // Find the nearest point
-                for (let i = 1; i < remaining.length; i++) {
-                    const distance = this.calculateDistance(current, remaining[i]);
-                    if (distance < nearestDistance) {
-                        nearestDistance = distance;
-                        nearestIndex = i;
-                    }
+            console.log(`🚀 NEAREST NEIGHBOR: From ${current.name}, considering:`);
+
+            // Find the nearest point with detailed logging
+            for (let i = 0; i < remaining.length; i++) {
+                const distance = this.calculateDistance(current, remaining[i]);
+                console.log(`  - ${remaining[i].name}: ${distance.toFixed(2)} km`);
+
+                if (distance < nearestDistance) {
+                    nearestDistance = distance;
+                    nearestIndex = i;
                 }
             }
 
@@ -933,7 +950,8 @@ class LandmarksOverlay {
             remaining.splice(nearestIndex, 1);
             current = nearest;
 
-            console.log('🚀 NEAREST NEIGHBOR: Added', nearest.name, 'distance:', nearestDistance.toFixed(2), 'km');
+            console.log(`🚀 NEAREST NEIGHBOR: ✅ Selected ${nearest.name} (${nearestDistance.toFixed(2)} km)`);
+            console.log(`🚀 NEAREST NEIGHBOR: Remaining: ${remaining.map(r => r.name).join(', ')}`);
         }
 
         // Add destination at the end
