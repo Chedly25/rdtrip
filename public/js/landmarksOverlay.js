@@ -618,17 +618,6 @@ class LandmarksOverlay {
                 }
             }
 
-            // Include destination in optimization to prevent landmarks from always appearing before destination
-            const destinationCoords = { name: 'Barcelona', lat: 41.3851, lng: 2.1734, type: 'destination' };
-            const waypointsWithDestination = [...combinedWaypoints, destinationCoords];
-
-            console.log('🗺️ LANDMARK ADD: Including destination in optimization');
-            console.log('🗺️ LANDMARK ADD: Waypoints with destination:', waypointsWithDestination.map(wp => wp.name));
-
-            // Client-side optimal insertion considering full route including destination
-            const optimalPosition = this.findOptimalInsertPosition(waypointsWithDestination, landmark);
-            console.log('🗺️ LANDMARK ADD: Optimal position calculated:', optimalPosition, 'out of', waypointsWithDestination.length);
-
             // Create landmark waypoint
             const landmarkWaypoint = {
                 name: landmark.name,
@@ -641,11 +630,21 @@ class LandmarksOverlay {
                 image_url: landmark.image_url
             };
 
-            // Insert landmark at optimal position in the full route (including destination)
-            waypointsWithDestination.splice(optimalPosition, 0, landmarkWaypoint);
+            // Add landmark to combined waypoints
+            const allWaypoints = [...combinedWaypoints, landmarkWaypoint];
+
+            // Include destination for full route optimization
+            const destinationCoords = { name: 'Venice', lat: 45.4408, lng: 12.3155, type: 'destination' };
+            const fullRoute = [...allWaypoints, destinationCoords];
+
+            console.log('🗺️ LANDMARK ADD: Full route before optimization:', fullRoute.map(wp => wp.name));
+
+            // COMPLETELY reorder the entire route including the new landmark
+            const optimizedFullRoute = this.optimizeEntireRoute(fullRoute);
+            console.log('🗺️ LANDMARK ADD: Full route after optimization:', optimizedFullRoute.map(wp => wp.name));
 
             // Remove destination from waypoints for storage (it will be added back by spotlight controller)
-            const finalWaypoints = waypointsWithDestination.filter(wp => wp.type !== 'destination');
+            const finalWaypoints = optimizedFullRoute.filter(wp => wp.type !== 'destination');
 
             // Update route directly without server optimization
             this.currentRoute = {
@@ -861,6 +860,89 @@ class LandmarksOverlay {
         console.log('🎯 CLIENT OPTIMIZATION: Best position:', bestPosition, 'with detour:', minDetour.toFixed(2), 'km');
 
         return bestPosition;
+    }
+
+    optimizeEntireRoute(waypoints) {
+        if (!waypoints || waypoints.length <= 2) {
+            console.log('🚀 FULL ROUTE OPTIMIZATION: Too few waypoints to optimize');
+            return waypoints;
+        }
+
+        console.log('🚀 FULL ROUTE OPTIMIZATION: Optimizing full route with', waypoints.length, 'waypoints');
+        console.log('🚀 FULL ROUTE OPTIMIZATION: Input order:', waypoints.map(wp => wp.name));
+
+        // Hardcode start point as Aix-en-Provence
+        const startPoint = { name: 'Aix-en-Provence', lat: 43.5297, lng: 5.4474, type: 'start' };
+
+        // Find destination (last point)
+        const destinationPoint = waypoints.find(wp => wp.type === 'destination');
+        if (!destinationPoint) {
+            console.log('🚀 FULL ROUTE OPTIMIZATION: No destination found, using existing optimization');
+            return this.optimizeRouteOrder(waypoints);
+        }
+
+        // Get intermediate waypoints (everything except destination)
+        const intermediatePoints = waypoints.filter(wp => wp.type !== 'destination');
+
+        // Optimize intermediate points using nearest neighbor from start to destination
+        const optimizedRoute = this.optimizeFromStartToEnd(startPoint, intermediatePoints, destinationPoint);
+
+        console.log('🚀 FULL ROUTE OPTIMIZATION: Optimized order:', optimizedRoute.map(wp => wp.name));
+        return optimizedRoute;
+    }
+
+    optimizeFromStartToEnd(start, intermediatePoints, destination) {
+        if (intermediatePoints.length === 0) {
+            return [destination];
+        }
+
+        if (intermediatePoints.length === 1) {
+            return [intermediatePoints[0], destination];
+        }
+
+        // Use nearest neighbor algorithm starting from start point towards destination
+        const optimized = [];
+        const remaining = [...intermediatePoints];
+        let current = start;
+
+        console.log('🚀 NEAREST NEIGHBOR: Starting from', current.name, 'heading to', destination.name);
+        console.log('🚀 NEAREST NEIGHBOR: Intermediate points to visit:', remaining.map(wp => wp.name));
+
+        while (remaining.length > 0) {
+            let nearestIndex = 0;
+            let nearestDistance = this.calculateDistance(current, remaining[0]);
+
+            // For the last remaining point, consider distance to destination as well
+            if (remaining.length === 1) {
+                const distanceToDestination = this.calculateDistance(remaining[0], destination);
+                console.log('🚀 NEAREST NEIGHBOR: Last point', remaining[0].name, 'distance to destination:', distanceToDestination.toFixed(2), 'km');
+            } else {
+                // Find the nearest point
+                for (let i = 1; i < remaining.length; i++) {
+                    const distance = this.calculateDistance(current, remaining[i]);
+                    if (distance < nearestDistance) {
+                        nearestDistance = distance;
+                        nearestIndex = i;
+                    }
+                }
+            }
+
+            // Add nearest point to route and remove from remaining
+            const nearest = remaining[nearestIndex];
+            optimized.push(nearest);
+            remaining.splice(nearestIndex, 1);
+            current = nearest;
+
+            console.log('🚀 NEAREST NEIGHBOR: Added', nearest.name, 'distance:', nearestDistance.toFixed(2), 'km');
+        }
+
+        // Add destination at the end
+        optimized.push(destination);
+
+        const totalDistance = this.calculateTotalDistance([start, ...optimized]);
+        console.log('🚀 NEAREST NEIGHBOR: Total route distance:', totalDistance.toFixed(2), 'km');
+
+        return optimized;
     }
 
     optimizeRouteOrder(waypoints) {
