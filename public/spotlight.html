@@ -162,6 +162,26 @@
         </main>
     </div>
 
+    <!-- City Detail Modal -->
+    <div id="cityDetailModal" class="city-detail-modal">
+        <div class="city-detail-content">
+            <button class="modal-close-btn" id="closeCityModal">×</button>
+            <div class="city-detail-header">
+                <img id="modalCityImage" src="" alt="">
+                <div class="city-detail-overlay">
+                    <h2 class="city-detail-title" id="modalCityTitle">City Name</h2>
+                </div>
+            </div>
+            <div class="city-detail-body">
+                <p class="city-detail-description" id="modalCityDescription">City description will appear here...</p>
+                <h3 class="city-detail-activities-title">🎯 Things to Do</h3>
+                <ul class="city-detail-activities-list" id="modalCityActivities">
+                    <!-- Activities will be populated here -->
+                </ul>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Disable Mapbox telemetry to prevent ad-blocker conflicts
         window.mapboxTelemetryBlocked = true;

@@ -1074,7 +1074,7 @@ class SpotlightController {
             const imageUrl = await this.getWikipediaImage(waypoint.name, 800, 600);
 
             html += `
-                <div class="city-card">
+                <div class="city-card" onclick="window.spotlightController.showCityModal('${waypoint.name}', '${imageUrl || ''}', '${(waypoint.description || '').replace(/'/g, '\\\'').replace(/"/g, '&quot;')}', ${JSON.stringify(waypoint.activities || []).replace(/'/g, '\\\'').replace(/"/g, '&quot;')})">
                     <div class="city-image-container">
                         ${imageUrl ? `
                             <img src="${imageUrl}" alt="${waypoint.name}" class="city-image"
@@ -1088,14 +1088,12 @@ class SpotlightController {
                         `}
                     </div>
                     <div class="city-content">
-                        <h3>${index + 1}. ${waypoint.name}</h3>
-                        <p class="city-description">${waypoint.description || ''}</p>
+                        <h3>${waypoint.name}</h3>
                         ${waypoint.activities && waypoint.activities.length > 0 ? `
                             <ul class="city-activities">
-                                ${waypoint.activities.map(activity => `<li>${activity}</li>`).join('')}
+                                ${waypoint.activities.slice(0, 3).map(activity => `<li>${activity}</li>`).join('')}
                             </ul>
-                        ` : ''}
-                        ${waypoint.duration ? `<p><strong>Suggested duration:</strong> ${waypoint.duration}</p>` : ''}
+                        ` : '<p class="no-activities">Click to see details</p>'}
                     </div>
                 </div>
             `;
@@ -2718,9 +2716,81 @@ class SpotlightController {
             }
         });
     }
+
+    // City Modal Methods
+    showCityModal(cityName, imageUrl, description, activities) {
+        console.log('🏙️ Opening city modal for:', cityName);
+
+        const modal = document.getElementById('cityDetailModal');
+        const titleElement = document.getElementById('modalCityTitle');
+        const imageElement = document.getElementById('modalCityImage');
+        const descriptionElement = document.getElementById('modalCityDescription');
+        const activitiesElement = document.getElementById('modalCityActivities');
+
+        // Set modal content
+        titleElement.textContent = cityName;
+        imageElement.src = imageUrl || '';
+        imageElement.alt = cityName;
+
+        // Handle description
+        if (description && description !== 'undefined' && description.trim()) {
+            descriptionElement.textContent = description;
+            descriptionElement.style.display = 'block';
+        } else {
+            descriptionElement.style.display = 'none';
+        }
+
+        // Handle activities
+        if (activities && Array.isArray(activities) && activities.length > 0) {
+            activitiesElement.innerHTML = activities
+                .map(activity => `<li>${activity}</li>`)
+                .join('');
+        } else {
+            activitiesElement.innerHTML = '<li>Discover this amazing destination and its unique attractions!</li>';
+        }
+
+        // Show modal
+        modal.classList.add('show');
+        document.body.style.overflow = 'hidden';
+
+        // Setup close functionality if not already done
+        if (!modal.hasEventListener) {
+            this.setupModalEventListeners();
+            modal.hasEventListener = true;
+        }
+    }
+
+    setupModalEventListeners() {
+        const modal = document.getElementById('cityDetailModal');
+        const closeBtn = document.getElementById('closeCityModal');
+
+        // Close on button click
+        closeBtn.addEventListener('click', () => this.closeCityModal());
+
+        // Close on background click
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                this.closeCityModal();
+            }
+        });
+
+        // Close on escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && modal.classList.contains('show')) {
+                this.closeCityModal();
+            }
+        });
+    }
+
+    closeCityModal() {
+        const modal = document.getElementById('cityDetailModal');
+        modal.classList.remove('show');
+        document.body.style.overflow = '';
+        console.log('🏙️ Closed city modal');
+    }
 }
 
 // Initialize the spotlight page when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    new SpotlightController();
+    window.spotlightController = new SpotlightController();
 });
