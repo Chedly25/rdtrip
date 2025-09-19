@@ -19,16 +19,27 @@ class DestinationManager {
     }
 
     init() {
+        console.log('🔧 DESTINATION MANAGER: Starting initialization...');
+
         // Load existing route data
+        console.log('🔧 INIT: Loading route data...');
         this.loadRouteData();
 
         // Setup event listeners
+        console.log('🔧 INIT: Setting up event listeners...');
         this.setupEventListeners();
 
         // Initialize UI
+        console.log('🔧 INIT: Initializing UI...');
         this.initializeUI();
 
-        console.log('✅ Destination Manager initialized');
+        // Wait a bit and then check if we need to render existing cities
+        setTimeout(() => {
+            console.log('🔧 INIT: Delayed check for existing cities...');
+            this.checkAndSyncExistingCities();
+        }, 1000);
+
+        console.log('✅ Destination Manager initialized successfully');
     }
 
     loadRouteData() {
@@ -54,62 +65,101 @@ class DestinationManager {
     }
 
     initializeUI() {
+        console.log('🎨 INIT UI: Starting UI initialization...');
+
         // Add edit mode toggle button
+        console.log('🎨 INIT UI: Adding edit mode button...');
         this.addEditModeButton();
 
         // Enhance existing city cards with controls
+        console.log('🎨 INIT UI: Enhancing existing city cards...');
         this.enhanceCityCards();
 
         // Create add destination modal
+        console.log('🎨 INIT UI: Creating add destination modal...');
         this.createAddDestinationModal();
+
+        console.log('🎨 INIT UI: UI initialization complete');
     }
 
     enhanceCityCards() {
-        console.log('🎨 Enhancing existing city cards...');
+        console.log('🎨 ENHANCE CITY CARDS: Enhancing existing city cards...');
         const cityCards = document.querySelectorAll('.city-card');
-        console.log(`Found ${cityCards.length} city cards to enhance`);
+        console.log(`🎨 ENHANCE: Found ${cityCards.length} city cards to enhance`);
 
         cityCards.forEach((card, index) => {
             // Skip if already enhanced
             if (card.querySelector('.remove-city-btn')) {
-                console.log(`City card ${index} already enhanced`);
+                console.log(`🎨 ENHANCE: City card ${index} already enhanced`);
                 return;
             }
 
-            console.log(`Enhancing city card ${index}`);
+            console.log(`🎨 ENHANCE: Enhancing city card ${index}`);
 
             // Add to destinations array if not already there
             const cityName = card.querySelector('.city-name')?.textContent?.trim();
+            const cityHighlights = card.querySelector('.city-highlights')?.textContent?.trim() || '';
+
+            console.log(`🎨 ENHANCE: Processing city: ${cityName}`);
+
             if (cityName && !this.destinations.find(d => d.name === cityName)) {
-                this.destinations.push({
+                const newDestination = {
                     name: cityName,
                     coordinates: [0, 0], // Will be updated when route is recalculated
-                    highlights: card.querySelector('.city-highlights')?.textContent?.trim() || []
-                });
+                    highlights: cityHighlights ? [cityHighlights] : [],
+                    fromExistingCard: true
+                };
+                this.destinations.push(newDestination);
+                console.log(`🎨 ENHANCE: Added destination from existing card:`, newDestination);
             }
 
-            // Add edit controls when in edit mode
-            this.addRemoveButton(card, index);
-            this.addDragHandle(card, index);
+            // Don't add edit controls immediately - only when in edit mode
+            // this.addRemoveButton(card, index);
+            // this.addDragHandle(card, index);
         });
 
-        console.log('Current destinations:', this.destinations);
+        console.log('🎨 ENHANCE: Current destinations after enhancement:', this.destinations);
+    }
+
+    checkAndSyncExistingCities() {
+        console.log('🔄 SYNC CHECK: Checking for existing cities to sync...');
+
+        const cityCards = document.querySelectorAll('.city-card');
+        console.log(`🔄 SYNC: Found ${cityCards.length} existing city cards`);
+
+        if (cityCards.length > 0 && this.destinations.length === 0) {
+            console.log('🔄 SYNC: No destinations in manager but city cards exist, syncing...');
+            this.enhanceCityCards();
+
+            // Update route and map
+            if (this.destinations.length > 0) {
+                console.log('🔄 SYNC: Synced destinations, updating route...');
+                this.updateRoute();
+            }
+        } else if (cityCards.length === 0 && this.destinations.length > 0) {
+            console.log('🔄 SYNC: Have destinations but no city cards, rendering...');
+            this.renderDestinations();
+        } else {
+            console.log('🔄 SYNC: City cards and destinations appear to be in sync');
+            console.log(`🔄 SYNC: City cards: ${cityCards.length}, Destinations: ${this.destinations.length}`);
+        }
     }
 
     addEditModeButton() {
-        console.log('🔧 Adding edit mode button...');
+        console.log('🔧 EDIT BUTTON: Adding edit mode button...');
         const headerNav = document.querySelector('.header-nav');
-        console.log('Header nav found:', !!headerNav);
+        console.log('🔧 EDIT BUTTON: Header nav found:', !!headerNav);
 
         if (!headerNav) {
-            console.warn('❌ Header nav not found!');
+            console.warn('❌ EDIT BUTTON: Header nav not found!');
+            console.log('🔧 EDIT BUTTON: Available header elements:', document.querySelectorAll('header, .header, .header-content, .nav'));
             return;
         }
 
         // Check if button already exists
         const existingButton = document.getElementById('edit-route-btn');
         if (existingButton) {
-            console.log('⚠️ Edit button already exists, skipping');
+            console.log('⚠️ EDIT BUTTON: Edit button already exists, skipping');
             return;
         }
 
@@ -689,61 +739,83 @@ class DestinationManager {
     }
 
     async enrichDestinationData(destination) {
-        console.log(`🤖 Enriching data for ${destination.name}...`);
+        console.log(`🤖 ENRICH DESTINATION: Enriching data for ${destination.name}...`);
 
         try {
-            // Call Perplexity API for rich destination description
-            const response = await fetch('/api/perplexity', {
+            // Call Chat API for rich destination description
+            console.log(`🤖 ENRICH: Making API call to /api/chat for ${destination.name}`);
+            const response = await fetch('/api/chat', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    query: `Provide 3-4 key highlights and attractions for ${destination.name}. Focus on must-see places, activities, and unique experiences. Format as bullet points.`
+                    message: `Provide 3-4 key highlights and attractions for ${destination.name}. Focus on must-see places, activities, and unique experiences. Format as bullet points.`
                 })
             });
 
+            console.log(`🤖 ENRICH: API response status: ${response.status}`);
+
             if (response.ok) {
                 const data = await response.json();
-                const highlights = this.parseHighlightsFromAI(data.content);
+                console.log(`🤖 ENRICH: API response data:`, data);
+                const highlights = this.parseHighlightsFromAI(data.answer || data.response || data.content || '');
 
-                return {
+                const enrichedDestination = {
                     ...destination,
                     description: `Discover ${destination.name}, a captivating destination with rich culture and amazing attractions`,
                     highlights: highlights,
                     aiGenerated: true,
                     added: new Date().toISOString()
                 };
+
+                console.log(`🤖 ENRICH: Successfully enriched ${destination.name}:`, enrichedDestination);
+                return enrichedDestination;
             } else {
-                throw new Error('Perplexity API request failed');
+                throw new Error(`Chat API request failed with status: ${response.status}`);
             }
         } catch (error) {
-            console.warn('⚠️ AI enrichment failed, using fallback data:', error);
+            console.warn('⚠️ ENRICH: AI enrichment failed, using fallback data:', error);
 
             // Fallback to basic destination data
-            return {
+            const fallbackDestination = {
                 ...destination,
                 description: `Beautiful ${destination.name} with amazing attractions and experiences`,
                 highlights: [`Explore ${destination.name}`, `Local cuisine`, `Historic sites`, `Local culture`],
                 added: new Date().toISOString()
             };
+
+            console.log(`🤖 ENRICH: Using fallback data for ${destination.name}:`, fallbackDestination);
+            return fallbackDestination;
         }
     }
 
     parseHighlightsFromAI(content) {
+        console.log(`🤖 PARSE HIGHLIGHTS: Parsing content:`, content);
+
+        if (!content || typeof content !== 'string') {
+            console.log(`🤖 PARSE: No valid content provided, using fallback`);
+            return ['Historic landmarks', 'Local cuisine', 'Cultural attractions', 'Scenic views'];
+        }
+
         // Extract bullet points or numbered items from AI response
-        const bulletPoints = content.match(/[-•*]\\s*([^\\n\\r]+)/g) ||
-                           content.match(/\\d+\\.\\s*([^\\n\\r]+)/g) ||
+        const bulletPoints = content.match(/[-•*]\s*([^\n\r]+)/g) ||
+                           content.match(/\d+\.\s*([^\n\r]+)/g) ||
                            content.split('.').filter(item => item.trim().length > 10);
 
+        console.log(`🤖 PARSE: Extracted bullet points:`, bulletPoints);
+
         if (bulletPoints && bulletPoints.length > 0) {
-            return bulletPoints.slice(0, 4).map(point => {
-                const cleaned = point.replace(/^[-•*\\d.]\\s*/, '').trim();
+            const parsed = bulletPoints.slice(0, 4).map(point => {
+                const cleaned = point.replace(/^[-•*\d.]\s*/, '').trim();
                 return cleaned.length > 60 ? cleaned.substring(0, 57) + '...' : cleaned;
             });
+            console.log(`🤖 PARSE: Parsed highlights:`, parsed);
+            return parsed;
         }
 
         // Fallback highlights
+        console.log(`🤖 PARSE: No bullet points found, using fallback highlights`);
         return ['Historic landmarks', 'Local cuisine', 'Cultural attractions', 'Scenic views'];
     }
 
@@ -812,40 +884,59 @@ class DestinationManager {
             await this.enrichCustomDestination(newDestination);
 
         } catch (error) {
-            console.error('❌ Error adding custom destination:', error);
+            console.error('❌ ADD CUSTOM: Error adding custom destination:', error);
             alert('Failed to add city. Please try again.');
         } finally {
             // Restore button
-            addBtn.textContent = originalText;
-            addBtn.disabled = false;
+            console.log('🌍 ADD CUSTOM: Restoring button state...');
+            if (addBtn) {
+                addBtn.textContent = originalText;
+                addBtn.disabled = false;
+            }
         }
     }
 
     async enrichCustomDestination(destination) {
-        console.log(`🔍 Enriching data for ${destination.name}...`);
+        console.log(`🔍 ENRICH CUSTOM: Enriching data for ${destination.name}...`);
 
         try {
             // Get Wikipedia image and basic info
+            console.log(`🔍 ENRICH CUSTOM: Getting Wikipedia image for ${destination.name}...`);
             const wikipediaImage = await this.getWikipediaImage(destination.name);
+            console.log(`🔍 ENRICH CUSTOM: Wikipedia image result:`, wikipediaImage ? 'found' : 'not found');
 
-            // Get Perplexity description
-            const perplexityData = await this.enrichDestinationData(destination);
+            // Get AI description
+            console.log(`🔍 ENRICH CUSTOM: Getting AI description for ${destination.name}...`);
+            const aiData = await this.enrichDestinationData(destination);
+            console.log(`🔍 ENRICH CUSTOM: AI data result:`, aiData);
 
             // Update the destination in our array
             const destIndex = this.destinations.findIndex(d => d.name === destination.name);
+            console.log(`🔍 ENRICH CUSTOM: Found destination at index:`, destIndex);
+
             if (destIndex !== -1) {
-                this.destinations[destIndex].highlights = perplexityData.highlights || destination.highlights;
+                this.destinations[destIndex].highlights = aiData.highlights || destination.highlights;
                 this.destinations[destIndex].wikipediaImage = wikipediaImage;
-                this.destinations[destIndex].description = perplexityData.description;
+                this.destinations[destIndex].description = aiData.description;
+                this.destinations[destIndex].enriched = true;
+
+                console.log(`🔍 ENRICH CUSTOM: Updated destination:`, this.destinations[destIndex]);
 
                 // Re-render to show enriched data
+                console.log(`🔍 ENRICH CUSTOM: Re-rendering destinations...`);
                 this.renderDestinations();
 
-                console.log(`✅ Successfully enriched ${destination.name}`);
+                // Also update the map
+                console.log(`🔍 ENRICH CUSTOM: Updating route...`);
+                this.updateRoute();
+
+                console.log(`✅ ENRICH CUSTOM: Successfully enriched ${destination.name}`);
+            } else {
+                console.warn(`🔍 ENRICH CUSTOM: Could not find destination ${destination.name} in array`);
             }
 
         } catch (error) {
-            console.error(`❌ Failed to enrich ${destination.name}:`, error);
+            console.error(`❌ ENRICH CUSTOM: Failed to enrich ${destination.name}:`, error);
         }
     }
 
@@ -1287,11 +1378,20 @@ class DestinationManager {
     }
 
     directMapUpdate() {
+        console.log('🗺️ DIRECT MAP UPDATE: Starting direct map update...');
+
         // Direct map update when global functions aren't available
-        if (!window.map) return;
+        if (!window.map) {
+            console.log('🗺️ DIRECT MAP: No window.map found');
+            return;
+        }
+
+        console.log('🗺️ DIRECT MAP: Map instance found, updating...');
+        console.log('🗺️ DIRECT MAP: Destinations to map:', this.destinations.map(d => ({ name: d.name, coords: d.coordinates })));
 
         // Clear existing markers and route
         if (window.mapMarkers) {
+            console.log('🗺️ DIRECT MAP: Clearing', window.mapMarkers.length, 'existing markers');
             window.mapMarkers.forEach(marker => marker.remove());
             window.mapMarkers = [];
         }
@@ -1299,24 +1399,50 @@ class DestinationManager {
         // Add new markers for destinations
         const markers = [];
         this.destinations.forEach((dest, index) => {
-            if (dest.coordinates && dest.coordinates[0] !== 0) {
-                const marker = new mapboxgl.Marker()
-                    .setLngLat(dest.coordinates)
-                    .setPopup(new mapboxgl.Popup({ offset: 25 })
-                        .setHTML(`<h3>${dest.name}</h3><p>Stop ${index + 1}</p>`))
-                    .addTo(window.map);
-                markers.push(marker);
+            console.log(`🗺️ DIRECT MAP: Processing destination ${index}: ${dest.name}`);
+            console.log(`🗺️ DIRECT MAP: Coordinates for ${dest.name}:`, dest.coordinates);
+
+            if (dest.coordinates && Array.isArray(dest.coordinates) && dest.coordinates.length === 2) {
+                const [lng, lat] = dest.coordinates;
+                if (lng !== 0 && lat !== 0 && !isNaN(lng) && !isNaN(lat)) {
+                    console.log(`🗺️ DIRECT MAP: Adding marker for ${dest.name} at [${lng}, ${lat}]`);
+                    try {
+                        const marker = new mapboxgl.Marker()
+                            .setLngLat([lng, lat])
+                            .setPopup(new mapboxgl.Popup({ offset: 25 })
+                                .setHTML(`<h3>${dest.name}</h3><p>Stop ${index + 1}</p>`))
+                            .addTo(window.map);
+                        markers.push(marker);
+                        console.log(`🗺️ DIRECT MAP: Successfully added marker for ${dest.name}`);
+                    } catch (error) {
+                        console.error(`🗺️ DIRECT MAP: Failed to add marker for ${dest.name}:`, error);
+                    }
+                } else {
+                    console.log(`🗺️ DIRECT MAP: Invalid coordinates for ${dest.name}: [${lng}, ${lat}]`);
+                }
+            } else {
+                console.log(`🗺️ DIRECT MAP: No valid coordinates for ${dest.name}:`, dest.coordinates);
             }
         });
 
         window.mapMarkers = markers;
+        console.log(`🗺️ DIRECT MAP: Added ${markers.length} markers to map`);
 
         // Update route line if we have coordinates
         const validCoords = this.destinations
-            .filter(dest => dest.coordinates && dest.coordinates[0] !== 0)
+            .filter(dest => {
+                if (!dest.coordinates || !Array.isArray(dest.coordinates) || dest.coordinates.length !== 2) {
+                    return false;
+                }
+                const [lng, lat] = dest.coordinates;
+                return lng !== 0 && lat !== 0 && !isNaN(lng) && !isNaN(lat);
+            })
             .map(dest => dest.coordinates);
 
+        console.log(`🗺️ DIRECT MAP: Valid coordinates for route line:`, validCoords);
+
         if (validCoords.length > 1) {
+            console.log('🗺️ DIRECT MAP: Creating route line with', validCoords.length, 'points');
             // Add route line
             const routeData = {
                 type: 'Feature',
@@ -1327,31 +1453,40 @@ class DestinationManager {
                 }
             };
 
-            if (window.map.getSource('route')) {
-                window.map.getSource('route').setData(routeData);
-            } else {
-                window.map.addSource('route', {
-                    type: 'geojson',
-                    data: routeData
-                });
+            try {
+                if (window.map.getSource('route')) {
+                    console.log('🗺️ DIRECT MAP: Updating existing route source');
+                    window.map.getSource('route').setData(routeData);
+                } else {
+                    console.log('🗺️ DIRECT MAP: Creating new route source and layer');
+                    window.map.addSource('route', {
+                        type: 'geojson',
+                        data: routeData
+                    });
 
-                window.map.addLayer({
-                    id: 'route',
-                    type: 'line',
-                    source: 'route',
-                    layout: {
-                        'line-join': 'round',
-                        'line-cap': 'round'
-                    },
-                    paint: {
-                        'line-color': '#6366f1',
-                        'line-width': 4
-                    }
-                });
+                    window.map.addLayer({
+                        id: 'route',
+                        type: 'line',
+                        source: 'route',
+                        layout: {
+                            'line-join': 'round',
+                            'line-cap': 'round'
+                        },
+                        paint: {
+                            'line-color': '#6366f1',
+                            'line-width': 4
+                        }
+                    });
+                }
+                console.log('🗺️ DIRECT MAP: Route line updated successfully');
+            } catch (error) {
+                console.error('🗺️ DIRECT MAP: Failed to update route line:', error);
             }
+        } else {
+            console.log('🗺️ DIRECT MAP: Not enough valid coordinates for route line');
         }
 
-        console.log('✅ Map updated with', this.destinations.length, 'destinations');
+        console.log('✅ DIRECT MAP: Map updated with', this.destinations.length, 'destinations');
     }
 
     updateRouteStats() {
@@ -1681,10 +1816,12 @@ class DestinationManager {
     }
 }
 
-// Initialize when DOM is ready
+// Initialize when DOM is ready with improved timing
 let destinationManager;
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('🔍 INITIALIZATION: DOM Content Loaded - Checking page for initialization...');
+
+// Function to initialize destination manager with retries
+function initializeDestinationManager(attempt = 1, maxAttempts = 5) {
+    console.log(`🔍 INITIALIZATION ATTEMPT ${attempt}/${maxAttempts}: Checking page for initialization...`);
     console.log('🔍 INIT: Current path:', window.location.pathname);
     console.log('🔍 INIT: Page title:', document.title);
     console.log('🔍 INIT: Document ready state:', document.readyState);
@@ -1696,6 +1833,8 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('  - #citiesContainer element:', !!document.querySelector('#citiesContainer'));
     console.log('  - .cities-container element:', !!document.querySelector('.cities-container'));
     console.log('  - .city-card elements:', document.querySelectorAll('.city-card').length);
+    console.log('  - localStorage spotlightData:', !!localStorage.getItem('spotlightData'));
+    console.log('  - sessionStorage spotlightData:', !!sessionStorage.getItem('spotlightData'));
 
     // Check multiple conditions to ensure we're on the right page
     const isSpotlightPage = window.location.pathname.includes('spotlight') ||
@@ -1705,18 +1844,95 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('🔍 INIT: Is spotlight page?', isSpotlightPage);
 
     if (isSpotlightPage) {
+        // Check if we have data to work with
+        const hasData = localStorage.getItem('spotlightData') || sessionStorage.getItem('spotlightData');
+        const citiesContainer = document.querySelector('#citiesContainer');
+
+        if (!hasData && attempt < maxAttempts) {
+            console.log(`🕰️ INIT: No spotlight data found, retrying in 1000ms (attempt ${attempt}/${maxAttempts})`);
+            setTimeout(() => initializeDestinationManager(attempt + 1, maxAttempts), 1000);
+            return;
+        }
+
+        if (!citiesContainer && attempt < maxAttempts) {
+            console.log(`🕰️ INIT: Cities container not found, retrying in 500ms (attempt ${attempt}/${maxAttempts})`);
+            setTimeout(() => initializeDestinationManager(attempt + 1, maxAttempts), 500);
+            return;
+        }
+
         console.log('✅ INITIALIZATION: Detected spotlight page - Initializing Destination Manager...');
         try {
             destinationManager = new DestinationManager();
             window.destinationManager = destinationManager; // Make globally accessible
             console.log('✅ INITIALIZATION: Destination Manager initialized successfully');
             console.log('🔍 INIT: Global destinationManager object:', window.destinationManager);
+
+            // Listen for spotlight page updates to re-sync
+            setupSpotlightIntegration();
+
         } catch (error) {
             console.error('❌ INITIALIZATION: Failed to initialize Destination Manager:', error);
+            if (attempt < maxAttempts) {
+                console.log(`🕰️ INIT: Error occurred, retrying in 1000ms (attempt ${attempt}/${maxAttempts})`);
+                setTimeout(() => initializeDestinationManager(attempt + 1, maxAttempts), 1000);
+            }
         }
     } else {
         console.log('❌ INITIALIZATION: Not a spotlight page, skipping initialization');
         console.log('🔍 INIT: Available elements:', document.body.innerHTML.substring(0, 500) + '...');
+    }
+}
+
+// Setup integration with spotlight page
+function setupSpotlightIntegration() {
+    console.log('🤝 INTEGRATION: Setting up spotlight integration...');
+
+    // Listen for storage changes (when spotlight.js updates data)
+    window.addEventListener('storage', (e) => {
+        if (e.key === 'spotlightData' && destinationManager) {
+            console.log('🤝 INTEGRATION: Storage updated, reloading route data...');
+            destinationManager.loadRouteData();
+            destinationManager.renderDestinations();
+        }
+    });
+
+    // Listen for custom events from spotlight.js
+    document.addEventListener('spotlightDataUpdated', (e) => {
+        console.log('🤝 INTEGRATION: Spotlight data updated event received:', e.detail);
+        if (destinationManager) {
+            destinationManager.loadRouteData();
+            destinationManager.renderDestinations();
+            destinationManager.updateRoute();
+        }
+    });
+
+    // Wait for spotlight to be fully loaded
+    const checkSpotlightLoaded = () => {
+        if (window.spotlightMapController || document.querySelectorAll('.city-card').length > 0) {
+            console.log('🤝 INTEGRATION: Spotlight appears to be loaded, syncing...');
+            if (destinationManager) {
+                destinationManager.loadRouteData();
+                destinationManager.renderDestinations();
+            }
+        } else {
+            console.log('🤝 INTEGRATION: Waiting for spotlight to load...');
+            setTimeout(checkSpotlightLoaded, 1000);
+        }
+    };
+
+    setTimeout(checkSpotlightLoaded, 500);
+}
+
+// Initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+    initializeDestinationManager();
+});
+
+// Also try to initialize when window loads (as a fallback)
+window.addEventListener('load', () => {
+    if (!destinationManager) {
+        console.log('🕰️ FALLBACK: Window loaded, trying initialization again...');
+        initializeDestinationManager();
     }
 });
 
