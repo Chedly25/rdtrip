@@ -131,7 +131,7 @@ class DestinationManager {
     toggleEditMode() {
         this.isEditing = !this.isEditing;
         const editButton = document.getElementById('edit-route-btn');
-        const citiesContainer = document.getElementById('cities-container');
+        const citiesContainer = document.getElementById('citiesContainer');
 
         if (this.isEditing) {
             editButton.classList.add('editing');
@@ -181,7 +181,7 @@ class DestinationManager {
     }
 
     addMainDestinationButton() {
-        const citiesContainer = document.getElementById('cities-container');
+        const citiesContainer = document.getElementById('citiesContainer');
         if (!citiesContainer) return;
 
         // Check if button already exists
@@ -264,7 +264,7 @@ class DestinationManager {
     }
 
     addInsertButtons() {
-        const citiesContainer = document.getElementById('cities-container');
+        const citiesContainer = document.getElementById('citiesContainer');
         if (!citiesContainer) return;
 
         const cityCards = citiesContainer.querySelectorAll('.city-card');
@@ -291,6 +291,12 @@ class DestinationManager {
 
     removeDestination(index) {
         console.log(`🗑️ Removing destination at index ${index}:`, this.destinations[index]);
+
+        // Check bounds first
+        if (index < 0 || index >= this.destinations.length || !this.destinations[index]) {
+            console.warn(`❌ Invalid index ${index} for destinations array of length ${this.destinations.length}`);
+            return;
+        }
 
         // Confirm removal
         if (!confirm(`Remove ${this.destinations[index].name} from your route?`)) {
@@ -966,9 +972,10 @@ class DestinationManager {
 
     renderDestinations() {
         console.log('🔄 Rendering destinations:', this.destinations);
-        const container = document.getElementById('cities-container');
+        const container = document.getElementById('citiesContainer');
         if (!container) {
             console.warn('❌ Cities container not found!');
+            console.log('🔍 Available elements with "cities":', document.querySelectorAll('[id*="cities"]'));
             return;
         }
 
@@ -1043,7 +1050,12 @@ class DestinationManager {
         e.dataTransfer.effectAllowed = 'move';
         e.dataTransfer.setData('text/html', ''); // Required for some browsers
 
-        const card = e.target.closest('.city-card');
+        // Find city card using safer method
+        let card = e.target;
+        while (card && !card.classList.contains('city-card')) {
+            card = card.parentElement;
+        }
+
         if (card) {
             card.classList.add('dragging');
         }
@@ -1137,7 +1149,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Check multiple conditions to ensure we're on the right page
     const isSpotlightPage = window.location.pathname.includes('spotlight') ||
                            document.querySelector('.spotlight-main') ||
-                           document.querySelector('#cities-container');
+                           document.querySelector('#citiesContainer');
 
     if (isSpotlightPage) {
         console.log('✅ Destination Manager: Initializing on spotlight page');
