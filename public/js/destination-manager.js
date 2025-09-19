@@ -236,16 +236,21 @@ class DestinationManager {
     }
 
     addDragHandle(card, index) {
+        // Skip if already has a drag handle
+        if (card.querySelector('.drag-handle')) return;
+
         const dragHandle = document.createElement('div');
         dragHandle.className = 'drag-handle';
         dragHandle.innerHTML = '⋮⋮';
         dragHandle.draggable = true;
         dragHandle.title = 'Drag to reorder';
 
-        // Add all drag event listeners to both handle and card
-        dragHandle.addEventListener('dragstart', (e) => this.handleDragStart(e, index));
-        dragHandle.addEventListener('dragend', (e) => this.handleDragEnd(e));
+        // Make the entire card draggable when the handle is present
+        card.draggable = true;
 
+        // Add all drag event listeners to both handle and card
+        card.addEventListener('dragstart', (e) => this.handleDragStart(e, index));
+        card.addEventListener('dragend', (e) => this.handleDragEnd(e));
         card.addEventListener('dragover', (e) => this.handleDragOver(e));
         card.addEventListener('dragenter', (e) => this.handleDragEnter(e));
         card.addEventListener('dragleave', (e) => this.handleDragLeave(e));
@@ -259,6 +264,9 @@ class DestinationManager {
         dragHandle.addEventListener('mouseup', () => {
             card.style.cursor = '';
         });
+
+        // Store the index on the card for easier access
+        card.dataset.dragIndex = index;
 
         card.appendChild(dragHandle);
     }
@@ -338,7 +346,7 @@ class DestinationManager {
                 <div class="modal-body">
                     <div class="destination-search">
                         <input type="text" id="destination-search-input"
-                               placeholder="Search for a city..."
+                               placeholder="Type any city name and press Enter..."
                                autocomplete="off">
                         <div id="search-suggestions" class="suggestions-list"></div>
                     </div>
@@ -349,7 +357,7 @@ class DestinationManager {
                 </div>
                 <div class="modal-footer">
                     <button class="btn-cancel" onclick="destinationManager.closeAddModal()">Cancel</button>
-                    <button class="btn-add" onclick="destinationManager.addSelectedDestination()">Add to Route</button>
+                    <button class="btn-add" onclick="destinationManager.addCustomDestination()">Add Custom City</button>
                 </div>
             </div>
         `;
@@ -372,6 +380,17 @@ class DestinationManager {
             debounceTimer = setTimeout(() => {
                 this.searchDestinations(e.target.value);
             }, 300);
+        });
+
+        // Add Enter key support for custom cities
+        searchInput?.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const cityName = e.target.value.trim();
+                if (cityName) {
+                    this.addCustomDestination(cityName);
+                }
+            }
         });
     }
 
@@ -627,6 +646,138 @@ class DestinationManager {
         modal.classList.remove('show');
         this.selectedDestination = null;
         document.getElementById('destination-search-input').value = '';
+    }
+
+    async addCustomDestination(cityName) {
+        if (!cityName) {
+            // Get city name from input if not provided
+            cityName = document.getElementById('destination-search-input')?.value?.trim();
+        }
+
+        if (!cityName) {
+            alert('Please enter a city name');
+            return;
+        }
+
+        console.log(`🌍 Adding custom destination: ${cityName}`);
+
+        // Show loading state
+        const addBtn = document.querySelector('.btn-add');
+        const originalText = addBtn.textContent;
+        addBtn.innerHTML = '<div class="btn-spinner"></div> Adding City...';
+        addBtn.disabled = true;
+
+        try {
+            // Create destination with default coordinates (will be updated)
+            const newDestination = {
+                name: cityName,
+                coordinates: [0, 0], // Default coordinates
+                highlights: ['Loading city information...'],
+                isCustom: true
+            };
+
+            // Add to destinations immediately for UX
+            const modal = document.getElementById('add-destination-modal');
+            const insertIndex = parseInt(modal.dataset.insertIndex) || this.destinations.length;
+
+            this.destinations.splice(insertIndex, 0, newDestination);
+            this.renderDestinations();
+            this.updateRoute();
+
+            // Close modal
+            this.closeAddModal();
+
+            // Enrich with APIs in background
+            await this.enrichCustomDestination(newDestination);
+
+        } catch (error) {
+            console.error('❌ Error adding custom destination:', error);
+            alert('Failed to add city. Please try again.');
+        } finally {
+            // Restore button
+            addBtn.textContent = originalText;
+            addBtn.disabled = false;
+        }
+    }
+
+    async enrichCustomDestination(destination) {
+        console.log(`🔍 Enriching data for ${destination.name}...`);
+
+        try {
+            // Get Wikipedia image and basic info
+            const wikipediaImage = await this.getWikipediaImage(destination.name);
+
+            // Get Perplexity description
+            const perplexityData = await this.enrichDestinationData(destination);
+
+            // Update the destination in our array
+            const destIndex = this.destinations.findIndex(d => d.name === destination.name);
+            if (destIndex !== -1) {
+                this.destinations[destIndex].highlights = perplexityData.highlights || destination.highlights;
+                this.destinations[destIndex].wikipediaImage = wikipediaImage;
+                this.destinations[destIndex].description = perplexityData.description;
+
+                // Re-render to show enriched data
+                this.renderDestinations();
+
+                console.log(`✅ Successfully enriched ${destination.name}`);
+            }
+
+        } catch (error) {
+            console.error(`❌ Failed to enrich ${destination.name}:`, error);
+        }
+    }
+
+    async enrichDestinationData(destination) {
+        try {
+            const response = await fetch('/api/perplexity', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    query: `Provide 3-4 key highlights and attractions for ${destination.name}. Focus on must-see places, activities, and unique experiences. Format as bullet points.`
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Perplexity API error: ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            // Parse the response to extract highlights
+            const highlights = this.parsePerplexityResponse(data.answer || data.response || '');
+
+            return {
+                highlights: highlights,
+                description: data.answer || data.response || 'Beautiful destination with unique attractions'
+            };
+
+        } catch (error) {
+            console.warn('Perplexity API call failed:', error);
+            return {
+                highlights: ['Historic city center', 'Local cuisine', 'Cultural attractions'],
+                description: 'Beautiful destination with unique attractions'
+            };
+        }
+    }
+
+    parsePerplexityResponse(response) {
+        // Extract bullet points or numbered lists from Perplexity response
+        const bulletPoints = response.match(/[-•*]\s*([^\n\r]+)/g) ||
+                           response.match(/\d+\.\s*([^\n\r]+)/g) || [];
+
+        if (bulletPoints.length > 0) {
+            return bulletPoints.slice(0, 4).map(point => {
+                const cleaned = point.replace(/^[-•*\d.\s]+/, '').trim();
+                return cleaned.length > 60 ? cleaned.substring(0, 57) + '...' : cleaned;
+            });
+        }
+
+        // Fallback: split by sentences and take first few
+        const sentences = response.split(/[.!?]+/).filter(s => s.trim().length > 10);
+        return sentences.slice(0, 3).map(s => s.trim().substring(0, 60) + '...');
     }
 
     showOptimizationToolbar() {
@@ -892,11 +1043,90 @@ class DestinationManager {
     }
 
     updateMapRoute() {
-        // Update the route on the map
-        if (window.spotlightController?.map) {
-            console.log('🗺️ Updating map route...');
-            // Trigger map update
+        console.log('🗺️ Updating map route...');
+
+        try {
+            // Check if spotlight map exists
+            if (typeof window.updateMapRoute === 'function') {
+                // Call the global map update function
+                window.updateMapRoute(this.destinations);
+            } else if (window.map) {
+                // Direct access to map object
+                this.directMapUpdate();
+            } else {
+                console.log('ℹ️ Map not available for update');
+            }
+        } catch (error) {
+            console.warn('⚠️ Map update failed:', error);
         }
+    }
+
+    directMapUpdate() {
+        // Direct map update when global functions aren't available
+        if (!window.map) return;
+
+        // Clear existing markers and route
+        if (window.mapMarkers) {
+            window.mapMarkers.forEach(marker => marker.remove());
+            window.mapMarkers = [];
+        }
+
+        // Add new markers for destinations
+        const markers = [];
+        this.destinations.forEach((dest, index) => {
+            if (dest.coordinates && dest.coordinates[0] !== 0) {
+                const marker = new mapboxgl.Marker()
+                    .setLngLat(dest.coordinates)
+                    .setPopup(new mapboxgl.Popup({ offset: 25 })
+                        .setHTML(`<h3>${dest.name}</h3><p>Stop ${index + 1}</p>`))
+                    .addTo(window.map);
+                markers.push(marker);
+            }
+        });
+
+        window.mapMarkers = markers;
+
+        // Update route line if we have coordinates
+        const validCoords = this.destinations
+            .filter(dest => dest.coordinates && dest.coordinates[0] !== 0)
+            .map(dest => dest.coordinates);
+
+        if (validCoords.length > 1) {
+            // Add route line
+            const routeData = {
+                type: 'Feature',
+                properties: {},
+                geometry: {
+                    type: 'LineString',
+                    coordinates: validCoords
+                }
+            };
+
+            if (window.map.getSource('route')) {
+                window.map.getSource('route').setData(routeData);
+            } else {
+                window.map.addSource('route', {
+                    type: 'geojson',
+                    data: routeData
+                });
+
+                window.map.addLayer({
+                    id: 'route',
+                    type: 'line',
+                    source: 'route',
+                    layout: {
+                        'line-join': 'round',
+                        'line-cap': 'round'
+                    },
+                    paint: {
+                        'line-color': '#6366f1',
+                        'line-width': 4
+                    }
+                });
+            }
+        }
+
+        console.log('✅ Map updated with', this.destinations.length, 'destinations');
     }
 
     updateRouteStats() {
