@@ -51,6 +51,38 @@ class DestinationManager {
         this.createAddDestinationModal();
     }
 
+    enhanceCityCards() {
+        console.log('🎨 Enhancing existing city cards...');
+        const cityCards = document.querySelectorAll('.city-card');
+        console.log(`Found ${cityCards.length} city cards to enhance`);
+
+        cityCards.forEach((card, index) => {
+            // Skip if already enhanced
+            if (card.querySelector('.remove-city-btn')) {
+                console.log(`City card ${index} already enhanced`);
+                return;
+            }
+
+            console.log(`Enhancing city card ${index}`);
+
+            // Add to destinations array if not already there
+            const cityName = card.querySelector('.city-name')?.textContent?.trim();
+            if (cityName && !this.destinations.find(d => d.name === cityName)) {
+                this.destinations.push({
+                    name: cityName,
+                    coordinates: [0, 0], // Will be updated when route is recalculated
+                    highlights: card.querySelector('.city-highlights')?.textContent?.trim() || []
+                });
+            }
+
+            // Add edit controls when in edit mode
+            this.addRemoveButton(card, index);
+            this.addDragHandle(card, index);
+        });
+
+        console.log('Current destinations:', this.destinations);
+    }
+
     addEditModeButton() {
         console.log('🔧 Adding edit mode button...');
         const headerNav = document.querySelector('.header-nav');
