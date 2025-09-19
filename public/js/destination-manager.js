@@ -68,7 +68,6 @@ class DestinationManager {
                 if (wikipediaImage) {
                     this.destinations[i].wikipediaImage = wikipediaImage;
                 }
-                }
             } catch (error) {
                 console.warn(`🖼️ ENRICH INITIAL: Failed to fetch Wikipedia image for ${destination.name}:`, error);
             }

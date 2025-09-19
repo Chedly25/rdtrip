@@ -622,11 +622,6 @@ class SpotlightController {
         const coordinatesStr = limitedCoords.map(coord => `${coord[0]},${coord[1]}`).join(';');
         const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${coordinatesStr}?geometries=geojson&access_token=${mapboxgl.accessToken}`;
 
-            originalCoords: coordinates.length,
-            validatedCoords: validatedCoords.length,
-            limitedCoords: limitedCoords.length
-        });
-
         try {
             const response = await fetch(url);
 
