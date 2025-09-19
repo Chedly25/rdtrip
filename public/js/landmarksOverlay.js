@@ -604,10 +604,18 @@ class LandmarksOverlay {
                 const existingNames = new Set(combinedWaypoints.map(wp => wp.name.toLowerCase()));
                 const newCityWaypoints = cityWaypoints.filter(city => !existingNames.has(city.name.toLowerCase()));
 
-                combinedWaypoints = [...combinedWaypoints, ...newCityWaypoints];
                 console.log('🗺️ LANDMARK ADD: Added cities (deduplicated):', newCityWaypoints.length, 'of', cityWaypoints.length);
                 console.log('🗺️ LANDMARK ADD: All cities found:', cityWaypoints.map(wp => wp.name));
                 console.log('🗺️ LANDMARK ADD: Cities added (new only):', newCityWaypoints.map(wp => wp.name));
+
+                // Optimize the route order before adding landmark
+                if (newCityWaypoints.length > 0) {
+                    const allWaypoints = [...combinedWaypoints, ...newCityWaypoints];
+                    combinedWaypoints = this.optimizeRouteOrder(allWaypoints);
+                    console.log('🗺️ LANDMARK ADD: Optimized route order:', combinedWaypoints.map(wp => wp.name));
+                } else {
+                    console.log('🗺️ LANDMARK ADD: No new cities to add, keeping original order');
+                }
             }
 
             // Client-side optimal insertion instead of relying on server
@@ -843,6 +851,97 @@ class LandmarksOverlay {
         console.log('🎯 CLIENT OPTIMIZATION: Best position:', bestPosition, 'with detour:', minDetour.toFixed(2), 'km');
 
         return bestPosition;
+    }
+
+    optimizeRouteOrder(waypoints) {
+        if (!waypoints || waypoints.length <= 2) {
+            console.log('🚗 ROUTE OPTIMIZATION: Too few waypoints to optimize');
+            return waypoints;
+        }
+
+        console.log('🚗 ROUTE OPTIMIZATION: Optimizing route with', waypoints.length, 'waypoints');
+        console.log('🚗 ROUTE OPTIMIZATION: Input order:', waypoints.map(wp => wp.name));
+
+        // For routes with many waypoints, use a nearest neighbor approach starting from first waypoint
+        if (waypoints.length > 8) {
+            return this.nearestNeighborOptimization(waypoints);
+        }
+
+        // For smaller routes, try a few permutations to find better order
+        return this.smallRouteOptimization(waypoints);
+    }
+
+    nearestNeighborOptimization(waypoints) {
+        const optimized = [waypoints[0]]; // Start with first waypoint
+        const remaining = waypoints.slice(1);
+
+        while (remaining.length > 0) {
+            const current = optimized[optimized.length - 1];
+            let nearestIndex = 0;
+            let nearestDistance = this.calculateDistance(current, remaining[0]);
+
+            // Find nearest unvisited waypoint
+            for (let i = 1; i < remaining.length; i++) {
+                const distance = this.calculateDistance(current, remaining[i]);
+                if (distance < nearestDistance) {
+                    nearestDistance = distance;
+                    nearestIndex = i;
+                }
+            }
+
+            // Add nearest waypoint to route and remove from remaining
+            optimized.push(remaining[nearestIndex]);
+            remaining.splice(nearestIndex, 1);
+        }
+
+        console.log('🚗 NEAREST NEIGHBOR: Optimized order:', optimized.map(wp => wp.name));
+        return optimized;
+    }
+
+    smallRouteOptimization(waypoints) {
+        // Keep first waypoint fixed, optimize the rest
+        const firstPoint = waypoints[0];
+        const remainingPoints = waypoints.slice(1);
+
+        let bestOrder = waypoints;
+        let bestDistance = this.calculateTotalDistance(waypoints);
+
+        // Try a few different orderings by inserting each point at different positions
+        for (let i = 0; i < remainingPoints.length; i++) {
+            for (let j = 0; j < remainingPoints.length; j++) {
+                if (i === j) continue;
+
+                const testOrder = [firstPoint];
+                const tempRemaining = [...remainingPoints];
+
+                // Move point i to position j
+                const movedPoint = tempRemaining.splice(i, 1)[0];
+                tempRemaining.splice(Math.min(j, tempRemaining.length), 0, movedPoint);
+                testOrder.push(...tempRemaining);
+
+                const testDistance = this.calculateTotalDistance(testOrder);
+                if (testDistance < bestDistance) {
+                    bestDistance = testDistance;
+                    bestOrder = testOrder;
+                }
+            }
+        }
+
+        console.log('🚗 SMALL ROUTE: Original distance:', this.calculateTotalDistance(waypoints).toFixed(2), 'km');
+        console.log('🚗 SMALL ROUTE: Optimized distance:', bestDistance.toFixed(2), 'km');
+        console.log('🚗 SMALL ROUTE: Optimized order:', bestOrder.map(wp => wp.name));
+
+        return bestOrder;
+    }
+
+    calculateTotalDistance(waypoints) {
+        if (!waypoints || waypoints.length < 2) return 0;
+
+        let totalDistance = 0;
+        for (let i = 0; i < waypoints.length - 1; i++) {
+            totalDistance += this.calculateDistance(waypoints[i], waypoints[i + 1]);
+        }
+        return totalDistance;
     }
 
     calculateDistance(point1, point2) {
