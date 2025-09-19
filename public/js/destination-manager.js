@@ -1555,8 +1555,17 @@ class DestinationManager {
 
                 // Call recalculateRoute with new waypoints if available
                 if (typeof window.spotlightController.recalculateRoute === 'function') {
-                    await window.spotlightController.recalculateRoute(this.destinations);
-                    console.log('🗺️ DIRECT MAP: Called spotlight recalculateRoute()');
+                    // Convert destinations to waypoint format that spotlight expects
+                    const waypoints = this.destinations.map(dest => ({
+                        name: dest.name,
+                        lat: dest.coordinates ? dest.coordinates[1] : 0,
+                        lng: dest.coordinates ? dest.coordinates[0] : 0,
+                        description: dest.description || '',
+                        activities: dest.activities || dest.highlights || []
+                    }));
+
+                    await window.spotlightController.recalculateRoute(waypoints);
+                    console.log('🗺️ DIRECT MAP: Called spotlight recalculateRoute() with formatted waypoints');
                 }
 
                 console.log('🗺️ DIRECT MAP: Successfully updated spotlight waypoints and route');
@@ -1566,7 +1575,10 @@ class DestinationManager {
             }
         }
 
-        console.log('🗺️ DIRECT MAP: Falling back to custom map updates...');
+        console.log('🗺️ DIRECT MAP: No spotlight controller found, skipping route update...');
+        // Note: We don't want to create custom routes anymore to avoid conflicts
+        // All route updates should go through spotlight controller's recalculateRoute()
+        return;
 
         // Clear only our custom markers, not spotlight markers
         if (window.mapMarkers) {
