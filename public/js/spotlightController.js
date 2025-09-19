@@ -25,7 +25,6 @@ class SpotlightController {
         this.setupFilters();
         this.setupAnimations();
         
-        console.log('🚀 Premium Spotlight Controller initialized');
     }
     
     /**
@@ -33,7 +32,6 @@ class SpotlightController {
      * @param {Object} agentResult - Result from selected agent
      */
     initializeWithRoute(agentResult) {
-        console.log('🗺️ Initializing spotlight with route data:', agentResult);
         this.currentAgentResult = agentResult;
         this.routeData = agentResult.route;
         
@@ -42,7 +40,6 @@ class SpotlightController {
         
         // Re-initialize tab navigation to ensure buttons work
         setTimeout(() => {
-            console.log('🔄 Re-initializing tab navigation...');
             this.reinitializeTabNavigation();
         }, 100);
         
@@ -60,13 +57,11 @@ class SpotlightController {
      * Re-initialize tab navigation with fresh event listeners
      */
     reinitializeTabNavigation() {
-        console.log('🔧 Setting up fresh tab navigation...');
         
         const tabButtons = document.querySelectorAll('.tab-btn');
         const tabPanels = document.querySelectorAll('.tab-panel');
         const tabIndicator = document.querySelector('.tab-indicator');
         
-        console.log(`Found ${tabButtons.length} tab buttons, ${tabPanels.length} tab panels`);
         
         // Remove existing listeners and add fresh ones
         tabButtons.forEach((button, index) => {
@@ -78,11 +73,9 @@ class SpotlightController {
             newButton.addEventListener('click', (e) => {
                 e.preventDefault();
                 const tabName = newButton.dataset.tab;
-                console.log(`📋 Tab clicked: ${tabName}`);
                 this.switchTab(tabName, index, document.querySelectorAll('.tab-btn'), tabPanels, tabIndicator);
             });
             
-            console.log(`✓ Tab button ${index + 1} (${newButton.dataset.tab}) initialized`);
         });
         
         // Initialize first tab
@@ -102,18 +95,15 @@ class SpotlightController {
 
     // ===== TAB NAVIGATION SYSTEM =====
     setupTabNavigation() {
-        console.log('🔄 Initial tab navigation setup...');
         const tabButtons = document.querySelectorAll('.tab-btn');
         const tabPanels = document.querySelectorAll('.tab-panel');
         const tabIndicator = document.querySelector('.tab-indicator');
 
-        console.log(`Found ${tabButtons.length} tab buttons for initial setup`);
 
         tabButtons.forEach((button, index) => {
             button.addEventListener('click', (e) => {
                 e.preventDefault();
                 const tabName = button.dataset.tab;
-                console.log(`📋 Initial tab clicked: ${tabName}`);
                 this.switchTab(tabName, index, tabButtons, tabPanels, tabIndicator);
             });
         });
@@ -123,7 +113,6 @@ class SpotlightController {
     }
 
     async switchTab(tabName, index, buttons, panels, indicator) {
-        console.log(`🔄 Switching to tab: ${tabName} (index: ${index})`);
         
         // Update current tab
         this.currentTab = tabName;
@@ -131,23 +120,19 @@ class SpotlightController {
         // Remove active classes
         buttons.forEach((btn, i) => {
             btn.classList.remove('active');
-            console.log(`❌ Removed active from button ${i} (${btn.dataset?.tab || 'unknown'})`);
         });
         panels.forEach((panel, i) => {
             panel.classList.remove('active');
-            console.log(`❌ Removed active from panel ${i} (${panel.id})`);
         });
 
         // Add active classes
         if (buttons[index]) {
             buttons[index].classList.add('active');
-            console.log(`✓ Added active to button ${index} (${buttons[index].dataset?.tab || 'unknown'})`);
         }
         
         const targetPanel = document.getElementById(`tab-${tabName}`);
         if (targetPanel) {
             targetPanel.classList.add('active');
-            console.log(`✓ Added active to panel: tab-${tabName}`);
         } else {
             console.warn(`⚠️ Panel not found: tab-${tabName}`);
         }
@@ -157,7 +142,6 @@ class SpotlightController {
             const indicatorWidth = 100 / buttons.length;
             indicator.style.width = `${indicatorWidth}%`;
             indicator.style.left = `${index * indicatorWidth}%`;
-            console.log(`🎨 Moved indicator to position ${index}`);
         }
 
         // Load tab content
@@ -1404,7 +1388,6 @@ class SpotlightController {
     // ===== NEW FUNCTIONAL METHODS =====
 
     setupExportFunctions() {
-        console.log('🔧 Setting up export functions and button listeners');
         
         // Remove existing event listeners first
         this.removeExistingListeners();
@@ -1415,7 +1398,6 @@ class SpotlightController {
             googleMapsBtn.removeEventListener('click', this.exportToGoogleMaps);
             googleMapsBtn.addEventListener('click', (e) => {
                 e.preventDefault();
-                console.log('🗺️ Export to Google Maps clicked');
                 this.exportToGoogleMaps();
             });
         }
@@ -1426,7 +1408,6 @@ class SpotlightController {
             pdfBtn.removeEventListener('click', this.exportToPDF);
             pdfBtn.addEventListener('click', (e) => {
                 e.preventDefault();
-                console.log('📄 Export to PDF clicked');
                 this.exportToPDF();
             });
         }
@@ -1437,7 +1418,6 @@ class SpotlightController {
             emailBtn.removeEventListener('click', this.shareViaEmail);
             emailBtn.addEventListener('click', (e) => {
                 e.preventDefault();
-                console.log('✉️ Share via email clicked');
                 this.shareViaEmail();
             });
         }
@@ -1448,7 +1428,6 @@ class SpotlightController {
             saveBtn.removeEventListener('click', this.saveRoute);
             saveBtn.addEventListener('click', (e) => {
                 e.preventDefault();
-                console.log('💾 Save route clicked');
                 this.saveRoute();
             });
         }
@@ -1459,7 +1438,6 @@ class SpotlightController {
             addHighlightBtn.removeEventListener('click', this.addCustomHighlight);
             addHighlightBtn.addEventListener('click', (e) => {
                 e.preventDefault();
-                console.log('⭐ Add highlight clicked');
                 this.addCustomHighlight();
             });
         }
@@ -1470,7 +1448,6 @@ class SpotlightController {
         // Setup itinerary controls
         this.setupItineraryControls();
         
-        console.log('✓ Export functions setup complete');
     }
     
     removeExistingListeners() {
@@ -1488,7 +1465,6 @@ class SpotlightController {
     }
 
     exportToGoogleMaps() {
-        console.log('🗺️ Exporting route to Google Maps');
         
         let waypoints = [];
         
@@ -1506,7 +1482,6 @@ class SpotlightController {
             ];
         }
         
-        console.log('Waypoints for Google Maps:', waypoints);
 
         const googleMapsUrl = `https://www.google.com/maps/dir/${waypoints.join('/')}/`;
         
@@ -1517,7 +1492,6 @@ class SpotlightController {
                 text: 'Check out this amazing road trip route!',
                 url: googleMapsUrl
             }).catch(err => {
-                console.log('Share failed, opening in new tab instead');
                 window.open(googleMapsUrl, '_blank');
             });
         } else {

@@ -47,7 +47,6 @@ class LandmarksOverlay {
     init() {
         this.createOverlayHTML();
         this.setupEventListeners();
-        console.log('🏛️ Landmarks Overlay initialized');
     }
 
     createOverlayHTML() {
@@ -214,7 +213,6 @@ class LandmarksOverlay {
         this.currentRoute = routeData;
         this.isVisible = true;
 
-        console.log('🗺️ Showing landmarks overlay for route:', routeData);
 
         document.getElementById('landmarksOverlay').classList.remove('hidden');
         document.body.style.overflow = 'hidden';
@@ -242,7 +240,6 @@ class LandmarksOverlay {
             this.clearAllMarkers();
         }
 
-        console.log('🗺️ Landmarks overlay hidden');
     }
 
     async initializeMap() {
@@ -269,7 +266,6 @@ class LandmarksOverlay {
             this.map.on('load', resolve);
         });
 
-        console.log('🗺️ Landmarks map initialized');
     }
 
     calculateRouteBounds() {
@@ -314,7 +310,6 @@ class LandmarksOverlay {
                 try {
                     parsed = JSON.parse(cleanedRecommendations);
                 } catch (jsonError) {
-                    console.log('JSON parsing failed, extracting from text for agent:', agentResult.agent);
                     // Extract location names from the text
                     const locationMatches = cleanedRecommendations.match(/"name":\s*"([^"]+)"/g) ||
                         cleanedRecommendations.match(/\*\*([^*]+)\*\*/g) ||
@@ -424,7 +419,6 @@ class LandmarksOverlay {
             const data = await response.json();
             this.landmarks = data.landmarks || [];
 
-            console.log(`🏛️ Loaded ${this.landmarks.length} landmarks`);
 
             this.displayLandmarksOnMap();
 
@@ -465,7 +459,6 @@ class LandmarksOverlay {
             this.landmarkMarkers.push(marker);
         });
 
-        console.log(`🗺️ Displayed ${this.landmarkMarkers.length} landmark markers`);
     }
 
     displayCurrentRoute() {
@@ -587,7 +580,6 @@ class LandmarksOverlay {
 
             // Get combined waypoints (cities + landmarks) for optimal insertion
             let combinedWaypoints = this.currentRoute.waypoints || [];
-            console.log('🗺️ LANDMARK ADD: Original route waypoints:', combinedWaypoints.map(wp => `${wp.name} (${wp.lat}, ${wp.lng})`));
 
             // Add cities from destination manager if available
             if (window.destinationManager?.destinations && Array.isArray(window.destinationManager.destinations)) {
@@ -604,17 +596,12 @@ class LandmarksOverlay {
                 const existingNames = new Set(combinedWaypoints.map(wp => wp.name.toLowerCase()));
                 const newCityWaypoints = cityWaypoints.filter(city => !existingNames.has(city.name.toLowerCase()));
 
-                console.log('🗺️ LANDMARK ADD: Added cities (deduplicated):', newCityWaypoints.length, 'of', cityWaypoints.length);
-                console.log('🗺️ LANDMARK ADD: All cities found:', cityWaypoints.map(wp => wp.name));
-                console.log('🗺️ LANDMARK ADD: Cities added (new only):', newCityWaypoints.map(wp => wp.name));
 
                 // Optimize the route order before adding landmark
                 if (newCityWaypoints.length > 0) {
                     const allWaypoints = [...combinedWaypoints, ...newCityWaypoints];
                     combinedWaypoints = this.optimizeRouteOrder(allWaypoints);
-                    console.log('🗺️ LANDMARK ADD: Optimized route order:', combinedWaypoints.map(wp => wp.name));
                 } else {
-                    console.log('🗺️ LANDMARK ADD: No new cities to add, keeping original order');
                 }
             }
 
@@ -639,7 +626,6 @@ class LandmarksOverlay {
             // Try to get the real destination from spotlight controller
             if (window.spotlightController?.spotlightData?.destination) {
                 const destination = window.spotlightController.spotlightData.destination;
-                console.log('🚀 DETECTED DESTINATION:', destination);
 
                 // Try to geocode the destination to get coordinates
                 if (destination.toLowerCase().includes('venice') || destination.toLowerCase().includes('venise')) {
@@ -650,17 +636,14 @@ class LandmarksOverlay {
                     destinationCoords = { name: 'Milan', lat: 45.4642, lng: 9.1900, type: 'destination' };
                 } else {
                     // Use fallback coordinates for unknown destinations
-                    console.log('🚀 UNKNOWN DESTINATION, using Venice as fallback');
                 }
             }
 
             const fullRoute = [...allWaypoints, destinationCoords];
 
-            console.log('🗺️ LANDMARK ADD: Full route before optimization:', fullRoute.map(wp => wp.name));
 
             // COMPLETELY reorder the entire route including the new landmark
             const optimizedFullRoute = this.optimizeEntireRoute(fullRoute);
-            console.log('🗺️ LANDMARK ADD: Full route after optimization:', optimizedFullRoute.map(wp => wp.name));
 
             // Remove destination from waypoints for storage (it will be added back by spotlight controller)
             const finalWaypoints = optimizedFullRoute.filter(wp => wp.type !== 'destination');
@@ -672,7 +655,6 @@ class LandmarksOverlay {
             };
 
             this.selectedLandmarks.add(landmarkId);
-            console.log('🗺️ LANDMARK ADD: Landmark added at position', optimalPosition, 'without server optimization');
 
             this.updateSelectedLandmarksList();
             this.displayCurrentRoute();
@@ -682,10 +664,8 @@ class LandmarksOverlay {
 
             // Update main spotlight map - let spotlight controller gather all data internally
             if (window.spotlightController && typeof window.spotlightController.recalculateRoute === 'function') {
-                console.log('🗺️ LANDMARK: Updating main spotlight map');
                 try {
                     await window.spotlightController.recalculateRoute();
-                    console.log('🗺️ LANDMARK: Main map updated');
                 } catch (error) {
                     console.warn('🗺️ LANDMARK: Failed to update main map:', error);
                 }
@@ -769,7 +749,6 @@ class LandmarksOverlay {
         this.displayLandmarksOnMap();
         this.landmarks = originalLandmarks;
 
-        console.log(`🔍 Filtered to ${filteredLandmarks.length} landmarks of type: ${type}`);
     }
 
     saveUpdatedRoute() {
@@ -828,11 +807,8 @@ class LandmarksOverlay {
 
     // Client-side optimization functions
     findOptimalInsertPosition(waypoints, landmark) {
-        console.log('🎯 CLIENT OPTIMIZATION: Finding optimal position for landmark:', landmark.name);
-        console.log('🎯 CLIENT OPTIMIZATION: Current waypoints:', waypoints.map(wp => `${wp.name} (${wp.lat}, ${wp.lng})`));
 
         if (waypoints.length < 2) {
-            console.log('🎯 CLIENT OPTIMIZATION: Less than 2 waypoints, inserting at end');
             return waypoints.length;
         }
 
@@ -875,20 +851,15 @@ class LandmarksOverlay {
             }
         }
 
-        console.log('🎯 CLIENT OPTIMIZATION: Detour analysis:', detourAnalysis);
-        console.log('🎯 CLIENT OPTIMIZATION: Best position:', bestPosition, 'with detour:', minDetour.toFixed(2), 'km');
 
         return bestPosition;
     }
 
     optimizeEntireRoute(waypoints) {
         if (!waypoints || waypoints.length <= 2) {
-            console.log('🚀 FULL ROUTE OPTIMIZATION: Too few waypoints to optimize');
             return waypoints;
         }
 
-        console.log('🚀 FULL ROUTE OPTIMIZATION: Optimizing full route with', waypoints.length, 'waypoints');
-        console.log('🚀 FULL ROUTE OPTIMIZATION: Input order:', waypoints.map(wp => wp.name));
 
         // Hardcode start point as Aix-en-Provence
         const startPoint = { name: 'Aix-en-Provence', lat: 43.5297, lng: 5.4474, type: 'start' };
@@ -896,7 +867,6 @@ class LandmarksOverlay {
         // Find destination (last point)
         const destinationPoint = waypoints.find(wp => wp.type === 'destination');
         if (!destinationPoint) {
-            console.log('🚀 FULL ROUTE OPTIMIZATION: No destination found, using existing optimization');
             return this.optimizeRouteOrder(waypoints);
         }
 
@@ -906,7 +876,6 @@ class LandmarksOverlay {
         // Optimize intermediate points using nearest neighbor from start to destination
         const optimizedRoute = this.optimizeFromStartToEnd(startPoint, intermediatePoints, destinationPoint);
 
-        console.log('🚀 FULL ROUTE OPTIMIZATION: Optimized order:', optimizedRoute.map(wp => wp.name));
         return optimizedRoute;
     }
 
@@ -924,19 +893,15 @@ class LandmarksOverlay {
         const remaining = [...intermediatePoints];
         let current = start;
 
-        console.log('🚀 NEAREST NEIGHBOR: Starting from', current.name, 'heading to', destination.name);
-        console.log('🚀 NEAREST NEIGHBOR: Intermediate points to visit:', remaining.map(wp => wp.name));
 
         while (remaining.length > 0) {
             let nearestIndex = 0;
             let nearestDistance = this.calculateDistance(current, remaining[0]);
 
-            console.log(`🚀 NEAREST NEIGHBOR: From ${current.name}, considering:`);
 
             // Find the nearest point with detailed logging
             for (let i = 0; i < remaining.length; i++) {
                 const distance = this.calculateDistance(current, remaining[i]);
-                console.log(`  - ${remaining[i].name}: ${distance.toFixed(2)} km`);
 
                 if (distance < nearestDistance) {
                     nearestDistance = distance;
@@ -950,27 +915,21 @@ class LandmarksOverlay {
             remaining.splice(nearestIndex, 1);
             current = nearest;
 
-            console.log(`🚀 NEAREST NEIGHBOR: ✅ Selected ${nearest.name} (${nearestDistance.toFixed(2)} km)`);
-            console.log(`🚀 NEAREST NEIGHBOR: Remaining: ${remaining.map(r => r.name).join(', ')}`);
         }
 
         // Add destination at the end
         optimized.push(destination);
 
         const totalDistance = this.calculateTotalDistance([start, ...optimized]);
-        console.log('🚀 NEAREST NEIGHBOR: Total route distance:', totalDistance.toFixed(2), 'km');
 
         return optimized;
     }
 
     optimizeRouteOrder(waypoints) {
         if (!waypoints || waypoints.length <= 2) {
-            console.log('🚗 ROUTE OPTIMIZATION: Too few waypoints to optimize');
             return waypoints;
         }
 
-        console.log('🚗 ROUTE OPTIMIZATION: Optimizing route with', waypoints.length, 'waypoints');
-        console.log('🚗 ROUTE OPTIMIZATION: Input order:', waypoints.map(wp => wp.name));
 
         // For routes with many waypoints, use a nearest neighbor approach starting from first waypoint
         if (waypoints.length > 8) {
@@ -1004,7 +963,6 @@ class LandmarksOverlay {
             remaining.splice(nearestIndex, 1);
         }
 
-        console.log('🚗 NEAREST NEIGHBOR: Optimized order:', optimized.map(wp => wp.name));
         return optimized;
     }
 
@@ -1037,9 +995,6 @@ class LandmarksOverlay {
             }
         }
 
-        console.log('🚗 SMALL ROUTE: Original distance:', this.calculateTotalDistance(waypoints).toFixed(2), 'km');
-        console.log('🚗 SMALL ROUTE: Optimized distance:', bestDistance.toFixed(2), 'km');
-        console.log('🚗 SMALL ROUTE: Optimized order:', bestOrder.map(wp => wp.name));
 
         return bestOrder;
     }

@@ -276,7 +276,6 @@ export class RouteCalculator {
         
         // Check cache first
         if (this.routeCache.has(cacheKey)) {
-            console.log('Returning cached route for:', cacheKey);
             return this.routeCache.get(cacheKey);
         }
         
@@ -296,7 +295,6 @@ export class RouteCalculator {
         
         // If we have AI-suggested cities, use them directly without database matching
         if (suggestedCities.length > 0) {
-            console.log('🎯 Using AI-suggested cities directly:', suggestedCities);
             
             // Use AI suggestions directly - create city objects on the fly
             for (const suggestedName of suggestedCities) {
@@ -308,9 +306,7 @@ export class RouteCalculator {
                 
                 if (cityObj) {
                     selectedStops.push(cityObj);
-                    console.log(`✅ Using AI suggestion: "${suggestedName}"`);
                 } else {
-                    console.log(`⚠️ Could not process AI suggestion: "${suggestedName}"`);
                 }
             }
         }
@@ -320,7 +316,6 @@ export class RouteCalculator {
         
         // If we don't have enough stops from AI suggestions, use the original algorithm
         if (selectedStops.length < numStops) {
-            console.log(`📍 Need ${numStops - selectedStops.length} more stops, using theme-based selection`);
             
             // Stage 1: Bounding box filter
             const bufferKm = Math.max(100, directDistance * 0.4); // Dynamic buffer based on distance
@@ -386,7 +381,6 @@ export class RouteCalculator {
         this.calculateDrivingRoute(route)
             .then(drivingRoute => {
                 result.drivingRoute = drivingRoute;
-                console.log('✅ Driving route calculated for', route.map(c => c.name).join(' → '));
             })
             .catch(error => {
                 console.warn('⚠️ Failed to get driving route, using fallback:', error.message);
@@ -450,7 +444,6 @@ export class RouteCalculator {
         
         // Check if we have a cached driving route
         if (this.routeCache.has(routeCacheKey)) {
-            console.log('Using cached driving route:', start.name, 'to', end.name);
             return this.routeCache.get(routeCacheKey);
         }
         
@@ -471,7 +464,6 @@ export class RouteCalculator {
 
             for (const service of routingServices) {
                 try {
-                    console.log(`Trying ${service.name} routing service...`);
                     const response = await fetch(service.url, {
                         headers: service.headers,
                         mode: 'cors'
@@ -511,7 +503,6 @@ export class RouteCalculator {
                         service: service.name
                     };
                     
-                    console.log(`${service.name} route fetched:`, {
                         from: `${start.name}`,
                         to: `${end.name}`,
                         distance: result.distance,
@@ -574,11 +565,6 @@ export class RouteCalculator {
             service: 'Fallback'
         };
         
-        console.log('=== FALLBACK ROUTE GENERATED ===');
-        console.log('From:', start.name, 'to:', end.name);
-        console.log('Coordinates generated:', coordinates.length);
-        console.log('Sample coordinates:', coordinates.slice(0, 3));
-        console.log('Distance estimate:', result.distance, 'km');
         
         return result;
     }
@@ -753,7 +739,6 @@ export class RouteCalculator {
                 const data = await response.json();
                 if (data.features && data.features.length > 0) {
                     const feature = data.features[0];
-                    console.log(`📍 Geocoded "${cityName}" to coordinates:`, feature.center);
                     
                     return {
                         id: cityName.toLowerCase().replace(/\s+/g, '-'),
@@ -787,7 +772,6 @@ export class RouteCalculator {
         const latOffset = (Math.random() - 0.5) * 0.5;
         const lonOffset = (Math.random() - 0.5) * 0.5;
         
-        console.log(`📍 Using estimated coordinates for "${cityName}"`);
         
         return {
             id: cityName.toLowerCase().replace(/\s+/g, '-'),

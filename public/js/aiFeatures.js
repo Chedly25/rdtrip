@@ -171,7 +171,6 @@ export class AIFeatures {
         
         // If there's already a pending request for this prompt, return it
         if (this.pendingRequests.has(requestKey)) {
-            console.log('Returning existing request for:', requestKey.substring(0, 50) + '...');
             return this.pendingRequests.get(requestKey);
         }
         
@@ -201,7 +200,6 @@ export class AIFeatures {
                 
                 // If it's a 503 error, return fallback content immediately
                 if (response.status === 503) {
-                    console.log('503 error detected, returning client fallback');
                     this.pendingRequests.delete(requestKey);
                     return this.generateClientFallback(prompt);
                 }
@@ -226,7 +224,6 @@ export class AIFeatures {
             
                 // Only return client fallback for specific errors, otherwise re-throw
                 if (error.message.includes('503') || error.message.includes('Network error')) {
-                    console.log('Using client fallback due to server/network issues');
                     return this.generateClientFallback(prompt);
                 }
                 

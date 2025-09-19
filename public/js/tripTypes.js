@@ -128,7 +128,6 @@ export class TripTypesManager {
      */
     setAllAgentResults(agentResults) {
         this.agentResults = agentResults;
-        console.log('🎯 TripTypesManager received agent results:', agentResults.size);
         
         // Update trip types display to show real results instead of same route
         this.updateTripTypesWithAgentResults();
@@ -139,11 +138,9 @@ export class TripTypesManager {
      */
     updateTripTypesWithAgentResults() {
         if (!this.agentResults || this.agentResults.size === 0) {
-            console.log('No agent results available yet');
             return;
         }
         
-        console.log('🔄 Updating trip types with agent results');
         
         // This will be called when user opens the trip types modal
         // The agent results will be used instead of generating new ones

@@ -45,7 +45,6 @@ export class UIController {
             this.setupEventListeners();
             this.setupAutocomplete();
             
-            console.log('Road Trip Planner initialized successfully');
             
         } catch (error) {
             console.error('Initialization error:', error);
@@ -138,7 +137,6 @@ export class UIController {
         this.updateThrottlers.clear();
         
         // Main map container was removed, no cleanup needed
-        console.log('Main map cleanup skipped - container removed');
         
         // Cleanup animation controller
         if (animationController) {
@@ -156,7 +154,6 @@ export class UIController {
     initializeMap() {
         // Main map was removed for better performance
         // Maps are now only created in spotlight view and agent results
-        console.log('Main map initialization skipped - using dedicated maps instead');
         return;
     }
     
@@ -165,7 +162,6 @@ export class UIController {
      */
     addStartingPointMarker() {
         // No longer needed since main map was removed
-        console.log('Starting point marker not needed - main map removed');
     }
     
     /**
@@ -200,12 +196,10 @@ export class UIController {
                 
                 // Add click handlers
                 dropdown.querySelectorAll('.dropdown-item').forEach((item, index) => {
-                    console.log('Adding click handler to:', item.dataset.name);
                     
                     item.addEventListener('click', (e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        console.log('Dropdown item clicked:', item.dataset.name);
                         this.selectDestination(item.dataset.name, item.dataset.id);
                     });
                     
@@ -276,21 +270,18 @@ export class UIController {
      * Select a destination from autocomplete
      */
     selectDestination(name, id) {
-        console.log('selectDestination called with:', name, id);
         const input = document.getElementById('destination');
         const dropdown = document.getElementById('autocomplete');
         
         if (input) {
             input.value = name;
             input.dataset.cityId = id;
-            console.log('Set input value to:', name);
         } else {
             console.error('Destination input not found!');
         }
         
         if (dropdown) {
             dropdown.classList.remove('show');
-            console.log('Hid dropdown');
         } else {
             console.error('Dropdown not found!');
         }
@@ -328,7 +319,6 @@ export class UIController {
         const calculateBtn = document.getElementById('calculate-btn');
         if (calculateBtn) {
             calculateBtn.addEventListener('click', (e) => {
-                console.log('Calculate button clicked');
                 e.preventDefault();
                 
                 // Add visual feedback
@@ -364,8 +354,6 @@ export class UIController {
         // Keep removeStop as global function for dynamic HTML (will fix this separately)
         window.removeStop = (index) => this.removeStop(index);
         
-        console.log('=== AI EVENT LISTENERS SET ===');
-        console.log('AI buttons found:', {
             narrator: !!document.getElementById('ai-narrator'),
             food: !!document.getElementById('ai-food'),
             weather: !!document.getElementById('ai-weather'),
@@ -378,12 +366,10 @@ export class UIController {
      * Calculate route using parallel agents system for 6 different trip types
      */
     async calculateRoute() {
-        console.log('calculateRoute function called');
         const destInput = document.getElementById('destination');
         const destName = destInput.value.trim();
         const calculateBtn = document.getElementById('calculate-btn');
         
-        console.log('Destination:', destName);
         
         if (!destName) {
             this.showError('Please enter a destination city');
@@ -409,7 +395,6 @@ export class UIController {
             };
             
             // Launch all 6 parallel agents with progress tracking
-            console.log('🚀 Launching parallel agents for:', destName);
             this.agentResults = await this.launchAgentsWithProgress('aix-en-provence', destCity.id, baseOptions);
             
             // Use the adventure route as the main display route (first agent result)
@@ -449,12 +434,10 @@ export class UIController {
      */
     displayRoute(routeData) {
         // Main map was removed for performance - route is displayed in spotlight/agent views
-        console.log('Route display called for:', routeData);
         
         const { route } = routeData;
         
         // Main map was removed - route visualization is handled in spotlight and agent views
-        console.log('Route visualization skipped - using dedicated maps in spotlight/agent views');
     }
     
     /**
@@ -595,16 +578,11 @@ export class UIController {
      * Call AI feature and display results
      */
     async callAIFeature(featureType) {
-        console.log('=== AI FEATURE CALLED ===');
-        console.log('Feature type:', featureType);
-        console.log('Current route:', this.currentRoute);
-        console.log('AI Features object:', aiFeatures);
         
         const aiResults = document.getElementById('ai-results');
         const aiTitle = document.getElementById('ai-title');
         const aiContent = document.getElementById('ai-content');
         
-        console.log('DOM elements found:', { aiResults: !!aiResults, aiTitle: !!aiTitle, aiContent: !!aiContent });
         
         const featureMap = {
             narrative: { title: 'Trip Narrator', method: 'generateTripNarrative' },
@@ -733,7 +711,6 @@ export class UIController {
      * Display all trip types with their unique routes
      */
     displayAllTripTypes(agentResults) {
-        console.log('🎨 Displaying all trip types results:', agentResults.size);
         
         // Create or update the trip types comparison section
         let comparisonSection = document.getElementById('trip-comparison-section');
@@ -802,7 +779,6 @@ export class UIController {
      * Show route in full-screen spotlight mode
      */
     showRouteSpotlight(agentType, result) {
-        console.log(`🎯 Opening route spotlight for ${result.agent.name}`);
         
         // Hide results page
         document.getElementById('agents-results-page').style.display = 'none';
@@ -812,10 +788,8 @@ export class UIController {
         spotlightPage.style.display = 'block';
         
         // Initialize spotlight controller with route data FIRST
-        console.log('🗺️ Initializing spotlight controller with route data');
         setTimeout(() => {
             if (window.spotlightController) {
-                console.log('✓ Spotlight controller found, initializing...');
                 window.spotlightController.initializeWithRoute(result);
             } else {
                 console.warn('⚠️ Spotlight controller not available, using manual initialization');
@@ -831,7 +805,6 @@ export class UIController {
     }
     
     manualSpotlightInit(result) {
-        console.log('🔧 Manual spotlight initialization');
         
         // Update agent badge
         const agentBadge = document.getElementById('spotlight-agent-badge');
@@ -880,7 +853,6 @@ export class UIController {
             itineraryContainer.innerHTML = result.itinerary || UIEnhancements.getDefaultItinerary();
         }
         
-        console.log('✓ Manual spotlight initialization complete');
     }
     
     /**
@@ -1007,7 +979,6 @@ export class UIController {
      * Show detailed view of a specific agent's result
      */
     showAgentDetails(agentType, result) {
-        console.log(`📱 Showing details for ${result.agent.name}`);
         
         // Create modal or expanded view
         let modal = document.getElementById('agent-details-modal');
@@ -1095,14 +1066,12 @@ export class UIController {
      * Switch to using a specific agent's route
      */
     switchToAgentRoute(agentType, result) {
-        console.log(`🔄 Switching to ${result.agent.name} route`);
         
         this.currentRoute = result.route;
         aiFeatures.setCurrentRoute(result.route);
         this.tripTypesManager.setCurrentRoute(result.route);
         
         // Main map container was removed for performance
-        console.log('Main map container not needed - using dedicated maps only');
         
         // Update display - only route info since main map was removed
         this.updateRouteInfo(result.route);

@@ -52,12 +52,10 @@ export class RouteAgent {
      * @param {Object} route - Current route object
      */
     setCurrentRoute(route) {
-        console.log('🗺️ RouteAgent.setCurrentRoute called with:', route);
         this.currentRoute = route;
 
         // Log the cities that will be extracted
         const cities = this.extractRouteCities(route);
-        console.log('🏙️ RouteAgent extracted cities:', cities);
 
         aiFeatures.setCurrentRoute(route);
     }
@@ -69,7 +67,6 @@ export class RouteAgent {
      * @returns {Promise<Object>} Response with action and content
      */
     async processMessage(message, routeContext) {
-        console.log('📨 RouteAgent.processMessage received:', { message, routeContext });
         this.setCurrentRoute(routeContext);
         this.conversationContext.push({ role: 'user', content: message, timestamp: Date.now() });
 
@@ -106,7 +103,6 @@ export class RouteAgent {
      */
     detectIntent(message) {
         const lowercaseMessage = message.toLowerCase();
-        console.log('🔍 RouteAgent.detectIntent called with:', message);
 
         // Check for user confirming a specific replacement choice
         const confirmationPatterns = [
@@ -119,7 +115,6 @@ export class RouteAgent {
         for (const pattern of confirmationPatterns) {
             const match = message.match(pattern);
             if (match && match[1]) {
-                console.log('✅ Detected replacement confirmation for:', match[1]);
                 return {
                     type: 'confirmReplacement',
                     replacementCity: match[1].trim(),
@@ -132,7 +127,6 @@ export class RouteAgent {
         for (const pattern of this.intentPatterns.replaceStop) {
             const match = message.match(pattern);
             if (match) {
-                console.log('✅ Detected replaceStop intent with pattern:', pattern);
                 return {
                     type: 'replaceStop',
                     extractedCity: this.extractCityFromMessage(message),
@@ -200,7 +194,6 @@ export class RouteAgent {
      * @returns {Promise<Object>} Response object
      */
     async handleDirectReplacementChoice(intent) {
-        console.log('🎯 handleDirectReplacementChoice called with:', intent);
 
         const replacementName = intent.replacementCity;
 
@@ -274,9 +267,7 @@ export class RouteAgent {
      * @returns {Promise<Object>} Response object
      */
     async handleStopReplacement(message, intent) {
-        console.log('🔍 handleStopReplacement called with:', { message, intent });
         const cityToReplace = intent.extractedCity;
-        console.log('🏙️ Extracted city to replace:', cityToReplace);
 
         if (!cityToReplace) {
             return {
@@ -301,7 +292,6 @@ export class RouteAgent {
         let replacement = await this.findReplacementCity(normalizedCity, message);
 
         if (!replacement) {
-            console.log('⚠️ API replacement failed, using fallback suggestions');
             // Use fallback replacement suggestions
             replacement = this.getFallbackReplacement(normalizedCity, routeCities);
         }
@@ -353,15 +343,12 @@ export class RouteAgent {
      * @returns {Promise<Object>} Replacement city with full details
      */
     async findReplacementCity(originalCity, userMessage) {
-        console.log('🔍 findReplacementCity called for:', originalCity);
 
         // Extract preferences from user message
         const preferences = this.extractPreferences(userMessage);
-        console.log('📝 Extracted preferences:', preferences);
 
         // Get current route bounds and constraints
         const routeInfo = this.analyzeCurrentRoute();
-        console.log('🗺️ Route info for replacement search:', routeInfo);
 
         // Use Perplexity to find replacement with detailed research
         const prompt = `Find a perfect alternative to ${originalCity} for a road trip route from ${routeInfo.origin} to ${routeInfo.destination}.
@@ -395,16 +382,12 @@ export class RouteAgent {
         Focus on finding a hidden gem or excellent alternative that travelers would be excited to discover.`;
 
         try {
-            console.log('📤 Sending replacement request to Perplexity API...');
             const response = await aiFeatures.callPerplexityAPI(prompt, true);
-            console.log('📥 Raw API response:', response);
 
             // Clean and parse the JSON response
             const cleanedResponse = this.cleanJSONResponse(response);
-            console.log('🧹 Cleaned response:', cleanedResponse);
 
             const replacementData = JSON.parse(cleanedResponse);
-            console.log('✅ Parsed replacement data:', replacementData);
 
             // Enrich with coordinate data if possible
             const cityCoords = this.findCityCoordinates(replacementData.name);
@@ -517,7 +500,6 @@ export class RouteAgent {
         if (suggestions && suggestions.length > 0) {
             // Return the first suggestion as a fallback
             const suggestion = suggestions[0];
-            console.log('✅ Using fallback suggestion:', suggestion.name);
             return suggestion;
         }
 
@@ -772,7 +754,6 @@ export class RouteAgent {
             }
         }
 
-        console.log('🏙️ Extracted cities from route:', cities);
         return cities;
     }
 

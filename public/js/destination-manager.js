@@ -5,7 +5,6 @@
 
 class DestinationManager {
     constructor() {
-        console.log('🔧 DESTINATION MANAGER: Constructor called');
         this.destinations = [];
         this.origin = '';
         this.finalDestination = '';
@@ -14,80 +13,61 @@ class DestinationManager {
         this.mapInstance = null;
         this.routeLayer = null;
 
-        console.log('🔧 DESTINATION MANAGER: Calling init()...');
         this.init();
     }
 
     init() {
-        console.log('🔧 DESTINATION MANAGER: Starting initialization...');
 
         // Load existing route data
-        console.log('🔧 INIT: Loading route data...');
         this.loadRouteData();
 
         // Setup event listeners
-        console.log('🔧 INIT: Setting up event listeners...');
         this.setupEventListeners();
 
         // Initialize UI
-        console.log('🔧 INIT: Initializing UI...');
         this.initializeUI();
 
         // Wait a bit and then check if we need to render existing cities
         setTimeout(() => {
-            console.log('🔧 INIT: Delayed check for existing cities...');
             this.checkAndSyncExistingCities();
         }, 1000);
 
-        console.log('✅ Destination Manager initialized successfully');
     }
 
     loadRouteData() {
-        console.log('📊 LOAD ROUTE DATA: Starting...');
         // Load from localStorage or sessionStorage
         const localData = localStorage.getItem('spotlightData');
         const sessionData = sessionStorage.getItem('spotlightData');
-        console.log('📊 LocalStorage data:', localData ? 'exists' : 'empty');
-        console.log('📊 SessionStorage data:', sessionData ? 'exists' : 'empty');
 
         const spotlightData = JSON.parse(localData || sessionData || '{}');
-        console.log('📊 Parsed spotlight data:', spotlightData);
 
         if (spotlightData.waypoints) {
             this.destinations = [...spotlightData.waypoints];
             this.origin = spotlightData.origin || 'Aix-en-Provence';
             this.finalDestination = spotlightData.destination || '';
-            console.log('📊 Loaded destinations from storage:', this.destinations.length, 'destinations');
-            console.log('📊 Destinations:', this.destinations.map(d => d.name));
 
             // Enrich initial destinations with Wikipedia images if not already enriched
             this.enrichInitialDestinations();
         } else {
-            console.log('📊 No waypoints found in storage data');
         }
     }
 
     async enrichInitialDestinations() {
-        console.log('🖼️ ENRICH INITIAL: Starting to enrich initial destinations with Wikipedia images...');
 
         for (let i = 0; i < this.destinations.length; i++) {
             const destination = this.destinations[i];
 
             // Skip if already has Wikipedia image
             if (destination.wikipediaImage) {
-                console.log(`🖼️ ENRICH INITIAL: ${destination.name} already has Wikipedia image, skipping`);
                 continue;
             }
 
-            console.log(`🖼️ ENRICH INITIAL: Fetching Wikipedia image for ${destination.name}...`);
 
             try {
                 const wikipediaImage = await this.getWikipediaImage(destination.name);
                 if (wikipediaImage) {
                     this.destinations[i].wikipediaImage = wikipediaImage;
-                    console.log(`🖼️ ENRICH INITIAL: Successfully added Wikipedia image for ${destination.name}`);
-                } else {
-                    console.log(`🖼️ ENRICH INITIAL: No Wikipedia image found for ${destination.name}`);
+                }
                 }
             } catch (error) {
                 console.warn(`🖼️ ENRICH INITIAL: Failed to fetch Wikipedia image for ${destination.name}:`, error);
@@ -95,47 +75,36 @@ class DestinationManager {
         }
 
         // Re-render destinations with new images
-        console.log('🖼️ ENRICH INITIAL: Re-rendering destinations with Wikipedia images...');
         this.renderDestinations();
     }
 
     initializeUI() {
-        console.log('🎨 INIT UI: Starting UI initialization...');
 
         // Add edit mode toggle button
-        console.log('🎨 INIT UI: Adding edit mode button...');
         this.addEditModeButton();
 
         // Enhance existing city cards with controls
-        console.log('🎨 INIT UI: Enhancing existing city cards...');
         this.enhanceCityCards();
 
         // Create add destination modal
-        console.log('🎨 INIT UI: Creating add destination modal...');
         this.createAddDestinationModal();
 
-        console.log('🎨 INIT UI: UI initialization complete');
     }
 
     enhanceCityCards() {
-        console.log('🎨 ENHANCE CITY CARDS: Enhancing existing city cards...');
         const cityCards = document.querySelectorAll('.city-card');
-        console.log(`🎨 ENHANCE: Found ${cityCards.length} city cards to enhance`);
 
         cityCards.forEach((card, index) => {
             // Skip if already enhanced
             if (card.querySelector('.remove-city-btn')) {
-                console.log(`🎨 ENHANCE: City card ${index} already enhanced`);
                 return;
             }
 
-            console.log(`🎨 ENHANCE: Enhancing city card ${index}`);
 
             // Add to destinations array if not already there
             const cityName = card.querySelector('.city-name')?.textContent?.trim();
             const cityHighlights = card.querySelector('.city-highlights')?.textContent?.trim() || '';
 
-            console.log(`🎨 ENHANCE: Processing city: ${cityName}`);
 
             if (cityName && !this.destinations.find(d => d.name === cityName)) {
                 const newDestination = {
@@ -145,7 +114,6 @@ class DestinationManager {
                     fromExistingCard: true
                 };
                 this.destinations.push(newDestination);
-                console.log(`🎨 ENHANCE: Added destination from existing card:`, newDestination);
             }
 
             // Don't add edit controls immediately - only when in edit mode
@@ -153,48 +121,36 @@ class DestinationManager {
             // this.addDragHandle(card, index);
         });
 
-        console.log('🎨 ENHANCE: Current destinations after enhancement:', this.destinations);
     }
 
     checkAndSyncExistingCities() {
-        console.log('🔄 SYNC CHECK: Checking for existing cities to sync...');
 
         const cityCards = document.querySelectorAll('.city-card');
-        console.log(`🔄 SYNC: Found ${cityCards.length} existing city cards`);
 
         if (cityCards.length > 0 && this.destinations.length === 0) {
-            console.log('🔄 SYNC: No destinations in manager but city cards exist, syncing...');
             this.enhanceCityCards();
 
             // Update route and map
             if (this.destinations.length > 0) {
-                console.log('🔄 SYNC: Synced destinations, updating route...');
                 this.updateRoute();
             }
         } else if (cityCards.length === 0 && this.destinations.length > 0) {
-            console.log('🔄 SYNC: Have destinations but no city cards, rendering...');
             this.renderDestinations();
         } else {
-            console.log('🔄 SYNC: City cards and destinations appear to be in sync');
-            console.log(`🔄 SYNC: City cards: ${cityCards.length}, Destinations: ${this.destinations.length}`);
         }
     }
 
     addEditModeButton() {
-        console.log('🔧 EDIT BUTTON: Adding edit mode button...');
         const headerNav = document.querySelector('.header-nav');
-        console.log('🔧 EDIT BUTTON: Header nav found:', !!headerNav);
 
         if (!headerNav) {
             console.warn('❌ EDIT BUTTON: Header nav not found!');
-            console.log('🔧 EDIT BUTTON: Available header elements:', document.querySelectorAll('header, .header, .header-content, .nav'));
             return;
         }
 
         // Check if button already exists
         const existingButton = document.getElementById('edit-route-btn');
         if (existingButton) {
-            console.log('⚠️ EDIT BUTTON: Edit button already exists, skipping');
             return;
         }
 
@@ -213,17 +169,13 @@ class DestinationManager {
 
         // Insert after the back button in the header nav
         const backButton = document.querySelector('.back-button');
-        console.log('Back button found:', !!backButton);
 
         if (backButton) {
-            console.log('✅ Inserting edit button after back button');
             backButton.insertAdjacentElement('afterend', editButton);
         } else {
-            console.log('⚠️ Back button not found, using fallback insertion');
             headerNav.insertBefore(editButton, headerNav.firstChild);
         }
 
-        console.log('✅ Edit button added to page');
     }
 
     toggleEditMode() {
@@ -257,34 +209,24 @@ class DestinationManager {
     }
 
     enterEditMode() {
-        console.log('🎬 ENTER EDIT MODE: Starting...');
 
         // Add remove buttons to all city cards
         const cityCards = document.querySelectorAll('.city-card');
-        console.log(`🎬 EDIT MODE: Found ${cityCards.length} city cards`);
-        console.log(`🎬 EDIT MODE: City cards:`, cityCards);
 
         cityCards.forEach((card, index) => {
-            console.log(`🎬 EDIT MODE: Processing card ${index}:`, card);
-            console.log(`🎬 EDIT MODE: Adding remove button to card ${index}`);
             this.addRemoveButton(card, index);
-            console.log(`🎬 EDIT MODE: Adding drag handle to card ${index}`);
             this.addDragHandle(card, index);
         });
 
         // Add main "Add Destination" button
-        console.log(`🎬 EDIT MODE: Adding main destination button`);
         this.addMainDestinationButton();
 
         // Add "Add Stop" buttons between cities
-        console.log(`🎬 EDIT MODE: Adding insert buttons`);
         this.addInsertButtons();
 
         // Show optimization toolbar
-        console.log(`🎬 EDIT MODE: Showing optimization toolbar`);
         this.showOptimizationToolbar();
 
-        console.log('✅ EDIT MODE: Edit mode activated successfully');
     }
 
     addMainDestinationButton() {
@@ -314,7 +256,6 @@ class DestinationManager {
     }
 
     exitEditMode() {
-        console.log('🎬 Exiting edit mode...');
 
         // Remove all edit controls
         document.querySelectorAll('.remove-city-btn').forEach(btn => btn.remove());
@@ -333,7 +274,6 @@ class DestinationManager {
         // Save changes
         this.saveRoute();
 
-        console.log('✅ Edit mode deactivated');
     }
 
     addRemoveButton(card, index) {
@@ -347,10 +287,8 @@ class DestinationManager {
     }
 
     addDragHandle(card, index) {
-        console.log(`🎯 ADD DRAG HANDLE: Adding to card at index ${index}`);
         // Skip if already has a drag handle
         if (card.querySelector('.drag-handle')) {
-            console.log(`🎯 ADD DRAG HANDLE: Card ${index} already has drag handle, skipping`);
             return;
         }
 
@@ -360,13 +298,11 @@ class DestinationManager {
         dragHandle.title = 'Drag to reorder';
         // Don't make the handle itself draggable - let the card handle it
         // dragHandle.draggable = true;
-        console.log(`🎯 ADD DRAG HANDLE: Created drag handle for ${index}`);
 
         // Make the entire card draggable when the handle is present
         card.draggable = true;
         card.style.cursor = 'move';
         card.setAttribute('draggable', 'true'); // Ensure HTML attribute is set
-        console.log(`🎯 ADD DRAG HANDLE: Made card ${index} draggable`);
 
         // Clear any existing event listeners
         this.removeAllDragListeners(card);
@@ -377,16 +313,10 @@ class DestinationManager {
 
         // Create unique bound methods for this specific card
         const dragStartHandler = (e) => {
-            console.log(`🎯 DRAG START HANDLER: Triggered for index ${index}`);
-            console.log(`🎯 DRAG START: index ${index}, destination: ${this.destinations[index]?.name}`);
-            console.log(`🎯 DRAG START: Event target:`, e.target);
-            console.log(`🎯 DRAG START: Card element:`, card);
-            console.log(`🎯 DRAG START: Event type:`, e.type);
-            console.log(`🎯 DRAG START: Card draggable:`, card.draggable);
 
             // Ensure this is actually a drag event
             if (!e.dataTransfer) {
-                console.warn(`🎯 DRAG START: No dataTransfer available, not a drag event`);
+                console.warn('Drag start: No dataTransfer available');
                 return;
             }
 
@@ -395,7 +325,6 @@ class DestinationManager {
                 e.dataTransfer.setData('text/plain', index.toString()); // Use text/plain for better compatibility
                 this.draggedItem = index;
                 card.classList.add('dragging');
-                console.log(`🎯 DRAG START: Set draggedItem to ${index}, added dragging class`);
 
                 // Don't prevent default - let the drag event proceed naturally
                 // e.stopPropagation();
@@ -410,24 +339,20 @@ class DestinationManager {
                     dragImage.style.pointerEvents = 'none';
                     document.body.appendChild(dragImage);
                     e.dataTransfer.setDragImage(dragImage, 50, 25);
-                    console.log(`🎯 DRAG START: Created and set drag image`);
 
                     setTimeout(() => {
                         if (document.body.contains(dragImage)) {
                             document.body.removeChild(dragImage);
-                            console.log(`🎯 DRAG START: Removed temporary drag image`);
                         }
                     }, 100);
                 } catch (dragImageError) {
-                    console.warn(`🎯 DRAG START: Failed to create drag image:`, dragImageError);
                 }
             } catch (error) {
-                console.error(`🎯 DRAG START: Error in drag start handler:`, error);
+                console.error('Drag start error:', error);
             }
         };
 
         const dragEndHandler = (e) => {
-            console.log(`🎯 DRAG END: index ${index}`);
             card.classList.remove('dragging');
             document.querySelectorAll('.city-card.drag-over').forEach(c => c.classList.remove('drag-over'));
             this.draggedItem = null;
@@ -445,18 +370,12 @@ class DestinationManager {
         const dropHandler = (e) => {
             e.preventDefault();
             e.stopPropagation();
-            console.log(`🎯 DROP HANDLER: Triggered for index ${index}`);
-            console.log(`🎯 DROP: on index ${index}, dragged item: ${this.draggedItem}`);
-            console.log(`🎯 DROP: Event details:`, e);
-            console.log(`🎯 DROP: Destinations before reorder:`, this.destinations.map(d => d.name));
 
             card.classList.remove('drag-over');
 
             if (this.draggedItem !== null && this.draggedItem !== index) {
-                console.log(`🎯 DROP: Valid drop detected, calling reorderDestinations(${this.draggedItem}, ${index})`);
                 this.reorderDestinations(this.draggedItem, index);
             } else {
-                console.log(`🎯 DROP: Invalid drop - draggedItem: ${this.draggedItem}, dropIndex: ${index}`);
             }
         };
 
@@ -469,7 +388,6 @@ class DestinationManager {
         };
 
         // Add event listeners with better options
-        console.log(`🎯 ADD DRAG HANDLE: Adding event listeners to card ${index}`);
 
         // Use capture phase and ensure events aren't passive
         const eventOptions = { capture: false, passive: false };
@@ -480,30 +398,22 @@ class DestinationManager {
         card.addEventListener('drop', dropHandler, eventOptions);
         card.addEventListener('dragenter', (e) => {
             e.preventDefault();
-            console.log(`🎯 DRAG ENTER: Card ${index}`);
         }, eventOptions);
         card.addEventListener('dragleave', (e) => {
-            console.log(`🎯 DRAG LEAVE: Card ${index}`);
         }, eventOptions);
 
-        console.log(`🎯 ADD DRAG HANDLE: Event listeners added to card ${index} with options:`, eventOptions);
 
         // Test drag start with mousedown event
         card.addEventListener('mousedown', (e) => {
-            console.log(`🎯 MOUSE DOWN: Card ${index}, preparing for potential drag`);
-            console.log(`🎯 MOUSE DOWN: Target:`, e.target);
-            console.log(`🎯 MOUSE DOWN: Card draggable:`, card.draggable);
         }, eventOptions);
 
         // Visual feedback on hover and ensure drag handle doesn't interfere
         dragHandle.addEventListener('mousedown', (e) => {
-            console.log(`🎯 DRAG HANDLE MOUSEDOWN: Starting drag on handle for card ${index}`);
             card.style.cursor = 'grabbing';
             // Don't prevent default - let the drag start naturally
         });
 
         dragHandle.addEventListener('mouseup', () => {
-            console.log(`🎯 DRAG HANDLE MOUSEUP: Ending drag on handle for card ${index}`);
             card.style.cursor = 'move';
         });
 
@@ -557,7 +467,6 @@ class DestinationManager {
     }
 
     removeDestination(index) {
-        console.log(`🗑️ Removing destination at index ${index}:`, this.destinations[index]);
 
         // Check bounds first
         if (index < 0 || index >= this.destinations.length || !this.destinations[index]) {
@@ -574,7 +483,6 @@ class DestinationManager {
 
         // Remove from array
         this.destinations.splice(index, 1);
-        console.log('✅ Destination removed. Remaining destinations:', this.destinations);
 
         // Immediately re-render and update
         this.renderDestinations();
@@ -583,7 +491,6 @@ class DestinationManager {
         // Also update the detailed itinerary if it exists
         this.updateDetailedItinerary();
 
-        console.log(`✅ Successfully removed ${removedCity.name} from route`);
     }
 
     showAddDestinationModal(insertIndex) {
@@ -808,7 +715,6 @@ class DestinationManager {
             // Add to destinations array
             this.destinations.splice(insertIndex, 0, enhancedDestination);
 
-            console.log(`✅ Added ${enhancedDestination.name} to route at position ${insertIndex}`);
 
             // Close modal
             this.closeAddModal();
@@ -842,11 +748,9 @@ class DestinationManager {
     }
 
     async enrichDestinationData(destination) {
-        console.log(`🤖 ENRICH DESTINATION: Enriching data for ${destination.name}...`);
 
         try {
             // Call Chat API for rich destination description
-            console.log(`🤖 ENRICH: Making API call to /api/chat for ${destination.name}`);
             const response = await fetch('/api/chat', {
                 method: 'POST',
                 headers: {
@@ -857,11 +761,9 @@ class DestinationManager {
                 })
             });
 
-            console.log(`🤖 ENRICH: API response status: ${response.status}`);
 
             if (response.ok) {
                 const data = await response.json();
-                console.log(`🤖 ENRICH: API response data:`, data);
                 const highlights = this.parseHighlightsFromAI(data.answer || data.response || data.content || '');
 
                 const enrichedDestination = {
@@ -872,7 +774,6 @@ class DestinationManager {
                     added: new Date().toISOString()
                 };
 
-                console.log(`🤖 ENRICH: Successfully enriched ${destination.name}:`, enrichedDestination);
                 return enrichedDestination;
             } else {
                 throw new Error(`Chat API request failed with status: ${response.status}`);
@@ -888,16 +789,13 @@ class DestinationManager {
                 added: new Date().toISOString()
             };
 
-            console.log(`🤖 ENRICH: Using fallback data for ${destination.name}:`, fallbackDestination);
             return fallbackDestination;
         }
     }
 
     parseHighlightsFromAI(content) {
-        console.log(`🤖 PARSE HIGHLIGHTS: Parsing content:`, content);
 
         if (!content || typeof content !== 'string') {
-            console.log(`🤖 PARSE: No valid content provided, using fallback`);
             return ['Historic landmarks', 'Local cuisine', 'Cultural attractions', 'Scenic views'];
         }
 
@@ -906,19 +804,16 @@ class DestinationManager {
                            content.match(/\d+\.\s*([^\n\r]+)/g) ||
                            content.split('.').filter(item => item.trim().length > 10);
 
-        console.log(`🤖 PARSE: Extracted bullet points:`, bulletPoints);
 
         if (bulletPoints && bulletPoints.length > 0) {
             const parsed = bulletPoints.slice(0, 4).map(point => {
                 const cleaned = point.replace(/^[-•*\d.]\s*/, '').trim();
                 return cleaned.length > 60 ? cleaned.substring(0, 57) + '...' : cleaned;
             });
-            console.log(`🤖 PARSE: Parsed highlights:`, parsed);
             return parsed;
         }
 
         // Fallback highlights
-        console.log(`🤖 PARSE: No bullet points found, using fallback highlights`);
         return ['Historic landmarks', 'Local cuisine', 'Cultural attractions', 'Scenic views'];
     }
 
@@ -930,29 +825,23 @@ class DestinationManager {
     }
 
     async addCustomDestination(cityName) {
-        console.log(`🌍 ADD CUSTOM DESTINATION: Starting with cityName: '${cityName}'`);
 
         if (!cityName) {
             // Get city name from input if not provided
             cityName = document.getElementById('destination-search-input')?.value?.trim();
-            console.log(`🌍 ADD CUSTOM: Got city name from input: '${cityName}'`);
         }
 
         if (!cityName) {
-            console.log(`🌍 ADD CUSTOM: No city name provided, showing alert`);
             alert('Please enter a city name');
             return;
         }
 
-        console.log(`🌍 ADD CUSTOM: Adding custom destination: ${cityName}`);
-        console.log(`🌍 ADD CUSTOM: Current destinations before add:`, this.destinations.map(d => d.name));
 
         // Show loading state
         const addBtn = document.querySelector('.btn-add');
         const originalText = addBtn.textContent;
         addBtn.innerHTML = '<div class="btn-spinner"></div> Adding City...';
         addBtn.disabled = true;
-        console.log(`🌍 ADD CUSTOM: Set loading state on button`);
 
         try {
             // Try to get coordinates for the city from our database first
@@ -961,7 +850,6 @@ class DestinationManager {
                 city.name.toLowerCase() === cityName.toLowerCase()
             );
             const coordinates = cityData ? cityData.coords : [0, 0];
-            console.log(`🌍 ADD CUSTOM: Found coordinates for ${cityName}:`, coordinates);
 
             // Create destination with proper coordinates if available
             const newDestination = {
@@ -970,46 +858,35 @@ class DestinationManager {
                 highlights: ['Loading city information...'],
                 isCustom: true
             };
-            console.log(`🌍 ADD CUSTOM: Created new destination object:`, newDestination);
 
             // Add to destinations immediately for UX
             const modal = document.getElementById('add-destination-modal');
             let insertIndex = parseInt(modal.dataset.insertIndex) || this.destinations.length;
-            console.log(`🌍 ADD CUSTOM: Original insert index: ${insertIndex}`);
 
             // If this was called from "Add New Destination" (at the end), calculate optimal position
             if (insertIndex === this.destinations.length && this.destinations.length > 0) {
                 const optimalIndex = this.findOptimalInsertPositionForDestination(newDestination);
-                console.log(`🌍 ADD CUSTOM: Using optimal position ${optimalIndex} instead of ${insertIndex}`);
                 insertIndex = optimalIndex;
             }
 
             this.destinations.splice(insertIndex, 0, newDestination);
-            console.log(`🌍 ADD CUSTOM: Added to destinations array at index ${insertIndex}`);
-            console.log(`🌍 ADD CUSTOM: New destinations array:`, this.destinations.map(d => d.name));
 
-            console.log(`🌍 ADD CUSTOM: Calling renderDestinations...`);
             this.renderDestinations();
-            console.log(`🌍 ADD CUSTOM: Calling updateRoute...`);
             this.updateRoute();
 
             // Direct map update - let spotlight controller gather all data internally
             if (window.spotlightController && typeof window.spotlightController.recalculateRoute === 'function') {
-                console.log(`🌍 ADD CUSTOM: Calling map recalculation...`);
                 try {
                     await window.spotlightController.recalculateRoute();
-                    console.log(`🌍 ADD CUSTOM: Map recalculation completed successfully`);
                 } catch (error) {
-                    console.warn(`🌍 ADD CUSTOM: Map recalculation failed:`, error);
+                    console.warn('Map recalculation failed:', error);
                 }
             }
 
             // Close modal
-            console.log(`🌍 ADD CUSTOM: Closing modal...`);
             this.closeAddModal();
 
             // Enrich with APIs in background
-            console.log(`🌍 ADD CUSTOM: Starting background enrichment...`);
             // Get the actual added destination from the array (not the original object)
             const addedDestination = this.destinations[insertIndex];
             await this.enrichCustomDestination(addedDestination);
@@ -1019,7 +896,6 @@ class DestinationManager {
             alert('Failed to add city. Please try again.');
         } finally {
             // Restore button
-            console.log('🌍 ADD CUSTOM: Restoring button state...');
             if (addBtn) {
                 addBtn.textContent = originalText;
                 addBtn.disabled = false;
@@ -1028,22 +904,16 @@ class DestinationManager {
     }
 
     async enrichCustomDestination(destination) {
-        console.log(`🔍 ENRICH CUSTOM: Enriching data for ${destination.name}...`);
 
         try {
             // Get Wikipedia image and basic info
-            console.log(`🔍 ENRICH CUSTOM: Getting Wikipedia image for ${destination.name}...`);
             const wikipediaImage = await this.getWikipediaImage(destination.name);
-            console.log(`🔍 ENRICH CUSTOM: Wikipedia image result:`, wikipediaImage ? 'found' : 'not found');
 
             // Get AI description
-            console.log(`🔍 ENRICH CUSTOM: Getting AI description for ${destination.name}...`);
             const aiData = await this.enrichDestinationData(destination);
-            console.log(`🔍 ENRICH CUSTOM: AI data result:`, aiData);
 
             // Update the destination in our array
             const destIndex = this.destinations.findIndex(d => d.name === destination.name);
-            console.log(`🔍 ENRICH CUSTOM: Found destination at index:`, destIndex);
 
             if (destIndex !== -1) {
                 this.destinations[destIndex].highlights = aiData.highlights || destination.highlights;
@@ -1051,19 +921,15 @@ class DestinationManager {
                 this.destinations[destIndex].description = aiData.description;
                 this.destinations[destIndex].enriched = true;
 
-                console.log(`🔍 ENRICH CUSTOM: Updated destination:`, this.destinations[destIndex]);
 
                 // Re-render to show enriched data
-                console.log(`🔍 ENRICH CUSTOM: Re-rendering destinations...`);
                 this.renderDestinations();
 
                 // Also update the map
-                console.log(`🔍 ENRICH CUSTOM: Updating route...`);
                 this.updateRoute();
 
-                console.log(`✅ ENRICH CUSTOM: Successfully enriched ${destination.name}`);
             } else {
-                console.warn(`🔍 ENRICH CUSTOM: Could not find destination ${destination.name} in array`);
+                console.warn(`Could not find destination ${destination.name} in array`);
             }
 
         } catch (error) {
@@ -1195,7 +1061,6 @@ class DestinationManager {
     }
 
     optimizeRoute() {
-        console.log('🔄 Optimizing route with', this.destinations.length, 'destinations...');
 
         if (this.destinations.length <= 2) {
             alert('Route optimization works best with 3 or more destinations.');
@@ -1232,7 +1097,6 @@ class DestinationManager {
             this.updateRoute();
         }
 
-        console.log(`🎯 Optimization complete: ${originalDistance}km → ${newDistance}km (${improvementPercent}% improvement)`);
     }
 
     nearestNeighborOptimization() {
@@ -1351,7 +1215,6 @@ class DestinationManager {
         };
 
         localStorage.setItem('customRoute', JSON.stringify(routeData));
-        console.log('✅ Route saved successfully');
     }
 
     resetRoute() {
@@ -1362,7 +1225,6 @@ class DestinationManager {
     }
 
     updateRoute() {
-        console.log('🔄 Updating route with destinations:', this.destinations);
 
         // Recalculate distances and times
         this.calculateDistances();
@@ -1406,7 +1268,6 @@ class DestinationManager {
         }
 
         this.totalDistance = Math.round(totalDistance);
-        console.log(`📍 Total calculated distance: ${this.totalDistance} km`);
 
         return this.totalDistance;
     }
@@ -1431,17 +1292,8 @@ class DestinationManager {
     }
 
     updateMapRoute() {
-        console.log('🗺️ UPDATE MAP ROUTE: Starting with', this.destinations.length, 'destinations');
-        console.log('🗺️ UPDATE MAP ROUTE: Destinations to map:', this.destinations.map(d => ({ name: d.name, coords: d.coordinates })));
 
         // Check what map objects are available
-        console.log('🗺️ AVAILABLE OBJECTS:');
-        console.log('  - window.updateMapRoute:', typeof window.updateMapRoute);
-        console.log('  - window.spotlightMapController:', !!window.spotlightMapController);
-        console.log('  - window.spotlightController:', !!window.spotlightController);
-        console.log('  - window.spotlightController.map:', !!(window.spotlightController && window.spotlightController.map));
-        console.log('  - window.map:', !!window.map);
-        console.log('  - window.updateSpotlightRoute:', typeof window.updateSpotlightRoute);
 
         try {
             // Try multiple map update strategies
@@ -1449,119 +1301,97 @@ class DestinationManager {
 
             // Strategy 1: Global updateMapRoute function
             if (typeof window.updateMapRoute === 'function') {
-                console.log('📍 UPDATE MAP: Using global updateMapRoute function');
                 try {
                     window.updateMapRoute(this.destinations);
-                    console.log('📍 UPDATE MAP: Global updateMapRoute called successfully');
                     updated = true;
                 } catch (err) {
-                    console.error('📍 UPDATE MAP: Global updateMapRoute failed:', err);
+                    console.error('Global updateMapRoute failed:', err);
                 }
             }
 
             // Strategy 2: Spotlight controller with map
             if (window.spotlightController && window.spotlightController.map) {
-                console.log('📍 UPDATE MAP: Using spotlight controller with direct map access');
                 try {
                     // Use spotlight controller's map directly
                     window.map = window.spotlightController.map; // Set global reference for compatibility
                     this.directMapUpdate();
-                    console.log('📍 UPDATE MAP: Spotlight controller map update called successfully');
                     updated = true;
                 } catch (err) {
-                    console.error('📍 UPDATE MAP: Spotlight controller map update failed:', err);
+                    console.error('Spotlight controller map update failed:', err);
                 }
             }
 
             // Strategy 2b: Legacy spotlight map controller
             if (!updated && window.spotlightMapController && window.spotlightMapController.updateRoute) {
-                console.log('📍 UPDATE MAP: Using legacy spotlight map controller');
                 try {
                     window.spotlightMapController.updateRoute(this.destinations);
-                    console.log('📍 UPDATE MAP: Legacy spotlight map controller called successfully');
                     updated = true;
                 } catch (err) {
-                    console.error('📍 UPDATE MAP: Legacy spotlight map controller failed:', err);
+                    console.error('Legacy spotlight map controller failed:', err);
                 }
             }
 
             // Strategy 3: Direct map update (window.map or spotlight map)
             const mapInstance = window.map || (window.spotlightController && window.spotlightController.map);
             if (mapInstance) {
-                console.log('📍 UPDATE MAP: Using direct map update with map instance');
                 try {
                     // Ensure window.map points to the right instance
                     if (!window.map && window.spotlightController && window.spotlightController.map) {
                         window.map = window.spotlightController.map;
-                        console.log('📍 UPDATE MAP: Set window.map to spotlight controller map');
                     }
                     this.directMapUpdate();
-                    console.log('📍 UPDATE MAP: Direct map update called successfully');
                     updated = true;
                 } catch (err) {
-                    console.error('📍 UPDATE MAP: Direct map update failed:', err);
+                    console.error('Direct map update failed:', err);
                 }
             }
 
             // Strategy 4: Custom event dispatch
             if (!updated) {
-                console.log('📍 UPDATE MAP: Triggering custom map update event');
                 const event = new CustomEvent('routeUpdated', {
                     detail: { destinations: this.destinations }
                 });
                 document.dispatchEvent(event);
-                console.log('📍 UPDATE MAP: Custom event dispatched');
 
                 // Also try to update via spotlight.js if available
                 if (window.updateSpotlightRoute) {
-                    console.log('📍 UPDATE MAP: Calling window.updateSpotlightRoute');
                     try {
                         window.updateSpotlightRoute(this.destinations);
-                        console.log('📍 UPDATE MAP: window.updateSpotlightRoute called successfully');
                     } catch (err) {
-                        console.error('📍 UPDATE MAP: window.updateSpotlightRoute failed:', err);
+                        console.error('window.updateSpotlightRoute failed:', err);
                     }
                 }
             }
 
-            console.log('✅ UPDATE MAP: Map route update completed, updated =', updated);
         } catch (error) {
-            console.error('⚠️ UPDATE MAP: Map update failed with error:', error);
+            console.error('Map update failed:', error);
         }
     }
 
     async directMapUpdate() {
-        console.log('🗺️ DIRECT MAP UPDATE: Starting direct map update...');
 
         // Direct map update when global functions aren't available
         if (!window.map) {
-            console.log('🗺️ DIRECT MAP: No window.map found');
             return;
         }
 
-        console.log('🗺️ DIRECT MAP: Map instance found, updating...');
-        console.log('🗺️ DIRECT MAP: Destinations to map:', this.destinations.map(d => ({ name: d.name, coords: d.coordinates })));
 
         // Check if spotlight controller has a recalculateRoute method we can use instead
         if (window.spotlightController && typeof window.spotlightController.recalculateRoute === 'function') {
-            console.log('🗺️ DIRECT MAP: Using spotlight controller recalculateRoute method');
             try {
                 await window.spotlightController.recalculateRoute();
-                console.log('🗺️ DIRECT MAP: Successfully updated route via spotlight controller');
                 return;
             } catch (error) {
-                console.warn('🗺️ DIRECT MAP: Spotlight controller recalculateRoute failed:', error);
+                console.warn('Spotlight controller recalculateRoute failed:', error);
             }
         }
 
         // Try to update existing spotlight route instead of clearing everything
         if (window.spotlightController) {
-            console.log('🗺️ DIRECT MAP: Updating spotlight controller waypoints directly');
             try {
                 // Update both spotlightData.waypoints and agentData
                 if (window.spotlightController.spotlightData) {
                     window.spotlightController.spotlightData.waypoints = this.destinations;
-                    console.log('🗺️ DIRECT MAP: Updated spotlightData.waypoints');
 
                     // Also update agentData so displayCities() works correctly
                     if (window.spotlightController.spotlightData.agentData) {
@@ -1583,7 +1413,6 @@ class DestinationManager {
                                 'Updated route with new destinations'
                         });
                         agentData.recommendations = `\`\`\`json\n${updatedRecommendations}\n\`\`\``;
-                        console.log('🗺️ DIRECT MAP: Updated agentData.recommendations');
                     }
                 }
 
@@ -1591,35 +1420,29 @@ class DestinationManager {
                 const existingData = JSON.parse(localStorage.getItem('spotlightData') || '{}');
                 existingData.waypoints = this.destinations;
                 localStorage.setItem('spotlightData', JSON.stringify(existingData));
-                console.log('🗺️ DIRECT MAP: Updated localStorage spotlightData');
 
                 // Call spotlight's displayCities method to re-render
                 if (typeof window.spotlightController.displayCities === 'function') {
                     await window.spotlightController.displayCities();
-                    console.log('🗺️ DIRECT MAP: Called spotlight displayCities()');
                 }
 
                 // Call recalculateRoute to update the map
                 if (typeof window.spotlightController.recalculateRoute === 'function') {
                     await window.spotlightController.recalculateRoute();
-                    console.log('🗺️ DIRECT MAP: Called spotlight recalculateRoute()');
                 }
 
-                console.log('🗺️ DIRECT MAP: Successfully updated spotlight waypoints and route');
                 return;
             } catch (error) {
-                console.warn('🗺️ DIRECT MAP: Failed to update spotlight waypoints:', error);
+                console.warn('Failed to update spotlight waypoints:', error);
             }
         }
 
-        console.log('🗺️ DIRECT MAP: No spotlight controller found, skipping route update...');
         // Note: We don't want to create custom routes anymore to avoid conflicts
         // All route updates should go through spotlight controller's recalculateRoute()
         return;
 
         // Clear only our custom markers, not spotlight markers
         if (window.mapMarkers) {
-            console.log('🗺️ DIRECT MAP: Clearing', window.mapMarkers.length, 'existing custom markers');
             window.mapMarkers.forEach(marker => marker.remove());
             window.mapMarkers = [];
         }
@@ -1627,13 +1450,10 @@ class DestinationManager {
         // Add new markers for destinations
         const markers = [];
         this.destinations.forEach((dest, index) => {
-            console.log(`🗺️ DIRECT MAP: Processing destination ${index}: ${dest.name}`);
-            console.log(`🗺️ DIRECT MAP: Coordinates for ${dest.name}:`, dest.coordinates);
 
             if (dest.coordinates && Array.isArray(dest.coordinates) && dest.coordinates.length === 2) {
                 const [lng, lat] = dest.coordinates;
                 if (lng !== 0 && lat !== 0 && !isNaN(lng) && !isNaN(lat)) {
-                    console.log(`🗺️ DIRECT MAP: Adding marker for ${dest.name} at [${lng}, ${lat}]`);
                     try {
                         const marker = new mapboxgl.Marker()
                             .setLngLat([lng, lat])
@@ -1641,20 +1461,16 @@ class DestinationManager {
                                 .setHTML(`<h3>${dest.name}</h3><p>Stop ${index + 1}</p>`))
                             .addTo(window.map);
                         markers.push(marker);
-                        console.log(`🗺️ DIRECT MAP: Successfully added marker for ${dest.name}`);
                     } catch (error) {
-                        console.error(`🗺️ DIRECT MAP: Failed to add marker for ${dest.name}:`, error);
+                        console.error(`Failed to add marker for ${dest.name}:`, error);
                     }
                 } else {
-                    console.log(`🗺️ DIRECT MAP: Invalid coordinates for ${dest.name}: [${lng}, ${lat}]`);
                 }
             } else {
-                console.log(`🗺️ DIRECT MAP: No valid coordinates for ${dest.name}:`, dest.coordinates);
             }
         });
 
         window.mapMarkers = markers;
-        console.log(`🗺️ DIRECT MAP: Added ${markers.length} markers to map`);
 
         // Update route line if we have coordinates
         const validCoords = this.destinations
@@ -1667,10 +1483,8 @@ class DestinationManager {
             })
             .map(dest => dest.coordinates);
 
-        console.log(`🗺️ DIRECT MAP: Valid coordinates for route line:`, validCoords);
 
         if (validCoords.length > 1) {
-            console.log('🗺️ DIRECT MAP: Creating route line with', validCoords.length, 'points');
             // Add route line
             const routeData = {
                 type: 'Feature',
@@ -1683,10 +1497,8 @@ class DestinationManager {
 
             try {
                 if (window.map.getSource('route')) {
-                    console.log('🗺️ DIRECT MAP: Updating existing route source');
                     window.map.getSource('route').setData(routeData);
                 } else {
-                    console.log('🗺️ DIRECT MAP: Creating new route source and layer');
                     window.map.addSource('route', {
                         type: 'geojson',
                         data: routeData
@@ -1706,15 +1518,12 @@ class DestinationManager {
                         }
                     });
                 }
-                console.log('🗺️ DIRECT MAP: Route line updated successfully');
             } catch (error) {
-                console.error('🗺️ DIRECT MAP: Failed to update route line:', error);
+                console.error('Failed to update route line:', error);
             }
         } else {
-            console.log('🗺️ DIRECT MAP: Not enough valid coordinates for route line');
         }
 
-        console.log('✅ DIRECT MAP: Map updated with', this.destinations.length, 'destinations');
     }
 
     updateRouteStats() {
@@ -1738,7 +1547,6 @@ class DestinationManager {
             estimatedDaysElement.textContent = estimatedDays;
         }
 
-        console.log(`📊 Route Stats Updated: ${totalStops} stops, ${this.totalDistance} km, ${estimatedDays} days`);
     }
 
     calculateEstimatedDays() {
@@ -1773,7 +1581,6 @@ class DestinationManager {
         const mergedSessionData = { ...existingSessionData, ...updatedRouteData };
         sessionStorage.setItem('spotlightData', JSON.stringify(mergedSessionData));
 
-        console.log('💾 Route metadata updated in storage');
     }
 
     updateDetailedItinerary() {
@@ -1789,34 +1596,21 @@ class DestinationManager {
     }
 
     renderDestinations() {
-        console.log('🔄 RENDER DESTINATIONS: Starting render...');
-        console.log('🔄 RENDER: Destinations to render:', this.destinations.length);
-        console.log('🔄 RENDER: Destination names:', this.destinations.map(d => d.name));
-        console.log('🔄 RENDER: Full destinations:', this.destinations);
 
         const container = document.getElementById('citiesContainer');
-        console.log('🔄 RENDER: Cities container found:', !!container);
 
         if (!container) {
             console.warn('❌ RENDER: Cities container not found!');
-            console.log('🔍 RENDER: Available elements with "cities":', document.querySelectorAll('[id*="cities"]'));
-            console.log('🔍 RENDER: All elements with city-related classes:', document.querySelectorAll('.city-card, .cities-container, .cities-section'));
             return;
         }
 
-        console.log('🔄 RENDER: Container found, clearing contents...');
         // Clear container completely
         container.innerHTML = '';
-        console.log('🔄 RENDER: Container cleared');
 
         // Re-render all city cards with current destinations
-        console.log('🔄 RENDER: Creating city cards...');
         this.destinations.forEach((dest, index) => {
-            console.log(`🔄 RENDER: Creating card ${index} for ${dest.name}`);
             const cityCard = this.createCityCard(dest, index);
-            console.log(`🔄 RENDER: Created card for ${dest.name}:`, cityCard);
             container.appendChild(cityCard);
-            console.log(`🔄 RENDER: Appended card ${index} to container`);
         });
 
         // Add click event listeners for modal functionality
@@ -1838,7 +1632,6 @@ class DestinationManager {
                         activities = JSON.parse(decodeURIComponent(cityActivities));
                     }
                 } catch (err) {
-                    console.warn('Could not parse activities:', err);
                 }
 
                 // Use spotlight modal if available
@@ -1848,37 +1641,25 @@ class DestinationManager {
             });
         });
 
-        console.log('🔄 RENDER: All cards created and appended');
-        console.log('🔄 RENDER: Container now has', container.children.length, 'children');
 
         // Re-apply edit mode if active
         if (this.isEditing) {
-            console.log('🔄 RENDER: Edit mode is active, re-applying edit controls...');
             setTimeout(() => {
-                console.log('🔄 RENDER: Calling enterEditMode()...');
                 this.enterEditMode();
             }, 100);
-        } else {
-            console.log('🔄 RENDER: Edit mode not active');
         }
 
-        console.log('✅ RENDER: Rendered', this.destinations.length, 'destinations successfully');
     }
 
     createCityCard(destination, index) {
-        console.log(`🏠 CREATE CITY CARD: Creating card for ${destination.name} at index ${index}`);
-        console.log(`🏠 CREATE CARD: Destination data:`, destination);
 
         const cityCard = document.createElement('div');
         cityCard.className = 'city-card';
         cityCard.dataset.index = index;
-        console.log(`🏠 CREATE CARD: Created div element with class 'city-card'`);
 
         // Create city card content matching the existing structure
         const highlightsData = destination.activities || destination.highlights || destination.description;
         const highlights = this.formatCityHighlights(highlightsData);
-        console.log(`🏠 CREATE CARD: Formatted highlights:`, highlights);
-        console.log(`🏠 CREATE CARD: Wikipedia image for ${destination.name}:`, destination.wikipediaImage);
 
         // Use spotlight.js compatible structure with data attributes for modal
         cityCard.setAttribute('data-city-name', destination.name);
@@ -1909,8 +1690,6 @@ class DestinationManager {
                 ${highlights}
             </div>
         `;
-        console.log(`🏠 CREATE CARD: Set innerHTML for ${destination.name} with image:`, !!destination.wikipediaImage);
-        console.log(`🏠 CREATE CARD: Final card structure:`, cityCard.outerHTML);
 
         return cityCard;
     }
@@ -1978,7 +1757,6 @@ class DestinationManager {
             }, 100);
         }
 
-        console.log(`🎯 Drag started for item ${index}: ${this.destinations[index]?.name}`);
     }
 
     handleDragOver(e) {
@@ -2019,7 +1797,6 @@ class DestinationManager {
         }
 
         const draggedDestination = this.destinations[this.draggedItem];
-        console.log(`🎯 Dropping ${draggedDestination.name} from position ${this.draggedItem} to ${dropIndex}`);
 
         // Remove from old position
         this.destinations.splice(this.draggedItem, 1);
@@ -2043,7 +1820,6 @@ class DestinationManager {
             card.classList.remove('dragging', 'drag-over');
         });
 
-        console.log('🎯 Drag operation completed');
         this.draggedItem = null;
     }
 
@@ -2057,8 +1833,6 @@ class DestinationManager {
 
         // Global drag event listeners for debugging
         document.addEventListener('dragstart', (e) => {
-            console.log(`🎯 GLOBAL DRAG START: Element:`, e.target);
-            console.log(`🎯 GLOBAL DRAG START: Is city card:`, e.target.classList.contains('city-card'));
         });
 
         document.addEventListener('dragover', (e) => {
@@ -2067,7 +1841,6 @@ class DestinationManager {
         });
 
         document.addEventListener('drop', (e) => {
-            console.log(`🎯 GLOBAL DROP: Element:`, e.target);
             e.preventDefault();
         });
     }
@@ -2164,38 +1937,26 @@ class DestinationManager {
             }
         }
 
-        console.log(`🎯 OPTIMAL POSITION: Best position for ${newDestination.name} is index ${bestPosition} (saves ${(minAdditionalDistance).toFixed(1)} km)`);
         return bestPosition;
     }
 
     reorderDestinations(fromIndex, toIndex) {
-        console.log(`🔄 REORDER DESTINATIONS: Starting reorder from ${fromIndex} to ${toIndex}`);
-        console.log(`🔄 REORDER: Current destinations:`, this.destinations.map(d => d.name));
-        console.log(`🔄 REORDER: Moving destination: ${this.destinations[fromIndex]?.name}`);
 
         if (fromIndex === toIndex) {
-            console.log(`🔄 REORDER: Indices are the same, skipping`);
             return;
         }
 
         // Move the destination
         const draggedDestination = this.destinations[fromIndex];
-        console.log(`🔄 REORDER: Extracted destination:`, draggedDestination);
 
         this.destinations.splice(fromIndex, 1);
-        console.log(`🔄 REORDER: After removing from ${fromIndex}:`, this.destinations.map(d => d.name));
 
         this.destinations.splice(toIndex, 0, draggedDestination);
-        console.log(`🔄 REORDER: After inserting at ${toIndex}:`, this.destinations.map(d => d.name));
 
-        console.log('🔄 REORDER: New order final:', this.destinations.map(d => d.name));
 
         // Re-render and update everything
-        console.log('🔄 REORDER: Calling renderDestinations...');
         this.renderDestinations();
-        console.log('🔄 REORDER: Calling updateRoute...');
         this.updateRoute();
-        console.log('🔄 REORDER: Reorder complete');
     }
 }
 
@@ -2204,27 +1965,14 @@ let destinationManager;
 
 // Function to initialize destination manager with retries
 function initializeDestinationManager(attempt = 1, maxAttempts = 5) {
-    console.log(`🔍 INITIALIZATION ATTEMPT ${attempt}/${maxAttempts}: Checking page for initialization...`);
-    console.log('🔍 INIT: Current path:', window.location.pathname);
-    console.log('🔍 INIT: Page title:', document.title);
-    console.log('🔍 INIT: Document ready state:', document.readyState);
 
     // Log all potential spotlight page indicators
-    console.log('🔍 INIT: Page indicators:');
-    console.log('  - Path includes spotlight:', window.location.pathname.includes('spotlight'));
-    console.log('  - .spotlight-main element:', !!document.querySelector('.spotlight-main'));
-    console.log('  - #citiesContainer element:', !!document.querySelector('#citiesContainer'));
-    console.log('  - .cities-container element:', !!document.querySelector('.cities-container'));
-    console.log('  - .city-card elements:', document.querySelectorAll('.city-card').length);
-    console.log('  - localStorage spotlightData:', !!localStorage.getItem('spotlightData'));
-    console.log('  - sessionStorage spotlightData:', !!sessionStorage.getItem('spotlightData'));
 
     // Check multiple conditions to ensure we're on the right page
     const isSpotlightPage = window.location.pathname.includes('spotlight') ||
                            document.querySelector('.spotlight-main') ||
                            document.querySelector('#citiesContainer');
 
-    console.log('🔍 INIT: Is spotlight page?', isSpotlightPage);
 
     if (isSpotlightPage) {
         // Check if we have data to work with
@@ -2232,48 +1980,38 @@ function initializeDestinationManager(attempt = 1, maxAttempts = 5) {
         const citiesContainer = document.querySelector('#citiesContainer');
 
         if (!hasData && attempt < maxAttempts) {
-            console.log(`🕰️ INIT: No spotlight data found, retrying in 1000ms (attempt ${attempt}/${maxAttempts})`);
             setTimeout(() => initializeDestinationManager(attempt + 1, maxAttempts), 1000);
             return;
         }
 
         if (!citiesContainer && attempt < maxAttempts) {
-            console.log(`🕰️ INIT: Cities container not found, retrying in 500ms (attempt ${attempt}/${maxAttempts})`);
             setTimeout(() => initializeDestinationManager(attempt + 1, maxAttempts), 500);
             return;
         }
 
-        console.log('✅ INITIALIZATION: Detected spotlight page - Initializing Destination Manager...');
         try {
             destinationManager = new DestinationManager();
             window.destinationManager = destinationManager; // Make globally accessible
-            console.log('✅ INITIALIZATION: Destination Manager initialized successfully');
-            console.log('🔍 INIT: Global destinationManager object:', window.destinationManager);
 
             // Listen for spotlight page updates to re-sync
             setupSpotlightIntegration();
 
         } catch (error) {
-            console.error('❌ INITIALIZATION: Failed to initialize Destination Manager:', error);
+            console.error('Failed to initialize Destination Manager:', error);
             if (attempt < maxAttempts) {
-                console.log(`🕰️ INIT: Error occurred, retrying in 1000ms (attempt ${attempt}/${maxAttempts})`);
                 setTimeout(() => initializeDestinationManager(attempt + 1, maxAttempts), 1000);
             }
         }
     } else {
-        console.log('❌ INITIALIZATION: Not a spotlight page, skipping initialization');
-        console.log('🔍 INIT: Available elements:', document.body.innerHTML.substring(0, 500) + '...');
     }
 }
 
 // Setup integration with spotlight page
 function setupSpotlightIntegration() {
-    console.log('🤝 INTEGRATION: Setting up spotlight integration...');
 
     // Listen for storage changes (when spotlight.js updates data)
     window.addEventListener('storage', (e) => {
         if (e.key === 'spotlightData' && destinationManager) {
-            console.log('🤝 INTEGRATION: Storage updated, reloading route data...');
             destinationManager.loadRouteData();
             destinationManager.renderDestinations();
         }
@@ -2281,7 +2019,6 @@ function setupSpotlightIntegration() {
 
     // Listen for custom events from spotlight.js
     document.addEventListener('spotlightDataUpdated', (e) => {
-        console.log('🤝 INTEGRATION: Spotlight data updated event received:', e.detail);
         if (destinationManager) {
             destinationManager.loadRouteData();
             destinationManager.renderDestinations();
@@ -2292,13 +2029,11 @@ function setupSpotlightIntegration() {
     // Wait for spotlight to be fully loaded
     const checkSpotlightLoaded = () => {
         if (window.spotlightMapController || document.querySelectorAll('.city-card').length > 0) {
-            console.log('🤝 INTEGRATION: Spotlight appears to be loaded, syncing...');
             if (destinationManager) {
                 destinationManager.loadRouteData();
                 destinationManager.renderDestinations();
             }
         } else {
-            console.log('🤝 INTEGRATION: Waiting for spotlight to load...');
             setTimeout(checkSpotlightLoaded, 1000);
         }
     };
@@ -2314,7 +2049,6 @@ document.addEventListener('DOMContentLoaded', () => {
 // Also try to initialize when window loads (as a fallback)
 window.addEventListener('load', () => {
     if (!destinationManager) {
-        console.log('🕰️ FALLBACK: Window loaded, trying initialization again...');
         initializeDestinationManager();
     }
 });

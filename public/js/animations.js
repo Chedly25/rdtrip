@@ -24,7 +24,6 @@ export class AnimationController {
         }
         
         this.setupAccessibilityAnimations();
-        console.log('✨ Animation Controller initialized');
     }
 
     /**
@@ -482,7 +481,6 @@ export class AnimationController {
     cleanup() {
         this.observers.forEach(observer => observer.disconnect());
         this.observers.clear();
-        console.log('🧹 Animation Controller cleaned up');
     }
 }
 

@@ -1,7 +1,6 @@
 // Enhanced Road Trip Planner App
 class RoadTripPlanner {
     constructor() {
-        console.log('🔥 RoadTripPlanner constructor called');
         this.map = null;
         this.selectedAgents = ['adventure', 'culture', 'food', 'hidden-gems'];
         this.selectedBudget = 'comfort';
@@ -10,7 +9,6 @@ class RoadTripPlanner {
         this.routeAgent = null;
         this.enhancedFeaturesAvailable = false;
 
-        console.log('🔥 Calling init()...');
         this.init();
     }
 
@@ -30,10 +28,8 @@ class RoadTripPlanner {
             const { routeAgent } = await import('./routeAgent.js');
             this.routeAgent = routeAgent;
             this.enhancedFeaturesAvailable = true;
-            console.log('✅ Enhanced AI features loaded successfully');
         } catch (error) {
             console.warn('⚠️ Enhanced AI features failed to load:', error);
-            console.log('💬 Using fallback chat functionality');
             this.enhancedFeaturesAvailable = false;
         }
     }
@@ -45,7 +41,6 @@ class RoadTripPlanner {
         // Check if map container exists before initializing
         const mapContainer = document.getElementById('map');
         if (!mapContainer) {
-            console.log('Map container not found, skipping map initialization');
             this.map = null;
             return;
         }
@@ -75,11 +70,9 @@ class RoadTripPlanner {
     }
 
     setupEventListeners() {
-        console.log('🔥 Setting up event listeners...');
 
         // Theme selection travel style cards (updated from icon buttons)
         const travelCards = document.querySelectorAll('.travel-style-card');
-        console.log('🔥 Found travel style cards:', travelCards.length);
         travelCards.forEach(card => {
             card.addEventListener('click', () => this.toggleAgent(card));
         });
@@ -89,20 +82,16 @@ class RoadTripPlanner {
 
         // Budget label clicks
         const budgetLabels = document.querySelectorAll('.budget-label');
-        console.log('🔥 Found budget labels:', budgetLabels.length);
         budgetLabels.forEach(label => {
             label.addEventListener('click', () => this.selectBudgetByLabel(label));
         });
 
         // Generate route button
         const generateBtn = document.getElementById('generateRoute');
-        console.log('🔥 Found generate button:', generateBtn);
         if (generateBtn) {
             generateBtn.addEventListener('click', () => {
-                console.log('🔥 Generate button clicked!');
                 this.generateRoute();
             });
-            console.log('🔥 Generate button event listener added');
         } else {
             console.error('🔥 Generate button not found!');
         }
@@ -134,14 +123,12 @@ class RoadTripPlanner {
     setupStickyFormListeners() {
         // Sticky form budget buttons
         const stickyBudgetButtons = document.querySelectorAll('.sticky-budget-btn');
-        console.log('🔥 Found sticky budget buttons:', stickyBudgetButtons.length);
         stickyBudgetButtons.forEach(btn => {
             btn.addEventListener('click', () => this.selectBudget(btn));
         });
 
         // Sticky form theme buttons
         const stickyThemeButtons = document.querySelectorAll('.sticky-theme-btn');
-        console.log('🔥 Found sticky theme buttons:', stickyThemeButtons.length);
         stickyThemeButtons.forEach(btn => {
             btn.addEventListener('click', () => this.toggleAgent(btn));
         });
@@ -151,16 +138,10 @@ class RoadTripPlanner {
         const agent = card.dataset.agent;
 
         if (!agent) {
-            console.error('🔥 No agent data found on card');
+            console.error('No agent data found on card');
             return;
         }
 
-        console.log('🔥 TOGGLE AGENT CALLED:', agent);
-        console.log('🔥 Button element:', card);
-        console.log('🔥 Button classes:', card.className);
-        console.log('🔥 Button parent:', card.parentElement?.className);
-        console.log('🔥 Current selectedAgents before toggle:', this.selectedAgents);
-        console.log('🔥 Button currently has active class:', card.classList.contains('active'));
 
         // Add ripple effect animation
         this.addRippleEffect(card);
@@ -171,30 +152,23 @@ class RoadTripPlanner {
 
         if (isCurrentlyActive) {
             // Trying to deselect - ensure at least one agent remains selected
-            console.log('🔥 Trying to deselect. Current array length:', this.selectedAgents.length);
             if (this.selectedAgents.length > 1) {
                 // Remove from UI and array
                 card.classList.remove('active');
                 this.selectedAgents = this.selectedAgents.filter(a => a !== agent);
-                console.log('🔥 ✅ Deselected agent:', agent, 'Remaining:', this.selectedAgents);
             } else {
-                console.log('🔥 ❌ Cannot deselect last agent:', agent, 'Must have at least one');
                 // Keep it active - don't allow deselection of the last one
                 return;
             }
         } else {
             // Trying to select - add to UI and array (avoid duplicates)
-            console.log('🔥 Trying to select agent:', agent);
             card.classList.add('active');
             if (!this.selectedAgents.includes(agent)) {
                 this.selectedAgents.push(agent);
-                console.log('🔥 ✅ Selected agent:', agent, 'All selected:', this.selectedAgents);
             } else {
-                console.log('🔥 ⚠️ Agent already in array:', agent, 'Current array:', this.selectedAgents);
             }
         }
 
-        console.log('🔥 Final selectedAgents after toggle:', this.selectedAgents);
 
         // Sync all forms to ensure consistency
         this.syncAllFormAgents();
@@ -238,8 +212,6 @@ class RoadTripPlanner {
     }
 
     initializeFormState() {
-        console.log('🔥 Initializing form state...');
-        console.log('🔥 Initial selectedAgents:', this.selectedAgents);
 
         // Ensure CSS state matches JavaScript state on load
         this.syncAllFormAgents();
@@ -250,7 +222,6 @@ class RoadTripPlanner {
             const agent = element.dataset.agent;
             const hasActive = element.classList.contains('active');
             const shouldBeActive = this.selectedAgents.includes(agent);
-            console.log(`🔥 DEBUG: Element ${agent} - hasActive: ${hasActive}, shouldBeActive: ${shouldBeActive}`);
         });
 
         // Also sync budget state
@@ -261,18 +232,14 @@ class RoadTripPlanner {
             this.updateBudgetSlider(activeBudgetLabel);
         }
 
-        console.log('🔥 Form state synchronized');
 
         // Add a delayed check to see if something is removing the classes
         setTimeout(() => {
-            console.log('🔥 DELAYED CHECK: Checking if active classes are still there...');
             allThemeButtons.forEach(btn => {
                 const agent = btn.dataset.agent;
                 const hasActive = btn.classList.contains('active');
                 const shouldBeActive = this.selectedAgents.includes(agent);
-                console.log(`🔥 DELAYED: Button ${agent} - hasActive: ${hasActive}, shouldBeActive: ${shouldBeActive}`);
                 if (shouldBeActive && !hasActive) {
-                    console.log(`🔥 ❌ PROBLEM: ${agent} button lost its active class!`);
                 }
             });
         }, 1000);
@@ -465,8 +432,6 @@ class RoadTripPlanner {
             }
 
             // Generate route with AI agents
-            console.log('🔥 SENDING API REQUEST WITH AGENTS:', this.selectedAgents);
-            console.log('🔥 Hidden in selectedAgents?', this.selectedAgents.includes('hidden-gems'));
 
             const response = await fetch('/api/generate-route', {
                 method: 'POST',
@@ -486,8 +451,6 @@ class RoadTripPlanner {
             }
 
             const routeData = await response.json();
-            console.log('🔥 API RESPONSE RECEIVED:', routeData);
-            console.log('🔥 Agent Results in response:', routeData.agentResults?.map(ar => ar.agent));
 
             await this.displayRoute(routeData, destinationCoords);
             
@@ -529,7 +492,6 @@ class RoadTripPlanner {
         if (window.globalAI) {
             window.globalAI.currentRoute = routeData;
             window.globalAI.loadPageContext();
-            console.log('🤖 Global AI updated with new route data');
         }
 
         // Store route in localStorage for other pages
@@ -754,9 +716,6 @@ class RoadTripPlanner {
     }
 
     displayRouteResults(routeData) {
-        console.log('🔥 DISPLAYING ROUTE RESULTS:', routeData);
-        console.log('🔥 Agent Results:', routeData.agentResults);
-        console.log('🔥 Hidden Gems present?', routeData.agentResults.find(ar => ar.agent === 'hidden-gems'));
 
         const resultsContainer = document.getElementById('routeResults');
         if (!resultsContainer) return; // Element no longer exists
@@ -764,7 +723,6 @@ class RoadTripPlanner {
         let resultsHTML = '<h4 style="margin-bottom: 20px; font-size: 20px;">🎯 Agent Recommendations</h4>';
 
         routeData.agentResults.forEach(agentResult => {
-            console.log(`🔥 Processing agent: ${agentResult.agent}`);
             const agentEmoji = this.getAgentEmoji(agentResult.agent);
             const agentColor = this.getAgentColor(agentResult.agent);
 
@@ -831,7 +789,6 @@ class RoadTripPlanner {
                 }
             } catch (e) {
                 console.warn('Could not parse agent recommendations for', agentResult.agent, ':', e);
-                console.log('Raw response:', agentResult.recommendations.substring(0, 500) + '...');
 
                 // Fallback: try to extract location names
                 try {
@@ -1419,8 +1376,6 @@ class RoadTripPlanner {
                     parsed = JSON.parse(cleanedRecommendations);
                 } catch (jsonError) {
                     // If JSON parsing fails, extract waypoints from text
-                    console.log('JSON parsing failed, extracting from text for agent:', agentResult.agent);
-                    console.log('Failed JSON:', cleanedRecommendations.substring(0, 200) + '...');
 
                     // Extract location names from the text
                     const locationMatches = cleanedRecommendations.match(/"name":\s*"([^"]+)"/g) ||
@@ -1711,7 +1666,6 @@ class RoadTripPlanner {
 
     async addRouteToMap(waypoints, destination) {
         if (!this.map) {
-            console.log('Map not available, skipping route display');
             return;
         }
 
@@ -1784,7 +1738,6 @@ class RoadTripPlanner {
 
     addRouteLayer(coordinates) {
         if (!this.map) {
-            console.log('Map not available, skipping route layer');
             return;
         }
 
@@ -1888,7 +1841,6 @@ class RoadTripPlanner {
                 });
             }
 
-            console.log(`Route added with ${coordinates.length} coordinate points`);
 
         } catch (error) {
             console.warn('Could not add route layer:', error);
@@ -2226,7 +2178,6 @@ class RoadTripPlanner {
                 });
             }
         } catch (error) {
-            console.log('Could not parse waypoints for mini map:', agentResult.agent, error);
 
             // Fallback: create sample waypoints
             for (let i = 0; i < 3; i++) {
@@ -2353,7 +2304,6 @@ class RoadTripPlanner {
             return;
         }
 
-        console.log('🗺️ Opening landmarks overlay with route:', this.currentRoute);
 
         // Store original route for reset functionality
         window.landmarksOverlay.originalRoute = JSON.parse(JSON.stringify(this.currentRoute));
@@ -2366,7 +2316,6 @@ class RoadTripPlanner {
             if (event.detail?.route) {
                 this.currentRoute = event.detail.route;
                 this.displayRouteResults(this.currentRoute);
-                console.log('🗺️ Route updated from landmarks overlay');
             }
         };
 
@@ -2486,7 +2435,6 @@ class RoadTripPlanner {
      */
     clearMapLayers() {
         if (!this.map) {
-            console.log('Map not available, skipping layer cleanup');
             return;
         }
 
@@ -2512,7 +2460,5 @@ class RoadTripPlanner {
 
 // Initialize the app when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('🔥 DOM loaded, creating RoadTripPlanner...');
     window.planner = new RoadTripPlanner();
-    console.log('🔥 RoadTripPlanner created and assigned to window.planner');
 });

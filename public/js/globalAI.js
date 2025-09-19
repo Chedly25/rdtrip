@@ -20,7 +20,6 @@ class GlobalAIAssistant {
         this.injectAIWidget();
         this.loadPageContext();
         this.setupEventListeners();
-        console.log('🤖 Global AI Assistant initialized on', this.currentPage);
     }
 
     detectCurrentPage() {
@@ -35,7 +34,6 @@ class GlobalAIAssistant {
             const { routeAgent } = await import('./routeAgent.js');
             this.routeAgent = routeAgent;
             this.enhancedFeaturesAvailable = true;
-            console.log('✅ Enhanced AI features loaded successfully');
         } catch (error) {
             console.warn('⚠️ Enhanced AI features failed to load:', error);
             this.enhancedFeaturesAvailable = false;
@@ -64,45 +62,26 @@ class GlobalAIAssistant {
             const estimatedDays = document.getElementById('estimatedDays')?.textContent;
             const totalDistance = document.getElementById('totalDistance')?.textContent;
 
-            console.log('🔍 Context Loading Debug - DOM Elements:');
-            console.log('- routeTitle:', routeTitle);
-            console.log('- routeSubtitle:', routeSubtitle);
-            console.log('- totalStops:', totalStops);
 
             // Check all possible data sources comprehensively
-            console.log('🔍 Checking all storage sources...');
 
             // Source 1: spotlightData from localStorage
             const spotlightDataLocal = localStorage.getItem('spotlightData');
-            console.log('- localStorage.spotlightData:', spotlightDataLocal ? 'Found' : 'Not found');
-            if (spotlightDataLocal) {
-                console.log('  Content:', JSON.parse(spotlightDataLocal));
-            }
 
             // Source 2: spotlightData from sessionStorage
             const spotlightDataSession = sessionStorage.getItem('spotlightData');
-            console.log('- sessionStorage.spotlightData:', spotlightDataSession ? 'Found' : 'Not found');
-            if (spotlightDataSession) {
-                console.log('  Content:', JSON.parse(spotlightDataSession));
-            }
 
             // Source 3: currentRoute from localStorage
             const currentRouteLocal = localStorage.getItem('currentRoute');
-            console.log('- localStorage.currentRoute:', currentRouteLocal ? 'Found' : 'Not found');
-            if (currentRouteLocal) {
-                console.log('  Content:', JSON.parse(currentRouteLocal));
-            }
 
             // Source 4: citiesContainer data
             const citiesContainer = document.getElementById('citiesContainer');
             if (citiesContainer) {
                 const cityElements = citiesContainer.querySelectorAll('.city-card');
-                console.log('- citiesContainer cities found:', cityElements.length);
                 cityElements.forEach((element, index) => {
                     const cityName = element.querySelector('.city-name')?.textContent ||
                                    element.querySelector('h3')?.textContent ||
                                    element.dataset.city;
-                    console.log(`  City ${index + 1}:`, cityName);
                 });
             }
 
@@ -110,8 +89,6 @@ class GlobalAIAssistant {
             let spotlightData = spotlightDataLocal || spotlightDataSession;
             if (spotlightData) {
                 const spotlight = JSON.parse(spotlightData);
-                console.log('✅ Using spotlight data as primary source');
-                console.log('📋 Full spotlight object:', spotlight);
 
                 // Extract cities from various spotlight data formats
                 let extractedCities = [];
@@ -119,13 +96,11 @@ class GlobalAIAssistant {
                 // Method 1: From waypoints
                 if (spotlight.waypoints && Array.isArray(spotlight.waypoints)) {
                     extractedCities = spotlight.waypoints.map(wp => wp.name || wp.city || wp).filter(Boolean);
-                    console.log('  Cities from waypoints:', extractedCities);
                 }
 
                 // Method 2: From route array
                 if (extractedCities.length === 0 && spotlight.route && Array.isArray(spotlight.route)) {
                     extractedCities = spotlight.route.map(stop => stop.name || stop.city || stop).filter(Boolean);
-                    console.log('  Cities from route array:', extractedCities);
                 }
 
                 // Method 3: From agentData.recommendations (new format)
@@ -134,10 +109,8 @@ class GlobalAIAssistant {
                         const parsed = JSON.parse(spotlight.agentData.recommendations);
                         if (parsed.waypoints) {
                             extractedCities = parsed.waypoints.map(wp => wp.name || wp.city).filter(Boolean);
-                            console.log('  Cities from agentData.recommendations:', extractedCities);
                         }
                     } catch (e) {
-                        console.log('  Failed to parse agentData.recommendations:', e);
                     }
                 }
 
@@ -163,19 +136,16 @@ class GlobalAIAssistant {
                             }
                         }
                     });
-                    console.log('  Cities from agentResults:', extractedCities);
                 }
 
                 // Method 5: From origin/destination + missing intermediate cities
                 if (extractedCities.length === 0) {
                     if (spotlight.origin) extractedCities.push(spotlight.origin);
                     if (spotlight.destination) extractedCities.push(spotlight.destination);
-                    console.log('  Cities from origin/destination:', extractedCities);
                 }
 
                 // Method 6: Extract from DOM if we still don't have enough cities
                 if (extractedCities.length < (spotlight.totalStops || 2)) {
-                    console.log(`⚠️ Only found ${extractedCities.length} cities but expecting ${spotlight.totalStops}, checking DOM...`);
 
                     const citiesContainer = document.getElementById('citiesContainer');
                     if (citiesContainer) {
@@ -189,7 +159,6 @@ class GlobalAIAssistant {
                         }).filter(Boolean).filter(city => !extractedCities.includes(city));
 
                         if (domCities.length > 0) {
-                            console.log('  Additional cities from DOM:', domCities);
                             extractedCities.push(...domCities);
                         }
                     }
@@ -214,23 +183,18 @@ class GlobalAIAssistant {
                     ]
                 };
 
-                console.log('✅ Final converted route with extracted cities:', this.currentRoute);
-                console.log('📋 Route cities extracted:', extractedCities);
             } else {
                 // Fallback: Try regular currentRoute from localStorage
                 if (currentRouteLocal) {
                     this.currentRoute = JSON.parse(currentRouteLocal);
-                    console.log('📦 Using currentRoute from localStorage as fallback');
 
                     // Extract and log cities from this format too
                     const fallbackCities = this.extractCitiesFromCurrentRoute(this.currentRoute);
-                    console.log('📋 Cities from fallback route:', fallbackCities);
                 }
             }
 
             // If we still don't have route data, try to extract from page elements
             if (!this.currentRoute && routeSubtitle) {
-                console.log('🔧 No stored data found, extracting from page elements');
                 // Parse route subtitle like "Aix-en-Provence → Barcelona"
                 const routeParts = routeSubtitle.split(' → ');
                 if (routeParts.length >= 2) {
@@ -243,7 +207,6 @@ class GlobalAIAssistant {
                         ],
                         totalStops: parseInt(totalStops) || 2
                     };
-                    console.log('🔧 Reconstructed route from page elements:', this.currentRoute);
                 }
             }
 
@@ -259,7 +222,6 @@ class GlobalAIAssistant {
                 }).filter(Boolean);
 
                 if (domCities.length > 0) {
-                    console.log('🏙️ Cities found in DOM:', domCities);
 
                     // If we don't have a route yet, create one from DOM cities
                     if (!this.currentRoute || !this.currentRoute.route || this.currentRoute.route.length === 0) {
@@ -267,7 +229,6 @@ class GlobalAIAssistant {
                         this.currentRoute.route = domCities.map(city => ({ name: city, city: city }));
                         this.currentRoute.origin = domCities[0];
                         this.currentRoute.destination = domCities[domCities.length - 1];
-                        console.log('🔧 Created route from DOM cities:', this.currentRoute);
                     }
                 }
             }
@@ -282,13 +243,10 @@ class GlobalAIAssistant {
                 hasDetailedRoute: !!this.currentRoute
             };
 
-            console.log('📍 Final spotlight context:', this.pageContext);
-            console.log('🗺️ Final route data for AI:', this.currentRoute);
 
             // Final validation: Can we extract cities?
             if (this.currentRoute) {
                 const finalCities = this.extractCitiesFromCurrentRoute(this.currentRoute);
-                console.log('🎯 FINAL VALIDATION - Cities that AI will see:', finalCities);
                 if (finalCities.length === 0) {
                     console.error('❌ PROBLEM: No cities extracted despite having route data!');
                     console.error('Route structure:', JSON.stringify(this.currentRoute, null, 2));
@@ -344,7 +302,6 @@ class GlobalAIAssistant {
                 hasRoute: !!this.currentRoute
             };
 
-            console.log('🏠 Main page context loaded:', this.pageContext);
         } catch (error) {
             console.warn('Error loading main page context:', error);
         }
@@ -477,7 +434,6 @@ class GlobalAIAssistant {
                     if (this.currentRoute) {
                         // Try multiple methods to extract cities and show detailed debugging
                         const routeCities = this.extractCitiesFromCurrentRoute(this.currentRoute);
-                        console.log('🎯 Welcome message - extracted cities:', routeCities);
 
                         if (routeCities.length > 0) {
                             welcomeMessage = `Hi! I can see you're viewing a detailed route. 🗺️\n\nI have full context about this route from ${this.currentRoute.origin || 'your starting point'} to ${this.currentRoute.destination || 'your destination'}.\n\n**Cities in your route:** ${routeCities.join(', ')}\n\nI can help you:\n• **Modify stops** - Replace cities you've been to\n• **Optimize the route** - Rearrange for efficiency\n• **Add activities** - Find things to do in each city\n• **Adjust itinerary** - Change timing or add stops\n\nWhat would you like to adjust about this route?`;
@@ -493,7 +449,6 @@ class GlobalAIAssistant {
                                 origin: this.currentRoute.origin,
                                 destination: this.currentRoute.destination
                             };
-                            console.log('🔍 Route data debug info:', debugInfo);
 
                             welcomeMessage = `Hi! I can see you're on a route detail page. 🗺️\n\nI have route data loaded but I'm having trouble extracting the city names. Let me work with what I can see:\n\n**Route info:**\n• Origin: ${this.currentRoute.origin || 'Unknown'}\n• Destination: ${this.currentRoute.destination || 'Unknown'}\n• Total stops: ${this.currentRoute.totalStops || 'Unknown'}\n\nCould you tell me which specific city you'd like to modify? I can still help with route planning and replacements!`;
                         }
@@ -543,7 +498,6 @@ class GlobalAIAssistant {
 
             try {
                 // Use the enhanced route agent for processing
-                console.log('🚀 Calling routeAgent.processMessage with route:', this.currentRoute);
                 const response = await this.routeAgent.processMessage(contextualMessage, this.currentRoute);
 
                 // Hide workflow
@@ -725,11 +679,9 @@ class GlobalAIAssistant {
     }
 
     async handleAgentResponse(response) {
-        console.log('🔍 handleAgentResponse called with:', response);
 
         switch (response.type) {
             case 'replacement_proposal':
-                console.log('✅ Processing replacement_proposal');
                 // Add the proposal message
                 this.addAiMessage('assistant', response.content);
 
@@ -811,7 +763,6 @@ class GlobalAIAssistant {
 
     async performSeamlessReplacement(originalCity, replacementCity) {
         try {
-            console.log(`🔄 Performing seamless replacement: ${originalCity} → ${replacementCity.name}`);
 
             // 1. Update the current route data
             if (this.currentRoute) {
@@ -865,7 +816,6 @@ class GlobalAIAssistant {
             // 4. Update map if available
             this.updateMapAfterReplacement();
 
-            console.log('✅ Seamless replacement completed successfully');
             return true;
 
         } catch (error) {
@@ -894,7 +844,6 @@ class GlobalAIAssistant {
                 sessionStorage.setItem('spotlightData', JSON.stringify(spotlight));
             }
 
-            console.log('✅ Storage updated after replacement');
         } catch (error) {
             console.error('❌ Error updating storage:', error);
         }
@@ -934,7 +883,6 @@ class GlobalAIAssistant {
                 window.refreshRouteDisplay();
             }
 
-            console.log('✅ UI updated after replacement');
         } catch (error) {
             console.error('❌ Error updating UI:', error);
         }
@@ -946,7 +894,6 @@ class GlobalAIAssistant {
             if (window.spotlightMap) {
                 // Remove old markers and add new ones
                 // This would need to be implemented based on your specific map setup
-                console.log('🗺️ Map update triggered (implementation needed)');
             }
 
             // Trigger map refresh if there's a global function for it
@@ -954,7 +901,6 @@ class GlobalAIAssistant {
                 window.refreshMap();
             }
 
-            console.log('✅ Map update completed');
         } catch (error) {
             console.error('❌ Error updating map:', error);
         }

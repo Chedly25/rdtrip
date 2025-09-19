@@ -108,7 +108,6 @@ export class ParallelAgentSystem {
      * @returns {Promise<Map>} Map of agent results
      */
     async launchAllAgents(startId, destId, baseOptions) {
-        console.log('🚀 Launching 6 parallel agents for route calculation...');
         
         // Clear previous results
         this.agentResults.clear();
@@ -127,7 +126,6 @@ export class ParallelAgentSystem {
             const agentType = Object.keys(this.agents)[index];
             if (result.status === 'fulfilled') {
                 this.agentResults.set(agentType, result.value);
-                console.log(`✅ Agent ${agentType} completed successfully`);
             } else {
                 console.error(`❌ Agent ${agentType} failed:`, result.reason);
                 // Create fallback result
@@ -135,7 +133,6 @@ export class ParallelAgentSystem {
             }
         });
         
-        console.log('🎉 All agents completed!');
         return this.agentResults;
     }
     
@@ -150,7 +147,6 @@ export class ParallelAgentSystem {
      */
     async launchAgent(agentType, startId, destId, baseOptions, agent) {
         const startTime = Date.now();
-        console.log(`🤖 ${agent.name} starting route calculation...`);
         
         try {
             // First, ask the API for city suggestions based on agent type
@@ -192,7 +188,6 @@ export class ParallelAgentSystem {
             
             while (retryCount <= maxRetries && suggestedCities.length === 0) {
                 try {
-                    console.log(`🔍 ${agent.name} requesting city suggestions (attempt ${retryCount + 1}/${maxRetries + 1})...`);
                     
                     const citySuggestions = await Promise.race([
                         this.aiFeatures.callPerplexityAPI(citySuggestionPrompt, true),
@@ -207,7 +202,6 @@ export class ParallelAgentSystem {
                         if (this.isFallbackResponse(citySuggestions)) {
                             console.warn(`⚠️ ${agent.name} received fallback response: "${citySuggestions.substring(0, 100)}..."`);
                             if (retryCount < maxRetries) {
-                                console.log(`🔄 ${agent.name} retrying with simplified prompt...`);
                                 // Use a more direct prompt for retry
                                 citySuggestionPrompt = `List ${numStops} city names between ${startCity} and ${destCity}. Answer with ONLY city names separated by commas. No other text.`;
                             }
@@ -217,12 +211,10 @@ export class ParallelAgentSystem {
                             
                             if (validCities.length > 0) {
                                 suggestedCities = validCities;
-                                console.log(`✨ ${agent.name} received valid AI city suggestions:`, suggestedCities);
                                 break;
                             } else {
                                 console.warn(`⚠️ ${agent.name} received invalid city names: ${rawCities.join(', ')}`);
                                 if (retryCount < maxRetries) {
-                                    console.log(`🔄 ${agent.name} retrying with different approach...`);
                                 }
                             }
                         }
@@ -235,7 +227,6 @@ export class ParallelAgentSystem {
             }
             
             if (suggestedCities.length === 0) {
-                console.log(`🔄 ${agent.name} falling back to route calculation without AI city suggestions`);
             }
             
             // Create agent-specific route options
@@ -273,7 +264,6 @@ export class ParallelAgentSystem {
             ]);
             
             const duration = Date.now() - startTime;
-            console.log(`⚡ ${agent.name} completed in ${duration}ms`);
             
             return {
                 agentType,
@@ -291,7 +281,6 @@ export class ParallelAgentSystem {
             
             // Try one more time with a simpler approach before using fallback
             try {
-                console.log(`🔄 ${agent.name} retrying with simplified approach`);
                 
                 // Try to calculate route again in case it was the route calculation that failed
                 const retryRoute = await this.routeCalculator.calculateRoute(startId, destId, {
@@ -309,7 +298,6 @@ export class ParallelAgentSystem {
                 const retryItinerary = await this.aiFeatures.callPerplexityAPI(simplifiedPrompt, true);
                 
                 const duration = Date.now() - startTime;
-                console.log(`✅ ${agent.name} retry successful (${duration}ms)`);
                 
                 return {
                     agentType,
@@ -326,7 +314,6 @@ export class ParallelAgentSystem {
                 
                 // Provide fallback result only after retry fails
                 const duration = Date.now() - startTime;
-                console.log(`🔄 ${agent.name} using fallback (${duration}ms)`);
                 
                 // Generate unique fallback route for this specific agent
                 const agentOptions = {
@@ -825,7 +812,6 @@ Format as clean HTML. Include booking requirements and luxury service details. D
      * Cancel all active agents
      */
     cancelAllAgents() {
-        console.log('🛑 Canceling all active agents...');
         this.activeAgents.clear();
         // Note: Can't actually cancel fetch requests, but clear tracking
     }

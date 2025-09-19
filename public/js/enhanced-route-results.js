@@ -15,7 +15,6 @@ class EnhancedRouteResults {
     init() {
         this.createResultsContainer();
         this.setupEventListeners();
-        console.log('✅ Enhanced Route Results Controller initialized');
     }
 
     createResultsContainer() {
@@ -86,7 +85,6 @@ class EnhancedRouteResults {
     }
 
     async show(results, destination) {
-        console.log('🎨 Showing enhanced route results', results);
 
         this.currentResults = results;
 
@@ -111,7 +109,6 @@ class EnhancedRouteResults {
         // Restore body scroll
         document.body.style.overflow = '';
 
-        console.log('🎨 Enhanced route results hidden');
     }
 
     updateHeader(destination) {
@@ -419,7 +416,6 @@ class EnhancedRouteResults {
     }
 
     viewFullRoute(agent) {
-        console.log(`🎯 Viewing full route for agent: ${agent}`);
 
         // Find the agent result
         const agentResult = this.currentResults?.agentResults?.find(result => result.agent === agent);
@@ -462,7 +458,6 @@ class EnhancedRouteResults {
         localStorage.setItem('spotlightData', JSON.stringify(spotlightData));
         sessionStorage.setItem('spotlightData', JSON.stringify(spotlightData));
 
-        console.log('🎯 Spotlight data stored:', spotlightData);
 
         // Open spotlight page in new tab
         window.open('spotlight.html', '_blank');

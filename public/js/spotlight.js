@@ -162,7 +162,6 @@ class SpotlightController {
         const waypoints = this.extractWaypoints(agentData);
         
         if (waypoints.length === 0) {
-            console.log('No waypoints found for', agent);
             return;
         }
 
@@ -229,7 +228,6 @@ class SpotlightController {
 
             const data = await response.json();
             const landmarks = data.landmarks || [];
-            console.log(`📍 Loaded ${landmarks.length} landmarks:`, landmarks.map(l => l.name));
 
             // Define landmark colors by type
             const typeColors = {
@@ -275,57 +273,43 @@ class SpotlightController {
 
                 // Add hover effect with event prevention and debugging
                 el.addEventListener('mouseenter', (e) => {
-                    console.log(`🖱️ MOUSEENTER on landmark: ${landmark.name}`, e);
                     e.stopPropagation();
                     e.preventDefault();
                     el.style.transform = 'scale(1.1)';
                     el.style.boxShadow = '0 4px 15px rgba(0,0,0,0.3)';
-                    console.log(`✅ MOUSEENTER handled for: ${landmark.name}`);
                 });
 
                 el.addEventListener('mouseleave', (e) => {
-                    console.log(`🖱️ MOUSELEAVE on landmark: ${landmark.name}`, e);
                     e.stopPropagation();
                     e.preventDefault();
                     el.style.transform = 'scale(1)';
                     el.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
-                    console.log(`✅ MOUSELEAVE handled for: ${landmark.name}`);
                 });
 
                 // Prevent map jumping on all mouse events with debugging
                 el.addEventListener('click', (e) => {
-                    console.log(`🖱️ CLICK on landmark: ${landmark.name}`, e);
                     e.stopPropagation();
                     e.preventDefault();
-                    console.log(`✅ CLICK handled for: ${landmark.name}`);
                 });
 
                 el.addEventListener('mouseover', (e) => {
-                    console.log(`🖱️ MOUSEOVER on landmark: ${landmark.name}`, e);
                     e.stopPropagation();
                     e.preventDefault();
-                    console.log(`✅ MOUSEOVER handled for: ${landmark.name}`);
                 });
 
                 el.addEventListener('mouseout', (e) => {
-                    console.log(`🖱️ MOUSEOUT on landmark: ${landmark.name}`, e);
                     e.stopPropagation();
                     e.preventDefault();
-                    console.log(`✅ MOUSEOUT handled for: ${landmark.name}`);
                 });
 
                 el.addEventListener('mousedown', (e) => {
-                    console.log(`🖱️ MOUSEDOWN on landmark: ${landmark.name}`, e);
                     e.stopPropagation();
                     e.preventDefault();
-                    console.log(`✅ MOUSEDOWN handled for: ${landmark.name}`);
                 });
 
                 el.addEventListener('mouseup', (e) => {
-                    console.log(`🖱️ MOUSEUP on landmark: ${landmark.name}`, e);
                     e.stopPropagation();
                     e.preventDefault();
-                    console.log(`✅ MOUSEUP handled for: ${landmark.name}`);
                 });
 
                 // Create popup with landmark details
@@ -356,7 +340,6 @@ class SpotlightController {
                 `;
 
                 // Try custom overlay approach instead of Mapbox marker
-                console.log(`📍 Creating custom overlay for ${landmark.name} at [${landmark.lng}, ${landmark.lat}]`);
 
                 // Check if we have a custom image for this landmark
                 const customImage = this.getCustomLandmarkImage(landmark.name);
@@ -433,38 +416,31 @@ class SpotlightController {
                 overlayEl.appendChild(labelContainer);
 
                 // Add all our event handlers to the overlay element
-                console.log(`🎯 Setting up overlay element for ${landmark.name}`);
 
                 // Add hover effect with event prevention and debugging
                 overlayEl.addEventListener('mouseenter', (e) => {
-                    console.log(`🖱️ OVERLAY MOUSEENTER on landmark: ${landmark.name}`, e);
                     e.stopPropagation();
                     e.preventDefault();
                     overlayEl.style.transform = 'translate(-50%, -50%) scale(1.1)';
                     overlayEl.style.boxShadow = '0 4px 15px rgba(0,0,0,0.3)';
                     labelContainer.style.opacity = '1';
-                    console.log(`✅ OVERLAY MOUSEENTER handled for: ${landmark.name}`);
                 });
 
                 overlayEl.addEventListener('mouseleave', (e) => {
-                    console.log(`🖱️ OVERLAY MOUSELEAVE on landmark: ${landmark.name}`, e);
                     e.stopPropagation();
                     e.preventDefault();
                     overlayEl.style.transform = 'translate(-50%, -50%) scale(1)';
                     overlayEl.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
                     labelContainer.style.opacity = '0';
-                    console.log(`✅ OVERLAY MOUSELEAVE handled for: ${landmark.name}`);
                 });
 
                 // Create popup manually when clicked
                 overlayEl.addEventListener('click', (e) => {
-                    console.log(`🖱️ OVERLAY CLICK on landmark: ${landmark.name}`, e);
                     e.stopPropagation();
                     e.preventDefault();
 
                     // Show custom popup
                     this.showCustomLandmarkPopup(landmark, overlayEl);
-                    console.log(`✅ OVERLAY CLICK handled for: ${landmark.name}`);
                 });
 
                 // Convert lat/lng to screen coordinates and position the overlay
@@ -497,7 +473,6 @@ class SpotlightController {
                     }
                 });
 
-                console.log(`✅ Custom overlay added for ${landmark.name}`);
             });
 
         } catch (error) {
@@ -541,17 +516,14 @@ class SpotlightController {
                             // This appears to be [lat, lng] format - swap to [lng, lat]
                             lng = second;
                             lat = first;
-                            console.log(`Detected [lat, lng] format for ${waypoint.name}: [${first}, ${second}] -> lng=${lng}, lat=${lat}`);
                         } else {
                             // Assume [lng, lat] format (GeoJSON standard)
                             lng = first;
                             lat = second;
-                            console.log(`Using [lng, lat] format for ${waypoint.name}: lng=${lng}, lat=${lat}`);
                         }
 
                         // Final validation
                         if (lng >= -180 && lng <= 180 && lat >= -90 && lat <= 90) {
-                            console.log(`✅ Valid coordinates for ${waypoint.name}: lng=${lng}, lat=${lat}`);
 
                             waypoints.push({
                                 name: waypoint.name,
@@ -568,8 +540,7 @@ class SpotlightController {
                 });
             }
         } catch (e) {
-            console.log('Could not parse waypoints from agent data:', e);
-            console.log('Raw agent data sample:', agentData.recommendations.substring(0, 300));
+            console.error('Could not parse waypoints from agent data:', e);
 
             // Add fallback waypoints with European coordinates
             for (let i = 0; i < 3; i++) {
@@ -609,21 +580,17 @@ class SpotlightController {
     }
 
     async createRoute(waypoints, destinationCoords, color) {
-        console.log('Creating route with waypoints:', waypoints);
-        console.log('Destination coords:', destinationCoords);
 
         const coordinates = [
             [5.4474, 43.5297], // Aix-en-Provence (start)
             ...waypoints.map(w => {
                 // Ensure coordinates are in [lng, lat] format for Mapbox
                 const coord = [w.lng, w.lat];
-                console.log(`Waypoint ${w.name}: lng=${w.lng}, lat=${w.lat} -> [${coord[0]}, ${coord[1]}] (lng, lat)`);
                 return coord;
             }),
             [destinationCoords.lng, destinationCoords.lat] // Destination
         ];
 
-        console.log('Final coordinates array:', coordinates);
 
         try {
             const routeGeometry = await this.getDirections(coordinates);
@@ -705,10 +672,8 @@ class SpotlightController {
                     });
                 }
 
-                console.log(`Spotlight route added with detailed geometry`);
             } else {
                 // Fallback to straight line route
-                console.log('Falling back to straight line route');
                 this.createStraightLineRoute(coordinates, color);
             }
         } catch (error) {
@@ -775,7 +740,6 @@ class SpotlightController {
                 }
             });
 
-            console.log(`Spotlight straight line route created`);
         } catch (error) {
             console.error('Could not create fallback route:', error);
         }
@@ -783,7 +747,6 @@ class SpotlightController {
 
     async getDirections(coordinates) {
         // Log coordinates for debugging
-        console.log('Input coordinates for directions:', coordinates);
 
         // Validate and fix coordinates
         const validatedCoords = coordinates.filter(coord => {
@@ -813,7 +776,6 @@ class SpotlightController {
                 return false;
             }
 
-            console.log(`✅ Coordinate validated:`, { lng, lat });
 
             return true;
         });
@@ -831,7 +793,6 @@ class SpotlightController {
         const coordinatesStr = limitedCoords.map(coord => `${coord[0]},${coord[1]}`).join(';');
         const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${coordinatesStr}?geometries=geojson&access_token=${mapboxgl.accessToken}`;
 
-        console.log('Directions API request:', {
             originalCoords: coordinates.length,
             validatedCoords: validatedCoords.length,
             limitedCoords: limitedCoords.length
@@ -1178,7 +1139,6 @@ class SpotlightController {
             });
         });
 
-        console.log(`Loaded ${waypoints.length} locations with Wikipedia images and restored ${existingLandmarkCards.length} landmark cards`);
     }
 
     getLocationIcon(locationName) {
@@ -1380,7 +1340,6 @@ class SpotlightController {
             let itinerary = itineraryResponse.itinerary;
             let parsedItinerary = null;
             
-            console.log('Raw itinerary response:', itinerary);
             
             if (typeof itinerary === 'string') {
                 // Multiple parsing strategies
@@ -1388,11 +1347,9 @@ class SpotlightController {
                 // Strategy 1: Look for ```json code blocks
                 const jsonMatch = itinerary.match(/```json\s*([\s\S]*?)\s*```/);
                 if (jsonMatch) {
-                    console.log('Found JSON in code block');
                     try {
                         parsedItinerary = JSON.parse(jsonMatch[1]);
                     } catch (e) {
-                        console.log('JSON in code block is malformed, trying to fix...');
                         // Try to fix incomplete JSON
                         parsedItinerary = this.tryFixIncompleteJson(jsonMatch[1]);
                     }
@@ -1415,17 +1372,14 @@ class SpotlightController {
                         
                         if (jsonEnd !== -1) {
                             const jsonString = itinerary.substring(jsonStart, jsonEnd + 1);
-                            console.log('Extracted JSON string length:', jsonString.length);
                             try {
                                 parsedItinerary = JSON.parse(jsonString);
                             } catch (e) {
-                                console.log('Extracted JSON is malformed, trying to fix...');
                                 parsedItinerary = this.tryFixIncompleteJson(jsonString);
                             }
                         } else {
                             // JSON might be incomplete, try to extract what we can
                             const partialJson = itinerary.substring(jsonStart);
-                            console.log('Trying to fix incomplete JSON...');
                             parsedItinerary = this.tryFixIncompleteJson(partialJson);
                         }
                     }
@@ -1436,7 +1390,6 @@ class SpotlightController {
             }
             
             if (parsedItinerary && parsedItinerary.days) {
-                console.log('Successfully parsed itinerary with', parsedItinerary.days.length, 'days');
                 let html = '';
                 parsedItinerary.days.forEach(day => {
                     html += `
@@ -1494,13 +1447,11 @@ class SpotlightController {
                 // Load images asynchronously for day locations and activities
                 this.loadItineraryImages();
             } else {
-                console.log('Could not parse JSON, falling back to raw display');
                 // Fallback to show raw content if JSON parsing fails
                 this.displayRawItinerary(itinerary);
             }
         } catch (e) {
             console.error('Error parsing itinerary JSON:', e);
-            console.log('Falling back to raw content display');
             this.displayRawItinerary(itineraryResponse.itinerary);
         }
     }
@@ -1525,7 +1476,6 @@ class SpotlightController {
             // First, try parsing as-is
             return JSON.parse(jsonString);
         } catch (e) {
-            console.log('Attempting to fix incomplete JSON...');
             
             // Common fixes for incomplete JSON
             let fixedJson = jsonString.trim();
@@ -1557,10 +1507,8 @@ class SpotlightController {
             // Try to parse the fixed version
             try {
                 const parsed = JSON.parse(fixedJson);
-                console.log('Successfully fixed incomplete JSON');
                 return parsed;
             } catch (e2) {
-                console.log('Could not fix JSON, extracting partial data...');
                 
                 // Last resort: try to extract at least the days array
                 const daysMatch = fixedJson.match(/"days"\s*:\s*\[([\s\S]*)/);
@@ -1571,7 +1519,6 @@ class SpotlightController {
                         const simplifiedJson = `{"days":[${daysContent.split('},')[0]}}]}`;
                         return JSON.parse(simplifiedJson);
                     } catch (e3) {
-                        console.log('All JSON fixes failed');
                         return null;
                     }
                 }
@@ -1701,7 +1648,6 @@ class SpotlightController {
             // Fetch hotels and restaurants for each city
             for (const city of allCities) {
                 try {
-                    console.log(`Fetching recommendations for ${city.name}`);
 
                     const response = await fetch('/api/get-hotels-restaurants', {
                         method: 'POST',
@@ -1946,7 +1892,6 @@ class SpotlightController {
 
     async addLandmarkToRoute(name, lat, lng, type, description, city) {
         try {
-            console.log(`Adding landmark to route: ${name} at ${lat}, ${lng}`);
 
             // Show loading feedback
             const button = event.target;
@@ -1956,7 +1901,6 @@ class SpotlightController {
 
             // Get ALL current waypoints (including cities and existing landmarks)
             const currentWaypoints = this.getAllCombinedWaypoints();
-            console.log(`🔍 BEFORE OPTIMIZATION: Current waypoints for landmark placement:`, currentWaypoints.map(w => w.name));
 
             // Create new landmark waypoint
             const landmarkWaypoint = {
@@ -2049,9 +1993,6 @@ class SpotlightController {
         const updatedWaypoints = [...waypoints];
         updatedWaypoints.splice(bestPosition, 0, landmark);
 
-        console.log(`🎯 Landmark optimization: "${landmark.name}" inserted at position ${bestPosition} out of ${waypoints.length + 1} possible positions`);
-        console.log(`📍 Current waypoints:`, waypoints.map(w => w.name));
-        console.log(`🗺️ Updated waypoints:`, updatedWaypoints.map(w => w.name));
 
         return updatedWaypoints;
     }
@@ -2091,7 +2032,6 @@ class SpotlightController {
         // Check if this landmark marker already exists
         const existingMarker = this.addedLandmarkMarkers.find(({ landmark: l }) => l.name === landmark.name);
         if (existingMarker) {
-            console.log(`Landmark marker for "${landmark.name}" already exists`);
             return;
         }
 
@@ -2157,7 +2097,6 @@ class SpotlightController {
         try {
             // PRIORITY 0: If optimized waypoints are explicitly passed, use them directly
             if (passedWaypoints && Array.isArray(passedWaypoints) && passedWaypoints.length > 0) {
-                console.log('🎯 SPOTLIGHT: Using explicitly passed optimized waypoints:', passedWaypoints.map(wp => wp.name));
                 return passedWaypoints;
             }
 
@@ -2173,14 +2112,11 @@ class SpotlightController {
                     }));
 
                 if (optimizedWaypoints.length > 0) {
-                    console.log('🎯 SPOTLIGHT: Using optimized waypoints from landmarks overlay:', optimizedWaypoints.length);
-                    console.log('🎯 SPOTLIGHT: Optimized order:', optimizedWaypoints.map(wp => wp.name));
                     return optimizedWaypoints;
                 }
             }
 
             // FALLBACK: If no optimized route available, gather from individual sources
-            console.log('🎯 SPOTLIGHT: No optimized route found, gathering from individual sources');
             const allWaypoints = [];
 
             // 1. Start with original route waypoints from spotlight data
@@ -2198,7 +2134,6 @@ class SpotlightController {
                         type: 'city'
                     }));
                 allWaypoints.push(...cityWaypoints);
-                console.log('Added cities from destination manager:', cityWaypoints.length);
             }
 
             // 3. Add landmarks from selected landmarks (fallback approach)
@@ -2212,7 +2147,6 @@ class SpotlightController {
                         type: 'landmark'
                     }));
                 allWaypoints.push(...landmarkWaypoints);
-                console.log('Added landmarks from selected set:', landmarkWaypoints.length);
             }
 
             // 4. If waypoints were passed directly (for backward compatibility), add them too
@@ -2226,7 +2160,6 @@ class SpotlightController {
                         type: wp.type || 'waypoint'
                     }));
                 allWaypoints.push(...formattedPassed);
-                console.log('Added passed waypoints:', formattedPassed.length);
             }
 
             // Remove duplicates based on name and coordinates
@@ -2243,7 +2176,6 @@ class SpotlightController {
                 }
             });
 
-            console.log('Combined waypoints:', uniqueWaypoints);
             return uniqueWaypoints;
         } catch (error) {
             console.warn('Error in getAllCombinedWaypoints:', error);
@@ -2326,19 +2258,16 @@ class SpotlightController {
 
         // Fetch Wikipedia image for the landmark
         try {
-            console.log(`🖼️ Fetching Wikipedia image for landmark: ${landmark.name}`);
             const imageUrl = await this.getWikipediaImage(landmark.name, 800, 600);
 
             const imageContainer = landmarkCard.querySelector('.city-image-container');
             if (imageUrl) {
-                console.log(`✅ Found Wikipedia image for ${landmark.name}:`, imageUrl);
                 imageContainer.innerHTML = `
                     <img src="${imageUrl}" alt="${landmark.name}" class="city-image"
                          onload="this.classList.add('loaded')"
                          onerror="this.style.display='none'; this.parentElement.innerHTML='<div class=\\"no-image-placeholder\\"><div class=\\"no-image-icon\\">${this.getLandmarkIcon(landmark.type)}</div><div class=\\"no-image-text\\">${landmark.name}</div></div>';">
                 `;
             } else {
-                console.log(`❌ No Wikipedia image found for ${landmark.name}, using icon placeholder`);
                 imageContainer.innerHTML = `
                     <div class="no-image-placeholder">
                         <div class="no-image-icon">${this.getLandmarkIcon(landmark.type)}</div>
@@ -2495,9 +2424,7 @@ class SpotlightController {
 
         // First check if we have a custom image for this landmark
         const customImage = this.getCustomLandmarkImage(landmarkName);
-        console.log(`🔍 Checking landmark: "${landmarkName}" -> Custom image: ${customImage}`);
         if (customImage) {
-            console.log(`✅ Using custom image for ${landmarkName}: ${customImage}`);
             return `<img src="${customImage}" alt="${landmarkName}" style="width: 32px; height: 32px; object-fit: cover; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">`;
         }
 
@@ -2888,7 +2815,6 @@ class SpotlightController {
 
     // City Modal Methods
     showCityModal(cityName, imageUrl, description, activities) {
-        console.log('🏙️ Opening city modal for:', cityName);
 
         const modal = document.getElementById('cityDetailModal');
         const titleElement = document.getElementById('modalCityTitle');
@@ -2955,13 +2881,9 @@ class SpotlightController {
         const modal = document.getElementById('cityDetailModal');
         modal.classList.remove('show');
         document.body.style.overflow = '';
-        console.log('🏙️ Closed city modal');
     }
 
     optimizeEntireRouteWithLandmark(currentWaypoints, landmarkWaypoint) {
-        console.log('🚀 SPOTLIGHT OPTIMIZATION: Starting full route optimization with landmark');
-        console.log('🚀 SPOTLIGHT OPTIMIZATION: Current waypoints:', currentWaypoints.map(wp => wp.name));
-        console.log('🚀 SPOTLIGHT OPTIMIZATION: Adding landmark:', landmarkWaypoint.name);
 
         // Combine all waypoints
         const allWaypoints = [...currentWaypoints, landmarkWaypoint];
@@ -2969,20 +2891,14 @@ class SpotlightController {
         // Use the full route optimization
         const optimizedWaypoints = this.optimizeFullRoute(allWaypoints);
 
-        console.log('🚀 SPOTLIGHT OPTIMIZATION: Optimized order:', optimizedWaypoints.map(wp => wp.name));
         return optimizedWaypoints;
     }
 
     optimizeFullRoute(waypoints) {
         if (!waypoints || waypoints.length <= 2) {
-            console.log('🚀 SPOTLIGHT OPTIMIZATION: Too few waypoints to optimize');
             return waypoints;
         }
 
-        console.log('🚀 SPOTLIGHT OPTIMIZATION: Optimizing route with', waypoints.length, 'waypoints');
-        console.log('🚀 SPOTLIGHT OPTIMIZATION: Input order:', waypoints.map(wp => wp.name));
-        console.log('🚀 SPOTLIGHT OPTIMIZATION: Waypoint types:');
-        waypoints.forEach(wp => console.log(`  - ${wp.name}: ${wp.type || 'undefined'}`));
 
         // Hardcode start point as Aix-en-Provence
         const startPoint = { name: 'Aix-en-Provence', lat: 43.5297, lng: 5.4474, type: 'start' };
@@ -2999,43 +2915,31 @@ class SpotlightController {
             const landmarkWaypoints = waypoints.filter(wp => wp.type === 'cultural' || wp.isLandmark === true);
             const nonLandmarkWaypoints = waypoints.filter(wp => wp.type !== 'cultural' && wp.isLandmark !== true);
 
-            console.log('🚀 SPOTLIGHT OPTIMIZATION: Found', landmarkWaypoints.length, 'landmarks:', landmarkWaypoints.map(wp => wp.name));
-            console.log('🚀 SPOTLIGHT OPTIMIZATION: Found', nonLandmarkWaypoints.length, 'non-landmarks:', nonLandmarkWaypoints.map(wp => wp.name));
 
             // Use the last non-landmark waypoint as destination (this preserves the user's original destination)
             if (nonLandmarkWaypoints.length > 0) {
                 destinationPoint = nonLandmarkWaypoints[nonLandmarkWaypoints.length - 1];
-                console.log('🚀 SPOTLIGHT OPTIMIZATION: Using last non-landmark as destination:', destinationPoint.name);
             } else {
                 // Extreme fallback: use the last waypoint in the list as destination
                 destinationPoint = waypoints[waypoints.length - 1];
-                console.log('🚀 SPOTLIGHT OPTIMIZATION: Emergency fallback, using last waypoint as destination:', destinationPoint.name);
             }
         }
 
         if (!destinationPoint) {
-            console.log('🚀 SPOTLIGHT OPTIMIZATION: No destination found, using basic optimization');
             return waypoints;
         }
 
         // Get intermediate waypoints (everything except destination)
         const intermediatePoints = waypoints.filter(wp => wp !== destinationPoint && wp.name !== destinationPoint.name);
 
-        console.log('🚀 SPOTLIGHT OPTIMIZATION: Destination:', destinationPoint.name, '(type:', destinationPoint.type + ')');
-        console.log('🚀 SPOTLIGHT OPTIMIZATION: Intermediate points:', intermediatePoints.map(wp => `${wp.name} (${wp.type})`));
 
         // Optimize intermediate points using nearest neighbor from start to destination
         const optimizedRoute = this.optimizeFromStartToEndSpotlight(startPoint, intermediatePoints, destinationPoint);
 
-        console.log('🚀 SPOTLIGHT OPTIMIZATION: Optimized order:', optimizedRoute.map(wp => wp.name));
         return optimizedRoute;
     }
 
     optimizeFromStartToEndSpotlight(startPoint, intermediatePoints, destinationPoint) {
-        console.log('🚀 SPOTLIGHT OPTIMIZATION: Starting nearest neighbor optimization');
-        console.log('🚀 SPOTLIGHT OPTIMIZATION: Start:', startPoint.name);
-        console.log('🚀 SPOTLIGHT OPTIMIZATION: Intermediate points:', intermediatePoints.map(wp => wp.name));
-        console.log('🚀 SPOTLIGHT OPTIMIZATION: Destination:', destinationPoint.name);
 
         if (intermediatePoints.length === 0) {
             return [destinationPoint];
@@ -3062,14 +2966,12 @@ class SpotlightController {
             route.push(nearestPoint);
             currentPoint = nearestPoint;
 
-            console.log('🚀 SPOTLIGHT OPTIMIZATION: Added to route:', nearestPoint.name, 'Distance:', nearestDistance.toFixed(2));
         }
 
         // Add destination at the end
         route.push(destinationPoint);
 
         const totalDistance = this.calculateTotalDistancePoints([startPoint, ...route]);
-        console.log('🚀 SPOTLIGHT OPTIMIZATION: Total route distance:', totalDistance.toFixed(2), 'km');
 
         return route;
     }
