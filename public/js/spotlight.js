@@ -259,7 +259,7 @@ class SpotlightController {
                         return;
                     }
 
-                    this.map.loadImage(`images/landmarks/${imagePath}`, (error, image) => {
+                    this.map.loadImage(imagePath, (error, image) => {
                         if (!error && image) {
                             this.map.addImage(iconId, image);
                         }
