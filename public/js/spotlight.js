@@ -1094,11 +1094,30 @@ class SpotlightController {
                     </div>
                     <div class="city-content">
                         <h3>${waypoint.name}</h3>
-                        ${waypoint.activities && waypoint.activities.length > 0 ? `
-                            <ul class="city-activities">
-                                ${waypoint.activities.slice(0, 3).map(activity => `<li>${activity}</li>`).join('')}
-                            </ul>
-                        ` : '<p class="no-activities">Click to see details</p>'}
+                        ${(() => {
+                            // Extract activities from description if activities array is empty
+                            let activities = waypoint.activities || [];
+
+                            if ((!activities || activities.length === 0) && waypoint.description) {
+                                // Try to extract activities from description
+                                const descLines = waypoint.description.split(/[.!?]/)
+                                    .filter(line => line.trim())
+                                    .slice(0, 3)
+                                    .map(line => line.trim());
+
+                                if (descLines.length > 0) {
+                                    activities = descLines;
+                                }
+                            }
+
+                            if (activities && activities.length > 0) {
+                                return `<ul class="city-activities">
+                                    ${activities.slice(0, 3).map(activity => `<li>${activity}</li>`).join('')}
+                                </ul>`;
+                            } else {
+                                return '<p class="no-activities">Click to see details</p>';
+                            }
+                        })()}
                     </div>
                 </div>
             `;
