@@ -248,13 +248,29 @@ class DestinationManager {
         // Make the entire card draggable when the handle is present
         card.draggable = true;
 
-        // Add all drag event listeners to both handle and card
-        card.addEventListener('dragstart', (e) => this.handleDragStart(e, index));
-        card.addEventListener('dragend', (e) => this.handleDragEnd(e));
-        card.addEventListener('dragover', (e) => this.handleDragOver(e));
-        card.addEventListener('dragenter', (e) => this.handleDragEnter(e));
-        card.addEventListener('dragleave', (e) => this.handleDragLeave(e));
-        card.addEventListener('drop', (e) => this.handleDrop(e, index));
+        // Clear any existing event listeners and add new ones
+        card.removeEventListener('dragstart', card._boundDragStart);
+        card.removeEventListener('dragend', card._boundDragEnd);
+        card.removeEventListener('dragover', card._boundDragOver);
+        card.removeEventListener('drop', card._boundDrop);
+
+        // Create bound methods to maintain proper context
+        card._boundDragStart = (e) => {
+            console.log(`🎯 Starting drag for index ${index}, destination: ${this.destinations[index]?.name}`);
+            this.handleDragStart(e, index);
+        };
+        card._boundDragEnd = (e) => this.handleDragEnd(e);
+        card._boundDragOver = (e) => this.handleDragOver(e);
+        card._boundDrop = (e) => {
+            console.log(`🎯 Dropping on index ${index}, destination: ${this.destinations[index]?.name}`);
+            this.handleDrop(e, index);
+        };
+
+        // Add event listeners
+        card.addEventListener('dragstart', card._boundDragStart);
+        card.addEventListener('dragend', card._boundDragEnd);
+        card.addEventListener('dragover', card._boundDragOver);
+        card.addEventListener('drop', card._boundDrop);
 
         // Visual feedback on hover
         dragHandle.addEventListener('mousedown', () => {
@@ -730,18 +746,18 @@ class DestinationManager {
 
     async enrichDestinationData(destination) {
         try {
-            const response = await fetch('/api/perplexity', {
+            const response = await fetch('/api/chat', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    query: `Provide 3-4 key highlights and attractions for ${destination.name}. Focus on must-see places, activities, and unique experiences. Format as bullet points.`
+                    message: `Provide 3-4 key highlights and attractions for ${destination.name}. Focus on must-see places, activities, and unique experiences. Format as bullet points.`
                 })
             });
 
             if (!response.ok) {
-                throw new Error(`Perplexity API error: ${response.status}`);
+                throw new Error(`Chat API error: ${response.status}`);
             }
 
             const data = await response.json();
@@ -1088,19 +1104,47 @@ class DestinationManager {
     }
 
     updateMapRoute() {
-        console.log('🗺️ Updating map route...');
-
+        console.log('🗺️ Updating map route with', this.destinations.length, 'destinations');
         try {
-            // Check if spotlight map exists
+            // Try multiple map update strategies
+            let updated = false;
+
+            // Strategy 1: Global updateMapRoute function
             if (typeof window.updateMapRoute === 'function') {
-                // Call the global map update function
+                console.log('📍 Using global updateMapRoute function');
                 window.updateMapRoute(this.destinations);
-            } else if (window.map) {
-                // Direct access to map object
-                this.directMapUpdate();
-            } else {
-                console.log('ℹ️ Map not available for update');
+                updated = true;
             }
+
+            // Strategy 2: Spotlight map controller
+            if (window.spotlightMapController && window.spotlightMapController.updateRoute) {
+                console.log('📍 Using spotlight map controller');
+                window.spotlightMapController.updateRoute(this.destinations);
+                updated = true;
+            }
+
+            // Strategy 3: Direct map update
+            if (window.map) {
+                console.log('📍 Using direct map update');
+                this.directMapUpdate();
+                updated = true;
+            }
+
+            // Strategy 4: Custom event dispatch
+            if (!updated) {
+                console.log('📍 Triggering custom map update event');
+                const event = new CustomEvent('routeUpdated', {
+                    detail: { destinations: this.destinations }
+                });
+                document.dispatchEvent(event);
+
+                // Also try to update via spotlight.js if available
+                if (window.updateSpotlightRoute) {
+                    window.updateSpotlightRoute(this.destinations);
+                }
+            }
+
+            console.log('✅ Map route update completed');
         } catch (error) {
             console.warn('⚠️ Map update failed:', error);
         }
