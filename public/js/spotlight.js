@@ -278,8 +278,8 @@ class SpotlightController {
                         if (error) {
                             console.error(`Failed to load image ${iconId} from ${imageUrl}:`, error);
                         } else if (image) {
-                            // Resize the image to 40x40 pixels
-                            const size = 40;
+                            // Resize the image to 60x60 pixels for better visibility
+                            const size = 60;
                             const canvas = document.createElement('canvas');
                             canvas.width = size;
                             canvas.height = size;
