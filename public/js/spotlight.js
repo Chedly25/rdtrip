@@ -289,14 +289,14 @@ class SpotlightController {
                     .setPopup(new mapboxgl.Popup({ offset: 25 }).setHTML(popupContent))
                     .addTo(this.map);
 
-                // Add hover effects
+                // Add hover effects (using filter instead of transform to avoid positioning issues)
                 el.addEventListener('mouseenter', () => {
-                    el.style.transform = 'scale(1.1)';
+                    el.style.filter = 'brightness(1.2)';
                     el.style.boxShadow = '0 4px 15px rgba(0,0,0,0.3)';
                 });
 
                 el.addEventListener('mouseleave', () => {
-                    el.style.transform = 'scale(1)';
+                    el.style.filter = 'brightness(1)';
                     el.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
                 });
 
