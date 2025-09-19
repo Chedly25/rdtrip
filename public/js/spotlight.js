@@ -266,12 +266,18 @@ class SpotlightController {
             await Promise.all(imagesToLoad.map(({ iconId, imagePath }) => {
                 return new Promise((resolve) => {
                     if (this.map.hasImage(iconId)) {
+                        console.log(`Image ${iconId} already loaded`);
                         resolve();
                         return;
                     }
 
-                    this.map.loadImage(imagePath, (error, image) => {
-                        if (!error && image) {
+                    // Create full URL for image loading
+                    const imageUrl = window.location.origin + imagePath;
+
+                    this.map.loadImage(imageUrl, (error, image) => {
+                        if (error) {
+                            console.error(`Failed to load image ${iconId} from ${imageUrl}:`, error);
+                        } else if (image) {
                             // Create a canvas to resize the image
                             const canvas = document.createElement('canvas');
                             const ctx = canvas.getContext('2d');
@@ -284,6 +290,7 @@ class SpotlightController {
 
                             // Add the resized image to the map
                             this.map.addImage(iconId, canvas);
+                            console.log(`Successfully loaded image ${iconId}`);
                         }
                         resolve(); // Resolve regardless of success/failure
                     });
