@@ -2498,9 +2498,15 @@ class RoadTripPlanner {
             this.map.removeSource('route');
         }
 
-        // Remove waypoint markers (keep origin marker)
+        // Remove waypoint markers (keep origin marker and user-added landmarks)
         const markers = document.querySelectorAll('.mapboxgl-marker:not(.origin-marker)');
-        markers.forEach(marker => marker.remove());
+        markers.forEach(marker => {
+            // Check if this marker contains a user-added landmark
+            const isUserAddedLandmark = marker.querySelector('.added-landmark-marker');
+            if (!isUserAddedLandmark) {
+                marker.remove();
+            }
+        });
     }
 }
 

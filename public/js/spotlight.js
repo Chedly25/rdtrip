@@ -212,7 +212,7 @@ class SpotlightController {
 
     async loadLandmarksOnMap() {
         try {
-            // Clear existing landmark markers
+            // Clear existing landmark markers (but NOT user-added ones)
             this.landmarkMarkers.forEach(marker => marker.remove());
             this.landmarkMarkers = [];
 
