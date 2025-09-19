@@ -2154,9 +2154,29 @@ class SpotlightController {
     }
 
     getAllCombinedWaypoints(passedWaypoints = null) {
-        const allWaypoints = [];
-
         try {
+            // PRIORITY 1: If landmarks overlay has an optimized route, use it directly
+            if (window.landmarksOverlay?.currentRoute?.waypoints && Array.isArray(window.landmarksOverlay.currentRoute.waypoints)) {
+                const optimizedWaypoints = window.landmarksOverlay.currentRoute.waypoints
+                    .filter(wp => wp && wp.name && wp.lng != null && wp.lat != null)
+                    .map(wp => ({
+                        name: wp.name,
+                        lng: wp.lng,
+                        lat: wp.lat,
+                        type: wp.type || 'waypoint'
+                    }));
+
+                if (optimizedWaypoints.length > 0) {
+                    console.log('🎯 SPOTLIGHT: Using optimized waypoints from landmarks overlay:', optimizedWaypoints.length);
+                    console.log('🎯 SPOTLIGHT: Optimized order:', optimizedWaypoints.map(wp => wp.name));
+                    return optimizedWaypoints;
+                }
+            }
+
+            // FALLBACK: If no optimized route available, gather from individual sources
+            console.log('🎯 SPOTLIGHT: No optimized route found, gathering from individual sources');
+            const allWaypoints = [];
+
             // 1. Start with original route waypoints from spotlight data
             const originalWaypoints = this.extractWaypoints(this.spotlightData.agentData) || [];
             allWaypoints.push(...originalWaypoints);
@@ -2175,19 +2195,18 @@ class SpotlightController {
                 console.log('Added cities from destination manager:', cityWaypoints.length);
             }
 
-            // 3. Add landmarks from current route (user-added landmarks)
-            if (window.landmarksOverlay?.currentRoute && typeof window.landmarksOverlay.extractWaypoints === 'function') {
-                const landmarkWaypoints = window.landmarksOverlay.extractWaypoints(window.landmarksOverlay.currentRoute) || [];
-                const formattedLandmarks = landmarkWaypoints
-                    .filter(wp => wp && wp.name && wp.lng != null && wp.lat != null)
-                    .map(wp => ({
-                        name: wp.name,
-                        lng: wp.lng,
-                        lat: wp.lat,
+            // 3. Add landmarks from selected landmarks (fallback approach)
+            if (window.landmarksOverlay?.selectedLandmarks) {
+                const landmarkWaypoints = window.landmarksOverlay.landmarks
+                    .filter(landmark => window.landmarksOverlay.selectedLandmarks.has(landmark.id))
+                    .map(landmark => ({
+                        name: landmark.name,
+                        lng: landmark.lng,
+                        lat: landmark.lat,
                         type: 'landmark'
                     }));
-                allWaypoints.push(...formattedLandmarks);
-                console.log('Added landmarks from overlay:', formattedLandmarks.length);
+                allWaypoints.push(...landmarkWaypoints);
+                console.log('Added landmarks from selected set:', landmarkWaypoints.length);
             }
 
             // 4. If waypoints were passed directly (for backward compatibility), add them too
