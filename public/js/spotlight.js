@@ -2866,48 +2866,100 @@ class SpotlightController {
         return optimizedWaypoints;
     }
 
+    // New method: Find optimal position for inserting a waypoint
+    findOptimalPosition(waypoints, newWaypoint) {
+        if (!waypoints || waypoints.length === 0) {
+            return 0;
+        }
+
+        let bestPosition = 0;
+        let minAdditionalDistance = Infinity;
+
+        // Try inserting at each possible position
+        for (let i = 0; i <= waypoints.length; i++) {
+            let additionalDistance = 0;
+
+            if (i === 0) {
+                // Insert at beginning (after origin)
+                const distanceFromOrigin = this.calculateDistance(43.5297, 5.4474, newWaypoint.lat, newWaypoint.lng);
+                const distanceToFirst = waypoints.length > 0 ?
+                    this.calculateDistance(newWaypoint.lat, newWaypoint.lng, waypoints[0].lat, waypoints[0].lng) : 0;
+                const originalDistanceToFirst = waypoints.length > 0 ?
+                    this.calculateDistance(43.5297, 5.4474, waypoints[0].lat, waypoints[0].lng) : 0;
+                additionalDistance = distanceFromOrigin + distanceToFirst - originalDistanceToFirst;
+            } else if (i === waypoints.length) {
+                // Insert at end
+                const distanceFromLast = this.calculateDistance(
+                    waypoints[i-1].lat, waypoints[i-1].lng,
+                    newWaypoint.lat, newWaypoint.lng
+                );
+                additionalDistance = distanceFromLast;
+            } else {
+                // Insert between waypoints
+                const distanceFromPrev = this.calculateDistance(
+                    waypoints[i-1].lat, waypoints[i-1].lng,
+                    newWaypoint.lat, newWaypoint.lng
+                );
+                const distanceToNext = this.calculateDistance(
+                    newWaypoint.lat, newWaypoint.lng,
+                    waypoints[i].lat, waypoints[i].lng
+                );
+                const originalDistance = this.calculateDistance(
+                    waypoints[i-1].lat, waypoints[i-1].lng,
+                    waypoints[i].lat, waypoints[i].lng
+                );
+                additionalDistance = distanceFromPrev + distanceToNext - originalDistance;
+            }
+
+            if (additionalDistance < minAdditionalDistance) {
+                minAdditionalDistance = additionalDistance;
+                bestPosition = i;
+            }
+        }
+
+        return bestPosition;
+    }
+
     optimizeFullRoute(waypoints) {
         if (!waypoints || waypoints.length <= 2) {
             return waypoints;
         }
 
+        // IMPORTANT: Preserve original cities and only optimize landmark placement
+        // Separate cities from landmarks
+        const cities = waypoints.filter(wp =>
+            wp.type === 'city' ||
+            (!wp.isLandmark && wp.type !== 'landmark' && wp.type !== 'cultural')
+        );
+        const landmarks = waypoints.filter(wp =>
+            wp.isLandmark ||
+            wp.type === 'landmark' ||
+            wp.type === 'cultural'
+        );
 
-        // Hardcode start point as Aix-en-Provence
-        const startPoint = { name: 'Aix-en-Provence', lat: 43.5297, lng: 5.4474, type: 'start' };
+        console.log('Optimizing route - Cities:', cities.length, 'Landmarks:', landmarks.length);
 
-        // Try to find destination (prefer cities over landmarks as destination)
-        let destinationPoint = waypoints.find(wp => wp.type === 'destination');
-
-        // If no explicit destination found, determine the true destination
-        if (!destinationPoint && waypoints.length > 0) {
-            // Strategy: Find the original route destination (usually the last city added to the route)
-            // Landmarks should NEVER be destinations - they are waypoints along the route
-
-            // First, separate landmarks from cities/locations
-            const landmarkWaypoints = waypoints.filter(wp => wp.type === 'cultural' || wp.isLandmark === true);
-            const nonLandmarkWaypoints = waypoints.filter(wp => wp.type !== 'cultural' && wp.isLandmark !== true);
-
-
-            // Use the last non-landmark waypoint as destination (this preserves the user's original destination)
-            if (nonLandmarkWaypoints.length > 0) {
-                destinationPoint = nonLandmarkWaypoints[nonLandmarkWaypoints.length - 1];
-            } else {
-                // Extreme fallback: use the last waypoint in the list as destination
-                destinationPoint = waypoints[waypoints.length - 1];
-            }
-        }
-
-        if (!destinationPoint) {
+        // If we have original cities stored, use those as the base route
+        let baseRoute = [];
+        if (this.spotlightData?.originalCities && this.spotlightData.originalCities.length > 0) {
+            baseRoute = [...this.spotlightData.originalCities];
+        } else if (cities.length > 0) {
+            baseRoute = [...cities];
+        } else {
+            // Fallback: if no cities, just return waypoints as-is
             return waypoints;
         }
 
-        // Get intermediate waypoints (everything except destination)
-        const intermediatePoints = waypoints.filter(wp => wp !== destinationPoint && wp.name !== destinationPoint.name);
+        // Now insert each landmark at its optimal position in the base route
+        const optimizedRoute = [...baseRoute];
 
+        // For each landmark, find the best position to insert it
+        landmarks.forEach(landmark => {
+            const position = this.findOptimalPosition(optimizedRoute, landmark);
+            optimizedRoute.splice(position, 0, landmark);
+        });
 
-        // Optimize intermediate points using nearest neighbor from start to destination
-        const optimizedRoute = this.optimizeFromStartToEndSpotlight(startPoint, intermediatePoints, destinationPoint);
-
+        console.log('Optimized route:', optimizedRoute.length, 'waypoints');
         return optimizedRoute;
     }
 
