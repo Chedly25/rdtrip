@@ -499,6 +499,32 @@ class RoadTripPlanner {
         // Store route in localStorage for other pages
         localStorage.setItem('currentRoute', JSON.stringify(routeData));
 
+        // Check for ZTL zones if the route includes Italian cities
+        if (window.ztlManager) {
+            const allCities = [];
+
+            // Extract cities from all route responses
+            Object.values(routeData.routes || {}).forEach(route => {
+                if (route.waypoints) {
+                    route.waypoints.forEach(wp => {
+                        if (wp.city) allCities.push(wp.city);
+                    });
+                }
+            });
+
+            // Add destination
+            const destination = document.getElementById('destination')?.value;
+            if (destination) {
+                allCities.push(destination);
+            }
+
+            // Check for ZTL zones
+            if (allCities.length > 0) {
+                const travelDate = document.getElementById('travelDate')?.value || new Date().toISOString();
+                window.ztlManager.checkRoute(allCities, travelDate);
+            }
+        }
+
         // Show enhanced results with Wikipedia images
         if (window.enhancedRouteResults) {
             const destination = document.getElementById('destination')?.value || 'Your Destination';

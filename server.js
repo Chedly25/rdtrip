@@ -2,9 +2,11 @@ const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
 require('dotenv').config();
+const ZTLService = require('./services/ztl-service');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const ztlService = new ZTLService();
 
 app.use(cors());
 app.use(express.json());
@@ -1999,6 +2001,97 @@ function calculateEstimatedDuration(waypoints) {
   const drivingTime = waypoints.length * 60; // Assume 1 hour driving between stops
   return Math.round((baseMinutes + drivingTime) / 60); // Return in hours
 }
+
+// ZTL Zone API Endpoints
+app.post('/api/ztl/check-route', async (req, res) => {
+  try {
+    const { route, travelDate } = req.body;
+
+    if (!route || !Array.isArray(route)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Route array is required'
+      });
+    }
+
+    const ztlWarnings = await ztlService.checkRouteZTL(route, travelDate || new Date());
+    const alternatives = ztlService.suggestAlternativeRoute(route, ztlWarnings);
+
+    res.json({
+      success: true,
+      warnings: ztlWarnings,
+      hasRestrictions: ztlWarnings.length > 0,
+      alternatives: alternatives,
+      checkedAt: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('ZTL check error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to check ZTL restrictions'
+    });
+  }
+});
+
+app.get('/api/ztl/city/:city', async (req, res) => {
+  try {
+    const { city } = req.params;
+    const { days } = req.query;
+
+    const cityZones = await ztlService.fetchRealTimeStatus(city);
+
+    if (!cityZones) {
+      return res.status(404).json({
+        success: false,
+        error: 'City not found or no ZTL zones'
+      });
+    }
+
+    const upcomingRestrictions = ztlService.getUpcomingRestrictions(
+      city,
+      parseInt(days) || 7
+    );
+
+    res.json({
+      success: true,
+      city: cityZones.name,
+      zones: cityZones.zones,
+      upcoming: upcomingRestrictions,
+      lastUpdated: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('ZTL city info error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get city ZTL info'
+    });
+  }
+});
+
+app.get('/api/ztl/zones', (req, res) => {
+  // Return all available ZTL zones
+  const allZones = [];
+
+  for (const [cityKey, cityData] of Object.entries(ztlService.ztlCities)) {
+    allZones.push({
+      cityKey: cityKey,
+      cityName: cityData.name,
+      zonesCount: cityData.zones.length,
+      zones: cityData.zones.map(z => ({
+        name: z.name,
+        type: z.type,
+        hasSchedule: !!z.schedule,
+        fee: z.fee
+      }))
+    });
+  }
+
+  res.json({
+    success: true,
+    cities: allZones,
+    totalCities: allZones.length
+  });
+});
 
 app.listen(PORT, () => {
   console.log(`🚗 Road Trip Planner MVP running on port ${PORT}`);
