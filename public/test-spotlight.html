@@ -188,42 +188,27 @@
                 }
 
                 let bestPosition = 0;
-                let minAdditionalDistance = Infinity;
+                let minTotalDistance = Infinity;
 
+                // Try inserting at each possible position and calculate total route distance
                 for (let i = 0; i <= waypoints.length; i++) {
-                    let additionalDistance = 0;
+                    let totalDistance = 0;
 
-                    if (i === 0) {
-                        const distanceFromOrigin = this.calculateDistance(43.5297, 5.4474, newWaypoint.lat, newWaypoint.lng);
-                        const distanceToFirst = waypoints.length > 0 ?
-                            this.calculateDistance(newWaypoint.lat, newWaypoint.lng, waypoints[0].lat, waypoints[0].lng) : 0;
-                        const originalDistanceToFirst = waypoints.length > 0 ?
-                            this.calculateDistance(43.5297, 5.4474, waypoints[0].lat, waypoints[0].lng) : 0;
-                        additionalDistance = distanceFromOrigin + distanceToFirst - originalDistanceToFirst;
-                    } else if (i === waypoints.length) {
-                        const distanceFromLast = this.calculateDistance(
-                            waypoints[i-1].lat, waypoints[i-1].lng,
-                            newWaypoint.lat, newWaypoint.lng
+                    // Create a temporary route with the new waypoint inserted
+                    const tempRoute = [...waypoints];
+                    tempRoute.splice(i, 0, newWaypoint);
+
+                    // Calculate total distance of this route
+                    for (let j = 0; j < tempRoute.length - 1; j++) {
+                        totalDistance += this.calculateDistance(
+                            tempRoute[j].lat, tempRoute[j].lng,
+                            tempRoute[j + 1].lat, tempRoute[j + 1].lng
                         );
-                        additionalDistance = distanceFromLast;
-                    } else {
-                        const distanceFromPrev = this.calculateDistance(
-                            waypoints[i-1].lat, waypoints[i-1].lng,
-                            newWaypoint.lat, newWaypoint.lng
-                        );
-                        const distanceToNext = this.calculateDistance(
-                            newWaypoint.lat, newWaypoint.lng,
-                            waypoints[i].lat, waypoints[i].lng
-                        );
-                        const originalDistance = this.calculateDistance(
-                            waypoints[i-1].lat, waypoints[i-1].lng,
-                            waypoints[i].lat, waypoints[i].lng
-                        );
-                        additionalDistance = distanceFromPrev + distanceToNext - originalDistance;
                     }
 
-                    if (additionalDistance < minAdditionalDistance) {
-                        minAdditionalDistance = additionalDistance;
+                    // Track the position with minimum total distance
+                    if (totalDistance < minTotalDistance) {
+                        minTotalDistance = totalDistance;
                         bestPosition = i;
                     }
                 }

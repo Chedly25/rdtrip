@@ -72,57 +72,24 @@ class SpotlightTests {
     async test2_OptimizeRouteWhenAddingCity() {
         console.log('\n🧪 Test 2: Optimize route when adding new city');
 
-        const mockData = this.createMockSpotlightData();
         const controller = new SpotlightController();
-        controller.spotlightData = mockData;
+        const waypoints = [
+            { name: 'Aix-en-Provence', lat: 43.5297, lng: 5.4474, type: 'city' },
+            { name: 'Genoa', lat: 44.4056, lng: 8.9463, type: 'city' },
+            { name: 'Rome', lat: 41.9028, lng: 12.4964, type: 'city' }
+        ];
 
-        // Calculate distance between points
-        const calculateDistance = (lat1, lng1, lat2, lng2) => {
-            const R = 6371; // Earth's radius in km
-            const dLat = (lat2 - lat1) * Math.PI / 180;
-            const dLng = (lng2 - lng1) * Math.PI / 180;
-            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                Math.sin(dLng/2) * Math.sin(dLng/2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-            return R * c;
-        };
-
-        // New city to add: Florence (between Genoa and Rome)
+        // New city to add: Florence (should go between Genoa and Rome)
         const florence = { name: 'Florence', lat: 43.7696, lng: 11.2558, type: 'city' };
 
-        // Calculate optimal position
-        const waypoints = mockData.agentData.waypoints;
-        let minDistance = Infinity;
-        let optimalPosition = -1;
-
-        for (let i = 0; i <= waypoints.length; i++) {
-            let totalDistance = 0;
-
-            if (i === 0) {
-                // Insert at beginning
-                totalDistance += calculateDistance(waypoints[0].lat, waypoints[0].lng, florence.lat, florence.lng);
-                totalDistance += calculateDistance(florence.lat, florence.lng, waypoints[1].lat, waypoints[1].lng);
-            } else if (i === waypoints.length) {
-                // Insert at end
-                totalDistance += calculateDistance(waypoints[i-1].lat, waypoints[i-1].lng, florence.lat, florence.lng);
-            } else {
-                // Insert between cities
-                totalDistance += calculateDistance(waypoints[i-1].lat, waypoints[i-1].lng, florence.lat, florence.lng);
-                totalDistance += calculateDistance(florence.lat, florence.lng, waypoints[i].lat, waypoints[i].lng);
-            }
-
-            if (totalDistance < minDistance) {
-                minDistance = totalDistance;
-                optimalPosition = i;
-            }
-        }
+        // Use the controller's method to find optimal position
+        const position = controller.findOptimalPosition(waypoints, florence);
 
         // The optimal position for Florence should be between Genoa (index 1) and Rome (index 2)
-        const isOptimal = optimalPosition === 2;
+        const isOptimal = position === 2;
 
         this.recordTest('Optimize city insertion position', isOptimal,
-            `Expected position 2 (between Genoa and Rome), got ${optimalPosition}`);
+            `Expected position 2 (between Genoa and Rome), got ${position}`);
 
         return isOptimal;
     }
