@@ -1865,6 +1865,12 @@ class SpotlightController {
             button.textContent = '⏳ Adding...';
             button.disabled = true;
 
+            // Store original cities if not already stored
+            if (!this.spotlightData.originalCities) {
+                const originalWaypoints = this.extractWaypoints(this.spotlightData.agentData) || [];
+                this.spotlightData.originalCities = originalWaypoints.filter(wp => !wp.isLandmark);
+            }
+
             // Get ALL current waypoints (including cities and existing landmarks)
             const currentWaypoints = this.getAllCombinedWaypoints();
 
@@ -2080,7 +2086,8 @@ class SpotlightController {
                         name: wp.name,
                         lng: wp.lng,
                         lat: wp.lat,
-                        type: wp.type || 'waypoint'
+                        type: wp.type || 'waypoint',
+                        isLandmark: wp.isLandmark || false
                     }));
 
                 if (optimizedWaypoints.length > 0) {
@@ -2088,12 +2095,17 @@ class SpotlightController {
                 }
             }
 
-            // FALLBACK: If no optimized route available, gather from individual sources
+            // FALLBACK: If no optimized route available, gather from ALL sources
             const allWaypoints = [];
 
-            // 1. Start with original route waypoints from spotlight data
-            const originalWaypoints = this.extractWaypoints(this.spotlightData.agentData) || [];
-            allWaypoints.push(...originalWaypoints);
+            // 1. Start with original cities (preserved from initial route)
+            if (this.spotlightData.originalCities && this.spotlightData.originalCities.length > 0) {
+                allWaypoints.push(...this.spotlightData.originalCities);
+            } else {
+                // Extract original route waypoints from spotlight data
+                const originalWaypoints = this.extractWaypoints(this.spotlightData.agentData) || [];
+                allWaypoints.push(...originalWaypoints);
+            }
 
             // 2. Add cities from destination manager if available
             if (window.destinationManager?.destinations && Array.isArray(window.destinationManager.destinations)) {
