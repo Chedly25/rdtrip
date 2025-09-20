@@ -174,8 +174,16 @@ class SpotlightController {
         // Add waypoint markers
         const color = this.agentColors[agent];
         waypoints.forEach((waypoint, index) => {
+            // Validate coordinates before creating marker
+            if (!waypoint.lng || !waypoint.lat ||
+                isNaN(waypoint.lng) || isNaN(waypoint.lat) ||
+                Math.abs(waypoint.lng) > 180 || Math.abs(waypoint.lat) > 90) {
+                console.warn(`Skipping waypoint with invalid coordinates: ${waypoint.name}`, waypoint.lng, waypoint.lat);
+                return;
+            }
+
             const agentEmoji = this.getAgentEmoji(agent);
-            
+
             new mapboxgl.Marker({ color: color })
                 .setLngLat([waypoint.lng, waypoint.lat])
                 .setPopup(new mapboxgl.Popup().setHTML(`
@@ -188,7 +196,9 @@ class SpotlightController {
         // Get destination coordinates (you might need to geocode this)
         const destinationCoords = await this.geocodeDestination(this.spotlightData.destination);
         
-        if (destinationCoords) {
+        if (destinationCoords && destinationCoords.lng && destinationCoords.lat &&
+            !isNaN(destinationCoords.lng) && !isNaN(destinationCoords.lat) &&
+            Math.abs(destinationCoords.lng) <= 180 && Math.abs(destinationCoords.lat) <= 90) {
             // Add destination marker
             new mapboxgl.Marker({ color: '#8E44AD' })
                 .setLngLat([destinationCoords.lng, destinationCoords.lat])
@@ -292,9 +302,13 @@ class SpotlightController {
                                 // Get the image data in the format Mapbox expects
                                 const imageData = context.getImageData(0, 0, size, size);
 
-                                // Add the resized image to the map with proper format
-                                this.map.addImage(iconId, imageData, { pixelRatio: 1 });
-                                console.log(`Successfully loaded image ${iconId}`);
+                                // Check if image already exists before adding
+                                if (!this.map.hasImage(iconId)) {
+                                    this.map.addImage(iconId, imageData, { pixelRatio: 1 });
+                                    console.log(`Successfully loaded image ${iconId}`);
+                                } else {
+                                    console.log(`Image ${iconId} already exists, skipping`);
+                                }
                             }).catch(err => {
                                 console.error(`Failed to process image ${iconId}:`, err);
                             });
@@ -304,8 +318,19 @@ class SpotlightController {
                 });
             }));
 
-            // Convert landmarks to GeoJSON features
-            const landmarkFeatures = landmarks.map(landmark => {
+            // Convert landmarks to GeoJSON features, filtering out invalid coordinates
+            const landmarkFeatures = landmarks
+                .filter(landmark => {
+                    // Validate coordinates
+                    if (!landmark.lng || !landmark.lat ||
+                        isNaN(landmark.lng) || isNaN(landmark.lat) ||
+                        Math.abs(landmark.lng) > 180 || Math.abs(landmark.lat) > 90) {
+                        console.warn(`Invalid coordinates for landmark ${landmark.name}:`, landmark.lng, landmark.lat);
+                        return false;
+                    }
+                    return true;
+                })
+                .map(landmark => {
                 const imagePath = this.getCustomLandmarkImage(landmark.name);
                 const iconId = imagePath ? `landmark-${landmark.name.toLowerCase().replace(/\s+/g, '-')}` : null;
 
@@ -397,7 +422,7 @@ class SpotlightController {
                                 ${props.visit_duration ? `<span>• ${props.visit_duration} min</span>` : ''}
                             </div>
                         ` : ''}
-                        <button onclick="window.spotlightController.addLandmarkToRoute('${props.name}', ${feature.geometry.coordinates[1]}, ${feature.geometry.coordinates[0]}, '${props.type}', '${props.description}', '${props.city}')"
+                        <button onclick="window.spotlightController.addLandmarkToRoute('${props.name.replace(/'/g, "\\'")}', ${feature.geometry.coordinates[1] || 'null'}, ${feature.geometry.coordinates[0] || 'null'}, '${(props.type || '').replace(/'/g, "\\'")}', '${(props.description || '').replace(/'/g, "\\'")}', '${(props.city || '').replace(/'/g, "\\'")}')"
                                 style="background: var(--agent-primary-color, #007AFF); color: white; border: none; padding: 8px 16px; border-radius: 6px; font-size: 13px; cursor: pointer; width: 100%; margin-top: 5px;">
                             + Add to Route
                         </button>
@@ -790,9 +815,19 @@ class SpotlightController {
         const bounds = new mapboxgl.LngLatBounds();
         bounds.extend([5.4474, 43.5297]); // Aix-en-Provence
         waypoints.forEach(waypoint => {
-            bounds.extend([waypoint.lng, waypoint.lat]);
+            // Validate coordinates before extending bounds
+            if (waypoint.lng && waypoint.lat &&
+                !isNaN(waypoint.lng) && !isNaN(waypoint.lat) &&
+                Math.abs(waypoint.lng) <= 180 && Math.abs(waypoint.lat) <= 90) {
+                bounds.extend([waypoint.lng, waypoint.lat]);
+            }
         });
-        bounds.extend([destinationCoords.lng, destinationCoords.lat]);
+        // Validate destination coordinates before extending bounds
+        if (destinationCoords && destinationCoords.lng && destinationCoords.lat &&
+            !isNaN(destinationCoords.lng) && !isNaN(destinationCoords.lat) &&
+            Math.abs(destinationCoords.lng) <= 180 && Math.abs(destinationCoords.lat) <= 90) {
+            bounds.extend([destinationCoords.lng, destinationCoords.lat]);
+        }
         
         this.map.fitBounds(bounds, {
             padding: 50,
@@ -1858,6 +1893,16 @@ class SpotlightController {
 
     async addLandmarkToRoute(name, lat, lng, type, description, city) {
         try {
+            // Validate coordinates
+            const parsedLat = parseFloat(lat);
+            const parsedLng = parseFloat(lng);
+
+            if (isNaN(parsedLat) || isNaN(parsedLng) ||
+                Math.abs(parsedLng) > 180 || Math.abs(parsedLat) > 90) {
+                console.error(`Invalid coordinates for landmark ${name}: lat=${lat}, lng=${lng}`);
+                alert('Unable to add landmark - invalid coordinates');
+                return;
+            }
 
             // Show loading feedback
             const button = event.target;
@@ -1878,8 +1923,8 @@ class SpotlightController {
             const landmarkWaypoint = {
                 name: name,
                 description: description || `Visit ${name} in ${city}`,
-                lat: parseFloat(lat),
-                lng: parseFloat(lng),
+                lat: parsedLat,
+                lng: parsedLng,
                 type: type,
                 city: city,
                 activities: [`Explore ${name}`, `Learn about the history`, `Take photos`],
