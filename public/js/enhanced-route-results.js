@@ -366,7 +366,17 @@ class EnhancedRouteResults {
         }
 
         if (Array.isArray(highlights)) {
-            return `<ul>${highlights.slice(0, 3).map(h => `<li>${h}</li>`).join('')}</ul>`;
+            return `<ul>${highlights.slice(0, 3).map(h => {
+                // Handle objects in array
+                const text = typeof h === 'object' ? (h.activity || h.name || h.title || h.description || JSON.stringify(h)) : h;
+                return `<li>${text}</li>`;
+            }).join('')}</ul>`;
+        }
+
+        // Handle single object
+        if (typeof highlights === 'object') {
+            const text = highlights.activity || highlights.name || highlights.title || highlights.description || JSON.stringify(highlights);
+            return `<p>${text}</p>`;
         }
 
         return `<p>${highlights}</p>`;
@@ -393,29 +403,29 @@ class EnhancedRouteResults {
         const configs = {
             adventure: {
                 name: 'Adventure Route',
-                icon: 'A',
+                icon: '<img src="/images/icons/adventure_icon.png" alt="Adventure" style="width: 24px; height: 24px;">',
                 description: 'Discover amazing cities perfect for adventure enthusiasts with outdoor activities, hiking trails, and thrilling experiences.'
             },
             culture: {
                 name: 'Culture Route',
-                icon: 'C',
+                icon: '<img src="/images/icons/culture_icon.png" alt="Culture" style="width: 24px; height: 24px;">',
                 description: 'Explore cities rich in history, art, and cultural heritage with museums, historic sites, and architectural wonders.'
             },
             food: {
                 name: 'Food Route',
-                icon: 'F',
+                icon: '<img src="/images/icons/food_icon.png" alt="Food" style="width: 24px; height: 24px;">',
                 description: 'Savor the finest culinary experiences with local specialties, renowned restaurants, and food markets.'
             },
             'hidden-gems': {
                 name: 'Hidden Gems Route',
-                icon: 'H',
+                icon: '<img src="/images/icons/hidden_gem_icon.png" alt="Hidden Gems" style="width: 24px; height: 24px;">',
                 description: 'Uncover lesser-known treasures and authentic local experiences away from the typical tourist crowds.'
             }
         };
 
         return configs[agent] || {
             name: 'Custom Route',
-            icon: 'R',
+            icon: '<img src="/images/logo.png" alt="Route" style="width: 24px; height: 24px;">',
             description: 'A specially curated route with unique destinations and experiences.'
         };
     }
@@ -583,10 +593,16 @@ class EnhancedRouteResults {
     }
 
     createPriceDistribution(distribution) {
-        const prices = distribution || { budget: 30, mid: 50, fine: 20 };
-        const budget = prices.budget || prices.street || 30;
-        const mid = prices.mid || prices.casual || 50;
-        const fine = prices.fine || 20;
+        // Handle if distribution is not an object or is undefined
+        if (!distribution || typeof distribution !== 'object') {
+            distribution = { budget: 30, mid: 50, fine: 20 };
+        }
+
+        // Extract percentages with proper fallbacks
+        const budget = parseInt(distribution.budget) || parseInt(distribution.street) || 30;
+        const mid = parseInt(distribution.mid) || parseInt(distribution.casual) || 50;
+        const fine = parseInt(distribution.fine) || parseInt(distribution.luxury) || 20;
+
         return `
             <div class="metric-split">
                 <span title="Budget">€</span> ${budget}% |
