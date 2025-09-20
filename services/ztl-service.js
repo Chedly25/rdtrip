@@ -224,12 +224,19 @@ class ZTLService {
     // Normalize city names for lookup
     normalizeCityName(cityName) {
         const normalized = cityName.toLowerCase().trim();
+        // Map both English and Italian names to the same key
         const mappings = {
             'milano': 'milan',
+            'milan': 'milan',
             'roma': 'rome',
+            'rome': 'rome',
             'firenze': 'florence',
+            'florence': 'florence',
             'venezia': 'venice',
-            'napoli': 'naples'
+            'venice': 'venice',
+            'napoli': 'naples',
+            'naples': 'naples',
+            'bologna': 'bologna'
         };
         return mappings[normalized] || normalized;
     }
