@@ -783,9 +783,30 @@ class DestinationManager {
 
     closeAddModal() {
         const modal = document.getElementById('add-destination-modal');
-        modal.classList.remove('show');
-        this.selectedDestination = null;
-        document.getElementById('destination-search-input').value = '';
+        if (modal) {
+            modal.classList.remove('show');
+
+            // Reset modal state
+            const loadingOverlay = document.getElementById('modal-loading');
+            const successMessage = document.getElementById('modal-success');
+            const modalBody = modal.querySelector('.modal-body');
+            const modalFooter = modal.querySelector('.modal-footer');
+            const addButton = modal.querySelector('.btn-add');
+
+            // Hide overlays and show body
+            if (loadingOverlay) loadingOverlay.classList.remove('show');
+            if (successMessage) successMessage.classList.remove('show');
+            if (modalBody) modalBody.style.display = '';
+            if (modalFooter) modalFooter.style.display = '';
+
+            // Reset form
+            const searchInput = document.getElementById('destination-search-input');
+            if (searchInput) searchInput.value = '';
+            const suggestions = document.getElementById('search-suggestions');
+            if (suggestions) suggestions.innerHTML = '';
+            if (addButton) addButton.disabled = true;
+            this.selectedDestination = null;
+        }
     }
 
     async addCustomDestination(cityName) {
