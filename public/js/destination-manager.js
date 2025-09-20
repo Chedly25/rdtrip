@@ -487,7 +487,7 @@ class DestinationManager {
                 </div>
                 <div class="modal-footer">
                     <button class="btn-cancel" onclick="destinationManager.closeAddModal()">Cancel</button>
-                    <button class="btn-add" onclick="destinationManager.addCustomDestination()">Add Custom City</button>
+                    <button class="btn-add" onclick="destinationManager.addCustomDestination()" id="addCustomCityBtn">Add Custom City</button>
                 </div>
             </div>
         `;
