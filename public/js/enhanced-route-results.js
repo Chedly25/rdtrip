@@ -393,29 +393,29 @@ class EnhancedRouteResults {
         const configs = {
             adventure: {
                 name: 'Adventure Route',
-                icon: '🏔️',
+                icon: 'A',
                 description: 'Discover amazing cities perfect for adventure enthusiasts with outdoor activities, hiking trails, and thrilling experiences.'
             },
             culture: {
                 name: 'Culture Route',
-                icon: '🏛️',
+                icon: 'C',
                 description: 'Explore cities rich in history, art, and cultural heritage with museums, historic sites, and architectural wonders.'
             },
             food: {
                 name: 'Food Route',
-                icon: '🍽️',
+                icon: 'F',
                 description: 'Savor the finest culinary experiences with local specialties, renowned restaurants, and food markets.'
             },
             'hidden-gems': {
                 name: 'Hidden Gems Route',
-                icon: '💎',
+                icon: 'H',
                 description: 'Uncover lesser-known treasures and authentic local experiences away from the typical tourist crowds.'
             }
         };
 
         return configs[agent] || {
             name: 'Custom Route',
-            icon: '🗺️',
+            icon: 'R',
             description: 'A specially curated route with unique destinations and experiences.'
         };
     }
@@ -460,25 +460,25 @@ class EnhancedRouteResults {
     createAdventureMetrics(metrics) {
         return `
             <div class="metric-item">
-                <div class="metric-label">🏃 Physical Difficulty</div>
+                <div class="metric-label">Physical Difficulty</div>
                 <div class="metric-value">${this.createRatingDots(metrics.physicalDifficulty || 3, 5)}</div>
             </div>
             <div class="metric-item">
-                <div class="metric-label">🎒 Gear Required</div>
+                <div class="metric-label">Gear Required</div>
                 <div class="metric-value">
                     <span class="metric-badge level-${this.getLevelClass(metrics.gearRequirement)}">${metrics.gearRequirement || 'Moderate'}</span>
                 </div>
             </div>
             <div class="metric-item">
-                <div class="metric-label">☀️ Weather Dependent</div>
+                <div class="metric-label">Weather Dependent</div>
                 <div class="metric-value">${this.createPercentageBar(metrics.weatherDependency || 60)}</div>
             </div>
             <div class="metric-item">
-                <div class="metric-label">🏕️ Outdoor Hours</div>
+                <div class="metric-label">Outdoor Hours</div>
                 <div class="metric-value">${metrics.outdoorHours || '6-8'} hrs/day</div>
             </div>
             <div class="metric-item">
-                <div class="metric-label">💰 Equipment Cost</div>
+                <div class="metric-label">Equipment Cost</div>
                 <div class="metric-value">€${metrics.equipmentCost || '200-500'}</div>
             </div>
         `;
@@ -487,23 +487,23 @@ class EnhancedRouteResults {
     createFoodMetrics(metrics) {
         return `
             <div class="metric-item">
-                <div class="metric-label">⭐ Michelin Stars</div>
+                <div class="metric-label">Michelin Stars</div>
                 <div class="metric-value">${metrics.michelinStars || '3-5'} restaurants</div>
             </div>
             <div class="metric-item">
-                <div class="metric-label">📅 Book Ahead</div>
+                <div class="metric-label">Book Ahead</div>
                 <div class="metric-value">${metrics.bookingTimeline || '2-4'} weeks</div>
             </div>
             <div class="metric-item">
-                <div class="metric-label">💶 Price Range</div>
+                <div class="metric-label">Price Range</div>
                 <div class="metric-value">${this.createPriceDistribution(metrics.priceDistribution)}</div>
             </div>
             <div class="metric-item">
-                <div class="metric-label">🌍 Cuisines</div>
+                <div class="metric-label">Cuisines</div>
                 <div class="metric-value">${metrics.regionalCuisines || '5+'} regional</div>
             </div>
             <div class="metric-item">
-                <div class="metric-label">🍷 Experience Types</div>
+                <div class="metric-label">Experience Types</div>
                 <div class="metric-value">${this.createExperienceTypes(metrics.experienceTypes)}</div>
             </div>
         `;
@@ -512,25 +512,25 @@ class EnhancedRouteResults {
     createCultureMetrics(metrics) {
         return `
             <div class="metric-item">
-                <div class="metric-label">🏛️ UNESCO Sites</div>
+                <div class="metric-label">UNESCO Sites</div>
                 <div class="metric-value">${metrics.unescoSites || '2-3'} sites</div>
             </div>
             <div class="metric-item">
-                <div class="metric-label">🎨 Museum Density</div>
+                <div class="metric-label">Museum Density</div>
                 <div class="metric-value">
                     <span class="metric-badge level-${this.getLevelClass(metrics.museumDensity)}">${metrics.museumDensity || 'High'}</span>
                 </div>
             </div>
             <div class="metric-item">
-                <div class="metric-label">📚 Historical Periods</div>
+                <div class="metric-label">Historical Periods</div>
                 <div class="metric-value">${metrics.historicalPeriods || '3-4'} eras</div>
             </div>
             <div class="metric-item">
-                <div class="metric-label">🎧 Audio Guides</div>
+                <div class="metric-label">Audio Guides</div>
                 <div class="metric-value">${this.createPercentageBar(metrics.audioGuideAvailability || 80)}</div>
             </div>
             <div class="metric-item">
-                <div class="metric-label">🏺 Focus Split</div>
+                <div class="metric-label">Focus Split</div>
                 <div class="metric-value">${this.createFocusSplit(metrics.artVsHistory)}</div>
             </div>
         `;
@@ -539,25 +539,25 @@ class EnhancedRouteResults {
     createHiddenGemsMetrics(metrics) {
         return `
             <div class="metric-item">
-                <div class="metric-label">👥 Tourist Density</div>
+                <div class="metric-label">Tourist Density</div>
                 <div class="metric-value">
                     <span class="metric-badge level-${this.getLevelClass(metrics.touristDensity, true)}">${metrics.touristDensity || 'Low'}</span>
                 </div>
             </div>
             <div class="metric-item">
-                <div class="metric-label">🗣️ Language Barrier</div>
+                <div class="metric-label">Language Barrier</div>
                 <div class="metric-value">${this.createRatingDots(metrics.languageBarrier || 3, 5)}</div>
             </div>
             <div class="metric-item">
-                <div class="metric-label">💳 Cash vs Card</div>
+                <div class="metric-label">Cash vs Card</div>
                 <div class="metric-value">${this.createPaymentSplit(metrics.cashVsCard)}</div>
             </div>
             <div class="metric-item">
-                <div class="metric-label">👨‍👩‍👧 Local Interaction</div>
+                <div class="metric-label">Local Interaction</div>
                 <div class="metric-value">${this.createPercentageBar(metrics.localInteraction || 75)}</div>
             </div>
             <div class="metric-item">
-                <div class="metric-label">🚗 Transport Access</div>
+                <div class="metric-label">Transport Access</div>
                 <div class="metric-value">
                     <span class="metric-badge level-${this.getLevelClass(metrics.transportAccess)}">${metrics.transportAccess || 'Moderate'}</span>
                 </div>

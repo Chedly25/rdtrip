@@ -205,7 +205,8 @@ class RoadTripPlanner {
 
         // Force a repaint to ensure CSS changes take effect
         requestAnimationFrame(() => {
-            allThemeButtons.forEach(btn => {
+            const buttons = document.querySelectorAll('.theme-button');
+            buttons.forEach(btn => {
                 btn.offsetHeight; // Trigger reflow
             });
         });
@@ -235,7 +236,8 @@ class RoadTripPlanner {
 
         // Add a delayed check to see if something is removing the classes
         setTimeout(() => {
-            allThemeButtons.forEach(btn => {
+            const buttons = document.querySelectorAll('.theme-button');
+            buttons.forEach(btn => {
                 const agent = btn.dataset.agent;
                 const hasActive = btn.classList.contains('active');
                 const shouldBeActive = this.selectedAgents.includes(agent);

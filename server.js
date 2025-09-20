@@ -101,7 +101,7 @@ Each waypoint must be a CITY NAME that tourists typically miss. Explain what mak
       languageRequirement: extractLevel(response, /Language.*:?\s*(\w+)/i, ["None", "Basic", "Moderate"], "Basic"),
       paymentAcceptance: extractPaymentSplit(response),
       localDependency: extractLevel(response, /Local Dependency:?\s*(\w+)/i, ["Low", "Moderate", "High"], "Moderate"),
-      transportAccess: extractTransportSplit(response)
+      transportAccess: extractLevel(response, /Transport Access:?\s*(\w+)/i, ["Low", "Moderate", "High"], "Moderate")
     })
   }
 };
