@@ -112,11 +112,18 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
     transition: all 0.3s ease;
     overflow: visible; /* Allow buttons to show */
+    padding: 0 !important; /* Ensure no padding affects image width */
 }
 
 .city-card:hover {
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
     transform: translateX(2px);
+    padding: 0 !important; /* Maintain no padding on hover */
+}
+
+/* Force card content to have no padding at top for image */
+.city-card > *:first-child {
+    margin-top: 0 !important;
 }
 
 /* Ensure city images display properly */
@@ -125,6 +132,9 @@
     height: 120px !important;
     overflow: hidden;
     border-radius: 12px 12px 0 0;
+    position: relative !important;
+    margin: 0 !important;
+    padding: 0 !important;
 }
 
 .city-card .city-image {
@@ -132,6 +142,21 @@
     height: 100% !important;
     object-fit: cover !important;
     display: block;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+}
+
+/* Prevent any width changes on hover */
+.city-card:hover .city-image-container {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.city-card:hover .city-image {
+    width: 100% !important;
+    height: 100% !important;
 }
 
 /* Fix Action Buttons - Only visible on hover, properly positioned */
