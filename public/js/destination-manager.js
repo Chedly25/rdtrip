@@ -873,12 +873,18 @@ class DestinationManager {
             this.renderDestinations();
             this.updateRoute();
 
-            // Direct map update - let spotlight controller gather all data internally
-            if (window.spotlightController && typeof window.spotlightController.recalculateRoute === 'function') {
+            // Direct map update - use the new addCityToRoute method for proper optimization
+            if (window.spotlightController) {
                 try {
-                    await window.spotlightController.recalculateRoute();
+                    if (typeof window.spotlightController.addCityToRoute === 'function') {
+                        // Use the new optimized city addition method
+                        await window.spotlightController.addCityToRoute(newDestination);
+                    } else if (typeof window.spotlightController.recalculateRoute === 'function') {
+                        // Fallback to old method
+                        await window.spotlightController.recalculateRoute();
+                    }
                 } catch (error) {
-                    console.warn('Map recalculation failed:', error);
+                    console.warn('Map update failed:', error);
                 }
             }
 

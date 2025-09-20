@@ -2097,16 +2097,105 @@ class SpotlightController {
     async recalculateRoute(waypoints = null) {
         const destinationCoords = await this.geocodeDestination(this.spotlightData.destination);
         if (destinationCoords) {
+            // First, update originalCities with any new cities from destination manager
+            this.updateOriginalCitiesFromDestinationManager();
+
             // Gather all waypoints from all systems
             const allWaypoints = this.getAllCombinedWaypoints(waypoints);
 
+            // Optimize the route if we have mixed cities and landmarks
+            const optimizedWaypoints = this.optimizeFullRoute(allWaypoints);
+
             const color = this.agentColors[this.spotlightData.agent];
-            await this.createRoute(allWaypoints, destinationCoords, color);
-            this.fitMapToRoute(allWaypoints, destinationCoords);
-            this.updateDistanceStats(allWaypoints, destinationCoords);
+            await this.createRoute(optimizedWaypoints, destinationCoords, color);
+            this.fitMapToRoute(optimizedWaypoints, destinationCoords);
+            this.updateDistanceStats(optimizedWaypoints, destinationCoords);
+
+            // Update spotlightData with the optimized waypoints
+            this.spotlightData.waypoints = optimizedWaypoints;
 
             // Restore added landmark markers after route recalculation
             this.restoreAddedLandmarkMarkers();
+        }
+    }
+
+    addCityToRoute(cityData) {
+        // Method specifically for adding cities from destination manager
+        console.log('🏙️ Adding city to route:', cityData);
+
+        // Ensure we have originalCities initialized
+        if (!this.spotlightData.originalCities) {
+            const originalWaypoints = this.extractWaypoints(this.spotlightData.agentData) || [];
+            this.spotlightData.originalCities = originalWaypoints.filter(wp => wp.type === 'city' || !wp.isLandmark);
+        }
+
+        // Create city waypoint
+        const newCity = {
+            name: cityData.name,
+            lng: cityData.coordinates[0],
+            lat: cityData.coordinates[1],
+            type: 'city'
+        };
+
+        // Check if city already exists
+        const exists = this.spotlightData.originalCities.some(c => c.name === newCity.name);
+        if (!exists) {
+            // Find optimal position for the new city
+            const position = this.findOptimalPosition(this.spotlightData.originalCities, newCity);
+            this.spotlightData.originalCities.splice(position, 0, newCity);
+
+            // Get all waypoints including landmarks
+            let allWaypoints = [...this.spotlightData.originalCities];
+
+            // Add existing landmarks
+            if (this.spotlightData.addedLandmarks && this.spotlightData.addedLandmarks.length > 0) {
+                this.spotlightData.addedLandmarks.forEach(landmark => {
+                    const landmarkPos = this.findOptimalPosition(allWaypoints, landmark);
+                    allWaypoints.splice(landmarkPos, 0, landmark);
+                });
+            }
+
+            // Update waypoints and recalculate route
+            this.spotlightData.waypoints = allWaypoints;
+
+            // Save to localStorage
+            localStorage.setItem('spotlightData', JSON.stringify(this.spotlightData));
+
+            // Recalculate with optimized waypoints
+            this.recalculateRoute(allWaypoints);
+        }
+    }
+
+    updateOriginalCitiesFromDestinationManager() {
+        // Update originalCities with cities from destination manager
+        if (window.destinationManager?.destinations && Array.isArray(window.destinationManager.destinations)) {
+            const dmCities = window.destinationManager.destinations
+                .filter(dest => dest && dest.coordinates && Array.isArray(dest.coordinates))
+                .map(dest => ({
+                    name: dest.name,
+                    lng: dest.coordinates[0],
+                    lat: dest.coordinates[1],
+                    type: 'city'
+                }));
+
+            if (dmCities.length > 0) {
+                // If we don't have originalCities yet, initialize with current cities
+                if (!this.spotlightData.originalCities || this.spotlightData.originalCities.length === 0) {
+                    this.spotlightData.originalCities = dmCities;
+                } else {
+                    // Merge destination manager cities with original cities
+                    // Remove duplicates based on name
+                    const cityNames = new Set(this.spotlightData.originalCities.map(c => c.name));
+                    dmCities.forEach(city => {
+                        if (!cityNames.has(city.name)) {
+                            // Find optimal position for the new city
+                            const position = this.findOptimalPosition(this.spotlightData.originalCities, city);
+                            this.spotlightData.originalCities.splice(position, 0, city);
+                            cityNames.add(city.name);
+                        }
+                    });
+                }
+            }
         }
     }
 
@@ -2115,12 +2204,6 @@ class SpotlightController {
             // PRIORITY 0: If optimized waypoints are explicitly passed, use them directly
             if (passedWaypoints && Array.isArray(passedWaypoints) && passedWaypoints.length > 0) {
                 return passedWaypoints;
-            }
-
-            // PRIORITY 1: If we have optimized waypoints stored in spotlightData (from adding landmarks)
-            if (this.spotlightData?.waypoints && Array.isArray(this.spotlightData.waypoints) && this.spotlightData.waypoints.length > 0) {
-                // These are already optimized waypoints that include landmarks in the correct order
-                return this.spotlightData.waypoints;
             }
 
             // PRIORITY 2: If landmarks overlay has an optimized route, use it directly
