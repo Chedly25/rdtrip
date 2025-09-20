@@ -243,7 +243,7 @@ class DestinationManager {
     addRemoveButton(card, index) {
         const removeBtn = document.createElement('button');
         removeBtn.className = 'remove-city-btn';
-        removeBtn.innerHTML = '🗑️';
+        removeBtn.innerHTML = '<img src="/images/trash.png" alt="Remove" style="width: 16px; height: 16px;">';
         removeBtn.title = 'Remove this destination';
         removeBtn.onclick = () => this.removeDestination(index);
 

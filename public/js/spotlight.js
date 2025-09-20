@@ -127,7 +127,7 @@ class SpotlightController {
 
         this.map = new mapboxgl.Map({
             container: 'spotlightMap',
-            style: 'mapbox://styles/mapbox/light-v11',
+            style: 'mapbox://styles/mapbox/streets-v12',
             center: [10.4515, 51.1657], // Center of Europe
             zoom: 4, // Zoom level to show most of Europe
             minZoom: 3,
