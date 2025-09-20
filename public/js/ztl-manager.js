@@ -51,46 +51,25 @@ class ZTLManager {
         const warningContainer = this.getOrCreateWarningContainer();
         console.log('Warning container created/found:', warningContainer);
 
+        // Create a compact warning banner
+        const cities = [...new Set(ztlData.warnings.map(w => w.city))].join(', ');
         const warningsHTML = `
-            <div class="ztl-warning-card">
-                <div class="ztl-header">
-                    <svg class="ztl-icon" width="24" height="24" viewBox="0 0 24 24" fill="none">
-                        <path d="M12 9V13M12 17H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z"
-                              stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                    </svg>
-                    <h3>ZTL Zone Warning</h3>
-                    <span class="ztl-badge">${ztlData.warnings.length} zone${ztlData.warnings.length > 1 ? 's' : ''}</span>
-                </div>
-
-                <div class="ztl-content">
-                    <p class="ztl-info">Your route passes through restricted traffic zones (ZTL) in Italy.</p>
-
-                    <div class="ztl-zones">
-                        ${ztlData.warnings.map(warning => this.createWarningItem(warning)).join('')}
+            <div class="ztl-warning-banner">
+                <div class="ztl-banner-content">
+                    <div class="ztl-banner-left">
+                        <svg class="ztl-icon-small" width="20" height="20" viewBox="0 0 24 24" fill="none">
+                            <path d="M12 9V13M12 17H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z"
+                                  stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                        <span class="ztl-banner-text">
+                            <strong>Traffic Restriction Zone</strong> - ${cities} has ${ztlData.warnings.length} ZTL zone${ztlData.warnings.length > 1 ? 's' : ''}
+                        </span>
                     </div>
-
-                    ${ztlData.alternatives.length > 0 ? `
-                        <div class="ztl-alternatives">
-                            <h4>Alternative Options:</h4>
-                            ${ztlData.alternatives.map(alt => `
-                                <div class="ztl-alternative">
-                                    <strong>${alt.city}:</strong>
-                                    <p>${alt.suggestion}</p>
-                                    <div class="ztl-options">
-                                        ${alt.parkingOptions.map(p => `<span class="ztl-option">🅿️ ${p}</span>`).join('')}
-                                    </div>
-                                </div>
-                            `).join('')}
-                        </div>
-                    ` : ''}
-
-                    <div class="ztl-actions">
-                        <button class="btn-ztl-details" onclick="ztlManager.showDetails()">
-                            View Zone Details
+                    <div class="ztl-banner-right">
+                        <button class="ztl-details-btn" onclick="ztlManager.showFullDetails(${JSON.stringify(ztlData).replace(/"/g, '&quot;')})">
+                            View Details
                         </button>
-                        <button class="btn-ztl-map" onclick="ztlManager.showOnMap()">
-                            Show on Map
-                        </button>
+                        <button class="ztl-close-btn" onclick="ztlManager.hideWarnings()">×</button>
                     </div>
                 </div>
             </div>
@@ -188,6 +167,55 @@ class ZTLManager {
         if (container) {
             container.style.display = 'none';
         }
+    }
+
+    // Show full details in modal
+    showFullDetails(ztlData) {
+        const modal = document.createElement('div');
+        modal.className = 'ztl-modal';
+        modal.innerHTML = `
+            <div class="ztl-modal-content">
+                <div class="ztl-modal-header">
+                    <h2>ZTL Traffic Restriction Details</h2>
+                    <button class="ztl-modal-close" onclick="this.parentElement.parentElement.parentElement.remove()">×</button>
+                </div>
+                <div class="ztl-modal-body">
+                    <div class="ztl-zones-grid">
+                        ${ztlData.warnings.map(warning => `
+                            <div class="ztl-zone-card">
+                                <h3>${warning.city} - ${warning.zone}</h3>
+                                <div class="ztl-zone-info">
+                                    <p><strong>Schedule:</strong> ${warning.message}</p>
+                                    <p><strong>Type:</strong> ${warning.type === 'congestion' ? 'Congestion Charge' : 'Historic Center'}</p>
+                                    <p><strong>Fee:</strong> ${warning.fee > 0 ? `€${warning.fee}/day` : 'Permit required'}</p>
+                                    ${warning.exemptions ? `
+                                        <p><strong>Exemptions:</strong> ${warning.exemptions.map(e =>
+                                            this.formatExemption(e)
+                                        ).join(', ')}</p>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+
+                    ${ztlData.alternatives && ztlData.alternatives.length > 0 ? `
+                        <div class="ztl-alternatives-section">
+                            <h3>Parking Alternatives</h3>
+                            ${ztlData.alternatives.map(alt => `
+                                <div class="ztl-alternative-item">
+                                    <strong>${alt.city}:</strong> ${alt.suggestion}
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                </div>
+                <div class="ztl-modal-footer">
+                    <button class="ztl-action-btn" onclick="ztlManager.showOnMap()">Show on Map</button>
+                    <button class="ztl-action-btn-secondary" onclick="this.parentElement.parentElement.parentElement.remove()">Close</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
     }
 
     // Show detailed ZTL information
