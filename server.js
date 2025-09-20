@@ -67,15 +67,15 @@ List cultural sites as things to see IN that city with historical context.`,
     prompt: `You are a culinary travel expert. Create a route with CITIES (not specific restaurants) known for their food scene. Each waypoint must be a CITY NAME like 'Lyon' or 'San Sebastian', not specific restaurants or markets.
 
 For the route, also provide these FOOD METRICS in your response:
-- Michelin Stars: Total count of Michelin-starred restaurants across the route
+- Must-Try Restaurants: List 2-3 specific restaurant names across the entire route (format: "Restaurant Name (City)")
 - Booking Timeline: "Days ahead", "Weeks ahead", or "Months ahead" for popular restaurants
 - Price Distribution: Street food (%), Casual dining (%), Fine dining (%) - must total 100%
 - Regional Cuisines: Number of distinct regional cuisine types you'll experience
 - Experience Types: Count of Markets, Cooking Classes, Tastings, Restaurant visits
 
-List culinary experiences as things to try IN that city with price ranges.`,
+List culinary experiences as things to try IN that city with price ranges. Include specific restaurant names where applicable.`,
     metricsExtractor: (response) => ({
-      michelinStars: extractNumber(response, /Michelin Stars?:?\s*(\d+)/i, 0),
+      restaurants: extractRestaurants(response),
       bookingTimeline: extractLevel(response, /Booking.*:?\s*(Days?|Weeks?|Months?)/i, ["Days", "Weeks", "Months"], "Weeks"),
       priceDistribution: extractPriceDistribution(response),
       cuisineTypes: extractNumber(response, /Regional Cuisines?:?\s*(\d+)/i, 3),
@@ -187,6 +187,47 @@ function extractPriceDistribution(text) {
   }
 
   return { street, casual, fine };
+}
+
+function extractRestaurants(text) {
+  const restaurants = [];
+
+  // Look for restaurant patterns like "Restaurant Name (City)" or "Restaurant Name in City"
+  const patterns = [
+    /([A-Z][^()]+)\s*\(([^)]+)\)/g,  // Name (City)
+    /(?:restaurant:|must-try:|recommended:)\s*([^,\n]+)/gi,  // After keywords
+    /\d+\.\s*([^:\n]+)(?:\s*[-–]\s*|:\s*)/g  // Numbered lists
+  ];
+
+  patterns.forEach(pattern => {
+    let match;
+    while ((match = pattern.exec(text)) !== null) {
+      const name = match[1]?.trim();
+      const city = match[2]?.trim();
+
+      if (name && name.length > 2 && name.length < 50) {
+        // Filter out common non-restaurant phrases
+        if (!name.match(/^(the|a|an|in|at|for|with|and|or|but)$/i)) {
+          restaurants.push({
+            name: name,
+            city: city || '',
+            link: `https://www.google.com/search?q=${encodeURIComponent(name + (city ? ' ' + city : ''))}`
+          });
+        }
+      }
+    }
+  });
+
+  // Return max 3 restaurants, or defaults if none found
+  if (restaurants.length === 0) {
+    return [
+      { name: "Le Bernardin", city: "Paris" },
+      { name: "Osteria Francescana", city: "Modena" },
+      { name: "El Celler de Can Roca", city: "Girona" }
+    ];
+  }
+
+  return restaurants.slice(0, 3);
 }
 
 function extractExperienceTypes(text) {

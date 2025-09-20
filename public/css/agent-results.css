@@ -2981,45 +2981,41 @@ body.map-fullscreen .spotlight-map-section.fullscreen {
 /* ===== RESTAURANT LIST STYLES ===== */
 .restaurant-list {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 4px 0;
+  gap: 4px;
+  padding: 0;
+  flex-wrap: wrap;
 }
 
 .restaurant-item {
-  display: flex;
-  align-items: center;
+  flex: 1 1 auto;
 }
 
 .restaurant-link {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 8px 12px;
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px;
+  background: #f0f2f5;
+  border-radius: 3px;
   text-decoration: none;
-  color: inherit;
-  transition: all 0.2s ease;
-  border: 1px solid rgba(0,0,0,0.08);
-  width: 100%;
+  color: #2c3e50;
+  transition: background 0.15s;
+  font-size: 0.7rem;
+  border: 1px solid #dde0e4;
 }
 
 .restaurant-link:hover {
-  background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
-  transform: translateX(2px);
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  border-color: rgba(0,0,0,0.12);
+  background: #e1e4e8;
 }
 
 .restaurant-name {
-  font-weight: 600;
-  font-size: 0.9rem;
+  font-weight: 500;
+  font-size: 0.7rem;
   color: #2c3e50;
 }
 
 .restaurant-city {
-  font-size: 0.75rem;
+  font-size: 0.65rem;
   color: #6c757d;
-  font-style: italic;
+  font-style: normal;
 }

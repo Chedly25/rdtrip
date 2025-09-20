@@ -638,9 +638,9 @@ class EnhancedRouteResults {
     createRestaurantList(restaurants) {
         // Default restaurant recommendations if none provided
         const defaultRestaurants = [
-            { name: "Le Bernardin", city: "Paris", link: "https://www.google.com/search?q=Le+Bernardin+Paris" },
-            { name: "Osteria Francescana", city: "Modena", link: "https://www.google.com/search?q=Osteria+Francescana+Modena" },
-            { name: "El Celler de Can Roca", city: "Girona", link: "https://www.google.com/search?q=El+Celler+de+Can+Roca+Girona" }
+            { name: "Le Bernardin", city: "Paris" },
+            { name: "Osteria Francescana", city: "Modena" },
+            { name: "El Celler de Can Roca", city: "Girona" }
         ];
 
         const rests = restaurants || defaultRestaurants;
@@ -649,11 +649,12 @@ class EnhancedRouteResults {
             <div class="restaurant-list">
                 ${rests.slice(0, 3).map(r => `
                     <div class="restaurant-item">
-                        <a href="${r.link || `https://www.google.com/search?q=${encodeURIComponent(r.name + ' ' + (r.city || ''))}`}"
+                        <a href="https://www.google.com/search?q=${encodeURIComponent(r.name + ' ' + (r.city || ''))}"
                            target="_blank"
-                           class="restaurant-link">
+                           class="restaurant-link"
+                           title="Search for ${r.name}">
                             <span class="restaurant-name">${r.name}</span>
-                            ${r.city ? `<span class="restaurant-city">${r.city}</span>` : ''}
+                            ${r.city ? ` • ${r.city}` : ''}
                         </a>
                     </div>
                 `).join('')}
