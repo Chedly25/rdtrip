@@ -148,7 +148,7 @@ class DestinationManager {
         const addBtn = document.getElementById('add-destination-top');
         if (addBtn) {
             addBtn.addEventListener('click', () => {
-                this.showAddDestinationModal(this.destinations.length);
+                this.openAddModal();
             });
         }
 
@@ -158,7 +158,7 @@ class DestinationManager {
             // Always enable drag and drop
             this.isEditing = true; // Always in editing mode
             citiesContainer.classList.add('edit-mode');
-            this.setupDragAndDrop();
+            // Drag and drop is set up per card in createCityCard
 
             // Add hover effects setup
             this.setupHoverEffects();
