@@ -403,22 +403,22 @@ class EnhancedRouteResults {
         const configs = {
             adventure: {
                 name: 'Adventure Route',
-                icon: '<img src="/images/icons/adventure_icon.png" alt="Adventure" style="width: 24px; height: 24px;">',
+                icon: '<img src="/images/icons/adventure_icon.png" alt="Adventure" style="width: 48px; height: 48px;">',
                 description: 'Discover amazing cities perfect for adventure enthusiasts with outdoor activities, hiking trails, and thrilling experiences.'
             },
             culture: {
                 name: 'Culture Route',
-                icon: '<img src="/images/icons/culture_icon.png" alt="Culture" style="width: 24px; height: 24px;">',
+                icon: '<img src="/images/icons/culture_icon.png" alt="Culture" style="width: 48px; height: 48px;">',
                 description: 'Explore cities rich in history, art, and cultural heritage with museums, historic sites, and architectural wonders.'
             },
             food: {
                 name: 'Food Route',
-                icon: '<img src="/images/icons/food_icon.png" alt="Food" style="width: 24px; height: 24px;">',
+                icon: '<img src="/images/icons/food_icon.png" alt="Food" style="width: 48px; height: 48px;">',
                 description: 'Savor the finest culinary experiences with local specialties, renowned restaurants, and food markets.'
             },
             'hidden-gems': {
                 name: 'Hidden Gems Route',
-                icon: '<img src="/images/icons/hidden_gem_icon.png" alt="Hidden Gems" style="width: 24px; height: 24px;">',
+                icon: '<img src="/images/icons/hidden_gem_icon.png" alt="Hidden Gems" style="width: 48px; height: 48px;">',
                 description: 'Uncover lesser-known treasures and authentic local experiences away from the typical tourist crowds.'
             }
         };
@@ -604,20 +604,48 @@ class EnhancedRouteResults {
         const fine = parseInt(distribution.fine) || parseInt(distribution.luxury) || 20;
 
         return `
-            <div class="metric-split">
-                <span title="Budget">€</span> ${budget}% |
-                <span title="Mid-range">€€</span> ${mid}% |
-                <span title="Fine dining">€€€</span> ${fine}%
+            <div class="price-distribution-grid">
+                <div class="price-segment">
+                    <span class="price-symbol" title="Budget">€</span>
+                    <span class="price-percent">${budget}%</span>
+                    <span class="price-label">Budget</span>
+                </div>
+                <div class="price-segment">
+                    <span class="price-symbol" title="Mid-range">€€</span>
+                    <span class="price-percent">${mid}%</span>
+                    <span class="price-label">Mid-range</span>
+                </div>
+                <div class="price-segment">
+                    <span class="price-symbol" title="Fine dining">€€€</span>
+                    <span class="price-percent">${fine}%</span>
+                    <span class="price-label">Fine</span>
+                </div>
             </div>
         `;
     }
 
     createExperienceTypes(types) {
         const exp = types || { dining: 60, markets: 25, classes: 15 };
-        const dining = exp.dining || exp.tastings || 60;
-        const markets = exp.markets || 25;
-        const classes = exp.classes || 15;
-        return `<span style="font-size: 0.85rem">Din ${dining}% | Mkt ${markets}% | Cls ${classes}%</span>`;
+        const dining = parseInt(exp.dining) || parseInt(exp.tastings) || 60;
+        const markets = parseInt(exp.markets) || 25;
+        const classes = parseInt(exp.classes) || parseInt(exp.cooking) || 15;
+
+        return `
+            <div class="experience-types-grid">
+                <div class="exp-segment">
+                    <span class="exp-percent">${dining}%</span>
+                    <span class="exp-label">Dining</span>
+                </div>
+                <div class="exp-segment">
+                    <span class="exp-percent">${markets}%</span>
+                    <span class="exp-label">Markets</span>
+                </div>
+                <div class="exp-segment">
+                    <span class="exp-percent">${classes}%</span>
+                    <span class="exp-label">Classes</span>
+                </div>
+            </div>
+        `;
     }
 
     createFocusSplit(split) {
