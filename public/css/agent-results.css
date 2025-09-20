@@ -2977,3 +2977,49 @@ body.map-fullscreen .spotlight-map-section.fullscreen {
   text-transform: uppercase;
   letter-spacing: 0.3px;
 }
+
+/* ===== RESTAURANT LIST STYLES ===== */
+.restaurant-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.restaurant-item {
+  display: flex;
+  align-items: center;
+}
+
+.restaurant-link {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 6px;
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.2s ease;
+  border: 1px solid rgba(0,0,0,0.08);
+  width: 100%;
+}
+
+.restaurant-link:hover {
+  background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
+  transform: translateX(2px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  border-color: rgba(0,0,0,0.12);
+}
+
+.restaurant-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #2c3e50;
+}
+
+.restaurant-city {
+  font-size: 0.75rem;
+  color: #6c757d;
+  font-style: italic;
+}

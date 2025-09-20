@@ -508,8 +508,8 @@ class EnhancedRouteResults {
     createFoodMetrics(metrics) {
         return `
             <div class="metric-item">
-                <div class="metric-label">Michelin Stars</div>
-                <div class="metric-value">${metrics.michelinStars || '3-5'} restaurants</div>
+                <div class="metric-label">Must-Try Restaurants</div>
+                <div class="metric-value">${this.createRestaurantList(metrics.restaurants)}</div>
             </div>
             <div class="metric-item">
                 <div class="metric-label">Book Ahead</div>
@@ -631,6 +631,32 @@ class EnhancedRouteResults {
                     <span class="price-percent">${fine}%</span>
                     <span class="price-label">Fine</span>
                 </div>
+            </div>
+        `;
+    }
+
+    createRestaurantList(restaurants) {
+        // Default restaurant recommendations if none provided
+        const defaultRestaurants = [
+            { name: "Le Bernardin", city: "Paris", link: "https://www.google.com/search?q=Le+Bernardin+Paris" },
+            { name: "Osteria Francescana", city: "Modena", link: "https://www.google.com/search?q=Osteria+Francescana+Modena" },
+            { name: "El Celler de Can Roca", city: "Girona", link: "https://www.google.com/search?q=El+Celler+de+Can+Roca+Girona" }
+        ];
+
+        const rests = restaurants || defaultRestaurants;
+
+        return `
+            <div class="restaurant-list">
+                ${rests.slice(0, 3).map(r => `
+                    <div class="restaurant-item">
+                        <a href="${r.link || `https://www.google.com/search?q=${encodeURIComponent(r.name + ' ' + (r.city || ''))}`}"
+                           target="_blank"
+                           class="restaurant-link">
+                            <span class="restaurant-name">${r.name}</span>
+                            ${r.city ? `<span class="restaurant-city">${r.city}</span>` : ''}
+                        </a>
+                    </div>
+                `).join('')}
             </div>
         `;
     }
