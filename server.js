@@ -190,14 +190,17 @@ function extractPriceDistribution(text) {
 }
 
 function extractExperienceTypes(text) {
-  const marketsMatch = text.match(/Markets?:?\s*(\d+)/i);
-  const classesMatch = text.match(/Classes?:?\s*(\d+)/i);
-  const tastingsMatch = text.match(/Tastings?:?\s*(\d+)/i);
+  // Look for percentages in the text, or default to reasonable distribution
+  const marketsMatch = text.match(/Markets?:?\s*(\d+)%?/i);
+  const classesMatch = text.match(/Classes?:?\s*(\d+)%?/i);
+  const tastingsMatch = text.match(/Tastings?:?\s*(\d+)%?/i);
+  const diningMatch = text.match(/Dining:?\s*(\d+)%?/i);
 
+  // Return percentages that make sense for food experiences
   return {
-    markets: marketsMatch ? parseInt(marketsMatch[1]) : 2,
-    classes: classesMatch ? parseInt(classesMatch[1]) : 1,
-    tastings: tastingsMatch ? parseInt(tastingsMatch[1]) : 3
+    dining: diningMatch ? parseInt(diningMatch[1]) : 60,
+    markets: marketsMatch ? parseInt(marketsMatch[1]) : 25,
+    classes: classesMatch ? parseInt(classesMatch[1]) : 15
   };
 }
 
