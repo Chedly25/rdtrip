@@ -29,7 +29,7 @@ class RoadTripPlanner {
             this.routeAgent = routeAgent;
             this.enhancedFeaturesAvailable = true;
         } catch (error) {
-            console.warn('⚠️ Enhanced AI features failed to load:', error);
+            console.warn('Enhanced AI features failed to load:', error);
             this.enhancedFeaturesAvailable = false;
         }
     }
