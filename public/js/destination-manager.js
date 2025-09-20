@@ -1699,7 +1699,11 @@ class DestinationManager {
         }
 
         if (Array.isArray(highlights)) {
-            return `<ul class="city-activities">${highlights.slice(0, 3).map(h => `<li>${h}</li>`).join('')}</ul>`;
+            return `<ul class="city-activities">${highlights.slice(0, 3).map(h => {
+                // Handle if h is an object or string
+                const text = typeof h === 'object' ? (h.activity || h.name || h.title || JSON.stringify(h)) : h;
+                return `<li>${text}</li>`;
+            }).join('')}</ul>`;
         }
 
         if (typeof highlights === 'string') {

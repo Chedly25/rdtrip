@@ -479,7 +479,7 @@ class EnhancedRouteResults {
             </div>
             <div class="metric-item">
                 <div class="metric-label">Equipment Cost</div>
-                <div class="metric-value">€${metrics.equipmentCost || '200-500'}</div>
+                <div class="metric-value">${metrics.equipmentCost || '€200-500'}</div>
             </div>
         `;
     }
@@ -523,7 +523,7 @@ class EnhancedRouteResults {
             </div>
             <div class="metric-item">
                 <div class="metric-label">Historical Periods</div>
-                <div class="metric-value">${metrics.historicalPeriods || '3-4'} eras</div>
+                <div class="metric-value">${this.formatHistoricalPeriods(metrics.historicalPeriods)}</div>
             </div>
             <div class="metric-item">
                 <div class="metric-label">Audio Guides</div>
@@ -584,18 +584,24 @@ class EnhancedRouteResults {
 
     createPriceDistribution(distribution) {
         const prices = distribution || { budget: 30, mid: 50, fine: 20 };
+        const budget = prices.budget || prices.street || 30;
+        const mid = prices.mid || prices.casual || 50;
+        const fine = prices.fine || 20;
         return `
             <div class="metric-split">
-                <span title="Budget">€</span> ${prices.budget}% |
-                <span title="Mid-range">€€</span> ${prices.mid}% |
-                <span title="Fine dining">€€€</span> ${prices.fine}%
+                <span title="Budget">€</span> ${budget}% |
+                <span title="Mid-range">€€</span> ${mid}% |
+                <span title="Fine dining">€€€</span> ${fine}%
             </div>
         `;
     }
 
     createExperienceTypes(types) {
         const exp = types || { dining: 60, markets: 25, classes: 15 };
-        return `<span style="font-size: 0.85rem">Din ${exp.dining}% | Mkt ${exp.markets}% | Cls ${exp.classes}%</span>`;
+        const dining = exp.dining || exp.tastings || 60;
+        const markets = exp.markets || 25;
+        const classes = exp.classes || 15;
+        return `<span style="font-size: 0.85rem">Din ${dining}% | Mkt ${markets}% | Cls ${classes}%</span>`;
     }
 
     createFocusSplit(split) {
@@ -614,6 +620,24 @@ class EnhancedRouteResults {
                 Cash ${payment.cash}% | Card ${payment.card}%
             </div>
         `;
+    }
+
+    formatHistoricalPeriods(periods) {
+        if (!periods) return '3-4 eras';
+        if (typeof periods === 'string') {
+            try {
+                const parsed = JSON.parse(periods);
+                if (Array.isArray(parsed)) {
+                    return `${parsed.length} eras`;
+                }
+            } catch (e) {
+                return periods.includes(',') ? `${periods.split(',').length} eras` : periods;
+            }
+        }
+        if (Array.isArray(periods)) {
+            return `${periods.length} eras`;
+        }
+        return periods;
     }
 
     getLevelClass(level, inverse = false) {
