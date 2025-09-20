@@ -116,17 +116,32 @@ class ZTLService {
 
         for (const city of route) {
             const cityKey = this.normalizeCityName(city);
+            console.log('Checking city:', city, '-> normalized:', cityKey);
+
             if (this.ztlCities[cityKey]) {
                 const cityZTL = this.ztlCities[cityKey];
+                console.log('Found ZTL zones for:', cityZTL.name);
 
                 for (const zone of cityZTL.zones) {
-                    const warning = this.checkZoneRestriction(zone, travelDate);
-                    if (warning) {
+                    // Always show ZTL zones, even if not currently active
+                    // This is more useful for trip planning
+                    const restriction = this.checkZoneRestriction(zone, travelDate);
+                    const hasSchedule = zone.schedule && Object.keys(zone.schedule).length > 0;
+
+                    if (hasSchedule) {
+                        // Get general schedule info
+                        const activedays = Object.entries(zone.schedule)
+                            .filter(([day, sched]) => sched !== 'closed')
+                            .map(([day, sched]) => `${day}: ${sched.start}-${sched.end}`)
+                            .join(', ');
+
                         ztlWarnings.push({
                             city: cityZTL.name,
                             zone: zone.name,
                             type: zone.type,
-                            ...warning,
+                            active: restriction ? restriction.active : false,
+                            schedule: restriction ? restriction.schedule : null,
+                            message: activedays || 'Schedule varies',
                             coordinates: zone.coordinates[0],
                             fee: zone.fee,
                             exemptions: zone.exemptions
@@ -136,6 +151,7 @@ class ZTLService {
             }
         }
 
+        console.log('ZTL warnings found:', ztlWarnings.length);
         return ztlWarnings;
     }
 
