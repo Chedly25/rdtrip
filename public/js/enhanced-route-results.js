@@ -250,9 +250,20 @@ class EnhancedRouteResults {
         } else if (Array.isArray(highlights)) {
             // Truncate each array item and limit to 3 items
             highlights = highlights.slice(0, 3).map(item => {
-                const str = String(item).trim();
+                // Handle objects in the array
+                let str;
+                if (typeof item === 'object' && item !== null) {
+                    str = item.activity || item.name || item.title || item.description || JSON.stringify(item);
+                } else {
+                    str = String(item);
+                }
+                str = str.trim();
                 return str.length > 40 ? str.substring(0, 37) + '...' : str;
             });
+        } else if (typeof highlights === 'object' && highlights !== null) {
+            // Handle single object
+            const text = highlights.activity || highlights.name || highlights.title || highlights.description || JSON.stringify(highlights);
+            highlights = [text.length > 40 ? text.substring(0, 37) + '...' : text];
         }
 
 
