@@ -148,7 +148,7 @@ class DestinationManager {
         const addBtn = document.getElementById('add-destination-top');
         if (addBtn) {
             addBtn.addEventListener('click', () => {
-                this.openAddModal();
+                this.showAddDestinationModal(this.destinations.length);
             });
         }
 
