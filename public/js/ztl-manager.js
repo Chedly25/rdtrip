@@ -12,6 +12,8 @@ class ZTLManager {
     // Check route for ZTL restrictions
     async checkRoute(cities, travelDate) {
         try {
+            console.log('ZTL Manager: Checking route for cities:', cities);
+
             const response = await fetch('/api/ztl/check-route', {
                 method: 'POST',
                 headers: {
@@ -24,6 +26,7 @@ class ZTLManager {
             });
 
             const data = await response.json();
+            console.log('ZTL Manager: Response from server:', data);
 
             if (data.success) {
                 this.ztlWarnings = data.warnings;
