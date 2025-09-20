@@ -41,12 +41,15 @@ class ZTLManager {
 
     // Display ZTL warnings in the UI
     displayWarnings(ztlData) {
+        console.log('displayWarnings called with:', ztlData);
+
         if (!ztlData.hasRestrictions) {
             this.hideWarnings();
             return;
         }
 
         const warningContainer = this.getOrCreateWarningContainer();
+        console.log('Warning container created/found:', warningContainer);
 
         const warningsHTML = `
             <div class="ztl-warning-card">
@@ -95,6 +98,11 @@ class ZTLManager {
 
         warningContainer.innerHTML = warningsHTML;
         warningContainer.style.display = 'block';
+
+        // Ensure visibility
+        warningContainer.style.visibility = 'visible';
+        warningContainer.style.opacity = '1';
+        console.log('ZTL warnings HTML injected and container shown');
     }
 
     // Create individual warning item
@@ -143,13 +151,32 @@ class ZTLManager {
             container.id = 'ztl-warnings';
             container.className = 'ztl-warnings-container';
 
-            // Insert after the route results or at the top of main content
+            // Try multiple insertion points
+            const resultsOverlay = document.getElementById('results-overlay');
             const routeResults = document.getElementById('routeResults');
-            if (routeResults) {
+            const spotlight = document.querySelector('.spotlight-container');
+            const mainContent = document.querySelector('.container');
+
+            if (resultsOverlay) {
+                // Insert at the top of results overlay
+                resultsOverlay.insertBefore(container, resultsOverlay.firstChild);
+                console.log('ZTL container inserted into results-overlay');
+            } else if (spotlight) {
+                // Insert at the top of spotlight
+                spotlight.insertBefore(container, spotlight.firstChild);
+                console.log('ZTL container inserted into spotlight');
+            } else if (routeResults) {
+                // Insert before route results
                 routeResults.parentNode.insertBefore(container, routeResults);
-            } else {
-                const mainContent = document.querySelector('.container') || document.body;
+                console.log('ZTL container inserted before routeResults');
+            } else if (mainContent) {
+                // Insert at the top of main content
                 mainContent.insertBefore(container, mainContent.firstChild);
+                console.log('ZTL container inserted at top of main container');
+            } else {
+                // Fallback to body
+                document.body.insertBefore(container, document.body.firstChild);
+                console.log('ZTL container inserted at top of body');
             }
         }
         return container;
