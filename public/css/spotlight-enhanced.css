@@ -223,6 +223,11 @@
     color: #EF4444;
 }
 
+/* Override and hide the old .remove-city-btn completely */
+.remove-city-btn {
+    display: none !important;
+}
+
 /* Trip Style Specific Colors */
 .spotlight-title[data-style="adventure"] {
     color: var(--adventure-color);
