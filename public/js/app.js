@@ -505,10 +505,31 @@ class RoadTripPlanner {
 
             // Extract cities from all route responses
             Object.values(routeData.routes || {}).forEach(route => {
-                if (route.waypoints) {
+                // Extract from waypoints array
+                if (route.waypoints && Array.isArray(route.waypoints)) {
                     route.waypoints.forEach(wp => {
-                        if (wp.city) allCities.push(wp.city);
+                        if (typeof wp === 'string') {
+                            allCities.push(wp);
+                        } else if (wp.city) {
+                            allCities.push(wp.city);
+                        } else if (wp.name) {
+                            allCities.push(wp.name);
+                        }
                     });
+                }
+
+                // Also check response text for city names
+                if (route.response) {
+                    const cityPattern = /(?:Stop \d+:|waypoint:|visiting|through|via)\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/g;
+                    const matches = route.response.match(cityPattern);
+                    if (matches) {
+                        matches.forEach(match => {
+                            const city = match.replace(/^.*?:\s*/, '').trim();
+                            if (city && city.length > 2) {
+                                allCities.push(city);
+                            }
+                        });
+                    }
                 }
             });
 
@@ -517,6 +538,8 @@ class RoadTripPlanner {
             if (destination) {
                 allCities.push(destination);
             }
+
+            console.log('Checking ZTL for cities:', allCities);
 
             // Check for ZTL zones
             if (allCities.length > 0) {
