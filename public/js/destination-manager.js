@@ -1752,9 +1752,7 @@ class DestinationManager {
                     </svg>
                 </button>
                 <button class="action-btn remove-btn" data-tooltip="Remove" onclick="destinationManager.removeDestination(${index})">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                        <path d="M2 4h12M5 4V2.5C5 2.22 5.22 2 5.5 2h5c.28 0 .5.22.5.5V4m2 0v9.5c0 .28-.22.5-.5.5h-9c-.28 0-.5-.22-.5-.5V4h10z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                    </svg>
+                    <img src="/images/trash.png" alt="Remove" style="width: 16px; height: 16px;">
                 </button>
             </div>
         `;

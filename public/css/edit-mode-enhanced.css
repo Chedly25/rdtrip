@@ -14,7 +14,7 @@
     align-items: center;
     gap: 8px;
     padding: 10px 16px;
-    background: linear-gradient(135deg, #10b981, #059669);
+    background: linear-gradient(135deg, #051226 0%, #021A0F 100%);
     color: white;
     border: none;
     border-radius: 8px;
@@ -22,12 +22,12 @@
     font-size: 14px;
     font-weight: 500;
     transition: all 0.3s ease;
-    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+    box-shadow: 0 2px 8px rgba(5, 18, 38, 0.3);
 }
 
 .add-destination-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+    box-shadow: 0 4px 12px rgba(5, 18, 38, 0.4);
 }
 
 .add-destination-btn svg {

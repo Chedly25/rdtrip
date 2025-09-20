@@ -41,7 +41,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: linear-gradient(135deg, #10b981, #059669);
+    background: linear-gradient(135deg, #051226 0%, #021A0F 100%);
     color: white;
 }
 
@@ -103,9 +103,9 @@
 
 #destination-search-input:focus {
     outline: none;
-    border-color: #10b981;
+    border-color: #051226;
     background: white;
-    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
+    box-shadow: 0 0 0 4px rgba(5, 18, 38, 0.1);
 }
 
 .search-icon {
@@ -195,9 +195,9 @@
 }
 
 .suggestion-chip:hover {
-    background: #10b981;
+    background: linear-gradient(135deg, #051226 0%, #021A0F 100%);
     color: white;
-    border-color: #10b981;
+    border-color: #051226;
     transform: translateY(-2px);
 }
 
@@ -233,14 +233,14 @@
 }
 
 .btn-add {
-    background: linear-gradient(135deg, #10b981, #059669);
+    background: linear-gradient(135deg, #051226 0%, #021A0F 100%);
     color: white;
     min-width: 120px;
 }
 
 .btn-add:hover:not(:disabled) {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+    box-shadow: 0 4px 12px rgba(5, 18, 38, 0.4);
 }
 
 .btn-add:disabled {
@@ -286,7 +286,7 @@
     width: 48px;
     height: 48px;
     border: 3px solid #e5e7eb;
-    border-top-color: #10b981;
+    border-top-color: #051226;
     border-radius: 50%;
     animation: spin 1s linear infinite;
     margin: 0 auto 16px;
@@ -317,7 +317,7 @@
 .success-icon {
     width: 64px;
     height: 64px;
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    background: linear-gradient(135deg, #051226 0%, #021A0F 100%);
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -389,12 +389,12 @@
 
 /* Accessibility */
 .modal-content:focus {
-    outline: 2px solid #10b981;
+    outline: 2px solid #051226;
     outline-offset: 2px;
 }
 
 button:focus-visible {
-    outline: 2px solid #10b981;
+    outline: 2px solid #051226;
     outline-offset: 2px;
 }
 

@@ -106,46 +106,67 @@
 
 /* City Cards Enhancement */
 .city-card {
+    position: relative;
     background: var(--surface-white);
     border: 1px solid rgba(0, 0, 0, 0.08);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
     transition: all 0.3s ease;
+    overflow: visible; /* Allow buttons to show */
 }
 
 .city-card:hover {
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-    transform: translateX(4px);
+    transform: translateX(2px);
 }
 
-/* Fix Overlapping Action Buttons */
+/* Ensure city image takes full width */
+.city-card .city-image-container {
+    width: 100%;
+    height: auto;
+}
+
+.city-card .city-image {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+/* Fix Action Buttons - Only visible on hover, properly positioned */
 .card-actions {
     position: absolute;
-    right: -60px; /* Increased spacing */
-    top: 50%;
-    transform: translateY(-50%);
+    right: 10px;
+    top: 10px;
     display: flex;
     flex-direction: column;
-    gap: 12px; /* Increased gap between buttons */
+    gap: 8px;
     opacity: 0;
     pointer-events: none;
     transition: all 0.3s ease;
     z-index: 100;
 }
 
-.city-card:hover .card-actions {
+/* Only show buttons when hovering over cities section */
+#cities .city-card:hover .card-actions {
     opacity: 1;
     pointer-events: all;
-    right: -55px;
+}
+
+/* Hide buttons by default in other sections */
+#overview .card-actions,
+#stay-dine .card-actions,
+#itinerary .card-actions {
+    display: none !important;
 }
 
 /* Action Button Styles */
 .action-btn {
-    width: 40px; /* Slightly larger */
-    height: 40px;
-    border-radius: 8px;
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    background: var(--surface-white);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -155,7 +176,8 @@
 
 .action-btn:hover {
     transform: scale(1.1);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    background: rgba(255, 255, 255, 1);
 }
 
 /* Drag Handle Specific */
@@ -177,19 +199,24 @@
 
 /* Remove Button with Trash Icon */
 .action-btn.remove-btn {
-    background: #FEF2F2;
-    border-color: #FCA5A5;
+    background: rgba(255, 255, 255, 0.95);
+    border-color: rgba(239, 68, 68, 0.3);
 }
 
 .action-btn.remove-btn:hover {
-    background: #FEE2E2;
-    border-color: #F87171;
+    background: #FEF2F2;
+    border-color: #EF4444;
 }
 
 .action-btn.remove-btn img {
-    width: 18px;
-    height: 18px;
-    opacity: 0.8;
+    width: 16px;
+    height: 16px;
+}
+
+.action-btn.remove-btn svg {
+    width: 16px;
+    height: 16px;
+    color: #EF4444;
 }
 
 /* Trip Style Specific Colors */
@@ -346,9 +373,8 @@
     border-left: 1px solid rgba(0, 0, 0, 0.08);
 }
 
-/* Cities Container Spacing Fix */
+/* Cities Container - No extra padding needed */
 .cities-container {
-    padding-right: 80px; /* Extra padding for action buttons */
     position: relative;
 }
 
