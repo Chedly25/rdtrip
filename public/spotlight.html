@@ -20,6 +20,7 @@
     <link rel="stylesheet" href="css/spotlight.css?v=1.1.0">
     <link rel="stylesheet" href="css/navigation-buttons.css?v=1.1.0">
     <link rel="stylesheet" href="css/destination-manager.css?v=1.0.0">
+    <link rel="stylesheet" href="css/edit-mode-enhanced.css?v=1.0.0">
     <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet">
 </head>
 <body>
@@ -92,7 +93,15 @@
 
                         <!-- Cities Overview Section -->
                         <section id="cities" class="panel-section">
-                            <h2>Cities & Highlights</h2>
+                            <div class="cities-header">
+                                <h2>Cities & Highlights</h2>
+                                <button id="add-destination-top" class="add-destination-btn">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                        <path d="M8 3V13M3 8H13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                    </svg>
+                                    Add New Destination
+                                </button>
+                            </div>
                             <div id="citiesContainer" class="cities-container">
                                 <!-- Cities will be populated by JavaScript -->
                             </div>

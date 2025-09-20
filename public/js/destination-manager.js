@@ -79,14 +79,17 @@ class DestinationManager {
 
     initializeUI() {
 
-        // Add edit mode toggle button
-        this.addEditModeButton();
+        // No longer need edit mode button - always editable
+        // this.addEditModeButton(); // Removed for seamless editing
 
         // Enhance existing city cards with controls
         this.enhanceCityCards();
 
         // Create add destination modal
         this.createAddDestinationModal();
+
+        // Setup always-on editing features
+        this.setupAlwaysEditableFeatures();
 
     }
 
@@ -139,73 +142,35 @@ class DestinationManager {
         }
     }
 
-    addEditModeButton() {
-        const headerNav = document.querySelector('.header-nav');
-
-        if (!headerNav) {
-            console.warn('❌ EDIT BUTTON: Header nav not found!');
-            return;
+    // Removed edit mode button - users can now edit directly
+    setupAlwaysEditableFeatures() {
+        // Add event listener for the top Add Destination button
+        const addBtn = document.getElementById('add-destination-top');
+        if (addBtn) {
+            addBtn.addEventListener('click', () => {
+                this.showAddDestinationModal(this.destinations.length);
+            });
         }
 
-        // Check if button already exists
-        const existingButton = document.getElementById('edit-route-btn');
-        if (existingButton) {
-            return;
-        }
-
-        const editButton = document.createElement('button');
-        editButton.id = 'edit-route-btn';
-        editButton.className = 'edit-route-button';
-        editButton.innerHTML = `
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-            </svg>
-            <span>Edit Route</span>
-        `;
-
-        editButton.addEventListener('click', () => this.toggleEditMode());
-
-        // Insert after the back button in the header nav
-        const backButton = document.querySelector('.back-button');
-
-        if (backButton) {
-            backButton.insertAdjacentElement('afterend', editButton);
-        } else {
-            headerNav.insertBefore(editButton, headerNav.firstChild);
-        }
-
-    }
-
-    toggleEditMode() {
-        this.isEditing = !this.isEditing;
-        const editButton = document.getElementById('edit-route-btn');
+        // Enable drag and drop by default
         const citiesContainer = document.getElementById('citiesContainer');
+        if (citiesContainer) {
+            // Always enable drag and drop
+            this.isEditing = true; // Always in editing mode
+            citiesContainer.classList.add('edit-mode');
+            this.setupDragAndDrop();
 
-        if (this.isEditing) {
-            editButton.classList.add('editing');
-            editButton.innerHTML = `
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2z"></path>
-                    <path d="M9 9l6 6m0-6l-6 6"></path>
-                </svg>
-                <span>Done Editing</span>
-            `;
-            citiesContainer?.classList.add('edit-mode');
-            this.enterEditMode();
-        } else {
-            editButton.classList.remove('editing');
-            editButton.innerHTML = `
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                </svg>
-                <span>Edit Route</span>
-            `;
-            citiesContainer?.classList.remove('edit-mode');
-            this.exitEditMode();
+            // Add hover effects setup
+            this.setupHoverEffects();
         }
     }
+
+    setupHoverEffects() {
+        // This will be called after cards are rendered
+        // To add "Add stop here" buttons between cards
+    }
+
+    // Removed toggleEditMode - editing is now always available
 
     enterEditMode() {
 
@@ -1642,11 +1607,41 @@ class DestinationManager {
             }
         });
 
-        // Re-render all city and landmark cards
+        // Re-render all city and landmark cards with "Add stop here" buttons
         allWaypoints.forEach((dest, index) => {
+            // Add "Add stop here" button before each card (except the first)
+            if (index > 0) {
+                const addStopContainer = document.createElement('div');
+                addStopContainer.className = 'add-stop-container';
+                addStopContainer.innerHTML = `
+                    <button class="add-stop-btn" onclick="destinationManager.showAddDestinationModal(${index})">
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor" style="margin-right: 4px;">
+                            <path d="M7 2v10M2 7h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                        </svg>
+                        Add stop here
+                    </button>
+                `;
+                container.appendChild(addStopContainer);
+            }
+
             const cityCard = this.createCityCard(dest, index);
             container.appendChild(cityCard);
         });
+
+        // Add final "Add stop here" button at the end
+        if (allWaypoints.length > 0) {
+            const addStopContainer = document.createElement('div');
+            addStopContainer.className = 'add-stop-container';
+            addStopContainer.innerHTML = `
+                <button class="add-stop-btn" onclick="destinationManager.showAddDestinationModal(${allWaypoints.length})">
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor" style="margin-right: 4px;">
+                        <path d="M7 2v10M2 7h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                    Add destination
+                </button>
+            `;
+            container.appendChild(addStopContainer);
+        }
 
         // Add click event listeners for modal functionality
         container.querySelectorAll('.city-card').forEach(card => {
@@ -1724,7 +1719,36 @@ class DestinationManager {
                 <h3>${destination.name}</h3>
                 ${highlights}
             </div>
+            <div class="card-actions">
+                <button class="action-btn drag-handle" data-tooltip="Drag to reorder" draggable="true">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <circle cx="4" cy="4" r="1.5"/>
+                        <circle cx="12" cy="4" r="1.5"/>
+                        <circle cx="4" cy="8" r="1.5"/>
+                        <circle cx="12" cy="8" r="1.5"/>
+                        <circle cx="4" cy="12" r="1.5"/>
+                        <circle cx="12" cy="12" r="1.5"/>
+                    </svg>
+                </button>
+                <button class="action-btn remove-btn" data-tooltip="Remove" onclick="destinationManager.removeDestination(${index})">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path d="M2 4h12M5 4V2.5C5 2.22 5.22 2 5.5 2h5c.28 0 .5.22.5.5V4m2 0v9.5c0 .28-.22.5-.5.5h-9c-.28 0-.5-.22-.5-.5V4h10z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                </button>
+            </div>
         `;
+
+        // Make the card draggable via the drag handle
+        const dragHandle = cityCard.querySelector('.drag-handle');
+        if (dragHandle) {
+            dragHandle.addEventListener('dragstart', (e) => this.handleDragStart(e, index));
+            dragHandle.addEventListener('dragend', (e) => this.handleDragEnd(e));
+        }
+
+        // Add drag over events to the card itself
+        cityCard.addEventListener('dragover', (e) => this.handleDragOver(e));
+        cityCard.addEventListener('drop', (e) => this.handleDrop(e, index));
+        cityCard.addEventListener('dragleave', () => cityCard.classList.remove('drag-over'));
 
         return cityCard;
     }
