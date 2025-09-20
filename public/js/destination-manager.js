@@ -1612,8 +1612,38 @@ class DestinationManager {
         // Clear container completely
         container.innerHTML = '';
 
-        // Re-render all city cards with current destinations
-        this.destinations.forEach((dest, index) => {
+        // Get landmarks from spotlightData if available
+        const spotlightData = JSON.parse(localStorage.getItem('spotlightData') || '{}');
+        const landmarksToRender = spotlightData.addedLandmarks || [];
+
+        // Combine destinations (cities) with landmarks for rendering
+        const allWaypoints = [...this.destinations];
+
+        // Add landmarks that aren't already in destinations
+        landmarksToRender.forEach(landmark => {
+            // Check if landmark is not already in destinations array
+            const exists = allWaypoints.some(dest =>
+                dest.name === landmark.name &&
+                (dest.type === 'landmark' || dest.isLandmark)
+            );
+
+            if (!exists) {
+                // Add landmark with proper structure for rendering
+                allWaypoints.push({
+                    name: landmark.name,
+                    coordinates: landmark.coordinates || [landmark.lng, landmark.lat],
+                    description: landmark.description || `Historic landmark in ${landmark.city || 'this area'}`,
+                    highlights: landmark.highlights || [],
+                    type: 'landmark',
+                    isLandmark: true,
+                    city: landmark.city,
+                    fromSpotlight: true // Mark as coming from spotlight to differentiate
+                });
+            }
+        });
+
+        // Re-render all city and landmark cards
+        allWaypoints.forEach((dest, index) => {
             const cityCard = this.createCityCard(dest, index);
             container.appendChild(cityCard);
         });
