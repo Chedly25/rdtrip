@@ -2123,9 +2123,15 @@ const tripRoutes = require('./routes/trips');
 app.use('/api/auth', authRoutes);
 app.use('/api/trips', tripRoutes);
 
-app.listen(PORT, () => {
-  console.log(`🚗 Road Trip Planner MVP running on port ${PORT}`);
-  console.log(`📍 Loaded ${europeanLandmarks.length} European landmarks`);
-  console.log(`🔐 Authentication system active`);
-  console.log(`🗄️ Connected to MongoDB`);
-});
+// For local development
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log(`🚗 Road Trip Planner MVP running on port ${PORT}`);
+    console.log(`📍 Loaded ${europeanLandmarks.length} European landmarks`);
+    console.log(`🔐 Authentication system active`);
+    console.log(`🗄️ Connected to MongoDB`);
+  });
+}
+
+// Export for Vercel
+module.exports = app;

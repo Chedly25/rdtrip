@@ -1,36 +1,43 @@
 const mongoose = require('mongoose');
 
+// Cached connection for serverless environments
+let cached = global.mongoose;
+
+if (!cached) {
+    cached = global.mongoose = { conn: null, promise: null };
+}
+
 const connectDB = async () => {
-    try {
-        // MongoDB connection string - you can use local MongoDB or MongoDB Atlas
+    // Return cached connection if available (for serverless)
+    if (cached.conn) {
+        return cached.conn;
+    }
+
+    if (!cached.promise) {
         const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/roadtrip-planner';
 
-        await mongoose.connect(mongoUri, {
+        const opts = {
             useNewUrlParser: true,
-            useUnifiedTopology: true
-        });
+            useUnifiedTopology: true,
+            bufferCommands: false, // Disable buffering for serverless
+            maxPoolSize: 10, // Limit connection pool for serverless
+        };
 
+        cached.promise = mongoose.connect(mongoUri, opts).then((mongoose) => {
+            return mongoose;
+        });
+    }
+
+    try {
+        cached.conn = await cached.promise;
         console.log('MongoDB Connected Successfully');
-
-        // Handle connection events
-        mongoose.connection.on('error', err => {
-            console.error('MongoDB connection error:', err);
-        });
-
-        mongoose.connection.on('disconnected', () => {
-            console.log('MongoDB disconnected');
-        });
-
-        // Graceful shutdown
-        process.on('SIGINT', async () => {
-            await mongoose.connection.close();
-            console.log('MongoDB connection closed through app termination');
-            process.exit(0);
-        });
     } catch (error) {
         console.error('MongoDB connection failed:', error);
-        process.exit(1);
+        cached.promise = null;
+        throw error;
     }
+
+    return cached.conn;
 };
 
 module.exports = connectDB;
