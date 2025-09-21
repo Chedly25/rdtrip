@@ -1,15 +1,37 @@
 const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
+const session = require('express-session');
 require('dotenv').config();
 const ZTLService = require('./services/ztl-service');
+const connectDB = require('./config/database');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 const ztlService = new ZTLService();
 
-app.use(cors());
+// Connect to MongoDB
+connectDB();
+
+app.use(cors({
+    origin: process.env.CLIENT_URL || 'http://localhost:3000',
+    credentials: true
+}));
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Session configuration for auth
+app.use(session({
+    secret: process.env.SESSION_SECRET || 'your-secret-key-change-in-production',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        secure: process.env.NODE_ENV === 'production',
+        httpOnly: true,
+        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    }
+}));
+
 app.use(express.static('public'));
 
 const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY;
@@ -2093,7 +2115,17 @@ app.get('/api/ztl/zones', (req, res) => {
   });
 });
 
+// Import routes
+const authRoutes = require('./routes/auth');
+const tripRoutes = require('./routes/trips');
+
+// Use routes
+app.use('/api/auth', authRoutes);
+app.use('/api/trips', tripRoutes);
+
 app.listen(PORT, () => {
   console.log(`🚗 Road Trip Planner MVP running on port ${PORT}`);
   console.log(`📍 Loaded ${europeanLandmarks.length} European landmarks`);
+  console.log(`🔐 Authentication system active`);
+  console.log(`🗄️ Connected to MongoDB`);
 });

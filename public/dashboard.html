@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Dashboard - Road Trip Planner</title>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="logo.png">
+
+    <!-- Existing Styles -->
+    <link rel="stylesheet" href="css/premium-design-system.css">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/auth.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <header class="dashboard-header">
+        <div class="header-container">
+            <div class="header-left">
+                <a href="/" class="logo">
+                    <img src="logo.png" alt="RoadTrip" height="40">
+                </a>
+                <nav class="main-nav">
+                    <a href="/" class="nav-link">Plan Trip</a>
+                    <a href="/explore" class="nav-link">Explore</a>
+                    <a href="/dashboard" class="nav-link active">My Trips</a>
+                </nav>
+            </div>
+
+            <div class="header-right">
+                <button class="notification-btn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                        <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z" fill="currentColor"/>
+                    </svg>
+                    <span class="notification-badge">3</span>
+                </button>
+
+                <div class="user-menu">
+                    <button class="user-menu-toggle">
+                        <div class="user-avatar">
+                            <span id="userInitial">U</span>
+                        </div>
+                        <span class="user-display-name">Username</span>
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+                            <path d="M2 4L6 8L10 4"/>
+                        </svg>
+                    </button>
+                    <div class="user-menu-dropdown">
+                        <a href="/profile">My Profile</a>
+                        <a href="/settings">Settings</a>
+                        <div class="divider"></div>
+                        <button onclick="authManager.logout()">Sign Out</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Dashboard Content -->
+    <main class="dashboard-main">
+        <div class="dashboard-container">
+            <!-- Dashboard Stats -->
+            <section class="dashboard-stats">
+                <div class="stat-card">
+                    <div class="stat-icon trips">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z" fill="currentColor"/>
+                        </svg>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="tripsCount">0</h3>
+                        <p>Trips Created</p>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon saved">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <path d="M17 3H7c-1.1 0-1.99.9-1.99 2L5 21l7-3 7 3V5c0-1.1-.9-2-2-2z" fill="currentColor"/>
+                        </svg>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="savedCount">0</h3>
+                        <p>Saved Trips</p>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon distance">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="currentColor"/>
+                        </svg>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="distanceCount">0 km</h3>
+                        <p>Total Distance</p>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon followers">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" fill="currentColor"/>
+                        </svg>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="followersCount">0</h3>
+                        <p>Followers</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tabs -->
+            <div class="dashboard-tabs">
+                <button class="tab-btn active" data-tab="my-trips">My Trips</button>
+                <button class="tab-btn" data-tab="saved">Saved</button>
+                <button class="tab-btn" data-tab="drafts">Drafts</button>
+                <button class="tab-btn" data-tab="shared">Shared with Me</button>
+            </div>
+
+            <!-- Filters and Actions -->
+            <div class="dashboard-controls">
+                <div class="filters">
+                    <select class="filter-select" id="sortBy">
+                        <option value="-createdAt">Newest First</option>
+                        <option value="createdAt">Oldest First</option>
+                        <option value="-stats.views">Most Viewed</option>
+                        <option value="-stats.likes">Most Liked</option>
+                    </select>
+
+                    <select class="filter-select" id="filterPrivacy">
+                        <option value="">All Privacy</option>
+                        <option value="public">Public</option>
+                        <option value="private">Private</option>
+                        <option value="unlisted">Unlisted</option>
+                    </select>
+                </div>
+
+                <button class="create-trip-btn" onclick="window.location.href='/'">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                        <path d="M10 5v10m-5-5h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                    Create New Trip
+                </button>
+            </div>
+
+            <!-- Trips Grid -->
+            <section id="tripsGrid" class="trips-grid">
+                <!-- Trip cards will be loaded here -->
+                <div class="loading-spinner">
+                    <div class="spinner"></div>
+                    <p>Loading your trips...</p>
+                </div>
+            </section>
+
+            <!-- Empty State -->
+            <section id="emptyState" class="empty-state" style="display: none;">
+                <img src="/images/icons/empty-trips.svg" alt="No trips">
+                <h3>No trips yet</h3>
+                <p>Start planning your first adventure!</p>
+                <button class="create-trip-btn" onclick="window.location.href='/'">
+                    Plan Your First Trip
+                </button>
+            </section>
+
+            <!-- Pagination -->
+            <div class="pagination" id="pagination">
+                <!-- Pagination buttons will be loaded here -->
+            </div>
+        </div>
+    </main>
+
+    <!-- Trip Options Menu -->
+    <div id="tripOptionsMenu" class="trip-options-menu" style="display: none;">
+        <button class="option-btn" data-action="edit">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M11.5 1.5l3 3-9 9-3.5.5.5-3.5 9-9zm-10 12v2h14v-2H1.5z"/>
+            </svg>
+            Edit
+        </button>
+        <button class="option-btn" data-action="share">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M12 6c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2c0 .2 0 .3.1.5L6.6 6.6c-.4-.4-.9-.6-1.6-.6-1.1 0-2 .9-2 2s.9 2 2 2c.6 0 1.2-.3 1.6-.6l3.5 2.1c-.1.2-.1.3-.1.5 0 1.1.9 2 2 2s2-.9 2-2-.9-2-2-2c-.6 0-1.2.3-1.6.6L6.9 8.5c.1-.2.1-.3.1-.5s0-.3-.1-.5l3.5-2.1c.4.3 1 .6 1.6.6z"/>
+            </svg>
+            Share
+        </button>
+        <button class="option-btn" data-action="duplicate">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M11 1H3c-1.1 0-2 .9-2 2v9h2V3h8V1zm2 4H7c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h6c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 10H7V7h6v8z"/>
+            </svg>
+            Duplicate
+        </button>
+        <button class="option-btn danger" data-action="delete">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M2 4v10c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V4H2zm3 9V7h2v6H5zm4 0V7h2v6H9zM4 2h3l1-1h2l1 1h3v2H2V2z"/>
+            </svg>
+            Delete
+        </button>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/dashboard.js"></script>
+</body>
+</html>
