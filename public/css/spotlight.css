@@ -718,7 +718,8 @@
     transform: scaleX(1);
 }
 
-.panel-section .city-image-container {
+/* DISABLED - modern-cities.css handles this now */
+/* .panel-section .city-image-container {
     width: 100% !important;
     height: 120px;
     background: var(--surface-elevated);
@@ -726,7 +727,7 @@
     position: relative;
     flex-shrink: 0;
     display: block !important;
-}
+} */
 
 .city-image-container .city-image,
 .panel-section .city-image-container img {

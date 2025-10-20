@@ -119,8 +119,8 @@
     transform: translateX(2px);
 }
 
-/* Ensure city images display properly */
-.city-card .city-image-container {
+/* Ensure city images display properly - DISABLED - modern-cities.css handles this */
+/* .city-card .city-image-container {
     width: 100% !important;
     height: 120px !important;
     overflow: hidden;
@@ -132,7 +132,7 @@
     height: 100% !important;
     object-fit: cover !important;
     display: block;
-}
+} */
 
 /* Fix Action Buttons - Only visible on hover, properly positioned */
 .city-card .card-actions {
