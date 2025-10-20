@@ -1,5 +1,5 @@
 /* ===================================================================
-   CITY CARDS - FINAL FIX - Images fill full width
+   CITY CARDS - Images MUST fill full width, text VISIBLE
    =================================================================== */
 
 /* Container */
@@ -11,7 +11,7 @@
     background: transparent !important;
 }
 
-/* City Card */
+/* City Card - CRITICAL: overflow hidden on card itself */
 #citiesContainer .city-card {
     background: white !important;
     border-radius: 20px !important;
@@ -34,7 +34,7 @@
     box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15) !important;
 }
 
-/* Image Container - THIS IS THE KEY */
+/* Image Container - IMAGES FILL THIS COMPLETELY */
 #citiesContainer .city-card .city-image-container {
     width: 100% !important;
     height: 300px !important;
@@ -46,10 +46,9 @@
     flex-shrink: 0 !important;
     margin: 0 !important;
     padding: 0 !important;
-    border-radius: 0 !important;
 }
 
-/* Images - FILL EVERYTHING */
+/* Images - ABSOLUTE positioning fills container edge to edge */
 #citiesContainer .city-card .city-image-container img {
     width: 100% !important;
     height: 100% !important;
@@ -103,7 +102,7 @@
     text-shadow: 0 2px 12px rgba(0, 0, 0, 0.4) !important;
 }
 
-/* City Content */
+/* City Content - TEXT IS VISIBLE */
 #citiesContainer .city-card .city-content {
     padding: 32px !important;
     background: white !important;
@@ -113,37 +112,41 @@
     gap: 20px !important;
 }
 
-/* City Name */
-#citiesContainer .city-card h3 {
+/* City Name - SHOW IT */
+#citiesContainer .city-card h3,
+#citiesContainer .city-card .city-content h3 {
     font-size: 32px !important;
     font-weight: 900 !important;
     color: #0f172a !important;
     margin: 0 !important;
     line-height: 1.1 !important;
     transition: color 0.3s ease !important;
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
 }
 
 #citiesContainer .city-card:hover h3 {
     color: #667eea !important;
 }
 
-/* Hide descriptions */
-#citiesContainer .city-card .city-description,
-#citiesContainer .city-card p:not(.no-activities) {
-    display: none !important;
-}
+/* DON'T hide descriptions - they don't exist in this structure anyway */
 
-/* Activities */
-#citiesContainer .city-activities {
+/* Activities - SHOW THEM */
+#citiesContainer .city-activities,
+#citiesContainer .city-card .city-activities {
     list-style: none !important;
     padding: 0 !important;
     margin: 0 !important;
     display: flex !important;
     flex-direction: column !important;
     gap: 12px !important;
+    visibility: visible !important;
+    opacity: 1 !important;
 }
 
-#citiesContainer .city-activities li {
+#citiesContainer .city-activities li,
+#citiesContainer .city-card .city-activities li {
     font-size: 17px !important;
     color: #475569 !important;
     padding: 16px 20px 16px 50px !important;
@@ -152,9 +155,13 @@
     position: relative !important;
     font-weight: 500 !important;
     transition: all 0.25s ease !important;
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
 }
 
-#citiesContainer .city-activities li::before {
+#citiesContainer .city-activities li::before,
+#citiesContainer .city-card .city-activities li::before {
     content: '' !important;
     position: absolute !important;
     left: 20px !important;
@@ -183,16 +190,11 @@
     font-style: italic !important;
     text-align: center !important;
     padding: 20px 0 !important;
+    display: block !important;
+    visibility: visible !important;
 }
 
-/* ADD DESTINATION BUTTON - SHOW IT */
-#citiesContainer .cities-header {
-    display: flex !important;
-    justify-content: space-between !important;
-    align-items: center !important;
-    margin-bottom: 32px !important;
-}
-
+/* ADD DESTINATION BUTTON */
 #citiesContainer .add-destination-btn,
 #add-destination-top {
     display: inline-flex !important;
@@ -210,7 +212,6 @@
     box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4) !important;
     visibility: visible !important;
     opacity: 1 !important;
-    pointer-events: auto !important;
 }
 
 #citiesContainer .add-destination-btn:hover,
@@ -219,13 +220,7 @@
     box-shadow: 0 8px 20px rgba(102, 126, 234, 0.5) !important;
 }
 
-#citiesContainer .add-destination-btn svg,
-#add-destination-top svg {
-    width: 16px !important;
-    height: 16px !important;
-}
-
-/* HIDE add-stop-btn that appears on cards */
+/* HIDE add-stop-btn */
 .add-stop-btn {
     display: none !important;
 }
@@ -285,6 +280,10 @@
     #citiesContainer .city-card .city-image-container {
         height: 260px !important;
         min-height: 260px !important;
+    }
+
+    #citiesContainer .city-card h3 {
+        font-size: 28px !important;
     }
 }
 
