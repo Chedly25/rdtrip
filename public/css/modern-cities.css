@@ -1,0 +1,436 @@
+/* Modern Cities Container - Advanced Smooth Interactions */
+/* This file provides state-of-the-art hover effects with zero layout shift */
+
+:root {
+    --city-card-transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    --city-card-hover-lift: -8px;
+    --button-transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Cities Container - Modern Grid with proper gaps */
+.cities-container {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important;
+    gap: 24px !important;
+    padding: 24px !important;
+    background: rgba(255, 255, 255, 0.4) !important;
+    backdrop-filter: blur(10px) !important;
+    border-radius: 20px !important;
+    border: 1px solid rgba(0, 0, 0, 0.06) !important;
+    position: relative;
+}
+
+/* City Card - Modern Design with smooth transitions */
+.city-card {
+    background: rgba(255, 255, 255, 0.95) !important;
+    backdrop-filter: blur(25px) !important;
+    border-radius: 16px !important;
+    overflow: hidden !important;
+    border: 2px solid rgba(0, 0, 0, 0.08) !important;
+    transition: var(--city-card-transition) !important;
+    cursor: pointer !important;
+    box-shadow:
+        0 4px 12px rgba(0, 0, 0, 0.08),
+        0 2px 4px rgba(0, 0, 0, 0.04) !important;
+    position: relative !important;
+    height: auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    /* CRITICAL: Use transform for movement to avoid layout shift */
+    will-change: transform, box-shadow !important;
+    transform: translateY(0) translateZ(0) !important;
+}
+
+/* Top accent bar - smooth reveal */
+.city-card::before {
+    content: '' !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: 4px !important;
+    background: var(--agent-gradient, linear-gradient(135deg, #667eea 0%, #764ba2 100%)) !important;
+    transform: scaleX(0) !important;
+    transform-origin: left !important;
+    transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+    z-index: 10 !important;
+}
+
+/* Hover state - smooth lift with shadow enhancement */
+.city-card:hover {
+    transform: translateY(var(--city-card-hover-lift)) translateZ(0) scale(1.02) !important;
+    box-shadow:
+        0 20px 40px rgba(0, 0, 0, 0.15),
+        0 10px 20px rgba(0, 0, 0, 0.1),
+        0 0 0 1px rgba(var(--agent-primary-rgb, 102, 126, 234), 0.3) !important;
+    border-color: rgba(var(--agent-primary-rgb, 102, 126, 234), 0.3) !important;
+}
+
+.city-card:hover::before {
+    transform: scaleX(1) !important;
+}
+
+/* Active/Click state */
+.city-card:active {
+    transform: translateY(-4px) scale(0.98) !important;
+    transition: all 0.15s ease !important;
+}
+
+/* Image Container - Fixed size to prevent layout shift */
+.city-card .city-image-container {
+    width: 100% !important;
+    height: 180px !important;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    overflow: hidden !important;
+    position: relative !important;
+    flex-shrink: 0 !important;
+    display: block !important;
+}
+
+/* Image - Smooth zoom on hover using transform */
+.city-card .city-image-container img,
+.city-card .city-image-container .city-image {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    display: block !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    opacity: 0 !important;
+    transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    transform: scale(1) translateZ(0) !important;
+    will-change: transform, opacity !important;
+}
+
+.city-card .city-image-container img.loaded,
+.city-card .city-image-container .city-image.loaded {
+    opacity: 1 !important;
+}
+
+/* Smooth image zoom on card hover */
+.city-card:hover .city-image-container img,
+.city-card:hover .city-image-container .city-image {
+    transform: scale(1.1) translateZ(0) !important;
+}
+
+/* No-image placeholder - modern gradient */
+.city-card .no-image-placeholder {
+    width: 100% !important;
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: linear-gradient(135deg,
+        rgba(var(--agent-primary-rgb, 102, 126, 234), 0.1) 0%,
+        rgba(var(--agent-primary-rgb, 102, 126, 234), 0.2) 100%) !important;
+    transition: var(--city-card-transition) !important;
+}
+
+.city-card:hover .no-image-placeholder {
+    background: linear-gradient(135deg,
+        rgba(var(--agent-primary-rgb, 102, 126, 234), 0.2) 0%,
+        rgba(var(--agent-primary-rgb, 102, 126, 234), 0.3) 100%) !important;
+}
+
+.no-image-icon {
+    font-size: 48px !important;
+    margin-bottom: 8px !important;
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+}
+
+.city-card:hover .no-image-icon {
+    transform: scale(1.2) translateY(-4px) !important;
+}
+
+.no-image-text {
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    color: var(--text-main, #1a1a1a) !important;
+    text-align: center !important;
+    padding: 0 16px !important;
+}
+
+/* City Content - Fixed padding to prevent layout shift */
+.city-card .city-content {
+    padding: 20px !important;
+    background: rgba(255, 255, 255, 0.8) !important;
+    backdrop-filter: blur(10px) !important;
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+    position: relative !important;
+}
+
+/* City Title */
+.city-card .city-content h3 {
+    font-size: 18px !important;
+    font-weight: 700 !important;
+    color: var(--text-main, #1a1a1a) !important;
+    margin: 0 !important;
+    letter-spacing: -0.025em !important;
+    line-height: 1.3 !important;
+    transition: color 0.3s ease !important;
+}
+
+.city-card:hover .city-content h3 {
+    color: var(--agent-primary-color, #667eea) !important;
+}
+
+/* Activities List - Smooth stagger animation */
+.city-card .city-activities {
+    list-style: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    flex: 1 !important;
+}
+
+.city-card .city-activities li {
+    font-size: 13px !important;
+    color: var(--text-main, #1a1a1a) !important;
+    padding: 8px 12px !important;
+    background: rgba(var(--agent-primary-rgb, 102, 126, 234), 0.06) !important;
+    border-radius: 8px !important;
+    position: relative !important;
+    padding-left: 28px !important;
+    font-weight: 500 !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    line-height: 1.4 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    /* Use transform for smooth slide */
+    transform: translateX(0) !important;
+    will-change: transform, background !important;
+}
+
+/* Bullet point */
+.city-card .city-activities li::before {
+    content: '•' !important;
+    position: absolute !important;
+    left: 12px !important;
+    font-weight: 700 !important;
+    color: var(--agent-primary-color, #667eea) !important;
+    top: 50% !important;
+    transform: translateY(-50%) scale(1) !important;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+}
+
+/* Staggered hover effect on activities */
+.city-card:hover .city-activities li {
+    background: rgba(var(--agent-primary-rgb, 102, 126, 234), 0.12) !important;
+    transform: translateX(4px) !important;
+}
+
+.city-card:hover .city-activities li::before {
+    transform: translateY(-50%) scale(1.3) !important;
+}
+
+/* Stagger animation delays */
+.city-card:hover .city-activities li:nth-child(1) {
+    transition-delay: 0.05s !important;
+}
+
+.city-card:hover .city-activities li:nth-child(2) {
+    transition-delay: 0.1s !important;
+}
+
+.city-card:hover .city-activities li:nth-child(3) {
+    transition-delay: 0.15s !important;
+}
+
+/* No activities message */
+.city-card .no-activities {
+    font-style: italic !important;
+    color: var(--text-secondary, #666) !important;
+    font-size: 13px !important;
+    margin: 0 !important;
+}
+
+/* Add Stop Button - Absolutely positioned overlay to prevent layout shift */
+.add-stop-btn {
+    position: absolute !important;
+    bottom: 16px !important;
+    left: 50% !important;
+    transform: translateX(-50%) translateY(60px) !important;
+    background: linear-gradient(135deg,
+        var(--agent-primary-color, #667eea) 0%,
+        color-mix(in srgb, var(--agent-primary-color, #667eea) 80%, #000 20%) 100%) !important;
+    color: white !important;
+    border: none !important;
+    padding: 10px 20px !important;
+    border-radius: 24px !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    cursor: pointer !important;
+    z-index: 20 !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transition: var(--button-transition) !important;
+    box-shadow:
+        0 8px 20px rgba(var(--agent-primary-rgb, 102, 126, 234), 0.4),
+        0 4px 10px rgba(0, 0, 0, 0.1) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    white-space: nowrap !important;
+    will-change: transform, opacity !important;
+    /* Backdrop blur for glassmorphism */
+    backdrop-filter: blur(10px) saturate(180%) !important;
+}
+
+/* Show button on hover with smooth slide-up */
+.city-card:hover .add-stop-btn {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    transform: translateX(-50%) translateY(0) !important;
+}
+
+/* Button hover state */
+.add-stop-btn:hover {
+    transform: translateX(-50%) translateY(-4px) scale(1.05) !important;
+    box-shadow:
+        0 12px 28px rgba(var(--agent-primary-rgb, 102, 126, 234), 0.5),
+        0 6px 14px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Button active state */
+.add-stop-btn:active {
+    transform: translateX(-50%) translateY(-2px) scale(0.98) !important;
+    transition: all 0.1s ease !important;
+}
+
+/* Landmark Card - Special styling */
+.city-card.landmark-card {
+    border: 2px solid rgba(147, 51, 234, 0.3) !important;
+    background: linear-gradient(135deg,
+        rgba(248, 244, 255, 0.95) 0%,
+        rgba(230, 217, 255, 0.95) 100%) !important;
+}
+
+.city-card.landmark-card::before {
+    background: linear-gradient(135deg, #9333EA 0%, #7E22CE 100%) !important;
+}
+
+.city-card.landmark-card:hover {
+    border-color: rgba(147, 51, 234, 0.5) !important;
+    box-shadow:
+        0 20px 40px rgba(147, 51, 234, 0.2),
+        0 10px 20px rgba(0, 0, 0, 0.1),
+        0 0 0 1px rgba(147, 51, 234, 0.4) !important;
+}
+
+/* Loading State */
+.cities-loading {
+    grid-column: 1 / -1 !important;
+    text-align: center !important;
+    padding: 60px 24px !important;
+}
+
+.loading-message {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 16px !important;
+}
+
+.loading-spinner {
+    font-size: 36px !important;
+    animation: spin 2s linear infinite, pulse 1.5s ease-in-out infinite !important;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.1);
+        opacity: 0.8;
+    }
+}
+
+.loading-message p {
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    color: var(--text-soft, #666) !important;
+    margin: 0 !important;
+}
+
+/* Dragging State */
+.city-card.dragging {
+    opacity: 0.5 !important;
+    transform: scale(0.95) rotate(3deg) !important;
+    cursor: grabbing !important;
+}
+
+.city-card.drag-over {
+    border-color: var(--agent-primary-color, #667eea) !important;
+    border-style: dashed !important;
+    background: rgba(var(--agent-primary-rgb, 102, 126, 234), 0.1) !important;
+}
+
+/* Responsive Design - Maintain smoothness on all devices */
+@media (max-width: 1024px) {
+    .cities-container {
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)) !important;
+        gap: 20px !important;
+        padding: 20px !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .cities-container {
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)) !important;
+        gap: 16px !important;
+        padding: 16px !important;
+    }
+
+    .city-card .city-image-container {
+        height: 150px !important;
+    }
+
+    :root {
+        --city-card-hover-lift: -6px;
+    }
+}
+
+@media (max-width: 480px) {
+    .cities-container {
+        grid-template-columns: 1fr !important;
+        gap: 16px !important;
+    }
+
+    .city-card .city-image-container {
+        height: 200px !important;
+    }
+}
+
+/* Performance optimization - Hardware acceleration */
+.city-card,
+.city-card .city-image-container img,
+.city-card .city-activities li,
+.add-stop-btn {
+    transform: translateZ(0) !important;
+    backface-visibility: hidden !important;
+    -webkit-font-smoothing: subpixel-antialiased !important;
+}
+
+/* Reduced motion support - Accessibility */
+@media (prefers-reduced-motion: reduce) {
+    .city-card,
+    .city-card *,
+    .add-stop-btn {
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+    }
+}
