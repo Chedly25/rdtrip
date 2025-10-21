@@ -1,5 +1,4 @@
-import { forwardRef, ButtonHTMLAttributes } from 'react'
-import { motion } from 'framer-motion'
+import { forwardRef, type ButtonHTMLAttributes } from 'react'
 import { cn } from '../../lib/utils'
 import { Loader2 } from 'lucide-react'
 
@@ -30,7 +29,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     }
 
     return (
-      <motion.button
+      <button
         ref={ref}
         className={cn(
           baseStyles,
@@ -39,8 +38,6 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           className
         )}
         disabled={disabled || isLoading}
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
         {...props}
       >
         {isLoading ? (
@@ -51,7 +48,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         ) : (
           children
         )}
-      </motion.button>
+      </button>
     )
   }
 )

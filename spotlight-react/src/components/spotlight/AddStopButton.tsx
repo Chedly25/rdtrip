@@ -6,7 +6,7 @@ interface AddStopButtonProps {
   position: 'before' | 'after'
 }
 
-export function AddStopButton({ onAdd, position }: AddStopButtonProps) {
+export function AddStopButton({ onAdd, position: _position }: AddStopButtonProps) {
   return (
     <motion.button
       onClick={onAdd}
