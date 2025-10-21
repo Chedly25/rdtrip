@@ -2,16 +2,6 @@
    BEAUTIFUL CITY CARDS - Final Clean Design
    =================================================================== */
 
-/* HIDE ALL ADD STOP BUTTONS - They're ugly and cause movement */
-.add-stop-btn,
-#citiesContainer .add-stop-btn,
-.city-card .add-stop-btn {
-    display: none !important;
-    visibility: hidden !important;
-    opacity: 0 !important;
-    pointer-events: none !important;
-}
-
 /* Container - Clean modern grid */
 #citiesContainer {
     display: grid !important;
