@@ -363,41 +363,51 @@
     -webkit-font-smoothing: antialiased !important;
 }
 
-/* EMERGENCY FIX - Force text to be visible with maximum specificity */
-#cities #citiesContainer .city-card .city-content h3,
-#cities .cities-container .city-card .city-content h3,
-.panel-section#cities #citiesContainer .city-card .city-content h3 {
+/* ULTIMATE NUCLEAR OPTION - DEBUG MODE */
+/* Force EVERYTHING to be visible with bright colors to debug */
+#citiesContainer * {
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+#citiesContainer h3,
+#citiesContainer .city-content h3 {
     display: block !important;
     visibility: visible !important;
     opacity: 1 !important;
-    color: #000000 !important;
-    font-size: 24px !important;
-    font-weight: 700 !important;
-    margin-bottom: 10px !important;
-}
-
-#cities #citiesContainer .city-card .city-content .city-activities,
-#cities .cities-container .city-card .city-content .city-activities,
-.panel-section#cities #citiesContainer .city-card .city-content .city-activities {
-    display: flex !important;
-    flex-direction: column !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-    list-style: none !important;
-    padding: 0 !important;
-    gap: 8px !important;
-}
-
-#cities #citiesContainer .city-card .city-content .city-activities li,
-#cities .cities-container .city-card .city-content .city-activities li,
-.panel-section#cities #citiesContainer .city-card .city-content .city-activities li {
-    display: block !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-    color: #333333 !important;
-    font-size: 14px !important;
-    padding: 10px 12px 10px 32px !important;
-    background: #f0f0f0 !important;
-    border-radius: 8px !important;
+    color: red !important;  /* RED so we can see it for sure */
+    background: yellow !important;  /* Yellow background to make it obvious */
+    font-size: 30px !important;
+    font-weight: 900 !important;
+    margin: 10px !important;
+    padding: 10px !important;
+    border: 3px solid blue !important;
+    z-index: 9999 !important;
     position: relative !important;
+}
+
+#citiesContainer ul,
+#citiesContainer .city-activities {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    list-style: disc !important;
+    margin: 10px !important;
+    padding: 20px !important;
+    background: lightgreen !important;
+    border: 3px solid purple !important;
+}
+
+#citiesContainer li,
+#citiesContainer .city-activities li {
+    display: list-item !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    color: blue !important;
+    background: white !important;
+    font-size: 18px !important;
+    font-weight: bold !important;
+    margin: 5px !important;
+    padding: 10px !important;
+    border: 2px solid red !important;
 }
