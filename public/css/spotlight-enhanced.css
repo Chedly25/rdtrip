@@ -318,7 +318,6 @@
 .add-stop-btn:hover {
     background: var(--surface-light);
     border-color: var(--primary-dark);
-    transform: scale(1.05);
 }
 
 /* Custom Dropdown Enhancement */
