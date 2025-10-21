@@ -64,7 +64,7 @@
     min-width: 100% !important;
     max-width: 100% !important;
     height: 300px !important;
-    background: red !important; /* DEBUG: Make it red to see container bounds */
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
     overflow: hidden !important;
     position: relative !important;
     flex-shrink: 0 !important;
