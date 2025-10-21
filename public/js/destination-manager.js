@@ -162,6 +162,9 @@ class DestinationManager {
 
             // Add hover effects setup
             this.setupHoverEffects();
+
+            // Enter edit mode to add the insert buttons
+            this.enterEditMode();
         }
     }
 
