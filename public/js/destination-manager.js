@@ -407,34 +407,21 @@ class DestinationManager {
     }
 
     addInsertButtons() {
-        console.log('=== ADD INSERT BUTTONS DEBUG ===');
         const citiesContainer = document.getElementById('citiesContainer');
-        if (!citiesContainer) {
-            console.log('❌ citiesContainer not found');
-            return;
-        }
-        console.log('✅ citiesContainer found:', citiesContainer);
+        if (!citiesContainer) return;
 
         const cityCards = citiesContainer.querySelectorAll('.city-card');
-        console.log('Found city cards:', cityCards.length);
 
-        let buttonsCreated = 0;
         cityCards.forEach((card, index) => {
             const addBtn = document.createElement('button');
             addBtn.className = 'add-stop-btn';
             addBtn.innerHTML = '+ Add Stop Here';
-            addBtn.style.backgroundColor = 'red'; // DEBUG: Make it visible
-            addBtn.style.padding = '20px';
-            addBtn.style.display = 'block';
-            addBtn.style.width = '100%';
             // FIX: Use index + 1 for "Add Stop Here" to insert AFTER this city
             addBtn.onclick = () => this.showAddDestinationModal(index + 1);
 
             // Insert after each card except the last one
             if (index < cityCards.length - 1) {
                 card.insertAdjacentElement('afterend', addBtn);
-                buttonsCreated++;
-                console.log(`✅ Created button after card ${index}`);
             }
         });
 
@@ -442,33 +429,8 @@ class DestinationManager {
         const firstAddBtn = document.createElement('button');
         firstAddBtn.className = 'add-stop-btn';
         firstAddBtn.innerHTML = '+ Add Stop Here';
-        firstAddBtn.style.backgroundColor = 'red'; // DEBUG: Make it visible
-        firstAddBtn.style.padding = '20px';
-        firstAddBtn.style.display = 'block';
-        firstAddBtn.style.width = '100%';
         firstAddBtn.onclick = () => this.showAddDestinationModal(0);
         citiesContainer.insertBefore(firstAddBtn, citiesContainer.firstChild);
-        buttonsCreated++;
-        console.log('✅ Created first button at beginning');
-
-        console.log(`Total buttons created: ${buttonsCreated}`);
-
-        // Verify buttons exist in DOM
-        setTimeout(() => {
-            const allButtons = document.querySelectorAll('.add-stop-btn');
-            console.log(`Buttons in DOM after creation: ${allButtons.length}`);
-            allButtons.forEach((btn, i) => {
-                const styles = window.getComputedStyle(btn);
-                console.log(`Button ${i} computed styles:`, {
-                    display: styles.display,
-                    visibility: styles.visibility,
-                    opacity: styles.opacity,
-                    width: styles.width,
-                    height: styles.height
-                });
-            });
-        }, 100);
-        console.log('================================');
     }
 
     removeDestination(index) {
