@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import * as api from '../services/api'
-import type { City, Waypoint } from '../types'
+import type { Waypoint } from '../types'
 
 // Search cities hook
 export function useSearchCities(query: string, enabled = true) {
