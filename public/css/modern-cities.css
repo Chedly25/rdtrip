@@ -58,6 +58,8 @@
 /* Image Container - FULL WIDTH IMAGES */
 #citiesContainer .city-card .city-image-container {
     width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
     height: 300px !important;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
     overflow: hidden !important;
@@ -67,6 +69,8 @@
     border-radius: 0 !important;
     margin: 0 !important;
     padding: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
 }
 
 /* Images - Take FULL SPACE */
@@ -75,7 +79,9 @@
 #citiesContainer .city-image-container img,
 .city-card .city-image-container img {
     width: 100% !important;
+    min-width: 100% !important;
     height: 100% !important;
+    min-height: 100% !important;
     object-fit: cover !important;
     object-position: center !important;
     display: block !important;
@@ -84,6 +90,8 @@
     left: 0 !important;
     right: 0 !important;
     bottom: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
     opacity: 0 !important;
     transition: opacity 0.4s ease, transform 0.4s ease !important;
     transform: scale(1) !important;
