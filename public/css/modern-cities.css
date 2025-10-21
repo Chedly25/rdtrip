@@ -129,31 +129,40 @@
 
 /* City Content - This gets padding */
 .panel-section #citiesContainer .city-card .city-content,
-#citiesContainer .city-card .city-content {
-    padding: 32px !important;
+#citiesContainer .city-card .city-content,
+.city-card .city-content,
+.city-content {
+    padding: 24px !important;
     background: white !important;
     flex: 1 !important;
     display: flex !important;
     flex-direction: column !important;
-    gap: 20px !important;
+    gap: 16px !important;
     margin: 0 !important;
+    min-height: 120px !important;
+    visibility: visible !important;
+    opacity: 1 !important;
 }
 
 /* City Name - VISIBLE */
 .panel-section #citiesContainer .city-card h3,
 .panel-section #citiesContainer .city-card .city-content h3,
 #citiesContainer .city-card h3,
-#citiesContainer .city-card .city-content h3 {
-    font-size: 32px !important;
-    font-weight: 900 !important;
-    color: #0f172a !important;
-    margin: 0 !important;
+#citiesContainer .city-card .city-content h3,
+.city-card h3,
+.city-content h3 {
+    font-size: 28px !important;
+    font-weight: 800 !important;
+    color: #1a1a1a !important;
+    margin: 0 0 12px 0 !important;
     padding: 0 !important;
-    line-height: 1.1 !important;
+    line-height: 1.2 !important;
     transition: color 0.3s ease !important;
     display: block !important;
     visibility: visible !important;
     opacity: 1 !important;
+    text-rendering: optimizeLegibility !important;
+    -webkit-font-smoothing: antialiased !important;
 }
 
 .panel-section #citiesContainer .city-card:hover h3,
@@ -165,26 +174,31 @@
 .panel-section #citiesContainer .city-activities,
 .panel-section #citiesContainer .city-card .city-activities,
 #citiesContainer .city-activities,
-#citiesContainer .city-card .city-activities {
+#citiesContainer .city-card .city-activities,
+.city-activities,
+.city-card .city-activities {
     list-style: none !important;
     padding: 0 !important;
     margin: 0 !important;
     display: flex !important;
     flex-direction: column !important;
-    gap: 12px !important;
+    gap: 10px !important;
     visibility: visible !important;
     opacity: 1 !important;
+    max-width: 100% !important;
 }
 
 .panel-section #citiesContainer .city-activities li,
 .panel-section #citiesContainer .city-card .city-activities li,
 #citiesContainer .city-activities li,
-#citiesContainer .city-card .city-activities li {
-    font-size: 17px !important;
-    color: #475569 !important;
-    padding: 16px 20px 16px 50px !important;
-    background: #f8fafc !important;
-    border-radius: 12px !important;
+#citiesContainer .city-card .city-activities li,
+.city-activities li,
+.city-card .city-activities li {
+    font-size: 15px !important;
+    color: #374151 !important;
+    padding: 14px 18px 14px 40px !important;
+    background: #f3f4f6 !important;
+    border-radius: 10px !important;
     position: relative !important;
     font-weight: 500 !important;
     transition: all 0.25s ease !important;
@@ -192,6 +206,9 @@
     visibility: visible !important;
     opacity: 1 !important;
     margin: 0 !important;
+    line-height: 1.4 !important;
+    text-rendering: optimizeLegibility !important;
+    -webkit-font-smoothing: antialiased !important;
 }
 
 .panel-section #citiesContainer .city-activities li::before,
