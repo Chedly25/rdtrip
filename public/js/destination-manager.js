@@ -410,6 +410,9 @@ class DestinationManager {
         const citiesContainer = document.getElementById('citiesContainer');
         if (!citiesContainer) return;
 
+        // Remove any existing add-stop buttons first to prevent duplicates
+        document.querySelectorAll('.add-stop-btn').forEach(btn => btn.remove());
+
         const cityCards = citiesContainer.querySelectorAll('.city-card');
 
         cityCards.forEach((card, index) => {
