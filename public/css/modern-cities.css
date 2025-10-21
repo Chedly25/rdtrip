@@ -2,13 +2,22 @@
    BEAUTIFUL CITY CARDS - Final Clean Design
    =================================================================== */
 
-/* Fix add-stop-btn positioning - always visible but subtle */
+/* Add-stop buttons: invisible until hover, no movement */
 #citiesContainer .add-stop-btn,
 .add-stop-btn {
     position: static !important;
     transform: none !important;
     left: auto !important;
     top: auto !important;
+    opacity: 0 !important;
+    transition: opacity 0.25s ease, background 0.25s ease, border-color 0.25s ease !important;
+}
+
+/* Show button on hover - smooth fade in, no movement */
+#citiesContainer .add-stop-btn:hover,
+.add-stop-btn:hover {
+    opacity: 1 !important;
+    transform: none !important;
 }
 
 /* Container - Clean modern grid */
