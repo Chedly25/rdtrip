@@ -1110,6 +1110,14 @@ class SpotlightController {
         // Final update - remove any loading indicators
         container.innerHTML = html;
 
+        // DEBUG: Log to check if HTML was generated
+        console.log('=== CITIES DISPLAY DEBUG ===');
+        console.log('Total waypoints:', waypoints.length);
+        console.log('HTML length:', html.length);
+        console.log('Container children count:', container.children.length);
+        console.log('First card HTML:', container.children[0]?.outerHTML);
+        console.log('===========================');
+
         // Restore landmark cards by re-appending them
         existingLandmarkCards.forEach(landmarkCard => {
             container.appendChild(landmarkCard);
