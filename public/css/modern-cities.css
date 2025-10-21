@@ -362,3 +362,42 @@
     backface-visibility: hidden !important;
     -webkit-font-smoothing: antialiased !important;
 }
+
+/* EMERGENCY FIX - Force text to be visible with maximum specificity */
+#cities #citiesContainer .city-card .city-content h3,
+#cities .cities-container .city-card .city-content h3,
+.panel-section#cities #citiesContainer .city-card .city-content h3 {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    color: #000000 !important;
+    font-size: 24px !important;
+    font-weight: 700 !important;
+    margin-bottom: 10px !important;
+}
+
+#cities #citiesContainer .city-card .city-content .city-activities,
+#cities .cities-container .city-card .city-content .city-activities,
+.panel-section#cities #citiesContainer .city-card .city-content .city-activities {
+    display: flex !important;
+    flex-direction: column !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    list-style: none !important;
+    padding: 0 !important;
+    gap: 8px !important;
+}
+
+#cities #citiesContainer .city-card .city-content .city-activities li,
+#cities .cities-container .city-card .city-content .city-activities li,
+.panel-section#cities #citiesContainer .city-card .city-content .city-activities li {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    color: #333333 !important;
+    font-size: 14px !important;
+    padding: 10px 12px 10px 32px !important;
+    background: #f0f0f0 !important;
+    border-radius: 8px !important;
+    position: relative !important;
+}
