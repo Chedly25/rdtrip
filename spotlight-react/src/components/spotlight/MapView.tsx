@@ -2,23 +2,10 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import Map, { Marker, Source, Layer, NavigationControl } from 'react-map-gl'
 import { Eye, EyeOff } from 'lucide-react'
 import { useSpotlightStore } from '../../stores/spotlightStore'
+import { europeanLandmarks } from '../../data/landmarks'
 import 'mapbox-gl/dist/mapbox-gl.css'
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiY2hlZGx5MjUiLCJhIjoiY21lbW1qeHRoMHB5azJsc2VuMWJld2tlYSJ9.0jfOiOXCh0VN5ZjJ5ab7MQ'
-
-// European landmarks with proper icons
-const europeanLandmarks = [
-  { id: 1, name: 'Eiffel Tower', lat: 48.8584, lng: 2.2945, icon: '🗼', type: 'monument' },
-  { id: 2, name: 'Sagrada Familia', lat: 41.4036, lng: 2.1744, icon: '⛪', type: 'cultural' },
-  { id: 3, name: 'Mont Saint-Michel', lat: 48.6361, lng: -1.5115, icon: '🏰', type: 'historic' },
-  { id: 4, name: 'Colosseum', lat: 41.8902, lng: 12.4922, icon: '🏛️', type: 'historic' },
-  { id: 5, name: 'Arc de Triomphe', lat: 48.8738, lng: 2.2950, icon: '🎭', type: 'monument' },
-  { id: 6, name: 'Notre Dame', lat: 48.8530, lng: 2.3499, icon: '⛪', type: 'cultural' },
-  { id: 7, name: 'Matterhorn', lat: 45.9763, lng: 7.6586, icon: '⛰️', type: 'natural' },
-  { id: 8, name: 'Neuschwanstein Castle', lat: 47.5576, lng: 10.7498, icon: '🏰', type: 'historic' },
-  { id: 9, name: 'Leaning Tower of Pisa', lat: 43.7230, lng: 10.3966, icon: '🗼', type: 'monument' },
-  { id: 10, name: 'Big Ben', lat: 51.4994, lng: -0.1245, icon: '🕰️', type: 'monument' },
-]
 
 export function MapView() {
   const { waypoints } = useSpotlightStore()
@@ -206,9 +193,13 @@ export function MapView() {
               className="group relative cursor-pointer transition-transform hover:scale-125 hover:z-50"
             >
               <div className="flex flex-col items-center">
-                {/* Large Icon Background */}
-                <div className="flex h-12 w-12 items-center justify-center rounded-full border-3 border-white bg-gradient-to-br from-orange-400 to-red-500 shadow-2xl">
-                  <span className="text-3xl drop-shadow-lg">{landmark.icon}</span>
+                {/* Large Image Icon */}
+                <div className="flex h-12 w-12 items-center justify-center rounded-full border-3 border-white bg-white shadow-2xl overflow-hidden">
+                  <img
+                    src={landmark.image_url}
+                    alt={landmark.name}
+                    className="h-full w-full object-cover"
+                  />
                 </div>
                 {/* Small indicator dot */}
                 <div className="mt-1 h-2 w-2 rounded-full bg-orange-500 shadow-lg" />
@@ -232,7 +223,13 @@ export function MapView() {
           >
             <div className="rounded-lg border-2 border-orange-500 bg-white p-3 shadow-2xl">
               <div className="mb-2 flex items-center gap-2">
-                <span className="text-2xl">{selectedLandmark.icon}</span>
+                <div className="h-10 w-10 flex-shrink-0 overflow-hidden rounded-full border-2 border-orange-400">
+                  <img
+                    src={selectedLandmark.image_url}
+                    alt={selectedLandmark.name}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
                 <div>
                   <h3 className="font-bold text-gray-900">{selectedLandmark.name}</h3>
                   <p className="text-xs text-gray-600 capitalize">{selectedLandmark.type}</p>
@@ -285,8 +282,12 @@ export function MapView() {
             <span className="font-medium text-gray-700">Your Destinations</span>
           </div>
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border-3 border-white bg-gradient-to-br from-orange-400 to-red-500 text-2xl shadow-lg">
-              🏰
+            <div className="h-10 w-10 flex-shrink-0 overflow-hidden rounded-full border-3 border-white bg-white shadow-lg">
+              <img
+                src="/images/landmarks/eiffel_tower.png"
+                alt="Landmark example"
+                className="h-full w-full object-cover"
+              />
             </div>
             <span className="font-medium text-gray-700">Famous Landmarks</span>
           </div>
