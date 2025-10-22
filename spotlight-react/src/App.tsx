@@ -115,15 +115,21 @@ function AppContent() {
   const { loadFromLocalStorage, routeData } = useRouteDataStore()
 
   useEffect(() => {
+    console.log('AppContent mounted, loading from localStorage...')
     // Load route data from localStorage
     loadFromLocalStorage()
   }, [loadFromLocalStorage])
 
   useEffect(() => {
+    console.log('Route data changed:', routeData)
     // Extract and set waypoints when route data is loaded
     if (routeData) {
+      console.log('Extracting waypoints from route data...')
       const waypoints = extractWaypoints(routeData)
+      console.log('Extracted waypoints:', waypoints)
       setWaypoints(waypoints)
+    } else {
+      console.warn('No route data available in localStorage!')
     }
   }, [routeData, setWaypoints])
 

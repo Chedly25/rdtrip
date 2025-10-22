@@ -26,15 +26,23 @@ export const useRouteDataStore = create<RouteDataState>()(
       setRouteData: (data) => set({ routeData: data }),
 
       loadFromLocalStorage: () => {
-        // Try localStorage first (as set by the main app), then sessionStorage as fallback
-        const data = localStorage.getItem('spotlightData') || sessionStorage.getItem('spotlightData')
+        console.log('Loading from localStorage/sessionStorage...')
+        const localData = localStorage.getItem('spotlightData')
+        const sessionData = sessionStorage.getItem('spotlightData')
+        console.log('localStorage spotlightData:', localData ? 'EXISTS' : 'NULL')
+        console.log('sessionStorage spotlightData:', sessionData ? 'EXISTS' : 'NULL')
+
+        const data = localData || sessionData
         if (data) {
           try {
             const parsed = JSON.parse(data)
+            console.log('Parsed spotlight data:', parsed)
             set({ routeData: parsed })
           } catch (error) {
             console.error('Failed to parse spotlight data:', error)
           }
+        } else {
+          console.error('No spotlightData found in localStorage or sessionStorage!')
         }
       },
     }),
