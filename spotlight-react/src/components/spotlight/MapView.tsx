@@ -25,11 +25,13 @@ export function MapView() {
   // Fetch route from Mapbox Directions API
   const fetchRoute = useCallback(async () => {
     if (waypoints.length < 2) {
+      console.log('Not enough waypoints to fetch route:', waypoints.length)
       setRouteGeometry(null)
       return
     }
 
     setIsLoadingRoute(true)
+    console.log('Fetching route for waypoints:', waypoints)
 
     try {
       // Build coordinates string for Mapbox Directions API
@@ -38,14 +40,20 @@ export function MapView() {
         .map(wp => `${wp.coordinates!.lng},${wp.coordinates!.lat}`)
         .join(';')
 
+      console.log('Mapbox API coordinates:', coordinates)
+
       const response = await fetch(
         `https://api.mapbox.com/directions/v5/mapbox/driving/${coordinates}?geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`
       )
 
       const data = await response.json()
+      console.log('Mapbox API response:', data)
 
       if (data.routes && data.routes[0]) {
+        console.log('Setting route geometry:', data.routes[0].geometry)
         setRouteGeometry(data.routes[0].geometry)
+      } else {
+        console.warn('No routes found in Mapbox response')
       }
     } catch (error) {
       console.error('Error fetching route:', error)
@@ -178,17 +186,23 @@ export function MapView() {
                       className="mx-auto h-3 w-1"
                       style={{ background: `linear-gradient(to bottom, ${theme.primary}, ${theme.primary})` }}
                     />
-                    <div className="mx-auto h-2 w-2 rounded-full bg-purple-900 shadow-lg" />
+                    <div className="mx-auto h-2 w-2 rounded-full shadow-lg" style={{ backgroundColor: theme.primary }} />
                   </div>
 
                   {/* Tooltip */}
-                  <div className="pointer-events-none absolute -top-16 whitespace-nowrap rounded-lg border-2 border-primary-500 bg-white px-4 py-2 text-sm font-bold text-gray-900 shadow-2xl opacity-0 transition-opacity group-hover:opacity-100">
+                  <div
+                    className="pointer-events-none absolute -top-16 whitespace-nowrap rounded-lg border-2 bg-white px-4 py-2 text-sm font-bold text-gray-900 shadow-2xl opacity-0 transition-opacity group-hover:opacity-100"
+                    style={{ borderColor: theme.primary }}
+                  >
                     <div className="text-center">
-                      <div className="text-primary-600">Stop #{index + 1}</div>
+                      <div style={{ color: theme.primary }}>Stop #{index + 1}</div>
                       <div>{waypoint.name}</div>
                     </div>
                     {/* Arrow */}
-                    <div className="absolute -bottom-2 left-1/2 h-3 w-3 -translate-x-1/2 rotate-45 border-b-2 border-r-2 border-primary-500 bg-white" />
+                    <div
+                      className="absolute -bottom-2 left-1/2 h-3 w-3 -translate-x-1/2 rotate-45 border-b-2 border-r-2 bg-white"
+                      style={{ borderColor: theme.primary }}
+                    />
                   </div>
                 </div>
               </div>
@@ -249,7 +263,8 @@ export function MapView() {
               </div>
               <button
                 onClick={() => setSelectedLandmark(null)}
-                className="w-full rounded bg-primary-500 px-3 py-1 text-xs font-semibold text-white hover:bg-primary-600"
+                className="w-full rounded px-3 py-1 text-xs font-semibold text-white transition-opacity hover:opacity-80"
+                style={{ backgroundColor: theme.primary }}
               >
                 Close
               </button>
@@ -288,7 +303,10 @@ export function MapView() {
         <h3 className="mb-4 text-base font-bold text-gray-900">Map Legend</h3>
         <div className="space-y-3 text-sm">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border-4 border-white bg-gradient-to-br from-primary-500 to-purple-600 text-lg shadow-lg">
+            <div
+              className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border-4 border-white text-lg shadow-lg"
+              style={{ background: `linear-gradient(to bottom right, ${theme.primary}, ${theme.secondary})` }}
+            >
               📍
             </div>
             <span className="font-medium text-gray-700">Your Destinations</span>
