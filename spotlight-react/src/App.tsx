@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { SpotlightPage } from './components/spotlight/SpotlightPage'
+import { SpotlightPageComplete } from './components/spotlight/SpotlightPageComplete'
 import { useSpotlightStore } from './stores/spotlightStore'
 import type { Waypoint } from './types'
 
@@ -14,7 +14,7 @@ const queryClient = new QueryClient({
   },
 })
 
-// Mock data for testing
+// Mock data for testing with coordinates for map
 const mockWaypoints: Waypoint[] = [
   {
     id: '1',
@@ -26,6 +26,7 @@ const mockWaypoints: Waypoint[] = [
       'Explore medieval architecture'
     ],
     imageUrl: 'https://images.unsplash.com/photo-1499856871958-5b9627545d1a?w=800',
+    coordinates: { lat: 44.8892, lng: 1.2164 },
   },
   {
     id: '2',
@@ -37,6 +38,7 @@ const mockWaypoints: Waypoint[] = [
       'Visit Basilica of Notre-Dame'
     ],
     imageUrl: 'https://images.unsplash.com/photo-1524396309943-e03f5249f002?w=800',
+    coordinates: { lat: 45.7640, lng: 4.8357 },
   },
   {
     id: '3',
@@ -48,6 +50,7 @@ const mockWaypoints: Waypoint[] = [
       'Mountain paragliding'
     ],
     imageUrl: 'https://images.unsplash.com/photo-1513581166391-887a96ddeafd?w=800',
+    coordinates: { lat: 45.8992, lng: 6.1294 },
   },
 ]
 
@@ -59,7 +62,7 @@ function AppContent() {
     setWaypoints(mockWaypoints)
   }, [setWaypoints])
 
-  return <SpotlightPage />
+  return <SpotlightPageComplete />
 }
 
 function App() {
