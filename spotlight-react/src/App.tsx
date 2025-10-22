@@ -65,7 +65,7 @@ function extractWaypoints(routeData: any): Waypoint[] {
               activities: waypoint.activities || ['Explore the city', 'Try local cuisine'],
               imageUrl: waypoint.imageUrl,
               coordinates: waypoint.coordinates
-                ? { lat: waypoint.coordinates[0], lng: waypoint.coordinates[1] }
+                ? { lat: waypoint.coordinates[1], lng: waypoint.coordinates[0] }
                 : { lat: 44.0 + Math.random() * 6.0, lng: 2.0 + Math.random() * 8.0 },
             })
           }
@@ -121,17 +121,32 @@ function AppContent() {
   }, [loadFromLocalStorage])
 
   useEffect(() => {
-    console.log('Route data changed:', routeData)
-    // Extract and set waypoints when route data is loaded
+    console.log('Route data changed:', routeData);
     if (routeData) {
-      console.log('Extracting waypoints from route data...')
-      const waypoints = extractWaypoints(routeData)
-      console.log('Extracted waypoints:', waypoints)
-      setWaypoints(waypoints)
+      let waypointsToSet: Waypoint[] = [];
+      if (routeData.waypoints && routeData.waypoints.length > 0) {
+        console.log('Using pre-extracted waypoints:', routeData.waypoints);
+        waypointsToSet = routeData.waypoints.map((wp: any, index: number) => ({
+          id: wp.id || `waypoint-${index}`,
+          name: wp.name,
+          order: index,
+          activities: wp.activities || [],
+          coordinates: Array.isArray(wp.coordinates)
+            ? { lng: wp.coordinates[0], lat: wp.coordinates[1] }
+            : wp.coordinates,
+        }));
+      } else {
+        console.log('Extracting waypoints from route data...');
+        waypointsToSet = extractWaypoints(routeData);
+      }
+      
+      console.log('Setting waypoints:', waypointsToSet);
+      setWaypoints(waypointsToSet);
+
     } else {
-      console.warn('No route data available in localStorage!')
+      console.warn('No route data available in localStorage!');
     }
-  }, [routeData, setWaypoints])
+  }, [routeData, setWaypoints]);
 
   return <SpotlightPageComplete />
 }
