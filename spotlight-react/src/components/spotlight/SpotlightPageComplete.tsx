@@ -9,28 +9,53 @@ import { StayDineSection } from './StayDineSection'
 import { ItinerarySection } from './ItinerarySection'
 import { MapView } from './MapView'
 import { useSpotlightStore } from '../../stores/spotlightStore'
+import { useRouteDataStore } from '../../stores/routeDataStore'
+
+// Agent configuration
+const agentConfig = {
+  adventure: {
+    name: 'Adventure Route',
+    icon: '/images/icons/adventure_icon.png',
+  },
+  culture: {
+    name: 'Culture Route',
+    icon: '/images/icons/culture_icon.png',
+  },
+  food: {
+    name: 'Food Route',
+    icon: '/images/icons/food_icon.png',
+  },
+  'hidden-gems': {
+    name: 'Hidden Gems Route',
+    icon: '/images/icons/hidden_gem_icon.png',
+  },
+}
 
 export function SpotlightPageComplete() {
   const { waypoints } = useSpotlightStore()
+  const { routeData } = useRouteDataStore()
   const [activeSection, setActiveSection] = useState('overview')
 
+  // Get agent details
+  const agent = routeData?.agent || 'adventure'
+  const config = agentConfig[agent]
+  const origin = routeData?.origin || 'Your Starting Point'
+  const destination = routeData?.destination || waypoints[waypoints.length - 1]?.name || 'Your Destination'
+
   const handleBack = () => {
-    window.close() // Close the spotlight tab/window
+    window.location.href = '/index.html'
   }
 
   const handleExportGoogleMaps = () => {
-    const origin = 'Aix-en-Provence, France'
-    const destination = waypoints[waypoints.length - 1]?.name || 'Destination'
-    const waypointsParam = waypoints.slice(0, -1).map(wp => wp.name).join('|')
-
+    const waypointsParam = waypoints.map(wp => wp.name).join('|')
     const url = `https://www.google.com/maps/dir/${encodeURIComponent(origin)}/${waypointsParam ? encodeURIComponent(waypointsParam) + '/' : ''}${encodeURIComponent(destination)}`
     window.open(url, '_blank')
   }
 
   const handleExportWaze = () => {
-    const destination = waypoints[waypoints.length - 1]
-    if (destination && destination.coordinates) {
-      const url = `https://waze.com/ul?ll=${destination.coordinates.lat},${destination.coordinates.lng}&navigate=yes`
+    const lastWaypoint = waypoints[waypoints.length - 1]
+    if (lastWaypoint?.coordinates) {
+      const url = `https://waze.com/ul?ll=${lastWaypoint.coordinates.lat},${lastWaypoint.coordinates.lng}&navigate=yes`
       window.open(url, '_blank')
     }
   }
@@ -51,9 +76,14 @@ export function SpotlightPageComplete() {
                 <ArrowLeft className="h-4 w-4" />
                 Back to Overview
               </Button>
-              <div className="flex items-center gap-2">
-                <span className="text-2xl">🏔️</span>
-                <h1 className="text-2xl font-bold text-gray-900">Adventure Route</h1>
+              <div className="flex items-center gap-3">
+                {/* Agent Icon - Using actual PNG from /images/icons/ */}
+                <img
+                  src={config.icon}
+                  alt={config.name}
+                  className="h-12 w-12 object-contain"
+                />
+                <h1 className="text-2xl font-bold text-gray-900">{config.name}</h1>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -79,13 +109,11 @@ export function SpotlightPageComplete() {
           </div>
           <p className="mt-2 flex items-center gap-2 text-sm text-gray-600">
             <span className="flex items-center gap-1">
-              <img src="https://flagcdn.com/24x18/fr.png" alt="France" className="h-4 w-6" />
-              Aix-en-Provence
+              <span className="font-semibold">{origin}</span>
             </span>
             <span>→</span>
             <span className="flex items-center gap-1">
-              <img src="https://flagcdn.com/24x18/es.png" alt="Spain" className="h-4 w-6" />
-              Barcelona
+              <span className="font-semibold">{destination}</span>
             </span>
           </p>
         </div>
