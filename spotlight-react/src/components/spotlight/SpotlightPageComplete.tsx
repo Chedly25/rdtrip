@@ -10,6 +10,7 @@ import { ItinerarySection } from './ItinerarySection'
 import { MapView } from './MapView'
 import { useSpotlightStore } from '../../stores/spotlightStore'
 import { useRouteDataStore } from '../../stores/routeDataStore'
+import { getTheme } from '../../config/theme'
 
 // Agent configuration
 const agentConfig = {
@@ -36,9 +37,10 @@ export function SpotlightPageComplete() {
   const { routeData } = useRouteDataStore()
   const [activeSection, setActiveSection] = useState('overview')
 
-  // Get agent details
+  // Get agent details and theme
   const agent = routeData?.agent || 'adventure'
   const config = agentConfig[agent]
+  const theme = getTheme(agent)
   const origin = routeData?.origin || 'Your Starting Point'
   const destination = routeData?.destination || waypoints[waypoints.length - 1]?.name || 'Your Destination'
 
@@ -83,7 +85,7 @@ export function SpotlightPageComplete() {
                   alt={config.name}
                   className="h-12 w-12 object-contain"
                 />
-                <h1 className="text-2xl font-bold text-gray-900">{config.name}</h1>
+                <h1 className="text-2xl font-bold" style={{ color: theme.primary }}>{config.name}</h1>
               </div>
             </div>
             <div className="flex items-center gap-2">
