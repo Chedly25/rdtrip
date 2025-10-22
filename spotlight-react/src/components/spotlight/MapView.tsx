@@ -2,14 +2,21 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import Map, { Marker, Source, Layer, NavigationControl } from 'react-map-gl'
 import { Eye, EyeOff } from 'lucide-react'
 import { useSpotlightStore } from '../../stores/spotlightStore'
+import { useRouteDataStore } from '../../stores/routeDataStore'
 import { europeanLandmarks } from '../../data/landmarks'
+import { getTheme } from '../../config/theme'
 import 'mapbox-gl/dist/mapbox-gl.css'
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiY2hlZGx5MjUiLCJhIjoiY21lbW1qeHRoMHB5azJsc2VuMWJld2tlYSJ9.0jfOiOXCh0VN5ZjJ5ab7MQ'
 
 export function MapView() {
   const { waypoints } = useSpotlightStore()
+  const { routeData } = useRouteDataStore()
   const mapRef = useRef<any>(null)
+
+  // Get theme colors based on agent type
+  const agent = routeData?.agent || 'adventure'
+  const theme = getTheme(agent)
   const [showLandmarks, setShowLandmarks] = useState(true)
   const [selectedLandmark, setSelectedLandmark] = useState<typeof europeanLandmarks[0] | null>(null)
   const [routeGeometry, setRouteGeometry] = useState<any>(null)
@@ -124,7 +131,7 @@ export function MapView() {
               id="route-line"
               type="line"
               paint={{
-                'line-color': '#667eea',
+                'line-color': theme.primary,
                 'line-width': 5,
                 'line-opacity': 0.9,
               }}
@@ -148,20 +155,29 @@ export function MapView() {
                 <div className="relative flex flex-col items-center">
                   {/* Animated Pulse Ring */}
                   <div className="absolute top-0 h-12 w-12">
-                    <div className="absolute inset-0 animate-ping rounded-full bg-primary-500 opacity-40" />
+                    <div
+                      className="absolute inset-0 animate-ping rounded-full opacity-40"
+                      style={{ backgroundColor: theme.primary }}
+                    />
                   </div>
 
                   {/* Pin Shape */}
                   <div className="relative z-10">
                     {/* Pin Head */}
-                    <div className="flex h-14 w-14 items-center justify-center rounded-full border-4 border-white bg-gradient-to-br from-primary-500 to-purple-600 shadow-2xl">
+                    <div
+                      className="flex h-14 w-14 items-center justify-center rounded-full border-4 border-white shadow-2xl"
+                      style={{ background: `linear-gradient(to bottom right, ${theme.primary}, ${theme.secondary})` }}
+                    >
                       <div className="flex flex-col items-center">
                         <span className="text-2xl">📍</span>
                         <span className="text-xs font-bold text-white">{index + 1}</span>
                       </div>
                     </div>
                     {/* Pin Point */}
-                    <div className="mx-auto h-3 w-1 bg-gradient-to-b from-purple-600 to-purple-800" />
+                    <div
+                      className="mx-auto h-3 w-1"
+                      style={{ background: `linear-gradient(to bottom, ${theme.primary}, ${theme.primary})` }}
+                    />
                     <div className="mx-auto h-2 w-2 rounded-full bg-purple-900 shadow-lg" />
                   </div>
 
@@ -190,17 +206,15 @@ export function MapView() {
           >
             <button
               onClick={() => setSelectedLandmark(landmark)}
-              className="group relative cursor-pointer transition-transform hover:scale-125 hover:z-50"
+              className="group relative cursor-pointer transition-transform hover:scale-110 hover:z-50"
             >
               <div className="flex flex-col items-center">
-                {/* Large Image Icon */}
-                <div className="flex h-12 w-12 items-center justify-center rounded-full border-3 border-white bg-white shadow-2xl overflow-hidden">
-                  <img
-                    src={landmark.image_url}
-                    alt={landmark.name}
-                    className="h-full w-full object-cover"
-                  />
-                </div>
+                {/* Landmark PNG Icon - Direct with transparent background */}
+                <img
+                  src={landmark.image_url}
+                  alt={landmark.name}
+                  className="h-12 w-12 object-contain drop-shadow-2xl"
+                />
                 {/* Small indicator dot */}
                 <div className="mt-1 h-2 w-2 rounded-full bg-orange-500 shadow-lg" />
 
@@ -223,13 +237,11 @@ export function MapView() {
           >
             <div className="rounded-lg border-2 border-orange-500 bg-white p-3 shadow-2xl">
               <div className="mb-2 flex items-center gap-2">
-                <div className="h-10 w-10 flex-shrink-0 overflow-hidden rounded-full border-2 border-orange-400">
-                  <img
-                    src={selectedLandmark.image_url}
-                    alt={selectedLandmark.name}
-                    className="h-full w-full object-cover"
-                  />
-                </div>
+                <img
+                  src={selectedLandmark.image_url}
+                  alt={selectedLandmark.name}
+                  className="h-10 w-10 flex-shrink-0 object-contain"
+                />
                 <div>
                   <h3 className="font-bold text-gray-900">{selectedLandmark.name}</h3>
                   <p className="text-xs text-gray-600 capitalize">{selectedLandmark.type}</p>
@@ -282,17 +294,18 @@ export function MapView() {
             <span className="font-medium text-gray-700">Your Destinations</span>
           </div>
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 flex-shrink-0 overflow-hidden rounded-full border-3 border-white bg-white shadow-lg">
-              <img
-                src="/images/landmarks/eiffel_tower.png"
-                alt="Landmark example"
-                className="h-full w-full object-cover"
-              />
-            </div>
+            <img
+              src="/images/landmarks/eiffel_tower.png"
+              alt="Landmark example"
+              className="h-10 w-10 flex-shrink-0 object-contain"
+            />
             <span className="font-medium text-gray-700">Famous Landmarks</span>
           </div>
           <div className="flex items-center gap-3">
-            <div className="h-1 w-10 flex-shrink-0 rounded-full bg-gradient-to-r from-primary-500 to-purple-600"></div>
+            <div
+              className="h-1 w-10 flex-shrink-0 rounded-full"
+              style={{ background: `linear-gradient(to right, ${theme.primary}, ${theme.secondary})` }}
+            ></div>
             <span className="font-medium text-gray-700">Driving Route</span>
           </div>
         </div>
