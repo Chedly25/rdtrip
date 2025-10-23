@@ -85,10 +85,16 @@ export const useSpotlightStore = create<SpotlightState>()(
 
         // Enrich the city data in the background
         try {
+          console.log(`Starting enrichment for ${city.name}...`)
           const { activities, imageUrl } = await enrichCityData(city.name)
 
-          set((state) => ({
-            waypoints: state.waypoints.map((wp) =>
+          console.log(`Got enriched data for ${city.name}:`, {
+            activities,
+            imageUrl: imageUrl ? 'YES' : 'NO',
+          })
+
+          set((state) => {
+            const updatedWaypoints = state.waypoints.map((wp) =>
               wp.id === newWaypoint.id
                 ? {
                     ...wp,
@@ -96,12 +102,15 @@ export const useSpotlightStore = create<SpotlightState>()(
                     imageUrl: imageUrl || wp.imageUrl,
                   }
                 : wp
-            ),
-          }), false, 'enrichWaypoint')
+            )
 
-          console.log(`Enriched ${city.name} with ${activities.length} activities and image`)
+            console.log(`Updated waypoint ${newWaypoint.id} with enriched data`)
+            return { waypoints: updatedWaypoints }
+          }, false, 'enrichWaypoint')
+
+          console.log(`✅ Successfully enriched ${city.name} with ${activities.length} activities`)
         } catch (error) {
-          console.error('Failed to enrich city data:', error)
+          console.error(`❌ Failed to enrich city data for ${city.name}:`, error)
         }
       },
 
