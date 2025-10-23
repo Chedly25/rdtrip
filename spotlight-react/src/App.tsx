@@ -135,7 +135,7 @@ function extractCityName(locationName: string): string {
 }
 
 function AppContent() {
-  const { setWaypoints, updateWaypoint } = useSpotlightStore()
+  const { setWaypoints, setOriginalCities, updateWaypoint } = useSpotlightStore()
   const { loadFromLocalStorage, routeData } = useRouteDataStore()
 
   useEffect(() => {
@@ -221,6 +221,11 @@ function AppContent() {
         console.log('Final waypoints with origin and destination:', finalWaypoints);
         setWaypoints(finalWaypoints);
 
+        // Store original cities (non-landmarks) for route optimization
+        const cities = finalWaypoints.filter((wp) => !wp.isLandmark)
+        setOriginalCities(cities)
+        console.log('Stored original cities for optimization:', cities.length)
+
         // Fetch Wikipedia images for all waypoints asynchronously
         finalWaypoints.forEach(async (wp) => {
           if (!wp.imageUrl) {
@@ -238,7 +243,7 @@ function AppContent() {
     } else {
       console.warn('No route data available in localStorage!');
     }
-  }, [routeData, setWaypoints, updateWaypoint]);
+  }, [routeData, setWaypoints, setOriginalCities, updateWaypoint]);
 
   return <SpotlightPageComplete />
 }

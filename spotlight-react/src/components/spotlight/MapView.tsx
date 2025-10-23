@@ -5,12 +5,13 @@ import { useSpotlightStore } from '../../stores/spotlightStore'
 import { useRouteDataStore } from '../../stores/routeDataStore'
 import { europeanLandmarks } from '../../data/landmarks'
 import { getTheme } from '../../config/theme'
+import { LandmarkModal } from './LandmarkModal'
 import 'mapbox-gl/dist/mapbox-gl.css'
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoiY2hlZGx5MjUiLCJhIjoiY21lbW1qeHRoMHB5azJsc2VuMWJld2tlYSJ9.0jfOiOXCh0VN5ZjJ5ab7MQ'
 
 export function MapView() {
-  const { waypoints } = useSpotlightStore()
+  const { waypoints, addLandmark } = useSpotlightStore()
   const { routeData } = useRouteDataStore()
   const mapRef = useRef<any>(null)
 
@@ -19,6 +20,7 @@ export function MapView() {
   const theme = getTheme(agent)
   const [showLandmarks, setShowLandmarks] = useState(true)
   const [selectedLandmark, setSelectedLandmark] = useState<typeof europeanLandmarks[0] | null>(null)
+  const [showLandmarkModal, setShowLandmarkModal] = useState(false)
   const [routeGeometry, setRouteGeometry] = useState<any>(null)
   const [isLoadingRoute, setIsLoadingRoute] = useState(false)
 
@@ -219,7 +221,10 @@ export function MapView() {
             anchor="bottom"
           >
             <button
-              onClick={() => setSelectedLandmark(landmark)}
+              onClick={() => {
+                setSelectedLandmark(landmark)
+                setShowLandmarkModal(true)
+              }}
               className="group relative cursor-pointer transition-transform hover:scale-110 hover:z-50"
             >
               <div className="flex flex-col items-center">
@@ -241,37 +246,32 @@ export function MapView() {
           </Marker>
         ))}
 
-        {/* Landmark Info Card (shown when landmark selected) */}
-        {selectedLandmark && (
-          <Marker
-            longitude={selectedLandmark.lng}
-            latitude={selectedLandmark.lat}
-            anchor="bottom"
-            
-          >
-            <div className="rounded-lg border-2 border-orange-500 bg-white p-3 shadow-2xl">
-              <div className="mb-2 flex items-center gap-2">
-                <img
-                  src={selectedLandmark.image_url}
-                  alt={selectedLandmark.name}
-                  className="h-10 w-10 flex-shrink-0 object-contain"
-                />
-                <div>
-                  <h3 className="font-bold text-gray-900">{selectedLandmark.name}</h3>
-                  <p className="text-xs text-gray-600 capitalize">{selectedLandmark.type}</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setSelectedLandmark(null)}
-                className="w-full rounded px-3 py-1 text-xs font-semibold text-white transition-opacity hover:opacity-80"
-                style={{ backgroundColor: theme.primary }}
-              >
-                Close
-              </button>
-            </div>
-          </Marker>
-        )}
       </Map>
+
+      {/* Landmark Modal */}
+      {showLandmarkModal && selectedLandmark && (
+        <LandmarkModal
+          landmark={{
+            name: selectedLandmark.name,
+            lat: selectedLandmark.lat,
+            lng: selectedLandmark.lng,
+            type: selectedLandmark.type,
+            description: selectedLandmark.description,
+            city: selectedLandmark.city,
+          }}
+          onClose={() => {
+            setShowLandmarkModal(false)
+            setSelectedLandmark(null)
+          }}
+          onAdd={(landmark) => {
+            addLandmark({
+              ...landmark,
+              coordinates: { lat: landmark.lat, lng: landmark.lng },
+            })
+            console.log('Landmark added to route:', landmark.name)
+          }}
+        />
+      )}
 
       {/* Map Controls */}
       <div className="absolute bottom-6 left-6 flex flex-col gap-3">
