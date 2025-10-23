@@ -8,7 +8,7 @@ export function Hero() {
   }
 
   return (
-    <section className="relative h-screen w-full overflow-hidden">
+    <section className="relative h-[70vh] w-full overflow-hidden">
       {/* Video Background */}
       <div className="absolute inset-0">
         <video
@@ -18,7 +18,7 @@ export function Hero() {
           playsInline
           className="h-full w-full object-cover"
         >
-          <source src="/videos/hero-bg.mp4" type="video/mp4" />
+          <source src="/video 2.mp4" type="video/mp4" />
         </video>
 
         {/* Dark overlay for text readability */}
