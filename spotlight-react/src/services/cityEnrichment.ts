@@ -62,9 +62,8 @@ function parsePerplexityResponse(response: string): string[] {
     return []
   }
 
-  console.log('Parsing response:', response.substring(0, 200))
+  console.log('Full response to parse:', response)
 
-  // Try different formats
   const activities: string[] = []
 
   // Format 1: Bullet points with -, •, or *
@@ -72,7 +71,15 @@ function parsePerplexityResponse(response: string): string[] {
   if (bulletMatches && bulletMatches.length > 0) {
     bulletMatches.forEach((match) => {
       const cleaned = match.replace(/^[-•*]\s*/, '').trim()
-      if (cleaned.length > 0 && cleaned.length < 100) {
+      // Filter out incomplete sentences and meta text
+      if (
+        cleaned.length > 15 &&
+        cleaned.length < 150 &&
+        !cleaned.toLowerCase().includes('here are') &&
+        !cleaned.toLowerCase().includes('must-do') &&
+        cleaned.includes(' ') && // Must have at least one space (multiple words)
+        /[A-Z]/.test(cleaned[0]) // Must start with capital letter
+      ) {
         activities.push(cleaned)
       }
     })
@@ -80,27 +87,44 @@ function parsePerplexityResponse(response: string): string[] {
 
   // Format 2: Numbered list (1., 2., 3.)
   if (activities.length === 0) {
-    const numberedMatches = response.match(/\d+\.\s*([^\n\r]+)/g)
+    const numberedMatches = response.match(/\d+\.\s*([^\n\r.]+(?:\.[^\n\r.]+)*)/g)
     if (numberedMatches && numberedMatches.length > 0) {
       numberedMatches.forEach((match) => {
-        const cleaned = match.replace(/^\d+\.\s*/, '').trim()
-        if (cleaned.length > 0 && cleaned.length < 100) {
+        let cleaned = match.replace(/^\d+\.\s*/, '').trim()
+        // Remove any trailing incomplete text
+        cleaned = cleaned.replace(/\s+for\s*$/, '').replace(/\s+in\s*$/, '').trim()
+
+        if (
+          cleaned.length > 15 &&
+          cleaned.length < 150 &&
+          !cleaned.toLowerCase().includes('here are') &&
+          cleaned.includes(' ')
+        ) {
           activities.push(cleaned)
         }
       })
     }
   }
 
-  // Format 3: Split by newlines and filter meaningful lines
+  // Format 3: Look for complete sentences
   if (activities.length === 0) {
-    const lines = response.split(/[\n\r]+/).filter((line) => {
-      const trimmed = line.trim()
-      return trimmed.length > 10 && trimmed.length < 100 && !trimmed.includes('activity')
+    const sentences = response.split(/[.!?]+/)
+    sentences.forEach((sentence) => {
+      const trimmed = sentence.trim()
+      if (
+        trimmed.length > 20 &&
+        trimmed.length < 150 &&
+        trimmed.includes(' ') &&
+        !trimmed.toLowerCase().includes('here are') &&
+        !trimmed.toLowerCase().includes('activities') &&
+        /[A-Z]/.test(trimmed[0])
+      ) {
+        activities.push(trimmed)
+      }
     })
-    activities.push(...lines.slice(0, 3))
   }
 
-  console.log(`Extracted ${activities.length} activities`)
+  console.log(`Extracted ${activities.length} clean activities:`, activities)
   return activities.slice(0, 3)
 }
 
