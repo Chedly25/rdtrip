@@ -6,6 +6,7 @@ export interface RouteData {
   destination: string
   origin: string
   totalStops: number
+  waypoints?: any[]
   agentResults: Array<{
     agent: string
     recommendations: string

@@ -123,6 +123,12 @@ function AppContent() {
   useEffect(() => {
     console.log('Route data changed:', routeData);
     if (routeData) {
+      // DEBUG: Log full structure
+      console.log('Full routeData structure:', JSON.stringify(routeData, null, 2));
+      console.log('routeData.waypoints:', routeData.waypoints);
+      console.log('routeData.agentResults:', routeData.agentResults);
+      console.log('routeData keys:', Object.keys(routeData));
+
       let waypointsToSet: Waypoint[] = [];
       if (routeData.waypoints && routeData.waypoints.length > 0) {
         console.log('Using pre-extracted waypoints:', routeData.waypoints);
@@ -137,10 +143,12 @@ function AppContent() {
         }));
       } else {
         console.log('Extracting waypoints from route data...');
+        console.log('Calling extractWaypoints with:', routeData);
         waypointsToSet = extractWaypoints(routeData);
+        console.log('extractWaypoints returned:', waypointsToSet);
       }
-      
-      console.log('Setting waypoints:', waypointsToSet);
+
+      console.log('Extracted waypoints:', waypointsToSet);
       setWaypoints(waypointsToSet);
 
     } else {
