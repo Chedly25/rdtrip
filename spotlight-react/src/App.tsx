@@ -15,6 +15,29 @@ const queryClient = new QueryClient({
   },
 })
 
+// Geocode a city name to coordinates using Mapbox Geocoding API
+async function geocodeCity(cityName: string): Promise<{ lat: number; lng: number }> {
+  const MAPBOX_TOKEN = 'pk.eyJ1IjoiY2hlZGx5MjUiLCJhIjoiY21lbW1qeHRoMHB5azJsc2VuMWJld2tlYSJ9.0jfOiOXCh0VN5ZjJ5ab7MQ'
+
+  try {
+    const response = await fetch(
+      `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(cityName)}.json?access_token=${MAPBOX_TOKEN}&types=place&limit=1`
+    )
+    const data = await response.json()
+
+    if (data.features && data.features.length > 0) {
+      const [lng, lat] = data.features[0].center
+      return { lat, lng }
+    }
+
+    throw new Error(`No coordinates found for ${cityName}`)
+  } catch (error) {
+    console.error(`Geocoding failed for ${cityName}:`, error)
+    // Return a fallback coordinate (center of France)
+    return { lat: 46.603354, lng: 1.888334 }
+  }
+}
+
 // Function to extract waypoints from route data (same logic as old spotlight.js)
 function extractWaypoints(routeData: any): Waypoint[] {
   if (!routeData?.agentResults?.length) return []
@@ -129,28 +152,76 @@ function AppContent() {
       console.log('routeData.agentResults:', routeData.agentResults);
       console.log('routeData keys:', Object.keys(routeData));
 
-      let waypointsToSet: Waypoint[] = [];
-      if (routeData.waypoints && routeData.waypoints.length > 0) {
-        console.log('Using pre-extracted waypoints:', routeData.waypoints);
-        waypointsToSet = routeData.waypoints.map((wp: any, index: number) => ({
-          id: wp.id || `waypoint-${index}`,
-          name: wp.name,
-          order: index,
-          activities: wp.activities || [],
-          coordinates: Array.isArray(wp.coordinates)
-            ? { lng: wp.coordinates[0], lat: wp.coordinates[1] }
-            : wp.coordinates,
-        }));
-      } else {
-        console.log('Extracting waypoints from route data...');
-        console.log('Calling extractWaypoints with:', routeData);
-        waypointsToSet = extractWaypoints(routeData);
-        console.log('extractWaypoints returned:', waypointsToSet);
-      }
+      const processWaypoints = async () => {
+        let waypointsToSet: Waypoint[] = [];
+        if (routeData.waypoints && routeData.waypoints.length > 0) {
+          console.log('Using pre-extracted waypoints:', routeData.waypoints);
+          waypointsToSet = routeData.waypoints.map((wp: any, index: number) => ({
+            id: wp.id || `waypoint-${index}`,
+            name: wp.name,
+            order: index,
+            activities: wp.activities || [],
+            coordinates: Array.isArray(wp.coordinates)
+              ? { lng: wp.coordinates[0], lat: wp.coordinates[1] }
+              : wp.coordinates,
+          }));
+        } else {
+          console.log('Extracting waypoints from route data...');
+          console.log('Calling extractWaypoints with:', routeData);
+          waypointsToSet = extractWaypoints(routeData);
+          console.log('extractWaypoints returned:', waypointsToSet);
+        }
 
-      console.log('Extracted waypoints:', waypointsToSet);
-      setWaypoints(waypointsToSet);
+        // Add origin and destination if they exist
+        const finalWaypoints: Waypoint[] = [];
 
+        // Add origin as first waypoint
+        if (routeData.origin) {
+          console.log('Adding origin:', routeData.origin);
+          try {
+            const originCoords = await geocodeCity(routeData.origin);
+            finalWaypoints.push({
+              id: 'origin',
+              name: routeData.origin,
+              order: 0,
+              activities: ['Starting point'],
+              coordinates: originCoords,
+            });
+          } catch (error) {
+            console.error('Failed to geocode origin:', error);
+          }
+        }
+
+        // Add intermediate waypoints
+        waypointsToSet.forEach((wp) => {
+          finalWaypoints.push({
+            ...wp,
+            order: finalWaypoints.length,
+          });
+        });
+
+        // Add destination as last waypoint
+        if (routeData.destination) {
+          console.log('Adding destination:', routeData.destination);
+          try {
+            const destCoords = await geocodeCity(routeData.destination);
+            finalWaypoints.push({
+              id: 'destination',
+              name: routeData.destination,
+              order: finalWaypoints.length,
+              activities: ['Final destination'],
+              coordinates: destCoords,
+            });
+          } catch (error) {
+            console.error('Failed to geocode destination:', error);
+          }
+        }
+
+        console.log('Final waypoints with origin and destination:', finalWaypoints);
+        setWaypoints(finalWaypoints);
+      };
+
+      processWaypoints();
     } else {
       console.warn('No route data available in localStorage!');
     }
