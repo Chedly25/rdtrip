@@ -1,6 +1,8 @@
 import { motion } from 'framer-motion'
 import { Map, MapPin, Hotel, Calendar } from 'lucide-react'
 import { cn } from '../../lib/utils'
+import { useRouteDataStore } from '../../stores/routeDataStore'
+import { getTheme } from '../../config/theme'
 
 interface TableOfContentsProps {
   activeSection: string
@@ -15,9 +17,18 @@ const sections = [
 ]
 
 export function TableOfContents({ activeSection, onSectionChange }: TableOfContentsProps) {
+  const { routeData } = useRouteDataStore()
+  const agent = routeData?.agent || 'adventure'
+  const theme = getTheme(agent)
+
   return (
-    <nav className="rounded-xl border border-gray-200 bg-gradient-to-br from-white to-gray-50 p-4">
-      <h3 className="mb-3 text-sm font-semibold text-gray-700">Navigate Route</h3>
+    <nav
+      className="rounded-xl border-2 bg-gradient-to-br from-white to-gray-50 p-4 shadow-md"
+      style={{ borderColor: theme.primary }}
+    >
+      <h3 className="mb-3 text-sm font-semibold" style={{ color: theme.primary }}>
+        Navigate Route
+      </h3>
       <ul className="space-y-1">
         {sections.map((section) => {
           const Icon = section.icon
@@ -30,14 +41,17 @@ export function TableOfContents({ activeSection, onSectionChange }: TableOfConte
                 className={cn(
                   'group relative w-full rounded-lg px-3 py-2.5 text-left transition-all duration-200',
                   isActive
-                    ? 'bg-gradient-to-r from-primary-500 to-purple-500 text-white shadow-md'
+                    ? 'text-white shadow-lg'
                     : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                 )}
               >
                 {isActive && (
                   <motion.div
                     layoutId="activeSection"
-                    className="absolute inset-0 rounded-lg bg-gradient-to-r from-primary-500 to-purple-500"
+                    className="absolute inset-0 rounded-lg"
+                    style={{
+                      background: `linear-gradient(to right, ${theme.primary}, ${theme.secondary})`
+                    }}
                     initial={false}
                     transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                   />

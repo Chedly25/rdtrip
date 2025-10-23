@@ -2,6 +2,8 @@ import { motion } from 'framer-motion'
 import { MapPin, Trash2, GripVertical } from 'lucide-react'
 import type { Waypoint } from '../../types'
 import { cn } from '../../lib/utils'
+import { useRouteDataStore } from '../../stores/routeDataStore'
+import { getTheme } from '../../config/theme'
 
 interface CityCardProps {
   waypoint: Waypoint
@@ -12,6 +14,9 @@ interface CityCardProps {
 
 export function CityCard({ waypoint, onRemove, onClick, isDragging }: CityCardProps) {
   const { name, activities, imageUrl, isLandmark } = waypoint
+  const { routeData } = useRouteDataStore()
+  const agent = routeData?.agent || 'adventure'
+  const theme = getTheme(agent)
 
   return (
     <motion.div
@@ -27,8 +32,9 @@ export function CityCard({ waypoint, onRemove, onClick, isDragging }: CityCardPr
       }}
       className={cn(
         'group relative overflow-hidden rounded-2xl bg-white shadow-lg transition-shadow hover:shadow-2xl',
-        isDragging && 'shadow-2xl ring-2 ring-primary-500'
+        isDragging && 'shadow-2xl ring-4'
       )}
+      style={isDragging ? { borderColor: theme.primary } : undefined}
     >
       {/* Drag Handle */}
       <motion.div
@@ -55,7 +61,14 @@ export function CityCard({ waypoint, onRemove, onClick, isDragging }: CityCardPr
       )}
 
       {/* Image Container */}
-      <div className="relative h-72 w-full overflow-hidden bg-gradient-to-br from-primary-500 to-secondary-500">
+      <div
+        className="relative h-72 w-full overflow-hidden"
+        style={{
+          background: imageUrl
+            ? undefined
+            : `linear-gradient(to bottom right, ${theme.primary}, ${theme.secondary})`
+        }}
+      >
         {imageUrl ? (
           <motion.img
             src={imageUrl}
@@ -82,7 +95,14 @@ export function CityCard({ waypoint, onRemove, onClick, isDragging }: CityCardPr
         onClick={onClick}
         className="cursor-pointer p-6"
       >
-        <h3 className="mb-4 text-2xl font-bold text-gray-900 transition-colors group-hover:text-primary-600">
+        <h3
+          className="mb-4 text-2xl font-bold text-gray-900 transition-colors"
+          style={{
+            color: undefined
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = theme.primary)}
+          onMouseLeave={(e) => (e.currentTarget.style.color = '')}
+        >
           {name}
         </h3>
 
@@ -96,7 +116,10 @@ export function CityCard({ waypoint, onRemove, onClick, isDragging }: CityCardPr
                 transition={{ delay: idx * 0.1 }}
                 className="flex items-start gap-2 text-sm text-gray-600"
               >
-                <div className="mt-1.5 h-2 w-2 flex-shrink-0 rounded-full bg-primary-500" />
+                <div
+                  className="mt-1.5 h-2 w-2 flex-shrink-0 rounded-full"
+                  style={{ backgroundColor: theme.primary }}
+                />
                 <span>{activity}</span>
               </motion.li>
             ))}

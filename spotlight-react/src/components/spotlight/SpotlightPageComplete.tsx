@@ -123,13 +123,14 @@ export function SpotlightPageComplete() {
 
       {/* Main Layout */}
       <div className="flex h-[calc(100vh-120px)]">
-        {/* Left Sidebar */}
+        {/* Left Content Panel - Wider for better readability */}
         <motion.aside
           initial={{ x: -300, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
-          className="w-[480px] flex-shrink-0 overflow-y-auto border-r border-gray-200 bg-white"
+          className="w-[600px] flex-shrink-0 overflow-y-auto bg-white shadow-lg"
+          style={{ borderRight: `3px solid ${theme.primary}` }}
         >
-          <div className="p-6">
+          <div className="p-8">
             {/* Table of Contents */}
             <TableOfContents
               activeSection={activeSection}
@@ -137,7 +138,7 @@ export function SpotlightPageComplete() {
             />
 
             {/* Content Sections */}
-            <div className="mt-6 space-y-8">
+            <div className="mt-8 space-y-8">
               {activeSection === 'overview' && <RouteOverview />}
               {activeSection === 'cities' && <CitiesSection />}
               {activeSection === 'stay-dine' && <StayDineSection />}
@@ -146,9 +147,16 @@ export function SpotlightPageComplete() {
           </div>
         </motion.aside>
 
-        {/* Right Map */}
-        <div className="flex-1">
+        {/* Right Map - Seamlessly integrated */}
+        <div className="flex-1 relative">
           <MapView />
+          {/* Gradient overlay for better visual integration */}
+          <div
+            className="absolute left-0 top-0 bottom-0 w-12 pointer-events-none"
+            style={{
+              background: `linear-gradient(to right, ${theme.primary}15, transparent)`
+            }}
+          />
         </div>
       </div>
     </div>
