@@ -16,9 +16,9 @@ function App() {
       <div className="min-h-screen">
         <Navigation />
         <Hero />
+        <RouteForm />
         <Features />
         <Showcase />
-        <RouteForm />
         <About />
         <Footer />
       </div>
