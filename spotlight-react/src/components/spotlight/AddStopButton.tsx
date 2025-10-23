@@ -1,5 +1,7 @@
 import { motion } from 'framer-motion'
 import { Plus } from 'lucide-react'
+import { useRouteDataStore } from '../../stores/routeDataStore'
+import { getTheme } from '../../config/theme'
 
 interface AddStopButtonProps {
   onAdd: () => void
@@ -7,12 +9,22 @@ interface AddStopButtonProps {
 }
 
 export function AddStopButton({ onAdd, position: _position }: AddStopButtonProps) {
+  const { routeData } = useRouteDataStore()
+  const agent = routeData?.agent || 'adventure'
+  const theme = getTheme(agent)
+
   return (
     <motion.button
       onClick={onAdd}
-      initial={{ opacity: 0 }}
+      initial={{ opacity: 0, height: 0 }}
+      animate={{ opacity: 0, height: 'auto' }}
       whileHover={{ opacity: 1, scale: 1.02 }}
-      className="group relative w-full rounded-xl border-2 border-dashed border-primary-200 bg-gradient-to-r from-primary-50 to-purple-50 px-6 py-4 text-primary-600 opacity-0 transition-all hover:border-primary-400 hover:shadow-md"
+      className="group relative w-full overflow-hidden rounded-xl border-2 border-dashed px-6 py-4 opacity-0 transition-all hover:shadow-lg"
+      style={{
+        borderColor: `${theme.primary}40`,
+        background: `linear-gradient(to right, ${theme.primary}10, ${theme.secondary}10)`,
+        color: theme.primary,
+      }}
     >
       <div className="flex items-center justify-center gap-2">
         <motion.div
@@ -26,7 +38,10 @@ export function AddStopButton({ onAdd, position: _position }: AddStopButtonProps
 
       {/* Decorative gradient on hover */}
       <motion.div
-        className="absolute inset-0 -z-10 rounded-xl bg-gradient-to-r from-primary-500/10 to-purple-500/10 opacity-0 blur-xl transition-opacity group-hover:opacity-100"
+        className="absolute inset-0 -z-10 rounded-xl opacity-0 blur-xl transition-opacity group-hover:opacity-100"
+        style={{
+          background: `linear-gradient(to right, ${theme.primary}20, ${theme.secondary}20)`,
+        }}
         initial={false}
       />
     </motion.button>

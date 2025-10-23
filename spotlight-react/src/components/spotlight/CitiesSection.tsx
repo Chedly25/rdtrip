@@ -5,6 +5,7 @@ import { useSpotlightStore } from '../../stores/spotlightStore'
 import { SortableCityCard } from './SortableCityCard'
 import { AddDestinationModal } from './AddDestinationModal'
 import { CityDetailsModal } from './CityDetailsModal'
+import { AddStopButton } from './AddStopButton'
 import { Button } from '../ui/Button'
 import {
   DndContext,
@@ -106,15 +107,30 @@ export function CitiesSection() {
             items={waypoints.map(wp => wp.id)}
             strategy={verticalListSortingStrategy}
           >
-            <div className="space-y-4">
+            <div className="space-y-2">
               <AnimatePresence mode="popLayout">
-                {waypoints.map((waypoint) => (
-                  <SortableCityCard
-                    key={waypoint.id}
-                    waypoint={waypoint}
-                    onRemove={removeWaypoint}
-                    onClick={() => handleCityClick(waypoint.id)}
-                  />
+                {waypoints.map((waypoint, index) => (
+                  <div key={waypoint.id}>
+                    {/* City Card */}
+                    <SortableCityCard
+                      waypoint={waypoint}
+                      onRemove={removeWaypoint}
+                      onClick={() => handleCityClick(waypoint.id)}
+                    />
+
+                    {/* Add Stop Button - appears between cities on hover */}
+                    {index < waypoints.length - 1 && (
+                      <div className="py-2">
+                        <AddStopButton
+                          onAdd={() => {
+                            setInsertIndex(index + 1)
+                            setShowAddModal(true)
+                          }}
+                          position="after"
+                        />
+                      </div>
+                    )}
+                  </div>
                 ))}
               </AnimatePresence>
             </div>
