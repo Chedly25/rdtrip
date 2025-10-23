@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { SpotlightPageComplete } from './components/spotlight/SpotlightPageComplete'
 import { useSpotlightStore } from './stores/spotlightStore'
 import { useRouteDataStore } from './stores/routeDataStore'
+import { getWikipediaImage } from './utils/wikipedia'
 import type { Waypoint } from './types'
 
 // Create a client
@@ -134,7 +135,7 @@ function extractCityName(locationName: string): string {
 }
 
 function AppContent() {
-  const { setWaypoints } = useSpotlightStore()
+  const { setWaypoints, updateWaypoint } = useSpotlightStore()
   const { loadFromLocalStorage, routeData } = useRouteDataStore()
 
   useEffect(() => {
@@ -219,13 +220,25 @@ function AppContent() {
 
         console.log('Final waypoints with origin and destination:', finalWaypoints);
         setWaypoints(finalWaypoints);
+
+        // Fetch Wikipedia images for all waypoints asynchronously
+        finalWaypoints.forEach(async (wp) => {
+          if (!wp.imageUrl) {
+            const imageUrl = await getWikipediaImage(wp.name, 800, 600)
+            if (imageUrl) {
+              // Update the waypoint with the fetched image
+              updateWaypoint(wp.id, { imageUrl })
+              console.log(`Fetched Wikipedia image for ${wp.name}:`, imageUrl)
+            }
+          }
+        })
       };
 
       processWaypoints();
     } else {
       console.warn('No route data available in localStorage!');
     }
-  }, [routeData, setWaypoints]);
+  }, [routeData, setWaypoints, updateWaypoint]);
 
   return <SpotlightPageComplete />
 }
