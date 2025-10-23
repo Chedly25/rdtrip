@@ -23,17 +23,32 @@ interface SpotlightState {
   setError: (error: string | null) => void
 }
 
+// Helper to save to localStorage
+function saveToLocalStorage(waypoints: Waypoint[], addedLandmarks: Waypoint[]) {
+  try {
+    const spotlightData = JSON.parse(localStorage.getItem('spotlightData') || '{}')
+    spotlightData.waypoints = waypoints
+    spotlightData.addedLandmarks = addedLandmarks
+    localStorage.setItem('spotlightData', JSON.stringify(spotlightData))
+    console.log('✅ Saved to localStorage:', { waypoints: waypoints.length, landmarks: addedLandmarks.length })
+  } catch (error) {
+    console.error('Failed to save to localStorage:', error)
+  }
+}
+
 export const useSpotlightStore = create<SpotlightState>()(
   devtools(
-    (set) => ({
+    (set, get) => ({
       waypoints: [],
       originalCities: [],
       addedLandmarks: [],
       isLoading: false,
       error: null,
 
-      setWaypoints: (waypoints) =>
-        set({ waypoints }, false, 'setWaypoints'),
+      setWaypoints: (waypoints) => {
+        set({ waypoints }, false, 'setWaypoints')
+        saveToLocalStorage(waypoints, get().addedLandmarks)
+      },
 
       setOriginalCities: (cities) =>
         set({ originalCities: cities }, false, 'setOriginalCities'),
@@ -75,11 +90,16 @@ export const useSpotlightStore = create<SpotlightState>()(
           const newWaypoints = [...state.waypoints]
           newWaypoints.splice(afterIndex + 1, 0, newWaypoint)
 
+          const orderedWaypoints = newWaypoints.map((wp, idx) => ({
+            ...wp,
+            order: idx,
+          }))
+
+          // Save to localStorage
+          saveToLocalStorage(orderedWaypoints, state.addedLandmarks)
+
           return {
-            waypoints: newWaypoints.map((wp, idx) => ({
-              ...wp,
-              order: idx,
-            })),
+            waypoints: orderedWaypoints,
           }
         }, false, 'addWaypoint')
 
@@ -103,6 +123,9 @@ export const useSpotlightStore = create<SpotlightState>()(
                   }
                 : wp
             )
+
+            // Save enriched data to localStorage
+            saveToLocalStorage(updatedWaypoints, state.addedLandmarks)
 
             console.log(`Updated waypoint ${newWaypoint.id} with enriched data`)
             return { waypoints: updatedWaypoints }
@@ -142,18 +165,34 @@ export const useSpotlightStore = create<SpotlightState>()(
             state.originalCities
           )
 
+          const newAddedLandmarks = [...state.addedLandmarks, landmarkWaypoint]
+
+          // Save to localStorage
+          saveToLocalStorage(optimizedWaypoints, newAddedLandmarks)
+
           return {
             waypoints: optimizedWaypoints,
-            addedLandmarks: [...state.addedLandmarks, landmarkWaypoint],
+            addedLandmarks: newAddedLandmarks,
           }
         }, false, 'addLandmark'),
 
       removeWaypoint: (id) =>
-        set((state) => ({
-          waypoints: state.waypoints
+        set((state) => {
+          const updatedWaypoints = state.waypoints
             .filter((wp) => wp.id !== id)
-            .map((wp, idx) => ({ ...wp, order: idx })),
-        }), false, 'removeWaypoint'),
+            .map((wp, idx) => ({ ...wp, order: idx }))
+
+          // Remove from landmarks list if it was a landmark
+          const updatedLandmarks = state.addedLandmarks.filter((l) => l.id !== id)
+
+          // Save to localStorage
+          saveToLocalStorage(updatedWaypoints, updatedLandmarks)
+
+          return {
+            waypoints: updatedWaypoints,
+            addedLandmarks: updatedLandmarks,
+          }
+        }, false, 'removeWaypoint'),
 
       reorderWaypoints: (startIndex, endIndex) =>
         set((state) => {
