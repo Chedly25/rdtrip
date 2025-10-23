@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
 import type { Waypoint, City } from '../types'
 import { addLandmarkToRoute } from '../utils/routeOptimization'
+import { enrichCityData } from '../services/cityEnrichment'
 
 interface SpotlightState {
   waypoints: Waypoint[]
@@ -13,7 +14,7 @@ interface SpotlightState {
   // Actions
   setWaypoints: (waypoints: Waypoint[]) => void
   setOriginalCities: (cities: Waypoint[]) => void
-  addWaypoint: (waypoint: City, afterIndex: number) => void
+  addWaypoint: (waypoint: City, afterIndex: number) => Promise<void>
   addLandmark: (landmark: Waypoint) => void
   removeWaypoint: (id: string) => void
   reorderWaypoints: (startIndex: number, endIndex: number) => void
@@ -37,25 +38,72 @@ export const useSpotlightStore = create<SpotlightState>()(
       setOriginalCities: (cities) =>
         set({ originalCities: cities }, false, 'setOriginalCities'),
 
-      addWaypoint: (city, afterIndex) =>
-        set((state) => {
-          const newWaypoint: Waypoint = {
-            ...city,
-            id: city.id || `waypoint-${Date.now()}`,
-            order: afterIndex + 1,
-          }
+      addWaypoint: async (city, afterIndex) => {
+        // Geocode the city to get coordinates
+        const MAPBOX_TOKEN = 'pk.eyJ1IjoiY2hlZGx5MjUiLCJhIjoiY21lbW1qeHRoMHB5azJsc2VuMWJld2tlYSJ9.0jfOiOXCh0VN5ZjJ5ab7MQ'
+        let coordinates = city.coordinates
 
+        if (!coordinates) {
+          try {
+            const response = await fetch(
+              `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(city.name)}.json?access_token=${MAPBOX_TOKEN}&types=place&limit=1`
+            )
+            const data = await response.json()
+
+            if (data.features && data.features.length > 0) {
+              const [lng, lat] = data.features[0].center
+              coordinates = { lat, lng }
+            }
+          } catch (error) {
+            console.error(`Failed to geocode ${city.name}:`, error)
+            // Fallback coordinates (center of Europe)
+            coordinates = { lat: 48.8566, lng: 2.3522 }
+          }
+        }
+
+        const newWaypoint: Waypoint = {
+          ...city,
+          id: city.id || `waypoint-${Date.now()}`,
+          order: afterIndex + 1,
+          coordinates,
+          activities: city.activities || ['Explore the city', 'Try local cuisine', 'Visit landmarks'],
+          imageUrl: city.imageUrl,
+        }
+
+        // Add waypoint immediately
+        set((state) => {
           const newWaypoints = [...state.waypoints]
           newWaypoints.splice(afterIndex + 1, 0, newWaypoint)
 
-          // Reorder all waypoints
           return {
             waypoints: newWaypoints.map((wp, idx) => ({
               ...wp,
               order: idx,
             })),
           }
-        }, false, 'addWaypoint'),
+        }, false, 'addWaypoint')
+
+        // Enrich the city data in the background
+        try {
+          const { activities, imageUrl } = await enrichCityData(city.name)
+
+          set((state) => ({
+            waypoints: state.waypoints.map((wp) =>
+              wp.id === newWaypoint.id
+                ? {
+                    ...wp,
+                    activities: activities.length > 0 ? activities : wp.activities,
+                    imageUrl: imageUrl || wp.imageUrl,
+                  }
+                : wp
+            ),
+          }), false, 'enrichWaypoint')
+
+          console.log(`Enriched ${city.name} with ${activities.length} activities and image`)
+        } catch (error) {
+          console.error('Failed to enrich city data:', error)
+        }
+      },
 
       addLandmark: (landmark) =>
         set((state) => {
