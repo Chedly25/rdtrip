@@ -10,13 +10,18 @@ import { getWikipediaImage } from '../utils/wikipedia'
  */
 export async function fetchCityActivities(cityName: string): Promise<string[]> {
   try {
+    console.log(`Fetching activities for ${cityName} from Perplexity...`)
+
     const response = await fetch('/api/chat', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        message: `Provide 3-4 key highlights and attractions for ${cityName}. Focus on must-see places, activities, and unique experiences. Format as bullet points.`,
+        message: `List exactly 3 must-do activities or attractions in ${cityName}. Be very specific with names of places. Format as:
+- Activity 1
+- Activity 2
+- Activity 3`,
       }),
     })
 
@@ -25,15 +30,26 @@ export async function fetchCityActivities(cityName: string): Promise<string[]> {
     }
 
     const data = await response.json()
+    console.log('Perplexity response:', data)
 
     // Parse the response to extract highlights
     const highlights = parsePerplexityResponse(data.answer || data.response || '')
+    console.log(`Parsed ${highlights.length} activities for ${cityName}:`, highlights)
 
-    return highlights.length > 0
-      ? highlights
-      : ['Explore the historic city center', 'Try local cuisine', 'Visit cultural attractions']
+    if (highlights.length >= 3) {
+      return highlights.slice(0, 3)
+    }
+
+    // If we got less than 3, return what we have with fallbacks
+    const fallbacks = [
+      'Explore the historic city center',
+      'Try local cuisine',
+      'Visit cultural attractions'
+    ]
+
+    return [...highlights, ...fallbacks].slice(0, 3)
   } catch (error) {
-    console.warn('Failed to fetch activities from Perplexity:', error)
+    console.error('Failed to fetch activities from Perplexity:', error)
     return ['Explore the historic city center', 'Try local cuisine', 'Visit cultural attractions']
   }
 }
@@ -42,20 +58,50 @@ export async function fetchCityActivities(cityName: string): Promise<string[]> {
  * Parse Perplexity API response to extract bullet points
  */
 function parsePerplexityResponse(response: string): string[] {
-  // Extract bullet points or numbered lists
-  const bulletPoints =
-    response.match(/[-•*]\s*([^\n\r]+)/g) || response.match(/\d+\.\s*([^\n\r]+)/g) || []
+  if (!response || response.trim().length === 0) {
+    return []
+  }
 
-  if (bulletPoints.length > 0) {
-    return bulletPoints.slice(0, 4).map((point) => {
-      const cleaned = point.replace(/^[-•*\d.\s]+/, '').trim()
-      return cleaned.length > 60 ? cleaned.substring(0, 57) + '...' : cleaned
+  console.log('Parsing response:', response.substring(0, 200))
+
+  // Try different formats
+  const activities: string[] = []
+
+  // Format 1: Bullet points with -, •, or *
+  const bulletMatches = response.match(/[-•*]\s*([^\n\r]+)/g)
+  if (bulletMatches && bulletMatches.length > 0) {
+    bulletMatches.forEach((match) => {
+      const cleaned = match.replace(/^[-•*]\s*/, '').trim()
+      if (cleaned.length > 0 && cleaned.length < 100) {
+        activities.push(cleaned)
+      }
     })
   }
 
-  // Fallback: split by sentences and take first few
-  const sentences = response.split(/[.!?]+/).filter((s) => s.trim().length > 10)
-  return sentences.slice(0, 3).map((s) => s.trim().substring(0, 60) + '...')
+  // Format 2: Numbered list (1., 2., 3.)
+  if (activities.length === 0) {
+    const numberedMatches = response.match(/\d+\.\s*([^\n\r]+)/g)
+    if (numberedMatches && numberedMatches.length > 0) {
+      numberedMatches.forEach((match) => {
+        const cleaned = match.replace(/^\d+\.\s*/, '').trim()
+        if (cleaned.length > 0 && cleaned.length < 100) {
+          activities.push(cleaned)
+        }
+      })
+    }
+  }
+
+  // Format 3: Split by newlines and filter meaningful lines
+  if (activities.length === 0) {
+    const lines = response.split(/[\n\r]+/).filter((line) => {
+      const trimmed = line.trim()
+      return trimmed.length > 10 && trimmed.length < 100 && !trimmed.includes('activity')
+    })
+    activities.push(...lines.slice(0, 3))
+  }
+
+  console.log(`Extracted ${activities.length} activities`)
+  return activities.slice(0, 3)
 }
 
 /**
