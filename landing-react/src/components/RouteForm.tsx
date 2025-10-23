@@ -64,7 +64,7 @@ export function RouteForm() {
 
       // Store the route data and redirect to spotlight
       localStorage.setItem('spotlightData', JSON.stringify(data))
-      window.location.href = `/spotlight-react?routeId=${data.id}`
+      window.location.href = `/spotlight.html?routeId=${data.id}`
     } catch (err) {
       console.error('Route generation error:', err)
       setError(err instanceof Error ? err.message : 'Failed to generate route')
