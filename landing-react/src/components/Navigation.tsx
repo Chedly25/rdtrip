@@ -38,7 +38,7 @@ export function Navigation() {
           href="/"
           className={`text-2xl font-bold transition-colors ${
             isScrolled
-              ? 'bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent'
+              ? 'text-slate-900'
               : 'text-white'
           }`}
           whileHover={{ scale: 1.05 }}
@@ -50,7 +50,7 @@ export function Navigation() {
         <div className="hidden items-center gap-8 md:flex">
           <button
             onClick={() => scrollToSection('route-form')}
-            className={`font-medium transition-colors hover:text-purple-600 ${
+            className={`font-medium transition-colors hover:text-slate-900 ${
               isScrolled ? 'text-gray-700' : 'text-white'
             }`}
           >
@@ -58,7 +58,7 @@ export function Navigation() {
           </button>
           <button
             onClick={() => scrollToSection('features')}
-            className={`font-medium transition-colors hover:text-purple-600 ${
+            className={`font-medium transition-colors hover:text-slate-900 ${
               isScrolled ? 'text-gray-700' : 'text-white'
             }`}
           >
@@ -66,7 +66,7 @@ export function Navigation() {
           </button>
           <button
             onClick={() => scrollToSection('about')}
-            className={`font-medium transition-colors hover:text-purple-600 ${
+            className={`font-medium transition-colors hover:text-slate-900 ${
               isScrolled ? 'text-gray-700' : 'text-white'
             }`}
           >
@@ -74,9 +74,9 @@ export function Navigation() {
           </button>
           <motion.button
             onClick={() => scrollToSection('route-form')}
-            className="rounded-full bg-gradient-to-r from-blue-500 to-purple-500 px-6 py-2 font-semibold text-white shadow-md transition-all hover:scale-105 hover:shadow-lg"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+            className="rounded-lg bg-slate-900 px-6 py-2 font-semibold text-white shadow-md transition-all hover:bg-slate-800 hover:shadow-lg"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
           >
             Get Started
           </motion.button>
@@ -107,25 +107,25 @@ export function Navigation() {
             <div className="container mx-auto flex flex-col gap-4 px-4 py-6">
               <button
                 onClick={() => scrollToSection('route-form')}
-                className="text-left font-medium text-gray-700 hover:text-purple-600"
+                className="text-left font-medium text-gray-700 hover:text-slate-900"
               >
                 Plan Route
               </button>
               <button
                 onClick={() => scrollToSection('features')}
-                className="text-left font-medium text-gray-700 hover:text-purple-600"
+                className="text-left font-medium text-gray-700 hover:text-slate-900"
               >
                 Features
               </button>
               <button
                 onClick={() => scrollToSection('about')}
-                className="text-left font-medium text-gray-700 hover:text-purple-600"
+                className="text-left font-medium text-gray-700 hover:text-slate-900"
               >
                 About
               </button>
               <button
                 onClick={() => scrollToSection('route-form')}
-                className="rounded-full bg-gradient-to-r from-blue-500 to-purple-500 px-6 py-2 text-center font-semibold text-white"
+                className="rounded-lg bg-slate-900 px-6 py-2 text-center font-semibold text-white hover:bg-slate-800"
               >
                 Get Started
               </button>
