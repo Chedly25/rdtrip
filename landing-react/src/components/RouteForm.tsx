@@ -139,7 +139,7 @@ export function RouteForm() {
           <div className="space-y-3">
             <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
               <Users className="h-4 w-4" />
-              Number of Stops: <span className="text-purple-600">{stops}</span>
+              Number of Stops: <span className="text-slate-900 font-bold">{stops}</span>
             </label>
             <input
               type="range"
@@ -149,7 +149,7 @@ export function RouteForm() {
               onChange={(e) => setStops(Number(e.target.value))}
               className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-gray-200"
               style={{
-                background: `linear-gradient(to right, #a855f7 0%, #a855f7 ${((stops - 1) / 7) * 100}%, #e5e7eb ${((stops - 1) / 7) * 100}%, #e5e7eb 100%)`,
+                background: `linear-gradient(to right, #1e293b 0%, #1e293b ${((stops - 1) / 7) * 100}%, #e5e7eb ${((stops - 1) / 7) * 100}%, #e5e7eb 100%)`,
               }}
             />
             <div className="flex justify-between text-xs text-gray-500">
@@ -179,9 +179,9 @@ export function RouteForm() {
           <motion.button
             type="submit"
             disabled={isLoading || isSubmitting}
-            className="w-full rounded-xl bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 px-8 py-4 text-lg font-semibold text-white shadow-lg transition-all hover:scale-[1.02] hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50"
-            whileHover={!isLoading && !isSubmitting ? { scale: 1.02 } : undefined}
-            whileTap={!isLoading && !isSubmitting ? { scale: 0.98 } : undefined}
+            className="w-full rounded-lg bg-slate-900 px-8 py-4 text-lg font-semibold text-white shadow-lg transition-all hover:bg-slate-800 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50"
+            whileHover={!isLoading && !isSubmitting ? { scale: 1.01 } : undefined}
+            whileTap={!isLoading && !isSubmitting ? { scale: 0.99 } : undefined}
           >
             {isLoading || isSubmitting ? (
               <span className="flex items-center justify-center gap-2">

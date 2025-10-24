@@ -80,7 +80,7 @@ export function AgentSelector({ selected, onChange }: AgentSelectorProps) {
               onClick={() => toggleAgent(agent.type)}
               className={`relative overflow-hidden rounded-xl border-2 h-48 text-left transition-all ${
                 isSelected
-                  ? 'border-transparent shadow-2xl ring-4 ring-purple-500 ring-offset-2'
+                  ? 'border-transparent shadow-2xl ring-4 ring-slate-900 ring-offset-2'
                   : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
               }`}
               whileHover={{ scale: 1.02 }}

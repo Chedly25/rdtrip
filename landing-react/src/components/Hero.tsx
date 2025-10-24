@@ -41,7 +41,7 @@ export function Hero() {
           >
             Plan Your Perfect
             <br />
-            <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+            <span className="text-white">
               Road Trip Adventure
             </span>
           </motion.h1>
@@ -58,12 +58,12 @@ export function Hero() {
 
           <motion.button
             onClick={scrollToForm}
-            className="group inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 px-8 py-4 text-lg font-semibold text-white shadow-lg transition-all hover:scale-105 hover:shadow-2xl"
+            className="group inline-flex items-center gap-2 rounded-lg bg-slate-900 px-8 py-4 text-lg font-semibold text-white shadow-xl transition-all hover:bg-slate-800 hover:shadow-2xl"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.8 }}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
           >
             Start Planning
             <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
