@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Menu, X } from 'lucide-react'
+import { AuthButton } from './auth/AuthButton'
 
 export function Navigation() {
   const [isScrolled, setIsScrolled] = useState(false)
@@ -72,14 +73,7 @@ export function Navigation() {
           >
             About
           </button>
-          <motion.button
-            onClick={() => scrollToSection('route-form')}
-            className="rounded-lg bg-slate-900 px-6 py-2 font-semibold text-white shadow-md transition-all hover:bg-slate-800 hover:shadow-lg"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            Get Started
-          </motion.button>
+          <AuthButton />
         </div>
 
         {/* Mobile Menu Button */}
@@ -123,12 +117,9 @@ export function Navigation() {
               >
                 About
               </button>
-              <button
-                onClick={() => scrollToSection('route-form')}
-                className="rounded-lg bg-slate-900 px-6 py-2 text-center font-semibold text-white hover:bg-slate-800"
-              >
-                Get Started
-              </button>
+              <div className="pt-2">
+                <AuthButton />
+              </div>
             </div>
           </motion.div>
         )}
