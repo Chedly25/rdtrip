@@ -292,12 +292,54 @@ app.post('/api/generate-route', async (req, res) => {
       return res.status(400).json({ error: 'Destination is required' });
     }
 
-    // Process with selected agents
-    const agentPromises = selectedAgents.map(agentType =>
-      queryPerplexityWithMetrics(agents[agentType], destination, stops, budget)
-    );
+    console.log(`\n=== Starting route generation ===`);
+    console.log(`Destination: ${destination}`);
+    console.log(`Stops: ${stops}`);
+    console.log(`Agents: ${selectedAgents.join(', ')}`);
+    console.log(`Budget: ${budget}`);
 
-    const agentResults = await Promise.all(agentPromises);
+    // For large requests (6+ stops), process agents sequentially to avoid overwhelming Perplexity
+    // For smaller requests, process in parallel for speed
+    const shouldProcessSequentially = stops >= 6;
+
+    let agentResults;
+    if (shouldProcessSequentially) {
+      console.log(`Processing agents SEQUENTIALLY (${stops} stops >= 6)`);
+      agentResults = [];
+
+      for (const agentType of selectedAgents) {
+        try {
+          console.log(`\n--- Processing ${agents[agentType].name} ---`);
+          const result = await queryPerplexityWithMetrics(agents[agentType], destination, stops, budget);
+          agentResults.push(result);
+          console.log(`✓ ${agents[agentType].name} completed successfully`);
+        } catch (error) {
+          console.error(`✗ ${agents[agentType].name} failed:`, error.message);
+          // Continue with other agents even if one fails
+          agentResults.push({
+            recommendations: JSON.stringify({ waypoints: [], error: `Failed to generate ${agents[agentType].name} route` }),
+            metrics: {}
+          });
+        }
+      }
+    } else {
+      console.log(`Processing agents IN PARALLEL (${stops} stops < 6)`);
+      const agentPromises = selectedAgents.map(async agentType => {
+        try {
+          return await queryPerplexityWithMetrics(agents[agentType], destination, stops, budget);
+        } catch (error) {
+          console.error(`Agent ${agentType} failed:`, error.message);
+          return {
+            recommendations: JSON.stringify({ waypoints: [], error: `Failed to generate ${agents[agentType].name} route` }),
+            metrics: {}
+          };
+        }
+      });
+
+      agentResults = await Promise.all(agentPromises);
+    }
+
+    console.log(`\n=== Route generation completed ===\n`);
 
     // Combine results
     const route = {
@@ -320,7 +362,7 @@ app.post('/api/generate-route', async (req, res) => {
     res.json(route);
   } catch (error) {
     console.error('Route generation error:', error);
-    res.status(500).json({ error: 'Failed to generate route' });
+    res.status(500).json({ error: 'Failed to generate route', details: error.message });
   }
 });
 
@@ -912,7 +954,11 @@ async function queryPerplexityWithMetrics(agent, destination, stops, budget = 'b
   };
 }
 
-async function queryPerplexity(agent, destination, stops, budget = 'budget') {
+async function queryPerplexity(agent, destination, stops, budget = 'budget', retryCount = 0) {
+  const maxRetries = 2;
+  const baseTimeout = 45000; // 45 seconds base timeout
+  const retryDelay = 3000; // 3 second delay between retries
+
   try {
     const budgetDescriptions = {
       budget: 'budget-friendly options, affordable accommodations, free or low-cost activities, local food markets',
@@ -920,9 +966,12 @@ async function queryPerplexity(agent, destination, stops, budget = 'budget') {
       comfort: 'comfortable hotels, paid attractions and activities, nice restaurants and dining experiences',
       luxury: 'luxury hotels and resorts, premium experiences, fine dining, exclusive activities'
     };
-    
+
     const budgetContext = budgetDescriptions[budget] || budgetDescriptions.budget;
-    
+
+    // Adjust max_tokens based on stops (more stops = more tokens needed)
+    const maxTokens = Math.min(1000 + (stops * 100), 2000);
+
     const prompt = `${agent.prompt}
 
 Create a road trip from Aix-en-Provence to ${destination} with ${stops} CITY stops.
@@ -950,6 +999,8 @@ Return ONLY valid JSON (no extra text before or after):
 
 IMPORTANT: Return ONLY the JSON object, no markdown formatting, no extra text.`;
 
+    console.log(`[${agent.name}] Querying Perplexity (attempt ${retryCount + 1}/${maxRetries + 1}, timeout: ${baseTimeout}ms, maxTokens: ${maxTokens})`);
+
     const response = await axios.post('https://api.perplexity.ai/chat/completions', {
       model: 'sonar',
       messages: [
@@ -958,19 +1009,42 @@ IMPORTANT: Return ONLY the JSON object, no markdown formatting, no extra text.`;
           content: prompt
         }
       ],
-      max_tokens: 1000,
+      max_tokens: maxTokens,
       temperature: 0.7
     }, {
       headers: {
         'Authorization': `Bearer ${PERPLEXITY_API_KEY}`,
         'Content-Type': 'application/json'
-      }
+      },
+      timeout: baseTimeout // 45 second timeout
     });
 
+    console.log(`[${agent.name}] Successfully received response`);
     return response.data.choices[0].message.content;
+
   } catch (error) {
-    console.error(`Error with ${agent.name}:`, error.response?.data || error.message);
-    return `Error generating recommendations for ${agent.name}`;
+    const isTimeout = error.code === 'ECONNABORTED' || error.message.includes('timeout');
+    const is503 = error.response?.status === 503;
+
+    console.error(`[${agent.name}] Error (attempt ${retryCount + 1}/${maxRetries + 1}):`, {
+      message: error.message,
+      code: error.code,
+      status: error.response?.status,
+      isTimeout,
+      is503
+    });
+
+    // Retry on timeout or 503 errors
+    if ((isTimeout || is503) && retryCount < maxRetries) {
+      const delay = retryDelay * Math.pow(2, retryCount); // Exponential backoff
+      console.log(`[${agent.name}] Retrying in ${delay}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      return queryPerplexity(agent, destination, stops, budget, retryCount + 1);
+    }
+
+    // If all retries failed, return error
+    console.error(`[${agent.name}] All retry attempts exhausted`);
+    throw error;
   }
 }
 
