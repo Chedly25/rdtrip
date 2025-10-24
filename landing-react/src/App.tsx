@@ -25,10 +25,19 @@ function App() {
     }, 100)
   }
 
-  const handleViewMap = () => {
+  const handleViewMap = (agent?: string) => {
     if (routeData) {
-      localStorage.setItem('spotlightData', JSON.stringify(routeData))
-      window.location.href = `/spotlight.html?routeId=${routeData.id || Date.now()}`
+      // If agent is specified, filter the route data to only that agent
+      const dataToStore = agent
+        ? {
+            ...routeData,
+            agentResults: routeData.agentResults.filter((ar: any) => ar.agent === agent),
+            agent: agent // Set the primary agent
+          }
+        : routeData
+
+      localStorage.setItem('spotlightData', JSON.stringify(dataToStore))
+      window.location.href = `/spotlight.html?routeId=${routeData.id || Date.now()}&agent=${agent || 'adventure'}`
     }
   }
 

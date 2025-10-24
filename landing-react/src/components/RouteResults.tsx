@@ -43,7 +43,7 @@ interface RouteData {
 
 interface RouteResultsProps {
   routeData: RouteData
-  onViewMap: () => void
+  onViewMap: (agent?: string) => void
   onStartOver: () => void
 }
 
@@ -228,11 +228,21 @@ export function RouteResults({ routeData, onViewMap, onStartOver }: RouteResults
                           displayValue = value.toFixed(1)
                         } else if (typeof value === 'object' && value !== null) {
                           if (Array.isArray(value)) {
-                            displayValue = (value as any[]).join(', ')
+                            // Handle array of objects (like restaurants)
+                            if (value.length > 0 && typeof value[0] === 'object') {
+                              displayValue = value.map((item: any) => item.name || JSON.stringify(item)).join(', ')
+                            } else {
+                              displayValue = (value as any[]).join(', ')
+                            }
                           } else {
-                            displayValue = Object.entries(value as Record<string, any>)
-                              .map(([k, v]) => `${k}: ${v}%`)
-                              .join(', ')
+                            // Handle nested objects
+                            const entries = Object.entries(value as Record<string, any>)
+                            if (entries.some(([, v]) => typeof v === 'number' && v < 100)) {
+                              // Looks like percentages
+                              displayValue = entries.map(([k, v]) => `${k}: ${v}%`).join(', ')
+                            } else {
+                              displayValue = entries.map(([k, v]) => `${k}: ${v}`).join(', ')
+                            }
                           }
                         } else {
                           displayValue = String(value)
@@ -280,15 +290,26 @@ export function RouteResults({ routeData, onViewMap, onStartOver }: RouteResults
                               className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
                             />
                           ) : (
-                            <div
-                              className="flex h-full items-center justify-center"
-                              style={{
-                                background: `linear-gradient(135deg, ${theme.color}, ${theme.color}dd)`
+                            <img
+                              src={`https://source.unsplash.com/800x600/?${encodeURIComponent(city.name)},city,travel`}
+                              alt={city.name}
+                              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement
+                                target.style.display = 'none'
+                                const fallback = target.nextElementSibling as HTMLDivElement
+                                if (fallback) fallback.style.display = 'flex'
                               }}
-                            >
-                              <MapPin className="h-16 w-16 text-white/50" />
-                            </div>
+                            />
                           )}
+                          <div
+                            className="hidden h-full items-center justify-center"
+                            style={{
+                              background: `linear-gradient(135deg, ${theme.color}, ${theme.color}dd)`
+                            }}
+                          >
+                            <MapPin className="h-16 w-16 text-white/50" />
+                          </div>
                         </div>
 
                         {/* City Content */}
@@ -342,7 +363,7 @@ export function RouteResults({ routeData, onViewMap, onStartOver }: RouteResults
                 {/* View Map Button for this theme */}
                 <div className="flex justify-center">
                   <button
-                    onClick={onViewMap}
+                    onClick={() => onViewMap(agentResult.agent)}
                     className="inline-flex items-center justify-center gap-2 rounded-lg px-8 py-4 text-lg font-semibold text-white shadow-lg transition-all hover:shadow-xl hover:scale-105"
                     style={{ backgroundColor: theme.color }}
                   >
@@ -364,7 +385,7 @@ export function RouteResults({ routeData, onViewMap, onStartOver }: RouteResults
           className="mt-12 flex flex-col gap-4 sm:flex-row sm:justify-center"
         >
           <button
-            onClick={onViewMap}
+            onClick={() => onViewMap()}
             className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-8 py-4 text-lg font-semibold text-white shadow-lg transition-all hover:bg-slate-800 hover:shadow-xl"
           >
             <Map className="h-5 w-5" />
