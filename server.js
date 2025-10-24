@@ -862,6 +862,30 @@ async function queryPerplexityWithMetrics(agent, destination, stops, budget = 'b
   cleanedResponse = cleanedResponse.replace(/\s*```$/i, '');
   cleanedResponse = cleanedResponse.trim();
 
+  // Additional JSON cleaning
+  // Remove trailing commas before closing brackets/braces
+  cleanedResponse = cleanedResponse.replace(/,\s*}/g, '}');
+  cleanedResponse = cleanedResponse.replace(/,\s*]/g, ']');
+
+  // Try to validate and fix JSON
+  try {
+    JSON.parse(cleanedResponse);
+  } catch (e) {
+    console.error(`Invalid JSON from ${agent.name}:`, e.message);
+    console.error('First 500 chars:', cleanedResponse.substring(0, 500));
+    // If JSON is invalid, try to extract just the JSON object
+    const jsonMatch = cleanedResponse.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      cleanedResponse = jsonMatch[0];
+      // Try again with extracted JSON
+      try {
+        JSON.parse(cleanedResponse);
+      } catch (e2) {
+        console.error('Still invalid after extraction:', e2.message);
+      }
+    }
+  }
+
   // Extract metrics from the response
   const metrics = agent.metricsExtractor ? agent.metricsExtractor(cleanedResponse) : {};
 
