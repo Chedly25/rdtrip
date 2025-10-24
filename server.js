@@ -19,6 +19,12 @@ const UNSPLASH_ACCESS_KEY = process.env.UNSPLASH_ACCESS_KEY || 'lEwczWVNzGvFAp1B
 // In-memory job storage (in production, use Redis or a database)
 const routeJobs = new Map();
 
+// Auth utilities and middleware
+const db = require('./db/connection');
+const { hashPassword, comparePassword, validatePasswordStrength } = require('./utils/password');
+const { generateToken } = require('./utils/jwt');
+const { authenticate, optionalAuth } = require('./middleware/auth');
+
 // AI Agent configurations with enhanced metrics
 const agents = {
   adventure: {
@@ -285,6 +291,184 @@ function extractTransportSplit(text) {
 
   return { publicTransport, car };
 }
+
+// =====================================================
+// AUTHENTICATION ENDPOINTS
+// =====================================================
+
+/**
+ * POST /api/auth/register
+ * Register a new user account
+ */
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const { email, password, name } = req.body;
+
+    // Validate required fields
+    if (!email || !password) {
+      return res.status(400).json({
+        error: 'Missing required fields',
+        message: 'Email and password are required'
+      });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        error: 'Invalid email',
+        message: 'Please provide a valid email address'
+      });
+    }
+
+    // Validate password strength
+    const passwordValidation = validatePasswordStrength(password);
+    if (!passwordValidation.valid) {
+      return res.status(400).json({
+        error: 'Weak password',
+        message: 'Password does not meet requirements',
+        details: passwordValidation.errors
+      });
+    }
+
+    // Check if user already exists
+    const existingUser = await db.query(
+      'SELECT id FROM users WHERE email = $1',
+      [email.toLowerCase()]
+    );
+
+    if (existingUser.rows.length > 0) {
+      return res.status(409).json({
+        error: 'Email already registered',
+        message: 'An account with this email already exists'
+      });
+    }
+
+    // Hash password
+    const passwordHash = await hashPassword(password);
+
+    // Create user in database
+    const result = await db.query(
+      `INSERT INTO users (email, password_hash, name)
+       VALUES ($1, $2, $3)
+       RETURNING id, email, name, created_at`,
+      [email.toLowerCase(), passwordHash, name || null]
+    );
+
+    const user = result.rows[0];
+
+    // Generate JWT token
+    const token = generateToken(user);
+
+    console.log('✅ New user registered:', user.email);
+
+    res.status(201).json({
+      message: 'Account created successfully',
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        createdAt: user.created_at
+      },
+      token
+    });
+
+  } catch (error) {
+    console.error('Registration error:', error);
+    res.status(500).json({
+      error: 'Registration failed',
+      message: 'Failed to create account. Please try again.'
+    });
+  }
+});
+
+/**
+ * POST /api/auth/login
+ * Login with email and password
+ */
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Validate required fields
+    if (!email || !password) {
+      return res.status(400).json({
+        error: 'Missing credentials',
+        message: 'Email and password are required'
+      });
+    }
+
+    // Find user by email
+    const result = await db.query(
+      'SELECT id, email, password_hash, name, avatar_url, created_at FROM users WHERE email = $1',
+      [email.toLowerCase()]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(401).json({
+        error: 'Invalid credentials',
+        message: 'Email or password is incorrect'
+      });
+    }
+
+    const user = result.rows[0];
+
+    // Verify password
+    const isValidPassword = await comparePassword(password, user.password_hash);
+
+    if (!isValidPassword) {
+      return res.status(401).json({
+        error: 'Invalid credentials',
+        message: 'Email or password is incorrect'
+      });
+    }
+
+    // Generate JWT token
+    const token = generateToken(user);
+
+    console.log('✅ User logged in:', user.email);
+
+    res.json({
+      message: 'Login successful',
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        avatarUrl: user.avatar_url,
+        createdAt: user.created_at
+      },
+      token
+    });
+
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({
+      error: 'Login failed',
+      message: 'Failed to login. Please try again.'
+    });
+  }
+});
+
+/**
+ * GET /api/auth/me
+ * Get current user info (requires authentication)
+ */
+app.get('/api/auth/me', authenticate, (req, res) => {
+  // User is attached to req by authenticate middleware
+  res.json({
+    user: {
+      id: req.user.id,
+      email: req.user.email,
+      name: req.user.name,
+      avatarUrl: req.user.avatar_url,
+      createdAt: req.user.created_at
+    }
+  });
+});
+
+// =====================================================
+// ROUTE GENERATION ENDPOINTS
+// =====================================================
 
 // Start route generation job (returns immediately with job ID)
 app.post('/api/generate-route', async (req, res) => {
