@@ -5,8 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Redirecting to Spotlight...</title>
     <script>
-        // Immediately redirect to the React app
-        window.location.replace('/spotlight-new/');
+        // Immediately redirect to the React app with query params
+        const params = window.location.search;
+        window.location.replace('/spotlight-new/' + params);
     </script>
 </head>
 <body>
