@@ -1,21 +1,36 @@
 import { motion } from 'framer-motion'
-import { MapPin, Clock, DollarSign, ArrowRight, Map } from 'lucide-react'
+import { MapPin, Clock, DollarSign, ArrowRight, Map, Mountain, Palette, UtensilsCrossed, Gem } from 'lucide-react'
 
-interface Waypoint {
+interface City {
   name: string
   activities?: string[]
+  image?: string
   imageUrl?: string
+}
+
+interface ParsedRecommendations {
+  waypoints: City[]
+  description?: string
+}
+
+interface AgentResult {
+  agent: string
+  agentConfig: {
+    name: string
+    color: string
+    icon: string
+  }
+  recommendations: string
+  metrics: Record<string, number>
 }
 
 interface RouteData {
   id?: string
   origin: string
   destination: string
-  waypoints: Waypoint[]
-  distance?: number
-  duration?: number
+  totalStops?: number
   budget?: string
-  agents?: string[]
+  agentResults: AgentResult[]
 }
 
 interface RouteResultsProps {
@@ -24,8 +39,29 @@ interface RouteResultsProps {
   onStartOver: () => void
 }
 
+const agentIcons: Record<string, any> = {
+  adventure: Mountain,
+  culture: Palette,
+  food: UtensilsCrossed,
+  'hidden-gems': Gem
+}
+
+const agentColors: Record<string, string> = {
+  adventure: 'bg-green-600',
+  culture: 'bg-blue-600',
+  food: 'bg-red-600',
+  'hidden-gems': 'bg-purple-600'
+}
+
 export function RouteResults({ routeData, onViewMap, onStartOver }: RouteResultsProps) {
-  const allWaypoints = routeData.waypoints || []
+  const totalCities = routeData.agentResults.reduce((total, agentResult) => {
+    try {
+      const parsed: ParsedRecommendations = JSON.parse(agentResult.recommendations)
+      return total + (parsed.waypoints?.length || 0)
+    } catch {
+      return total
+    }
+  }, 0)
 
   return (
     <section className="relative bg-gradient-to-b from-gray-50 to-white py-20">
@@ -60,25 +96,23 @@ export function RouteResults({ routeData, onViewMap, onStartOver }: RouteResults
               </span>
             </div>
             <div className="text-3xl font-bold text-gray-900">
-              {allWaypoints.length}
+              {totalCities}
             </div>
             <p className="text-sm text-gray-600">Cities to explore</p>
           </div>
 
-          {routeData.distance && (
-            <div className="rounded-xl bg-white p-6 shadow-lg">
-              <div className="mb-2 flex items-center gap-2 text-slate-900">
-                <Clock className="h-5 w-5" />
-                <span className="text-sm font-semibold uppercase tracking-wide">
-                  Distance
-                </span>
-              </div>
-              <div className="text-3xl font-bold text-gray-900">
-                {Math.round(routeData.distance / 1000)} km
-              </div>
-              <p className="text-sm text-gray-600">Total travel distance</p>
+          <div className="rounded-xl bg-white p-6 shadow-lg">
+            <div className="mb-2 flex items-center gap-2 text-slate-900">
+              <Clock className="h-5 w-5" />
+              <span className="text-sm font-semibold uppercase tracking-wide">
+                Themes
+              </span>
             </div>
-          )}
+            <div className="text-3xl font-bold text-gray-900">
+              {routeData.agentResults.length}
+            </div>
+            <p className="text-sm text-gray-600">Travel styles</p>
+          </div>
 
           {routeData.budget && (
             <div className="rounded-xl bg-white p-6 shadow-lg">
@@ -96,70 +130,121 @@ export function RouteResults({ routeData, onViewMap, onStartOver }: RouteResults
           )}
         </motion.div>
 
-        {/* Waypoints List */}
+        {/* Agent Results */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.4 }}
-          className="mb-12 space-y-6"
+          className="mb-12 space-y-8"
         >
-          <h3 className="text-2xl font-bold text-gray-900">Your Itinerary</h3>
+          <h3 className="text-2xl font-bold text-gray-900">Your Themed Routes</h3>
 
-          <div className="space-y-4">
-            {allWaypoints.map((waypoint, index) => (
+          {routeData.agentResults.map((agentResult, agentIndex) => {
+            let parsedRecs: ParsedRecommendations | null = null
+            try {
+              parsedRecs = JSON.parse(agentResult.recommendations)
+            } catch (error) {
+              console.error('Failed to parse recommendations:', error)
+              return null
+            }
+
+            if (!parsedRecs) return null
+
+            const Icon = agentIcons[agentResult.agent] || MapPin
+            const colorClass = agentColors[agentResult.agent] || 'bg-slate-600'
+            const cities = parsedRecs.waypoints || []
+
+            return (
               <motion.div
-                key={index}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.5, delay: 0.1 * index }}
-                className="overflow-hidden rounded-xl bg-white shadow-lg transition-shadow hover:shadow-xl"
+                key={agentIndex}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.1 * agentIndex }}
+                className="overflow-hidden rounded-xl bg-white shadow-lg"
               >
-                <div className="flex flex-col md:flex-row">
-                  {/* Image */}
-                  {waypoint.imageUrl && (
-                    <div className="h-48 w-full md:h-auto md:w-64">
-                      <img
-                        src={waypoint.imageUrl}
-                        alt={waypoint.name}
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
-                  )}
-
-                  {/* Content */}
-                  <div className="flex-1 p-6">
-                    <div className="mb-4 flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-white font-bold">
-                        {index + 1}
-                      </div>
-                      <h4 className="text-2xl font-bold text-gray-900">
-                        {waypoint.name}
-                      </h4>
-                    </div>
-
-                    {waypoint.activities && waypoint.activities.length > 0 && (
-                      <div>
-                        <p className="mb-2 text-sm font-semibold text-gray-600">
-                          Things to do:
-                        </p>
-                        <ul className="space-y-2">
-                          {waypoint.activities.slice(0, 3).map((activity, actIndex) => (
-                            <li
-                              key={actIndex}
-                              className="flex items-start gap-2 text-gray-700"
-                            >
-                              <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-slate-900" />
-                              <span>{activity}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
+                {/* Agent Header */}
+                <div className={`${colorClass} p-6 text-white`}>
+                  <div className="flex items-center gap-3">
+                    <Icon className="h-8 w-8" />
+                    <h4 className="text-2xl font-bold">
+                      {agentResult.agentConfig.name}
+                    </h4>
                   </div>
+                  {parsedRecs.description && (
+                    <p className="mt-3 text-sm opacity-90">
+                      {parsedRecs.description}
+                    </p>
+                  )}
+                </div>
+
+                {/* Metrics */}
+                {agentResult.metrics && Object.keys(agentResult.metrics).length > 0 && (
+                  <div className="border-b border-gray-200 bg-gray-50 p-6">
+                    <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                      {Object.entries(agentResult.metrics).map(([key, value]) => (
+                        <div key={key}>
+                          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                            {key.replace(/_/g, ' ')}
+                          </p>
+                          <p className="mt-1 text-xl font-bold text-gray-900">
+                            {typeof value === 'number' ? value.toFixed(1) : value}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Cities Grid */}
+                <div className="p-6">
+                  <p className="mb-4 text-sm font-semibold text-gray-600">
+                    Featured Cities ({cities.length})
+                  </p>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                    {cities.slice(0, 3).map((city, cityIndex) => (
+                      <div
+                        key={cityIndex}
+                        className="overflow-hidden rounded-lg border border-gray-200 transition-shadow hover:shadow-md"
+                      >
+                        {(city.image || city.imageUrl) && (
+                          <div className="h-40 w-full">
+                            <img
+                              src={city.image || city.imageUrl}
+                              alt={city.name}
+                              className="h-full w-full object-cover"
+                            />
+                          </div>
+                        )}
+                        <div className="p-4">
+                          <h5 className="mb-2 font-bold text-gray-900">
+                            {city.name}
+                          </h5>
+                          {city.activities && city.activities.length > 0 && (
+                            <ul className="space-y-1">
+                              {city.activities.slice(0, 2).map((activity, actIndex) => (
+                                <li
+                                  key={actIndex}
+                                  className="flex items-start gap-2 text-sm text-gray-600"
+                                >
+                                  <span className="mt-1.5 h-1 w-1 flex-shrink-0 rounded-full bg-gray-400" />
+                                  <span className="line-clamp-1">{activity}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {cities.length > 3 && (
+                    <p className="mt-4 text-sm text-gray-500">
+                      + {cities.length - 3} more cities in this route
+                    </p>
+                  )}
                 </div>
               </motion.div>
-            ))}
-          </div>
+            )
+          })}
         </motion.div>
 
         {/* Action Buttons */}
