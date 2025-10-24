@@ -5,7 +5,11 @@ import { useFormStore } from '../stores/formStore'
 import { BudgetSelector } from './BudgetSelector'
 import { AgentSelector } from './AgentSelector'
 
-export function RouteForm() {
+interface RouteFormProps {
+  onRouteGenerated?: (data: any) => void
+}
+
+export function RouteForm({ onRouteGenerated }: RouteFormProps) {
   const {
     origin,
     destination,
@@ -62,9 +66,14 @@ export function RouteForm() {
 
       const data = await response.json()
 
-      // Store the route data and redirect to spotlight
-      localStorage.setItem('spotlightData', JSON.stringify(data))
-      window.location.href = `/spotlight.html?routeId=${data.id}`
+      // Call the callback to show results
+      if (onRouteGenerated) {
+        onRouteGenerated(data)
+      } else {
+        // Fallback: redirect directly if no callback provided
+        localStorage.setItem('spotlightData', JSON.stringify(data))
+        window.location.href = `/spotlight.html?routeId=${data.id}`
+      }
     } catch (err) {
       console.error('Route generation error:', err)
       setError(err instanceof Error ? err.message : 'Failed to generate route')
