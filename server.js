@@ -467,6 +467,221 @@ app.get('/api/auth/me', authenticate, (req, res) => {
 });
 
 // =====================================================
+// SAVED ROUTES ENDPOINTS
+// =====================================================
+
+// POST /api/routes - Save a new route (protected)
+app.post('/api/routes', authenticate, async (req, res) => {
+  try {
+    const { name, origin, destination, stops, budget, selectedAgents, routeData } = req.body;
+
+    // Validate required fields
+    if (!origin || !destination || !stops || !budget || !selectedAgents || !routeData) {
+      return res.status(400).json({
+        error: 'Missing required fields',
+        required: ['origin', 'destination', 'stops', 'budget', 'selectedAgents', 'routeData']
+      });
+    }
+
+    // Save route to database
+    const result = await db.query(
+      `INSERT INTO routes (user_id, name, origin, destination, stops, budget, selected_agents, route_data)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       RETURNING id, user_id, name, origin, destination, stops, budget, selected_agents, route_data, is_favorite, is_public, created_at, updated_at`,
+      [
+        req.user.id,
+        name || `${origin} to ${destination}`,
+        origin,
+        destination,
+        stops,
+        budget,
+        selectedAgents,
+        JSON.stringify(routeData)
+      ]
+    );
+
+    const savedRoute = result.rows[0];
+
+    res.status(201).json({
+      message: 'Route saved successfully',
+      route: {
+        id: savedRoute.id,
+        userId: savedRoute.user_id,
+        name: savedRoute.name,
+        origin: savedRoute.origin,
+        destination: savedRoute.destination,
+        stops: savedRoute.stops,
+        budget: savedRoute.budget,
+        selectedAgents: savedRoute.selected_agents,
+        routeData: savedRoute.route_data,
+        isFavorite: savedRoute.is_favorite,
+        isPublic: savedRoute.is_public,
+        createdAt: savedRoute.created_at,
+        updatedAt: savedRoute.updated_at
+      }
+    });
+  } catch (error) {
+    console.error('Error saving route:', error);
+    res.status(500).json({ error: 'Failed to save route' });
+  }
+});
+
+// GET /api/routes - Get all routes for authenticated user
+app.get('/api/routes', authenticate, async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT id, user_id, name, origin, destination, stops, budget, selected_agents, route_data, is_favorite, is_public, created_at, updated_at
+       FROM routes
+       WHERE user_id = $1
+       ORDER BY created_at DESC`,
+      [req.user.id]
+    );
+
+    const routes = result.rows.map(row => ({
+      id: row.id,
+      userId: row.user_id,
+      name: row.name,
+      origin: row.origin,
+      destination: row.destination,
+      stops: row.stops,
+      budget: row.budget,
+      selectedAgents: row.selected_agents,
+      routeData: row.route_data,
+      isFavorite: row.is_favorite,
+      isPublic: row.is_public,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    }));
+
+    res.json({ routes });
+  } catch (error) {
+    console.error('Error fetching routes:', error);
+    res.status(500).json({ error: 'Failed to fetch routes' });
+  }
+});
+
+// GET /api/routes/:id - Get a specific route
+app.get('/api/routes/:id', authenticate, async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT id, user_id, name, origin, destination, stops, budget, selected_agents, route_data, is_favorite, is_public, created_at, updated_at
+       FROM routes
+       WHERE id = $1 AND user_id = $2`,
+      [req.params.id, req.user.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Route not found' });
+    }
+
+    const row = result.rows[0];
+    res.json({
+      route: {
+        id: row.id,
+        userId: row.user_id,
+        name: row.name,
+        origin: row.origin,
+        destination: row.destination,
+        stops: row.stops,
+        budget: row.budget,
+        selectedAgents: row.selected_agents,
+        routeData: row.route_data,
+        isFavorite: row.is_favorite,
+        isPublic: row.is_public,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching route:', error);
+    res.status(500).json({ error: 'Failed to fetch route' });
+  }
+});
+
+// DELETE /api/routes/:id - Delete a route
+app.delete('/api/routes/:id', authenticate, async (req, res) => {
+  try {
+    const result = await db.query(
+      'DELETE FROM routes WHERE id = $1 AND user_id = $2 RETURNING id',
+      [req.params.id, req.user.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Route not found' });
+    }
+
+    res.json({ message: 'Route deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting route:', error);
+    res.status(500).json({ error: 'Failed to delete route' });
+  }
+});
+
+// PATCH /api/routes/:id - Update route (name, favorite status, etc.)
+app.patch('/api/routes/:id', authenticate, async (req, res) => {
+  try {
+    const { name, isFavorite, isPublic } = req.body;
+    const updates = [];
+    const values = [];
+    let paramIndex = 1;
+
+    if (name !== undefined) {
+      updates.push(`name = $${paramIndex++}`);
+      values.push(name);
+    }
+    if (isFavorite !== undefined) {
+      updates.push(`is_favorite = $${paramIndex++}`);
+      values.push(isFavorite);
+    }
+    if (isPublic !== undefined) {
+      updates.push(`is_public = $${paramIndex++}`);
+      values.push(isPublic);
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ error: 'No fields to update' });
+    }
+
+    updates.push(`updated_at = CURRENT_TIMESTAMP`);
+    values.push(req.params.id, req.user.id);
+
+    const result = await db.query(
+      `UPDATE routes SET ${updates.join(', ')}
+       WHERE id = $${paramIndex++} AND user_id = $${paramIndex++}
+       RETURNING id, user_id, name, origin, destination, stops, budget, selected_agents, route_data, is_favorite, is_public, created_at, updated_at`,
+      values
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Route not found' });
+    }
+
+    const row = result.rows[0];
+    res.json({
+      message: 'Route updated successfully',
+      route: {
+        id: row.id,
+        userId: row.user_id,
+        name: row.name,
+        origin: row.origin,
+        destination: row.destination,
+        stops: row.stops,
+        budget: row.budget,
+        selectedAgents: row.selected_agents,
+        routeData: row.route_data,
+        isFavorite: row.is_favorite,
+        isPublic: row.is_public,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at
+      }
+    });
+  } catch (error) {
+    console.error('Error updating route:', error);
+    res.status(500).json({ error: 'Failed to update route' });
+  }
+});
+
+// =====================================================
 // ROUTE GENERATION ENDPOINTS
 // =====================================================
 
