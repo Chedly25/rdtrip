@@ -198,16 +198,36 @@ export function RouteResults({ routeData, onViewMap, onStartOver }: RouteResults
                 {agentResult.metrics && Object.keys(agentResult.metrics).length > 0 && (
                   <div className="border-b border-gray-200 bg-gray-50 p-6">
                     <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-                      {Object.entries(agentResult.metrics).map(([key, value]) => (
-                        <div key={key}>
-                          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                            {key.replace(/_/g, ' ')}
-                          </p>
-                          <p className="mt-1 text-xl font-bold text-gray-900">
-                            {typeof value === 'number' ? value.toFixed(1) : value}
-                          </p>
-                        </div>
-                      ))}
+                      {Object.entries(agentResult.metrics).map(([key, value]) => {
+                        // Convert value to displayable format
+                        let displayValue: string
+                        if (typeof value === 'number') {
+                          displayValue = value.toFixed(1)
+                        } else if (typeof value === 'object' && value !== null) {
+                          // Handle nested objects (like Focus Split)
+                          if (Array.isArray(value)) {
+                            displayValue = (value as any[]).join(', ')
+                          } else {
+                            // Format object as key: value pairs
+                            displayValue = Object.entries(value as Record<string, any>)
+                              .map(([k, v]) => `${k}: ${v}%`)
+                              .join(', ')
+                          }
+                        } else {
+                          displayValue = String(value)
+                        }
+
+                        return (
+                          <div key={key}>
+                            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                              {key.replace(/_/g, ' ')}
+                            </p>
+                            <p className="mt-1 text-sm font-bold text-gray-900">
+                              {displayValue}
+                            </p>
+                          </div>
+                        )
+                      })}
                     </div>
                   </div>
                 )}
