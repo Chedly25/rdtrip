@@ -862,26 +862,43 @@ async function queryPerplexityWithMetrics(agent, destination, stops, budget = 'b
   cleanedResponse = cleanedResponse.replace(/\s*```$/i, '');
   cleanedResponse = cleanedResponse.trim();
 
-  // Additional JSON cleaning
-  // Remove trailing commas before closing brackets/braces
-  cleanedResponse = cleanedResponse.replace(/,\s*}/g, '}');
-  cleanedResponse = cleanedResponse.replace(/,\s*]/g, ']');
+  // Additional JSON cleaning - be very aggressive
+  // Remove trailing commas before closing brackets/braces (multiple passes)
+  let previousResponse = '';
+  let iterations = 0;
+  while (previousResponse !== cleanedResponse && iterations < 5) {
+    previousResponse = cleanedResponse;
+    cleanedResponse = cleanedResponse.replace(/,(\s*[\]}])/g, '$1');
+    iterations++;
+  }
+
+  // Remove comments (sometimes AI adds them)
+  cleanedResponse = cleanedResponse.replace(/\/\/.*$/gm, '');
+  cleanedResponse = cleanedResponse.replace(/\/\*[\s\S]*?\*\//g, '');
 
   // Try to validate and fix JSON
   try {
     JSON.parse(cleanedResponse);
   } catch (e) {
     console.error(`Invalid JSON from ${agent.name}:`, e.message);
-    console.error('First 500 chars:', cleanedResponse.substring(0, 500));
+    console.error('Error position:', e.message.match(/position (\d+)/)?.[1]);
+
     // If JSON is invalid, try to extract just the JSON object
     const jsonMatch = cleanedResponse.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       cleanedResponse = jsonMatch[0];
-      // Try again with extracted JSON
+
+      // Try more aggressive cleaning
+      cleanedResponse = cleanedResponse.replace(/,(\s*[\]}])/g, '$1'); // Remove trailing commas again
+
+      // Try to parse again
       try {
         JSON.parse(cleanedResponse);
+        console.log(`Fixed JSON for ${agent.name} after extraction`);
       } catch (e2) {
         console.error('Still invalid after extraction:', e2.message);
+        const errorPos = parseInt(e2.message.match(/position (\d+)/)?.[1] || '0');
+        console.error('Problem area:', cleanedResponse.substring(Math.max(0, errorPos - 50), errorPos + 50));
       }
     }
   }
