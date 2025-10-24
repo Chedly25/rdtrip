@@ -1,9 +1,14 @@
 import { motion } from 'framer-motion'
 import { MapPin, Clock, DollarSign, ArrowRight, Map, Mountain, Palette, UtensilsCrossed, Gem } from 'lucide-react'
 
+interface Activity {
+  name?: string
+  difficulty?: number
+}
+
 interface City {
   name: string
-  activities?: string[]
+  activities?: (string | Activity)[]
   image?: string
   imageUrl?: string
 }
@@ -233,15 +238,22 @@ export function RouteResults({ routeData, onViewMap, onStartOver }: RouteResults
                           </h5>
                           {city.activities && city.activities.length > 0 && (
                             <ul className="space-y-1">
-                              {city.activities.slice(0, 2).map((activity, actIndex) => (
-                                <li
-                                  key={actIndex}
-                                  className="flex items-start gap-2 text-sm text-gray-600"
-                                >
-                                  <span className="mt-1.5 h-1 w-1 flex-shrink-0 rounded-full bg-gray-400" />
-                                  <span className="line-clamp-1">{activity}</span>
-                                </li>
-                              ))}
+                              {city.activities.slice(0, 2).map((activity, actIndex) => {
+                                // Handle both string and object formats
+                                const activityText = typeof activity === 'string'
+                                  ? activity
+                                  : (activity as Activity).name || 'Activity'
+
+                                return (
+                                  <li
+                                    key={actIndex}
+                                    className="flex items-start gap-2 text-sm text-gray-600"
+                                  >
+                                    <span className="mt-1.5 h-1 w-1 flex-shrink-0 rounded-full bg-gray-400" />
+                                    <span className="line-clamp-1">{activityText}</span>
+                                  </li>
+                                )
+                              })}
                             </ul>
                           )}
                         </div>

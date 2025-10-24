@@ -853,11 +853,20 @@ async function getCityImages(city) {
 async function queryPerplexityWithMetrics(agent, destination, stops, budget = 'budget') {
   const responseText = await queryPerplexity(agent, destination, stops, budget);
 
+  // Clean markdown code blocks from JSON response
+  let cleanedResponse = responseText.trim();
+
+  // Remove ```json and ``` markers
+  cleanedResponse = cleanedResponse.replace(/^```json\s*/i, '');
+  cleanedResponse = cleanedResponse.replace(/^```\s*/i, '');
+  cleanedResponse = cleanedResponse.replace(/\s*```$/i, '');
+  cleanedResponse = cleanedResponse.trim();
+
   // Extract metrics from the response
-  const metrics = agent.metricsExtractor ? agent.metricsExtractor(responseText) : {};
+  const metrics = agent.metricsExtractor ? agent.metricsExtractor(cleanedResponse) : {};
 
   return {
-    recommendations: responseText,
+    recommendations: cleanedResponse,
     metrics: metrics
   };
 }
