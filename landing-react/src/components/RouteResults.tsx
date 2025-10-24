@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { MapPin, DollarSign, ArrowRight, Map } from 'lucide-react'
+import { CityCard } from './CityCard'
 
 interface Activity {
   name?: string
@@ -274,80 +275,12 @@ export function RouteResults({ routeData, onViewMap, onStartOver }: RouteResults
                   </h3>
                   <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                     {cities.map((city, cityIndex) => (
-                      <motion.div
+                      <CityCard
                         key={cityIndex}
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: cityIndex * 0.1 }}
-                        className="group overflow-hidden rounded-2xl bg-white shadow-lg transition-all hover:shadow-2xl hover:-translate-y-2"
-                      >
-                        {/* City Image */}
-                        <div className="relative h-64 w-full overflow-hidden">
-                          <img
-                            src={city.image || city.imageUrl || `https://images.unsplash.com/photo-1500835556837-99ac94a94552?w=800&h=600&fit=crop&q=80`}
-                            alt={city.name}
-                            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement
-                              target.style.display = 'none'
-                              const fallback = target.nextElementSibling as HTMLDivElement
-                              if (fallback) fallback.style.display = 'flex'
-                            }}
-                          />
-                          <div
-                            className="hidden h-full items-center justify-center"
-                            style={{
-                              background: `linear-gradient(135deg, ${theme.color}, ${theme.color}dd)`
-                            }}
-                          >
-                            <MapPin className="h-16 w-16 text-white/50" />
-                          </div>
-                        </div>
-
-                        {/* City Content */}
-                        <div className="p-6">
-                          <h4
-                            className="mb-3 text-2xl font-bold transition-colors"
-                            style={{ color: theme.color }}
-                          >
-                            {city.name}
-                          </h4>
-
-                          {city.description && (
-                            <p className="mb-4 text-sm text-gray-600 line-clamp-2">
-                              {city.description}
-                            </p>
-                          )}
-
-                          {city.activities && city.activities.length > 0 && (
-                            <div>
-                              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                                Highlights
-                              </p>
-                              <ul className="space-y-2">
-                                {city.activities.slice(0, 3).map((activity, actIndex) => {
-                                  const activityText = typeof activity === 'string'
-                                    ? activity
-                                    : (activity as Activity).name || (activity as Activity).activity || 'Activity'
-
-                                  return (
-                                    <li
-                                      key={actIndex}
-                                      className="flex items-start gap-2 text-sm text-gray-700"
-                                    >
-                                      <div
-                                        className="mt-1.5 h-2 w-2 flex-shrink-0 rounded-full"
-                                        style={{ backgroundColor: theme.color }}
-                                      />
-                                      <span>{activityText}</span>
-                                    </li>
-                                  )
-                                })}
-                              </ul>
-                            </div>
-                          )}
-                        </div>
-                      </motion.div>
+                        city={city}
+                        index={cityIndex}
+                        themeColor={theme.color}
+                      />
                     ))}
                   </div>
                 </div>
