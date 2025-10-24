@@ -54,14 +54,21 @@ const agentColors: Record<string, string> = {
 }
 
 export function RouteResults({ routeData, onViewMap, onStartOver }: RouteResultsProps) {
-  const totalCities = routeData.agentResults.reduce((total, agentResult) => {
+  console.log('RouteResults received data:', routeData)
+  console.log('agentResults:', routeData?.agentResults)
+
+  const totalCities = routeData?.agentResults?.reduce((total, agentResult) => {
     try {
+      console.log('Processing agent:', agentResult.agent)
+      console.log('Recommendations:', agentResult.recommendations)
       const parsed: ParsedRecommendations = JSON.parse(agentResult.recommendations)
+      console.log('Parsed recommendations:', parsed)
       return total + (parsed.waypoints?.length || 0)
-    } catch {
+    } catch (e) {
+      console.error('Error parsing recommendations:', e)
       return total
     }
-  }, 0)
+  }, 0) || 0
 
   return (
     <section className="relative bg-gradient-to-b from-gray-50 to-white py-20">
@@ -139,7 +146,12 @@ export function RouteResults({ routeData, onViewMap, onStartOver }: RouteResults
         >
           <h3 className="text-2xl font-bold text-gray-900">Your Themed Routes</h3>
 
-          {routeData.agentResults.map((agentResult, agentIndex) => {
+          {!routeData?.agentResults || routeData.agentResults.length === 0 ? (
+            <div className="rounded-lg bg-yellow-50 p-6 text-center">
+              <p className="text-yellow-800">No route data available. Please try generating your route again.</p>
+            </div>
+          ) : (
+            routeData.agentResults.map((agentResult, agentIndex) => {
             let parsedRecs: ParsedRecommendations | null = null
             try {
               parsedRecs = JSON.parse(agentResult.recommendations)
@@ -244,7 +256,8 @@ export function RouteResults({ routeData, onViewMap, onStartOver }: RouteResults
                 </div>
               </motion.div>
             )
-          })}
+          })
+          )}
         </motion.div>
 
         {/* Action Buttons */}
