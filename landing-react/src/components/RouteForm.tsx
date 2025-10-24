@@ -47,7 +47,7 @@ export function RouteForm({ onRouteGenerated }: RouteFormProps) {
     setIsSubmitting(true)
 
     try {
-      // Submit to backend API
+      // Start route generation job
       const response = await fetch('/api/generate-route', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -61,23 +61,58 @@ export function RouteForm({ onRouteGenerated }: RouteFormProps) {
       })
 
       if (!response.ok) {
-        throw new Error('Failed to generate route')
+        throw new Error('Failed to start route generation')
       }
 
-      const data = await response.json()
+      const { jobId } = await response.json()
+      console.log('Job started:', jobId)
 
-      // Call the callback to show results
-      if (onRouteGenerated) {
-        onRouteGenerated(data)
-      } else {
-        // Fallback: redirect directly if no callback provided
-        localStorage.setItem('spotlightData', JSON.stringify(data))
-        window.location.href = `/spotlight.html?routeId=${data.id}`
+      // Poll for job status
+      const pollInterval = 2000 // Poll every 2 seconds
+      const maxAttempts = 120 // Max 4 minutes (120 * 2s)
+      let attempts = 0
+
+      const pollStatus = async (): Promise<void> => {
+        if (attempts >= maxAttempts) {
+          throw new Error('Route generation timed out. Please try again with fewer stops.')
+        }
+
+        attempts++
+
+        const statusResponse = await fetch(`/api/route-status/${jobId}`)
+        if (!statusResponse.ok) {
+          throw new Error('Failed to check route status')
+        }
+
+        const statusData = await statusResponse.json()
+        console.log('Job status:', statusData)
+
+        if (statusData.status === 'completed') {
+          // Job completed successfully
+          if (onRouteGenerated) {
+            onRouteGenerated(statusData.route)
+          } else {
+            // Fallback: redirect directly if no callback provided
+            localStorage.setItem('spotlightData', JSON.stringify(statusData.route))
+            window.location.href = `/spotlight.html?routeId=${statusData.route.id}`
+          }
+          setLoading(false)
+          setIsSubmitting(false)
+        } else if (statusData.status === 'failed') {
+          // Job failed
+          throw new Error(statusData.error || 'Route generation failed')
+        } else {
+          // Still processing, poll again
+          setTimeout(pollStatus, pollInterval)
+        }
       }
+
+      // Start polling
+      await pollStatus()
+
     } catch (err) {
       console.error('Route generation error:', err)
       setError(err instanceof Error ? err.message : 'Failed to generate route')
-    } finally {
       setLoading(false)
       setIsSubmitting(false)
     }

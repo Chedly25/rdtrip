@@ -16,6 +16,9 @@ const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY;
 // For demo purposes - in production, get your own key from https://unsplash.com/developers
 const UNSPLASH_ACCESS_KEY = process.env.UNSPLASH_ACCESS_KEY || 'lEwczWVNzGvFAp1BtKgfV5KOtJrFbMdaDFEfL4Z6qHQ';
 
+// In-memory job storage (in production, use Redis or a database)
+const routeJobs = new Map();
+
 // AI Agent configurations with enhanced metrics
 const agents = {
   adventure: {
@@ -283,7 +286,7 @@ function extractTransportSplit(text) {
   return { publicTransport, car };
 }
 
-// Generate route with AI agents
+// Start route generation job (returns immediately with job ID)
 app.post('/api/generate-route', async (req, res) => {
   try {
     const { destination, stops = 3, agents: selectedAgents = ['adventure', 'culture', 'food'], budget = 'budget' } = req.body;
@@ -292,79 +295,159 @@ app.post('/api/generate-route', async (req, res) => {
       return res.status(400).json({ error: 'Destination is required' });
     }
 
-    console.log(`\n=== Starting route generation ===`);
-    console.log(`Destination: ${destination}`);
-    console.log(`Stops: ${stops}`);
-    console.log(`Agents: ${selectedAgents.join(', ')}`);
-    console.log(`Budget: ${budget}`);
+    // Create unique job ID
+    const jobId = `route_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-    // For large requests (6+ stops), process agents sequentially to avoid overwhelming Perplexity
-    // For smaller requests, process in parallel for speed
-    const shouldProcessSequentially = stops >= 6;
+    // Initialize job status
+    const job = {
+      id: jobId,
+      status: 'processing',
+      destination,
+      stops,
+      budget,
+      selectedAgents,
+      progress: {
+        total: selectedAgents.length,
+        completed: 0,
+        currentAgent: null
+      },
+      agentResults: [],
+      error: null,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
 
-    let agentResults;
-    if (shouldProcessSequentially) {
-      console.log(`Processing agents SEQUENTIALLY (${stops} stops >= 6)`);
-      agentResults = [];
+    routeJobs.set(jobId, job);
 
-      for (const agentType of selectedAgents) {
-        try {
-          console.log(`\n--- Processing ${agents[agentType].name} ---`);
-          const result = await queryPerplexityWithMetrics(agents[agentType], destination, stops, budget);
-          agentResults.push(result);
-          console.log(`✓ ${agents[agentType].name} completed successfully`);
-        } catch (error) {
-          console.error(`✗ ${agents[agentType].name} failed:`, error.message);
-          // Continue with other agents even if one fails
-          agentResults.push({
-            recommendations: JSON.stringify({ waypoints: [], error: `Failed to generate ${agents[agentType].name} route` }),
-            metrics: {}
-          });
-        }
+    // Return immediately with job ID
+    res.json({
+      jobId,
+      status: 'processing',
+      message: 'Route generation started. Poll /api/route-status/:jobId for progress.'
+    });
+
+    // Start processing in background (don't await)
+    processRouteJob(jobId, destination, stops, selectedAgents, budget).catch(error => {
+      console.error(`Job ${jobId} failed:`, error);
+      const failedJob = routeJobs.get(jobId);
+      if (failedJob) {
+        failedJob.status = 'failed';
+        failedJob.error = error.message;
+        failedJob.updatedAt = new Date();
       }
-    } else {
-      console.log(`Processing agents IN PARALLEL (${stops} stops < 6)`);
-      const agentPromises = selectedAgents.map(async agentType => {
-        try {
-          return await queryPerplexityWithMetrics(agents[agentType], destination, stops, budget);
-        } catch (error) {
-          console.error(`Agent ${agentType} failed:`, error.message);
-          return {
-            recommendations: JSON.stringify({ waypoints: [], error: `Failed to generate ${agents[agentType].name} route` }),
-            metrics: {}
-          };
-        }
-      });
+    });
 
-      agentResults = await Promise.all(agentPromises);
+  } catch (error) {
+    console.error('Error starting route generation:', error);
+    res.status(500).json({ error: 'Failed to start route generation', details: error.message });
+  }
+});
+
+// Get job status and results
+app.get('/api/route-status/:jobId', (req, res) => {
+  const { jobId } = req.params;
+  const job = routeJobs.get(jobId);
+
+  if (!job) {
+    return res.status(404).json({ error: 'Job not found' });
+  }
+
+  // Clean up old jobs (optional - remove completed jobs after sending)
+  if (job.status === 'completed' || job.status === 'failed') {
+    const age = Date.now() - job.createdAt.getTime();
+    if (age > 300000) { // 5 minutes
+      routeJobs.delete(jobId);
     }
+  }
 
-    console.log(`\n=== Route generation completed ===\n`);
-
-    // Combine results
-    const route = {
+  res.json({
+    jobId: job.id,
+    status: job.status,
+    progress: job.progress,
+    route: job.status === 'completed' ? {
       origin: "Aix-en-Provence, France",
-      destination: destination,
-      totalStops: stops,
-      budget: budget,
-      agentResults: agentResults.map((result, index) => ({
-        agent: selectedAgents[index],
+      destination: job.destination,
+      totalStops: job.stops,
+      budget: job.budget,
+      agentResults: job.agentResults
+    } : null,
+    error: job.error
+  });
+});
+
+// Background job processor
+async function processRouteJob(jobId, destination, stops, selectedAgents, budget) {
+  const job = routeJobs.get(jobId);
+  if (!job) return;
+
+  console.log(`\n=== Starting route job ${jobId} ===`);
+  console.log(`Destination: ${destination}`);
+  console.log(`Stops: ${stops}`);
+  console.log(`Agents: ${selectedAgents.join(', ')}`);
+  console.log(`Budget: ${budget}`);
+
+  // Always process sequentially to avoid timeouts
+  const agentResults = [];
+
+  for (let i = 0; i < selectedAgents.length; i++) {
+    const agentType = selectedAgents[i];
+    const agentConfig = agents[agentType];
+
+    try {
+      // Update progress
+      job.progress.currentAgent = agentConfig.name;
+      job.updatedAt = new Date();
+
+      console.log(`\n--- Processing ${agentConfig.name} (${i + 1}/${selectedAgents.length}) ---`);
+
+      const result = await queryPerplexityWithMetrics(agentConfig, destination, stops, budget);
+
+      agentResults.push({
+        agent: agentType,
         agentConfig: {
-          name: agents[selectedAgents[index]].name,
-          color: agents[selectedAgents[index]].color,
-          icon: agents[selectedAgents[index]].icon
+          name: agentConfig.name,
+          color: agentConfig.color,
+          icon: agentConfig.icon
         },
         recommendations: result.recommendations,
         metrics: result.metrics
-      }))
-    };
+      });
 
-    res.json(route);
-  } catch (error) {
-    console.error('Route generation error:', error);
-    res.status(500).json({ error: 'Failed to generate route', details: error.message });
+      // Update progress
+      job.progress.completed = i + 1;
+      job.agentResults = agentResults;
+      job.updatedAt = new Date();
+
+      console.log(`✓ ${agentConfig.name} completed (${i + 1}/${selectedAgents.length})`);
+
+    } catch (error) {
+      console.error(`✗ ${agentConfig.name} failed:`, error.message);
+
+      // Add error result but continue
+      agentResults.push({
+        agent: agentType,
+        agentConfig: {
+          name: agentConfig.name,
+          color: agentConfig.color,
+          icon: agentConfig.icon
+        },
+        recommendations: JSON.stringify({ waypoints: [], error: `Failed to generate route` }),
+        metrics: {}
+      });
+
+      job.progress.completed = i + 1;
+      job.agentResults = agentResults;
+      job.updatedAt = new Date();
+    }
   }
-});
+
+  // Mark job as completed
+  job.status = 'completed';
+  job.progress.currentAgent = null;
+  job.updatedAt = new Date();
+
+  console.log(`\n=== Route job ${jobId} completed ===\n`);
+}
 
 // Get hotels and restaurants for a city
 app.post('/api/get-hotels-restaurants', async (req, res) => {
