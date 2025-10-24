@@ -283,25 +283,17 @@ export function RouteResults({ routeData, onViewMap, onStartOver }: RouteResults
                       >
                         {/* City Image */}
                         <div className="relative h-64 w-full overflow-hidden">
-                          {(city.image || city.imageUrl) ? (
-                            <img
-                              src={city.image || city.imageUrl}
-                              alt={city.name}
-                              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
-                            />
-                          ) : (
-                            <img
-                              src={`https://source.unsplash.com/800x600/?${encodeURIComponent(city.name)},city,travel`}
-                              alt={city.name}
-                              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
-                              onError={(e) => {
-                                const target = e.target as HTMLImageElement
-                                target.style.display = 'none'
-                                const fallback = target.nextElementSibling as HTMLDivElement
-                                if (fallback) fallback.style.display = 'flex'
-                              }}
-                            />
-                          )}
+                          <img
+                            src={city.image || city.imageUrl || `https://images.unsplash.com/photo-1500835556837-99ac94a94552?w=800&h=600&fit=crop&q=80`}
+                            alt={city.name}
+                            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement
+                              target.style.display = 'none'
+                              const fallback = target.nextElementSibling as HTMLDivElement
+                              if (fallback) fallback.style.display = 'flex'
+                            }}
+                          />
                           <div
                             className="hidden h-full items-center justify-center"
                             style={{
