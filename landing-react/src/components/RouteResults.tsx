@@ -3,6 +3,7 @@ import { MapPin, Clock, DollarSign, ArrowRight, Map, Mountain, Palette, Utensils
 
 interface Activity {
   name?: string
+  activity?: string
   difficulty?: number
 }
 
@@ -262,7 +263,7 @@ export function RouteResults({ routeData, onViewMap, onStartOver }: RouteResults
                                 // Handle both string and object formats
                                 const activityText = typeof activity === 'string'
                                   ? activity
-                                  : (activity as Activity).name || 'Activity'
+                                  : (activity as Activity).name || (activity as Activity).activity || 'Activity'
 
                                 return (
                                   <li
