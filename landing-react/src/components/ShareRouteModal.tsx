@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Copy, Check, Mail, MessageCircle, Eye, Lock, Share2 } from 'lucide-react'
+import { X, Copy, Check, Mail, MessageCircle, Eye, Lock, Share2, QrCode, Edit3 } from 'lucide-react'
+import { QRCodeSVG } from 'qrcode.react'
 
 interface ShareRouteModalProps {
   isOpen: boolean
@@ -30,6 +31,9 @@ export default function ShareRouteModal({
   const [localIsPublic, setLocalIsPublic] = useState(isPublic)
   const [localViewCount, setLocalViewCount] = useState(viewCount)
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+  const [showQRCode, setShowQRCode] = useState(false)
+  const [customMessage, setCustomMessage] = useState(`Check out my route: ${routeName}`)
+  const [editingMessage, setEditingMessage] = useState(false)
 
   useEffect(() => {
     setLocalIsPublic(isPublic)
@@ -94,13 +98,13 @@ export default function ShareRouteModal({
   }
 
   const shareViaWhatsApp = () => {
-    const message = `Check out my route: ${routeName}\n${localShareUrl}`
+    const message = `${customMessage}\n${localShareUrl}`
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank')
   }
 
   const shareViaEmail = () => {
-    const subject = `Check out my route: ${routeName}`
-    const body = `I created this route on RDTrip and thought you might like it!\n\n${routeName}\n\n${localShareUrl}\n\nCreate your own personalized route at ${window.location.origin}`
+    const subject = routeName
+    const body = `${customMessage}\n\n${localShareUrl}\n\nCreate your own personalized route at ${window.location.origin}`
     window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
   }
 
@@ -218,6 +222,69 @@ export default function ShareRouteModal({
                       Email
                     </button>
                   </div>
+                </div>
+
+                {/* Custom Share Message */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-sm font-medium text-gray-700">Custom Message</label>
+                    <button
+                      onClick={() => setEditingMessage(!editingMessage)}
+                      className="text-xs text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+                    >
+                      <Edit3 className="h-3 w-3" />
+                      {editingMessage ? 'Done' : 'Edit'}
+                    </button>
+                  </div>
+                  {editingMessage ? (
+                    <textarea
+                      value={customMessage}
+                      onChange={(e) => setCustomMessage(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                      rows={3}
+                      placeholder="Enter your custom message..."
+                    />
+                  ) : (
+                    <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700">
+                      {customMessage}
+                    </div>
+                  )}
+                  <p className="mt-1 text-xs text-gray-500">
+                    This message will be used when sharing via WhatsApp or Email
+                  </p>
+                </div>
+
+                {/* QR Code */}
+                <div>
+                  <button
+                    onClick={() => setShowQRCode(!showQRCode)}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-indigo-200 text-indigo-700 rounded-lg font-medium hover:bg-indigo-50 hover:border-indigo-300 transition-colors"
+                  >
+                    <QrCode className="h-4 w-4" />
+                    {showQRCode ? 'Hide QR Code' : 'Show QR Code'}
+                  </button>
+                  <AnimatePresence>
+                    {showQRCode && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="mt-4 flex flex-col items-center"
+                      >
+                        <div className="p-4 bg-white rounded-lg shadow-sm border-2 border-gray-200">
+                          <QRCodeSVG
+                            value={localShareUrl}
+                            size={200}
+                            level="M"
+                            includeMargin={true}
+                          />
+                        </div>
+                        <p className="mt-2 text-xs text-center text-gray-500">
+                          Scan this QR code to open the route on mobile
+                        </p>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
 
                 {/* Statistics */}
