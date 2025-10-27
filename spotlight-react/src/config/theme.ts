@@ -1,3 +1,4 @@
+// Theme configuration for all agent types including best-overall
 export type AgentType = 'best-overall' | 'adventure' | 'culture' | 'food' | 'hidden-gems'
 
 export interface ThemeConfig {
