@@ -1,11 +1,13 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { User, LogOut } from 'lucide-react'
+import { User, LogOut, Map } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { LoginModal } from './LoginModal'
 import { RegisterModal } from './RegisterModal'
 
 export function AuthButton() {
+  const navigate = useNavigate()
   const { user, logout, isLoading } = useAuth()
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [showRegisterModal, setShowRegisterModal] = useState(false)
@@ -59,6 +61,17 @@ export function AuthButton() {
                   </p>
                   <p className="text-xs text-gray-500">{user.email}</p>
                 </div>
+
+                <button
+                  onClick={() => {
+                    navigate('/my-routes')
+                    setShowUserMenu(false)
+                  }}
+                  className="flex w-full items-center gap-3 px-4 py-3 text-sm text-gray-700 transition-colors hover:bg-gray-50"
+                >
+                  <Map className="h-4 w-4" />
+                  <span>My Routes</span>
+                </button>
 
                 <button
                   onClick={() => {

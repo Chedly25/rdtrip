@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Navigation } from './components/Navigation'
 import { Hero } from './components/Hero'
@@ -8,13 +9,24 @@ import { RouteForm } from './components/RouteForm'
 import { RouteResults } from './components/RouteResults'
 import { About } from './components/About'
 import { Footer } from './components/Footer'
+import MyRoutes from './pages/MyRoutes'
 import './App.css'
 
 const queryClient = new QueryClient()
 
-function App() {
+function HomePage() {
+  const location = useLocation()
   const [routeData, setRouteData] = useState<any>(null)
   const [showResults, setShowResults] = useState(false)
+
+  // Handle route data passed from MyRoutes page
+  useEffect(() => {
+    if (location.state?.routeData) {
+      setRouteData(location.state.routeData)
+      setShowResults(true)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }, [location.state])
 
   const handleRouteGenerated = (data: any) => {
     setRouteData(data)
@@ -51,28 +63,41 @@ function App() {
   }
 
   return (
+    <>
+      {!showResults ? (
+        <>
+          <Hero />
+          <RouteForm onRouteGenerated={handleRouteGenerated} />
+          <Features />
+          <Showcase />
+          <About />
+        </>
+      ) : (
+        <div className="pt-20">
+          <RouteResults
+            routeData={routeData}
+            onViewMap={handleViewMap}
+            onStartOver={handleStartOver}
+          />
+        </div>
+      )}
+    </>
+  )
+}
+
+function App() {
+  return (
     <QueryClientProvider client={queryClient}>
-      <div className="min-h-screen">
-        <Navigation />
-        {!showResults ? (
-          <>
-            <Hero />
-            <RouteForm onRouteGenerated={handleRouteGenerated} />
-            <Features />
-            <Showcase />
-            <About />
-          </>
-        ) : (
-          <div className="pt-20">
-            <RouteResults
-              routeData={routeData}
-              onViewMap={handleViewMap}
-              onStartOver={handleStartOver}
-            />
-          </div>
-        )}
-        <Footer />
-      </div>
+      <BrowserRouter>
+        <div className="min-h-screen">
+          <Navigation />
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/my-routes" element={<MyRoutes />} />
+          </Routes>
+          <Footer />
+        </div>
+      </BrowserRouter>
     </QueryClientProvider>
   )
 }
