@@ -29,6 +29,7 @@ export default function ShareRouteModal({
   const [localShareUrl, setLocalShareUrl] = useState<string>('')
   const [localIsPublic, setLocalIsPublic] = useState(isPublic)
   const [localViewCount, setLocalViewCount] = useState(viewCount)
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
 
   useEffect(() => {
     setLocalIsPublic(isPublic)
@@ -44,13 +45,17 @@ export default function ShareRouteModal({
 
   const handleShare = async () => {
     setLoading(true)
+    setToast(null)
     try {
       const result = await onShare()
       setLocalShareUrl(result.shareUrl)
       setLocalIsPublic(true)
+      setToast({ message: 'Route shared successfully!', type: 'success' })
+      setTimeout(() => setToast(null), 3000)
     } catch (error) {
       console.error('Error sharing route:', error)
-      alert('Failed to share route. Please try again.')
+      setToast({ message: 'Failed to share route. Please try again.', type: 'error' })
+      setTimeout(() => setToast(null), 3000)
     } finally {
       setLoading(false)
     }
@@ -62,13 +67,17 @@ export default function ShareRouteModal({
     }
 
     setLoading(true)
+    setToast(null)
     try {
       await onStopSharing()
       setLocalShareUrl('')
       setLocalIsPublic(false)
+      setToast({ message: 'Sharing disabled successfully', type: 'success' })
+      setTimeout(() => setToast(null), 3000)
     } catch (error) {
       console.error('Error stopping share:', error)
-      alert('Failed to stop sharing. Please try again.')
+      setToast({ message: 'Failed to stop sharing. Please try again.', type: 'error' })
+      setTimeout(() => setToast(null), 3000)
     } finally {
       setLoading(false)
     }
@@ -77,7 +86,11 @@ export default function ShareRouteModal({
   const copyToClipboard = () => {
     navigator.clipboard.writeText(localShareUrl)
     setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    setToast({ message: 'Link copied to clipboard!', type: 'success' })
+    setTimeout(() => {
+      setCopied(false)
+      setToast(null)
+    }, 2000)
   }
 
   const shareViaWhatsApp = () => {
@@ -248,6 +261,27 @@ export default function ShareRouteModal({
               </>
             )}
           </div>
+
+          {/* Toast Notification */}
+          <AnimatePresence>
+            {toast && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                className={`absolute bottom-4 left-4 right-4 px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 ${
+                  toast.type === 'success' ? 'bg-green-500' : 'bg-red-500'
+                } text-white`}
+              >
+                {toast.type === 'success' ? (
+                  <Check className="h-5 w-5 flex-shrink-0" />
+                ) : (
+                  <X className="h-5 w-5 flex-shrink-0" />
+                )}
+                <p className="font-medium">{toast.message}</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
       </div>
     </AnimatePresence>
