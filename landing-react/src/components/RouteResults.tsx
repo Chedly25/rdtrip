@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { MapPin, DollarSign, ArrowRight, Map, Save } from 'lucide-react'
+import { MapPin, DollarSign, ArrowRight, Map, Save, RefreshCw } from 'lucide-react'
 import { CityCard } from './CityCard'
 import { useAuth } from '../contexts/AuthContext'
 import SaveRouteModal from './SaveRouteModal'
@@ -23,7 +23,10 @@ interface City {
 
 interface ParsedRecommendations {
   waypoints: City[]
+  alternatives?: City[]
   description?: string
+  origin?: { name: string; latitude: number; longitude: number }
+  destination?: { name: string; latitude: number; longitude: number }
 }
 
 interface AgentResult {
@@ -65,6 +68,21 @@ export function RouteResults({ routeData, onViewMap, onStartOver }: RouteResults
   const [showSaveModal, setShowSaveModal] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const { token, isAuthenticated } = useAuth()
+
+  // State to manage modified waypoints per agent (for swapping cities)
+  const [modifiedWaypoints, setModifiedWaypoints] = useState<Record<number, City[]>>({})
+
+  // Handle swapping a city from alternatives into the main route
+  const handleSwapCity = (agentIndex: number, cityIndexToReplace: number, newCity: City, originalWaypoints: City[]) => {
+    const currentWaypoints = modifiedWaypoints[agentIndex] || originalWaypoints
+    const updatedWaypoints = [...currentWaypoints]
+    updatedWaypoints[cityIndexToReplace] = newCity
+
+    setModifiedWaypoints(prev => ({
+      ...prev,
+      [agentIndex]: updatedWaypoints
+    }))
+  }
 
   const handleSaveRoute = async (name: string) => {
     if (!token) {
@@ -237,7 +255,9 @@ export function RouteResults({ routeData, onViewMap, onStartOver }: RouteResults
             if (!parsedRecs) return null
 
             const theme = agentThemes[agentResult.agent] || agentThemes.adventure
-            const cities = parsedRecs.waypoints || []
+            // Use modified waypoints if available, otherwise use original
+            const cities = modifiedWaypoints[index] || parsedRecs.waypoints || []
+            const alternatives = parsedRecs.alternatives || []
 
             return (
               <motion.div
@@ -325,6 +345,68 @@ export function RouteResults({ routeData, onViewMap, onStartOver }: RouteResults
                     ))}
                   </div>
                 </div>
+
+                {/* Alternative Cities */}
+                {alternatives.length > 0 && (
+                  <div className="mt-12">
+                    <div className="mb-6 flex items-center gap-3">
+                      <RefreshCw className="h-6 w-6" style={{ color: theme.color }} />
+                      <h3 className="text-2xl font-bold text-gray-900">
+                        Alternative Cities ({alternatives.length})
+                      </h3>
+                    </div>
+                    <p className="mb-6 text-gray-600">
+                      These cities were also considered for your route. Click "Swap into Route" to replace one of your current cities.
+                    </p>
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                      {alternatives.map((altCity, altIndex) => (
+                        <div key={altIndex} className="relative">
+                          <CityCard
+                            city={altCity}
+                            index={altIndex}
+                            themeColor={theme.color}
+                            showThemeBadges={agentResult.agent === 'best-overall'}
+                            themes={altCity.themes || []}
+                          />
+                          {/* Swap Button Overlay */}
+                          <div className="mt-4 flex flex-col gap-2">
+                            <select
+                              className="w-full rounded-lg border-2 border-gray-300 p-3 text-sm font-semibold text-gray-700 transition-all hover:border-gray-400 focus:border-indigo-500 focus:outline-none"
+                              onChange={(e) => {
+                                const cityIndex = parseInt(e.target.value)
+                                if (!isNaN(cityIndex)) {
+                                  handleSwapCity(index, cityIndex, altCity, parsedRecs.waypoints || [])
+                                  e.target.value = '' // Reset selection
+                                }
+                              }}
+                              defaultValue=""
+                            >
+                              <option value="" disabled>
+                                Replace which city?
+                              </option>
+                              {cities.map((city, cityIndex) => (
+                                <option key={cityIndex} value={cityIndex}>
+                                  Replace {city.name}
+                                </option>
+                              ))}
+                            </select>
+                            <button
+                              className="w-full inline-flex items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold text-white shadow-md transition-all hover:shadow-lg hover:scale-105"
+                              style={{ backgroundColor: theme.color }}
+                              onClick={() => {
+                                const select = document.querySelector(`select`) as HTMLSelectElement
+                                if (select) select.focus()
+                              }}
+                            >
+                              <RefreshCw className="h-4 w-4" />
+                              Swap into Route
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* View Map Button for this theme */}
                 <div className="flex justify-center">
