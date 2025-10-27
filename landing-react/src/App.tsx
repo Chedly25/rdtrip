@@ -10,6 +10,7 @@ import { RouteResults } from './components/RouteResults'
 import { About } from './components/About'
 import { Footer } from './components/Footer'
 import MyRoutes from './pages/MyRoutes'
+import SharedRoute from './pages/SharedRoute'
 import './App.css'
 
 const queryClient = new QueryClient()
@@ -94,6 +95,7 @@ function App() {
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/my-routes" element={<MyRoutes />} />
+            <Route path="/shared/:token" element={<SharedRoute />} />
           </Routes>
           <Footer />
         </div>
