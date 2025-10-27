@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { MapPin, DollarSign, ArrowRight, Map, Save, RefreshCw, Share2 } from 'lucide-react'
+import { MapPin, DollarSign, ArrowRight, Map, Save, RefreshCw, Share2, Plus } from 'lucide-react'
 import { CityCard } from './CityCard'
 import { useAuth } from '../contexts/AuthContext'
 import SaveRouteModal from './SaveRouteModal'
 import ShareRouteModal from './ShareRouteModal'
+import CityActionModal from './CityActionModal'
 
 interface Activity {
   name?: string
@@ -73,20 +74,70 @@ export function RouteResults({ routeData, onViewMap, onStartOver }: RouteResults
   const [shareToken, setShareToken] = useState<string | null>(null)
   const [isPublic, setIsPublic] = useState(false)
   const [viewCount] = useState(0)
+  const [showCityActionModal, setShowCityActionModal] = useState(false)
+  const [selectedAlternativeCity, setSelectedAlternativeCity] = useState<City | null>(null)
+  const [currentAgentIndex, setCurrentAgentIndex] = useState<number>(0)
   const { token, isAuthenticated } = useAuth()
 
-  // State to manage modified waypoints per agent (for swapping cities)
+  // State to manage modified waypoints per agent (for adding/replacing cities)
   const [modifiedWaypoints, setModifiedWaypoints] = useState<Record<number, City[]>>({})
 
-  // Handle swapping a city from alternatives into the main route
-  const handleSwapCity = (agentIndex: number, cityIndexToReplace: number, newCity: City, originalWaypoints: City[]) => {
-    const currentWaypoints = modifiedWaypoints[agentIndex] || originalWaypoints
+  // Open modal for city action
+  const handleOpenCityAction = (city: City, agentIndex: number) => {
+    setSelectedAlternativeCity(city)
+    setCurrentAgentIndex(agentIndex)
+    setShowCityActionModal(true)
+  }
+
+  // Add city at specific position
+  const handleAddCity = (position: number) => {
+    if (!selectedAlternativeCity) return
+
+    const agentResult = routeData.agentResults[currentAgentIndex]
+    let parsedRecs: ParsedRecommendations | null = null
+    try {
+      parsedRecs = JSON.parse(agentResult.recommendations)
+    } catch (error) {
+      console.error('Failed to parse recommendations:', error)
+      return
+    }
+
+    const originalWaypoints = parsedRecs?.waypoints || []
+    const currentWaypoints = modifiedWaypoints[currentAgentIndex] || originalWaypoints
     const updatedWaypoints = [...currentWaypoints]
-    updatedWaypoints[cityIndexToReplace] = newCity
+
+    // Insert city at the specified position
+    updatedWaypoints.splice(position, 0, selectedAlternativeCity)
 
     setModifiedWaypoints(prev => ({
       ...prev,
-      [agentIndex]: updatedWaypoints
+      [currentAgentIndex]: updatedWaypoints
+    }))
+  }
+
+  // Replace city at specific index
+  const handleReplaceCity = (cityIndexToReplace: number) => {
+    if (!selectedAlternativeCity) return
+
+    const agentResult = routeData.agentResults[currentAgentIndex]
+    let parsedRecs: ParsedRecommendations | null = null
+    try {
+      parsedRecs = JSON.parse(agentResult.recommendations)
+    } catch (error) {
+      console.error('Failed to parse recommendations:', error)
+      return
+    }
+
+    const originalWaypoints = parsedRecs?.waypoints || []
+    const currentWaypoints = modifiedWaypoints[currentAgentIndex] || originalWaypoints
+    const updatedWaypoints = [...currentWaypoints]
+
+    // Replace the city at the specified index
+    updatedWaypoints[cityIndexToReplace] = selectedAlternativeCity
+
+    setModifiedWaypoints(prev => ({
+      ...prev,
+      [currentAgentIndex]: updatedWaypoints
     }))
   }
 
@@ -428,7 +479,7 @@ export function RouteResults({ routeData, onViewMap, onStartOver }: RouteResults
                       </h3>
                     </div>
                     <p className="mb-6 text-gray-600">
-                      These cities were also considered for your route. Click "Swap into Route" to replace one of your current cities.
+                      These cities were also considered for your route. Click "Add to Route" to customize your journey.
                     </p>
                     <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                       {alternatives.map((altCity, altIndex) => (
@@ -440,38 +491,15 @@ export function RouteResults({ routeData, onViewMap, onStartOver }: RouteResults
                             showThemeBadges={agentResult.agent === 'best-overall'}
                             themes={altCity.themes || []}
                           />
-                          {/* Swap Button Overlay */}
-                          <div className="mt-4 flex flex-col gap-2">
-                            <select
-                              className="w-full rounded-lg border-2 border-gray-300 p-3 text-sm font-semibold text-gray-700 transition-all hover:border-gray-400 focus:border-indigo-500 focus:outline-none"
-                              onChange={(e) => {
-                                const cityIndex = parseInt(e.target.value)
-                                if (!isNaN(cityIndex)) {
-                                  handleSwapCity(index, cityIndex, altCity, parsedRecs.waypoints || [])
-                                  e.target.value = '' // Reset selection
-                                }
-                              }}
-                              defaultValue=""
-                            >
-                              <option value="" disabled>
-                                Replace which city?
-                              </option>
-                              {cities.map((city, cityIndex) => (
-                                <option key={cityIndex} value={cityIndex}>
-                                  Replace {city.name}
-                                </option>
-                              ))}
-                            </select>
+                          {/* Add to Route Button */}
+                          <div className="mt-4">
                             <button
                               className="w-full inline-flex items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm font-semibold text-white shadow-md transition-all hover:shadow-lg hover:scale-105"
                               style={{ backgroundColor: theme.color }}
-                              onClick={() => {
-                                const select = document.querySelector(`select`) as HTMLSelectElement
-                                if (select) select.focus()
-                              }}
+                              onClick={() => handleOpenCityAction(altCity, index)}
                             >
-                              <RefreshCw className="h-4 w-4" />
-                              Swap into Route
+                              <Plus className="h-5 w-5" />
+                              Add to Route
                             </button>
                           </div>
                         </div>
@@ -569,6 +597,34 @@ export function RouteResults({ routeData, onViewMap, onStartOver }: RouteResults
           onShare={handleShareRoute}
           onStopSharing={handleStopSharing}
         />
+
+        {/* City Action Modal */}
+        {selectedAlternativeCity && (
+          <CityActionModal
+            isOpen={showCityActionModal}
+            onClose={() => setShowCityActionModal(false)}
+            selectedCity={selectedAlternativeCity}
+            currentRoute={
+              (() => {
+                const agentResult = routeData.agentResults[currentAgentIndex]
+                try {
+                  const parsedRecs = JSON.parse(agentResult.recommendations)
+                  return modifiedWaypoints[currentAgentIndex] || parsedRecs.waypoints || []
+                } catch {
+                  return []
+                }
+              })()
+            }
+            agentTheme={{
+              color: agentThemes[routeData.agentResults[currentAgentIndex]?.agent]?.color || '#055948',
+              name: routeData.agentResults[currentAgentIndex]?.agentConfig?.name || 'Route'
+            }}
+            onAddCity={handleAddCity}
+            onReplaceCity={handleReplaceCity}
+            origin={routeData.origin}
+            destination={routeData.destination}
+          />
+        )}
       </div>
     </section>
   )
