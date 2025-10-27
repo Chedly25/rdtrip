@@ -111,10 +111,23 @@ function detectAndFixSwappedCoordinates(obj) {
   const lat = obj.latitude;
   const lon = obj.longitude;
 
-  // If "latitude" value is outside valid range or looks like longitude
-  // and "longitude" value looks like latitude, they're probably swapped
-  if (Math.abs(lat) > 90 || (Math.abs(lon) <= 90 && Math.abs(lat) > Math.abs(lon))) {
-    console.warn(`⚠️  Detected swapped coordinates for ${obj.name}: (${lat}, ${lon}) -> swapping to (${lon}, ${lat})`);
+  // For Europe: latitude is typically larger than longitude
+  // Latitude: 35-70, Longitude: -10 to 50
+  // If lat < lon, they're likely swapped
+  const isEurope = (Math.abs(lat) >= 35 && Math.abs(lat) <= 70) || (Math.abs(lon) >= 35 && Math.abs(lon) <= 70);
+
+  if (isEurope && lat < lon) {
+    console.warn(`⚠️  Detected swapped coordinates for ${obj.name}: lat=${lat}, lon=${lon} -> swapping to lat=${lon}, lon=${lat}`);
+    return {
+      ...obj,
+      latitude: lon,
+      longitude: lat
+    };
+  }
+
+  // Also check if latitude is obviously out of range
+  if (Math.abs(lat) > 90) {
+    console.warn(`⚠️  Invalid latitude for ${obj.name}: lat=${lat}, lon=${lon} -> swapping to lat=${lon}, lon=${lat}`);
     return {
       ...obj,
       latitude: lon,
