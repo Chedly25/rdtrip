@@ -103,6 +103,29 @@ function filterOriginDestination(cities, originName, destinationName) {
 }
 
 /**
+ * Detect if coordinates are swapped (lon, lat instead of lat, lon)
+ * Latitude should be between -90 and 90, longitude between -180 and 180
+ * For Europe, latitude is typically 35-70, longitude -10 to 50
+ */
+function detectAndFixSwappedCoordinates(obj) {
+  const lat = obj.latitude;
+  const lon = obj.longitude;
+
+  // If "latitude" value is outside valid range or looks like longitude
+  // and "longitude" value looks like latitude, they're probably swapped
+  if (Math.abs(lat) > 90 || (Math.abs(lon) <= 90 && Math.abs(lat) > Math.abs(lon))) {
+    console.warn(`⚠️  Detected swapped coordinates for ${obj.name}: (${lat}, ${lon}) -> swapping to (${lon}, ${lat})`);
+    return {
+      ...obj,
+      latitude: lon,
+      longitude: lat
+    };
+  }
+
+  return obj;
+}
+
+/**
  * Select optimal cities for a route
  * @param {Array} cities - Array of city candidates with latitude, longitude
  * @param {Object} origin - {name, latitude, longitude}
@@ -112,6 +135,11 @@ function filterOriginDestination(cities, originName, destinationName) {
  */
 function selectOptimalCities(cities, origin, destination, count) {
   console.log(`\n=== City Optimization ===`);
+
+  // Fix swapped coordinates if detected
+  origin = detectAndFixSwappedCoordinates(origin);
+  destination = detectAndFixSwappedCoordinates(destination);
+
   console.log(`Origin: ${origin.name} (${origin.latitude}, ${origin.longitude})`);
   console.log(`Destination: ${destination.name} (${destination.latitude}, ${destination.longitude})`);
   console.log(`Candidates: ${cities.length}, Need: ${count}`);
@@ -125,14 +153,14 @@ function selectOptimalCities(cities, origin, destination, count) {
     return { selected: [], alternatives: [] };
   }
 
-  // Ensure all cities have valid coordinates
+  // Ensure all cities have valid coordinates and fix swapped coords
   filtered = filtered.filter(city => {
     const hasCoords = typeof city.latitude === 'number' && typeof city.longitude === 'number';
     if (!hasCoords) {
       console.warn(`Skipping ${city.name} - missing coordinates`);
     }
     return hasCoords;
-  });
+  }).map(city => detectAndFixSwappedCoordinates(city));
 
   console.log(`After validating coordinates: ${filtered.length} cities`);
 
