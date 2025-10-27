@@ -720,7 +720,11 @@ app.post('/api/generate-route', async (req, res) => {
       progress: {
         total: selectedAgents.length,
         completed: 0,
-        currentAgent: null
+        currentAgent: null,
+        percentComplete: 0,
+        startTime: Date.now(),
+        estimatedTimeRemaining: selectedAgents.length * 20000, // 20s per agent estimate
+        currentAgentStartTime: null
       },
       agentResults: [],
       error: null,
@@ -805,8 +809,17 @@ async function processRouteJob(jobId, destination, stops, selectedAgents, budget
     const agentConfig = agents[agentType];
 
     try {
-      // Update progress
+      // Update progress - agent starting
+      const agentStartTime = Date.now();
       job.progress.currentAgent = agentConfig.name;
+      job.progress.currentAgentStartTime = agentStartTime;
+      job.progress.percentComplete = Math.round((i / selectedAgents.length) * 100);
+
+      // Calculate estimated time remaining based on average time per completed agent
+      const elapsed = agentStartTime - job.progress.startTime;
+      const avgTimePerAgent = i > 0 ? elapsed / i : 20000; // Use 20s default for first agent
+      job.progress.estimatedTimeRemaining = Math.round(avgTimePerAgent * (selectedAgents.length - i));
+
       job.updatedAt = new Date();
 
       console.log(`\n--- Processing ${agentConfig.name} (${i + 1}/${selectedAgents.length}) ---`);
@@ -865,12 +878,21 @@ async function processRouteJob(jobId, destination, stops, selectedAgents, budget
         });
       }
 
-      // Update progress
+      // Update progress - agent completed
       job.progress.completed = i + 1;
+      job.progress.percentComplete = Math.round(((i + 1) / selectedAgents.length) * 100);
+
+      // Update time estimate based on actual performance
+      const completedTime = Date.now();
+      const totalElapsed = completedTime - job.progress.startTime;
+      const avgTimePerAgent = totalElapsed / (i + 1);
+      job.progress.estimatedTimeRemaining = Math.round(avgTimePerAgent * (selectedAgents.length - (i + 1)));
+
       job.agentResults = agentResults;
       job.updatedAt = new Date();
 
       console.log(`✓ ${agentConfig.name} completed (${i + 1}/${selectedAgents.length})`);
+      console.log(`   Progress: ${job.progress.percentComplete}% | Est. remaining: ${Math.round(job.progress.estimatedTimeRemaining / 1000)}s`);
 
     } catch (error) {
       console.error(`✗ ${agentConfig.name} failed:`, error.message);
@@ -887,7 +909,16 @@ async function processRouteJob(jobId, destination, stops, selectedAgents, budget
         metrics: {}
       });
 
+      // Update progress even on error
       job.progress.completed = i + 1;
+      job.progress.percentComplete = Math.round(((i + 1) / selectedAgents.length) * 100);
+
+      // Update time estimate
+      const completedTime = Date.now();
+      const totalElapsed = completedTime - job.progress.startTime;
+      const avgTimePerAgent = totalElapsed / (i + 1);
+      job.progress.estimatedTimeRemaining = Math.round(avgTimePerAgent * (selectedAgents.length - (i + 1)));
+
       job.agentResults = agentResults;
       job.updatedAt = new Date();
     }
