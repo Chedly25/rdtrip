@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { MapPin, DollarSign, ArrowRight, Map, Save, RefreshCw, Share2, Plus, Sparkles } from 'lucide-react'
+import { MapPin, DollarSign, ArrowRight, Map, Save, RefreshCw, Share2, Plus, Sparkles, Undo, RotateCcw } from 'lucide-react'
 import { CityCard } from './CityCard'
 import { useAuth } from '../contexts/AuthContext'
 import SaveRouteModal from './SaveRouteModal'
@@ -84,6 +84,16 @@ export function RouteResults({ routeData, onViewMap, onStartOver }: RouteResults
   // State to manage modified waypoints per agent (for adding/replacing cities)
   const [modifiedWaypoints, setModifiedWaypoints] = useState<Record<number, City[]>>({})
 
+  // History tracking for undo/redo
+  type HistoryEntry = {
+    agentIndex: number
+    previousWaypoints: City[]
+    action: string
+    timestamp: number
+  }
+  const [history, setHistory] = useState<HistoryEntry[]>([])
+  const [showChangeHistory, setShowChangeHistory] = useState(false)
+
   // Open modal for city action
   const handleOpenCityAction = (city: City, agentIndex: number) => {
     setSelectedAlternativeCity(city)
@@ -106,8 +116,19 @@ export function RouteResults({ routeData, onViewMap, onStartOver }: RouteResults
 
     const originalWaypoints = parsedRecs?.waypoints || []
     const currentWaypoints = modifiedWaypoints[currentAgentIndex] || originalWaypoints
-    const updatedWaypoints = [...currentWaypoints]
 
+    // Save to history before making changes
+    setHistory(prev => [
+      ...prev,
+      {
+        agentIndex: currentAgentIndex,
+        previousWaypoints: [...currentWaypoints],
+        action: `Added ${selectedAlternativeCity.name} at position ${position + 1}`,
+        timestamp: Date.now()
+      }
+    ])
+
+    const updatedWaypoints = [...currentWaypoints]
     // Insert city at the specified position
     updatedWaypoints.splice(position, 0, selectedAlternativeCity)
 
@@ -142,6 +163,17 @@ export function RouteResults({ routeData, onViewMap, onStartOver }: RouteResults
     const updatedWaypoints = [...currentWaypoints]
     const replacedCity = updatedWaypoints[cityIndexToReplace]
 
+    // Save to history before making changes
+    setHistory(prev => [
+      ...prev,
+      {
+        agentIndex: currentAgentIndex,
+        previousWaypoints: [...currentWaypoints],
+        action: `Replaced ${replacedCity?.name} with ${selectedAlternativeCity.name}`,
+        timestamp: Date.now()
+      }
+    ])
+
     // Replace the city at the specified index
     updatedWaypoints[cityIndexToReplace] = selectedAlternativeCity
 
@@ -153,6 +185,52 @@ export function RouteResults({ routeData, onViewMap, onStartOver }: RouteResults
     // Show success toast
     setToast({
       message: `${replacedCity?.name} replaced with ${selectedAlternativeCity.name}!`,
+      type: 'success'
+    })
+    setTimeout(() => setToast(null), 3000)
+  }
+
+  // Undo last change
+  const handleUndo = () => {
+    if (history.length === 0) return
+
+    const lastChange = history[history.length - 1]
+
+    // Restore previous waypoints
+    setModifiedWaypoints(prev => ({
+      ...prev,
+      [lastChange.agentIndex]: lastChange.previousWaypoints
+    }))
+
+    // Remove last history entry
+    setHistory(prev => prev.slice(0, -1))
+
+    // Show toast
+    setToast({
+      message: 'Change undone!',
+      type: 'success'
+    })
+    setTimeout(() => setToast(null), 2000)
+  }
+
+  // Reset to original AI recommendations
+  const handleResetToOriginal = () => {
+    if (Object.keys(modifiedWaypoints).length === 0) {
+      setToast({
+        message: 'No changes to reset',
+        type: 'info'
+      })
+      setTimeout(() => setToast(null), 2000)
+      return
+    }
+
+    // Clear all modifications
+    setModifiedWaypoints({})
+    setHistory([])
+
+    // Show toast
+    setToast({
+      message: 'Route reset to original AI recommendations!',
       type: 'success'
     })
     setTimeout(() => setToast(null), 3000)
@@ -626,6 +704,80 @@ export function RouteResults({ routeData, onViewMap, onStartOver }: RouteResults
               </motion.div>
             )
           })}
+        </AnimatePresence>
+
+        {/* Undo/Reset Controls */}
+        {(history.length > 0 || Object.keys(modifiedWaypoints).length > 0) && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-8 flex flex-wrap items-center justify-center gap-3"
+          >
+            {history.length > 0 && (
+              <button
+                onClick={handleUndo}
+                className="inline-flex items-center gap-2 rounded-lg border-2 border-orange-500 bg-white px-4 py-2 text-sm font-semibold text-orange-600 transition-all hover:bg-orange-50 hover:shadow-md"
+              >
+                <Undo className="h-4 w-4" />
+                Undo Last Change
+              </button>
+            )}
+
+            {Object.keys(modifiedWaypoints).length > 0 && (
+              <button
+                onClick={handleResetToOriginal}
+                className="inline-flex items-center gap-2 rounded-lg border-2 border-gray-400 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition-all hover:bg-gray-50 hover:shadow-md"
+              >
+                <RotateCcw className="h-4 w-4" />
+                Reset to Original
+              </button>
+            )}
+
+            {/* Change history summary */}
+            {history.length > 0 && (
+              <button
+                onClick={() => setShowChangeHistory(!showChangeHistory)}
+                className="inline-flex items-center gap-2 rounded-lg bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-600 transition-all hover:bg-gray-200"
+              >
+                {history.length} change{history.length !== 1 ? 's' : ''} made
+                <span className="text-xs">{showChangeHistory ? '▲' : '▼'}</span>
+              </button>
+            )}
+          </motion.div>
+        )}
+
+        {/* Change History List */}
+        <AnimatePresence>
+          {showChangeHistory && history.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mt-4 overflow-hidden"
+            >
+              <div className="mx-auto max-w-2xl rounded-lg bg-gray-50 p-4">
+                <h4 className="mb-3 text-sm font-bold text-gray-700">Change History</h4>
+                <div className="space-y-2">
+                  {history.slice().reverse().map((entry, index) => (
+                    <div
+                      key={entry.timestamp}
+                      className="flex items-start gap-3 rounded-md bg-white p-3 text-sm"
+                    >
+                      <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-purple-100 text-xs font-bold text-purple-600">
+                        {history.length - index}
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900">{entry.action}</p>
+                        <p className="mt-1 text-xs text-gray-500">
+                          {new Date(entry.timestamp).toLocaleTimeString()}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          )}
         </AnimatePresence>
 
         {/* Global Action Buttons */}
