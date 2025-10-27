@@ -114,6 +114,15 @@ Each waypoint must be a CITY NAME that tourists typically miss. Explain what mak
       localDependency: extractLevel(response, /Local Dependency:?\s*(\w+)/i, ["Low", "Moderate", "High"], "Moderate"),
       transportAccess: extractLevel(response, /Transport Access:?\s*(\w+)/i, ["Low", "Moderate", "High"], "Moderate")
     })
+  },
+  "best-overall": {
+    name: "Best Overall",
+    color: "#6366f1",
+    icon: "⭐",
+    isMerged: true, // Special flag to indicate this merges other results
+    description: "A perfectly balanced route combining the best of adventure, culture, food, and hidden gems",
+    prompt: null, // This agent doesn't use AI - it merges results from other agents
+    metricsExtractor: null
   }
 };
 
@@ -840,12 +849,107 @@ async function processRouteJob(jobId, destination, stops, selectedAgents, budget
     }
   }
 
+  // Create "Best Overall" merged result if we have multiple agents
+  if (selectedAgents.length > 1 && !selectedAgents.includes('best-overall')) {
+    try {
+      console.log('\n--- Creating Best Overall merged route ---');
+      const mergedResult = createBestOverallRoute(agentResults, stops);
+
+      // Add to beginning of results array
+      agentResults.unshift({
+        agent: 'best-overall',
+        agentConfig: {
+          name: agents['best-overall'].name,
+          color: agents['best-overall'].color,
+          icon: agents['best-overall'].icon
+        },
+        recommendations: JSON.stringify(mergedResult),
+        metrics: {}
+      });
+
+      job.agentResults = agentResults;
+      console.log('✓ Best Overall route created');
+    } catch (error) {
+      console.error('✗ Failed to create Best Overall:', error.message);
+    }
+  }
+
   // Mark job as completed
   job.status = 'completed';
   job.progress.currentAgent = null;
   job.updatedAt = new Date();
 
   console.log(`\n=== Route job ${jobId} completed ===\n`);
+}
+
+// Create Best Overall route by merging top cities from all agents
+function createBestOverallRoute(agentResults, requestedStops) {
+  const allCities = [];
+  const cityScores = new Map(); // Track which themes each city has
+
+  // Parse all agent results and collect cities
+  agentResults.forEach(result => {
+    try {
+      const parsed = JSON.parse(result.recommendations);
+      if (parsed.waypoints && Array.isArray(parsed.waypoints)) {
+        parsed.waypoints.forEach((city, index) => {
+          const cityName = city.name;
+          const agent = result.agent;
+
+          // Score cities higher if they appear earlier in their agent's list
+          const positionScore = (parsed.waypoints.length - index) / parsed.waypoints.length;
+
+          if (!cityScores.has(cityName)) {
+            cityScores.set(cityName, {
+              city: { ...city },
+              themes: [],
+              score: 0,
+              count: 0
+            });
+          }
+
+          const cityData = cityScores.get(cityName);
+          cityData.themes.push(agent);
+          cityData.score += positionScore;
+          cityData.count += 1;
+
+          // Merge activities from different agents
+          if (city.activities && Array.isArray(city.activities)) {
+            if (!cityData.city.activities) {
+              cityData.city.activities = [];
+            }
+            cityData.city.activities = [...cityData.city.activities, ...city.activities];
+          }
+        });
+      }
+    } catch (e) {
+      console.error('Error parsing agent result:', e.message);
+    }
+  });
+
+  // Sort cities by score (cities appearing in multiple themes rank higher)
+  const sortedCities = Array.from(cityScores.values())
+    .sort((a, b) => {
+      // Prioritize cities with multiple themes
+      if (a.themes.length !== b.themes.length) {
+        return b.themes.length - a.themes.length;
+      }
+      // Then by score
+      return b.score - a.score;
+    })
+    .slice(0, requestedStops); // Take top N cities
+
+  // Build final waypoints with theme information
+  const waypoints = sortedCities.map(cityData => ({
+    ...cityData.city,
+    themes: cityData.themes, // Add themes array to each city
+    themesDisplay: cityData.themes.map(t => agents[t]?.name || t).join(', ')
+  }));
+
+  return {
+    waypoints,
+    description: `A perfectly balanced route combining the best of ${Array.from(new Set(sortedCities.flatMap(c => c.themes))).map(t => agents[t]?.name || t).join(', ')}. Each city has been selected for its unique mix of experiences.`
+  };
 }
 
 // Get hotels and restaurants for a city
