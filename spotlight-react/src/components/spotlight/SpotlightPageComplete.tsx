@@ -14,6 +14,10 @@ import { getTheme } from '../../config/theme'
 
 // Agent configuration
 const agentConfig = {
+  'best-overall': {
+    name: 'Best Overall Route',
+    icon: '/images/icons/best_icon.png',
+  },
   adventure: {
     name: 'Adventure Route',
     icon: '/images/icons/adventure_icon.png',
