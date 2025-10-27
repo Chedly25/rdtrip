@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { MapPin, DollarSign, ArrowRight, Map, Save, RefreshCw, Share2, Plus } from 'lucide-react'
+import { MapPin, DollarSign, ArrowRight, Map, Save, RefreshCw, Share2, Plus, Sparkles } from 'lucide-react'
 import { CityCard } from './CityCard'
 import { useAuth } from '../contexts/AuthContext'
 import SaveRouteModal from './SaveRouteModal'
 import ShareRouteModal from './ShareRouteModal'
 import CityActionModal from './CityActionModal'
+import Toast, { type ToastType } from './Toast'
 
 interface Activity {
   name?: string
@@ -77,6 +78,7 @@ export function RouteResults({ routeData, onViewMap, onStartOver }: RouteResults
   const [showCityActionModal, setShowCityActionModal] = useState(false)
   const [selectedAlternativeCity, setSelectedAlternativeCity] = useState<City | null>(null)
   const [currentAgentIndex, setCurrentAgentIndex] = useState<number>(0)
+  const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null)
   const { token, isAuthenticated } = useAuth()
 
   // State to manage modified waypoints per agent (for adding/replacing cities)
@@ -113,6 +115,13 @@ export function RouteResults({ routeData, onViewMap, onStartOver }: RouteResults
       ...prev,
       [currentAgentIndex]: updatedWaypoints
     }))
+
+    // Show success toast
+    setToast({
+      message: `${selectedAlternativeCity.name} added to your route!`,
+      type: 'success'
+    })
+    setTimeout(() => setToast(null), 3000)
   }
 
   // Replace city at specific index
@@ -131,6 +140,7 @@ export function RouteResults({ routeData, onViewMap, onStartOver }: RouteResults
     const originalWaypoints = parsedRecs?.waypoints || []
     const currentWaypoints = modifiedWaypoints[currentAgentIndex] || originalWaypoints
     const updatedWaypoints = [...currentWaypoints]
+    const replacedCity = updatedWaypoints[cityIndexToReplace]
 
     // Replace the city at the specified index
     updatedWaypoints[cityIndexToReplace] = selectedAlternativeCity
@@ -139,6 +149,13 @@ export function RouteResults({ routeData, onViewMap, onStartOver }: RouteResults
       ...prev,
       [currentAgentIndex]: updatedWaypoints
     }))
+
+    // Show success toast
+    setToast({
+      message: `${replacedCity?.name} replaced with ${selectedAlternativeCity.name}!`,
+      type: 'success'
+    })
+    setTimeout(() => setToast(null), 3000)
   }
 
   // Create enriched route data with modifications
@@ -378,11 +395,12 @@ export function RouteResults({ routeData, onViewMap, onStartOver }: RouteResults
           <div className="flex flex-wrap gap-2">
             {routeData.agentResults.map((agentResult, index) => {
               const theme = agentThemes[agentResult.agent] || agentThemes.adventure
+              const isModified = modifiedWaypoints[index] !== undefined
               return (
                 <button
                   key={index}
                   onClick={() => setActiveTab(index)}
-                  className={`flex items-center gap-3 rounded-xl px-6 py-4 font-semibold shadow-md transition-all ${
+                  className={`relative flex items-center gap-3 rounded-xl px-6 py-4 font-semibold shadow-md transition-all ${
                     activeTab === index
                       ? 'scale-105 text-white shadow-xl'
                       : 'bg-white text-gray-700 hover:shadow-lg'
@@ -400,6 +418,20 @@ export function RouteResults({ routeData, onViewMap, onStartOver }: RouteResults
                     }}
                   />
                   <span>{agentResult.agentConfig.name}</span>
+                  {isModified && (
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs ${
+                        activeTab === index
+                          ? 'bg-white/20 text-white'
+                          : 'bg-purple-100 text-purple-700'
+                      }`}
+                    >
+                      <Sparkles className="h-3 w-3" />
+                      <span className="font-bold">Modified</span>
+                    </motion.div>
+                  )}
                 </button>
               )
             })}
@@ -677,6 +709,16 @@ export function RouteResults({ routeData, onViewMap, onStartOver }: RouteResults
             onReplaceCity={handleReplaceCity}
             origin={routeData.origin}
             destination={routeData.destination}
+          />
+        )}
+
+        {/* Toast Notification */}
+        {toast && (
+          <Toast
+            message={toast.message}
+            type={toast.type}
+            isVisible={true}
+            onClose={() => setToast(null)}
           />
         )}
       </div>
