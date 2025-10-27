@@ -694,6 +694,198 @@ app.patch('/api/routes/:id', authenticate, async (req, res) => {
 });
 
 // =====================================================
+// ROUTE SHARING ENDPOINTS
+// =====================================================
+
+// Helper function to generate unique share token
+async function generateShareToken() {
+  const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let token = '';
+  let attempts = 0;
+
+  while (attempts < 10) {
+    token = '';
+    for (let i = 0; i < 12; i++) {
+      token += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+
+    // Check if token already exists
+    const result = await db.query(
+      'SELECT COUNT(*) FROM routes WHERE share_token = $1',
+      [token]
+    );
+
+    if (parseInt(result.rows[0].count) === 0) {
+      return token;
+    }
+
+    attempts++;
+  }
+
+  throw new Error('Could not generate unique share token after 10 attempts');
+}
+
+// POST /api/routes/:id/share - Generate share token and make route public
+app.post('/api/routes/:id/share', authenticate, async (req, res) => {
+  try {
+    // First, verify the user owns this route
+    const ownerCheck = await db.query(
+      'SELECT user_id FROM routes WHERE id = $1',
+      [req.params.id]
+    );
+
+    if (ownerCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Route not found' });
+    }
+
+    if (ownerCheck.rows[0].user_id !== req.user.id) {
+      return res.status(403).json({ error: 'Not authorized to share this route' });
+    }
+
+    // Generate unique share token
+    const shareToken = await generateShareToken();
+
+    // Update route to be public with share token
+    const result = await db.query(
+      `UPDATE routes
+       SET is_public = true,
+           share_token = $1,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $2 AND user_id = $3
+       RETURNING share_token`,
+      [shareToken, req.params.id, req.user.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Route not found' });
+    }
+
+    const baseUrl = req.protocol + '://' + req.get('host');
+    const shareUrl = `${baseUrl}/shared/${shareToken}`;
+
+    console.log(`✅ Route ${req.params.id} shared with token: ${shareToken}`);
+
+    res.json({
+      message: 'Route shared successfully',
+      shareToken: shareToken,
+      shareUrl: shareUrl,
+      isPublic: true
+    });
+  } catch (error) {
+    console.error('Error sharing route:', error);
+    res.status(500).json({ error: 'Failed to share route' });
+  }
+});
+
+// DELETE /api/routes/:id/share - Revoke sharing (make route private)
+app.delete('/api/routes/:id/share', authenticate, async (req, res) => {
+  try {
+    const result = await db.query(
+      `UPDATE routes
+       SET is_public = false,
+           share_token = NULL,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $1 AND user_id = $2
+       RETURNING id`,
+      [req.params.id, req.user.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Route not found' });
+    }
+
+    console.log(`🔒 Route ${req.params.id} sharing revoked`);
+
+    res.json({
+      message: 'Sharing disabled successfully',
+      isPublic: false,
+      shareToken: null
+    });
+  } catch (error) {
+    console.error('Error revoking share:', error);
+    res.status(500).json({ error: 'Failed to revoke sharing' });
+  }
+});
+
+// GET /api/shared/:token - View shared route (public, no auth required)
+app.get('/api/shared/:token', async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT r.*, u.name as creator_name, u.email as creator_email
+       FROM routes r
+       JOIN users u ON r.user_id = u.id
+       WHERE r.share_token = $1 AND r.is_public = true`,
+      [req.params.token]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Shared route not found or is no longer public' });
+    }
+
+    // Increment view count
+    await db.query(
+      `UPDATE routes
+       SET view_count = COALESCE(view_count, 0) + 1,
+           last_viewed_at = CURRENT_TIMESTAMP
+       WHERE share_token = $1`,
+      [req.params.token]
+    );
+
+    const row = result.rows[0];
+
+    console.log(`👁️ Shared route ${row.id} viewed (token: ${req.params.token})`);
+
+    res.json({
+      id: row.id,
+      name: row.name,
+      origin: row.origin,
+      destination: row.destination,
+      stops: row.stops,
+      budget: row.budget,
+      selectedAgents: row.selected_agents,
+      routeData: row.route_data,
+      createdAt: row.created_at,
+      creator: {
+        name: row.creator_name
+        // Note: email is excluded from public view for privacy
+      },
+      viewCount: (row.view_count || 0) + 1 // Include the count we just incremented
+    });
+  } catch (error) {
+    console.error('Error fetching shared route:', error);
+    res.status(500).json({ error: 'Failed to fetch shared route' });
+  }
+});
+
+// GET /api/routes/:id/stats - Get sharing statistics (owner only)
+app.get('/api/routes/:id/stats', authenticate, async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT view_count, last_viewed_at, share_token, is_public
+       FROM routes
+       WHERE id = $1 AND user_id = $2`,
+      [req.params.id, req.user.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Route not found' });
+    }
+
+    const row = result.rows[0];
+
+    res.json({
+      viewCount: row.view_count || 0,
+      lastViewedAt: row.last_viewed_at,
+      isPublic: row.is_public,
+      shareToken: row.share_token
+    });
+  } catch (error) {
+    console.error('Error fetching route stats:', error);
+    res.status(500).json({ error: 'Failed to fetch route statistics' });
+  }
+});
+
+// =====================================================
 // ROUTE GENERATION ENDPOINTS
 // =====================================================
 
@@ -2970,7 +3162,62 @@ app.get('/api/ztl/zones', (req, res) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`🚗 Road Trip Planner MVP running on port ${PORT}`);
-  console.log(`📍 Loaded ${europeanLandmarks.length} European landmarks`);
+// =====================================================
+// DATABASE MIGRATION - Run on startup
+// =====================================================
+async function runDatabaseMigrations() {
+  try {
+    console.log('🔄 Checking database migrations...');
+
+    // Check if share_token column exists
+    const columnCheck = await db.query(`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_name = 'routes' AND column_name = 'share_token'
+    `);
+
+    if (columnCheck.rows.length === 0) {
+      console.log('📦 Running migration: Adding route sharing columns...');
+
+      // Add sharing columns
+      await db.query(`
+        ALTER TABLE routes ADD COLUMN IF NOT EXISTS share_token VARCHAR(12) UNIQUE;
+        ALTER TABLE routes ADD COLUMN IF NOT EXISTS view_count INTEGER DEFAULT 0;
+        ALTER TABLE routes ADD COLUMN IF NOT EXISTS last_viewed_at TIMESTAMP WITH TIME ZONE;
+      `);
+
+      // Create index for share tokens
+      await db.query(`
+        CREATE INDEX IF NOT EXISTS idx_routes_share_token
+        ON routes(share_token)
+        WHERE share_token IS NOT NULL;
+      `);
+
+      // Create index for public routes
+      await db.query(`
+        CREATE INDEX IF NOT EXISTS idx_routes_is_public
+        ON routes(is_public)
+        WHERE is_public = true;
+      `);
+
+      console.log('✅ Migration completed: Route sharing columns added');
+    } else {
+      console.log('✅ Database schema is up to date');
+    }
+  } catch (error) {
+    console.error('❌ Migration error:', error);
+    // Don't crash the server if migration fails
+    console.warn('⚠️  Server will continue, but sharing features may not work');
+  }
+}
+
+// Run migrations and then start server
+runDatabaseMigrations().then(() => {
+  app.listen(PORT, () => {
+    console.log(`🚗 Road Trip Planner MVP running on port ${PORT}`);
+    console.log(`📍 Loaded ${europeanLandmarks.length} European landmarks`);
+  });
+}).catch(error => {
+  console.error('Failed to start server:', error);
+  process.exit(1);
 });
