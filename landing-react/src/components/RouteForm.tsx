@@ -4,6 +4,7 @@ import { MapPin, Navigation, Users } from 'lucide-react'
 import { useFormStore } from '../stores/formStore'
 import { BudgetSelector } from './BudgetSelector'
 import { AgentSelector } from './AgentSelector'
+import { RouteGenerationLoading } from './RouteGenerationLoading'
 
 interface RouteFormProps {
   onRouteGenerated?: (data: any) => void
@@ -28,6 +29,13 @@ export function RouteForm({ onRouteGenerated }: RouteFormProps) {
   } = useFormStore()
 
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [progress, setProgress] = useState({
+    total: 0,
+    completed: 0,
+    currentAgent: null as string | null,
+    percentComplete: 0,
+    estimatedTimeRemaining: 0
+  })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -87,6 +95,17 @@ export function RouteForm({ onRouteGenerated }: RouteFormProps) {
         const statusData = await statusResponse.json()
         console.log('Job status:', statusData)
 
+        // Update progress state
+        if (statusData.progress) {
+          setProgress({
+            total: statusData.progress.total || 0,
+            completed: statusData.progress.completed || 0,
+            currentAgent: statusData.progress.currentAgent || null,
+            percentComplete: statusData.progress.percentComplete || 0,
+            estimatedTimeRemaining: statusData.progress.estimatedTimeRemaining || 0
+          })
+        }
+
         if (statusData.status === 'completed') {
           // Job completed successfully
           if (onRouteGenerated) {
@@ -121,22 +140,35 @@ export function RouteForm({ onRouteGenerated }: RouteFormProps) {
   return (
     <section id="route-form" className="relative bg-gradient-to-b from-gray-50 to-white py-20">
       <div className="container mx-auto max-w-4xl px-4">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="mb-12 text-center"
-        >
-          <h2 className="mb-4 text-4xl font-bold text-gray-900">
-            Plan Your Journey
-          </h2>
-          <p className="text-lg text-gray-600">
-            Tell us where you want to go, and we'll create a personalized route just for you
-          </p>
-        </motion.div>
+        {!isLoading && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="mb-12 text-center"
+          >
+            <h2 className="mb-4 text-4xl font-bold text-gray-900">
+              Plan Your Journey
+            </h2>
+            <p className="text-lg text-gray-600">
+              Tell us where you want to go, and we'll create a personalized route just for you
+            </p>
+          </motion.div>
+        )}
 
-        <motion.form
+        {/* Show loading component when generating route */}
+        {isLoading && (
+          <RouteGenerationLoading
+            progress={progress}
+            destination={destination}
+            agents={agents}
+          />
+        )}
+
+        {/* Show form when not loading */}
+        {!isLoading && (
+          <motion.form
           onSubmit={handleSubmit}
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -255,6 +287,7 @@ export function RouteForm({ onRouteGenerated }: RouteFormProps) {
             )}
           </motion.button>
         </motion.form>
+        )}
       </div>
     </section>
   )
