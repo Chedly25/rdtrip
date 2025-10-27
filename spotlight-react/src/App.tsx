@@ -80,21 +80,35 @@ function extractWaypoints(routeData: any): Waypoint[] {
 
       // If we have parsed JSON with waypoints
       if (parsed && parsed.waypoints && Array.isArray(parsed.waypoints)) {
-        parsed.waypoints.forEach((waypoint: any) => {
+        console.log(`📍 [${agentResult.agent}] Parsing ${parsed.waypoints.length} waypoints`);
+        parsed.waypoints.forEach((waypoint: any, idx: number) => {
           if (waypoint.name) {
+            console.log(`  [${idx}] ${waypoint.name}:`, {
+              hasLatitude: !!waypoint.latitude,
+              hasLongitude: !!waypoint.longitude,
+              latValue: waypoint.latitude,
+              lngValue: waypoint.longitude,
+              hasCoordinates: !!waypoint.coordinates,
+              coordinatesType: Array.isArray(waypoint.coordinates) ? 'array' : typeof waypoint.coordinates
+            });
+
             // Handle coordinates from backend (latitude, longitude fields)
             let coords;
             if (waypoint.latitude && waypoint.longitude) {
               coords = { lat: waypoint.latitude, lng: waypoint.longitude };
+              console.log(`    ✅ Using lat/lng fields → lat=${coords.lat}, lng=${coords.lng}`);
             } else if (waypoint.coordinates && Array.isArray(waypoint.coordinates)) {
               // Fallback for old array format [lng, lat]
               coords = { lat: waypoint.coordinates[1], lng: waypoint.coordinates[0] };
+              console.log(`    ⚠️ Using array format → lat=${coords.lat}, lng=${coords.lng}`);
             } else if (waypoint.coordinates && waypoint.coordinates.lat && waypoint.coordinates.lng) {
               // Already in correct format
               coords = waypoint.coordinates;
+              console.log(`    ✅ Using object format → lat=${coords.lat}, lng=${coords.lng}`);
             } else {
               // Random fallback
               coords = { lat: 44.0 + Math.random() * 6.0, lng: 2.0 + Math.random() * 8.0 };
+              console.log(`    ❌ NO COORDINATES! Using random → lat=${coords.lat}, lng=${coords.lng}`);
             }
 
             waypoints.push({
