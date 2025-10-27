@@ -25,6 +25,9 @@ const { hashPassword, comparePassword, validatePasswordStrength } = require('./u
 const { generateToken } = require('./utils/jwt');
 const { authenticate, optionalAuth } = require('./middleware/auth');
 
+// City optimization utility
+const { selectOptimalCities } = require('./utils/cityOptimization');
+
 // AI Agent configurations with enhanced metrics
 const agents = {
   adventure: {
@@ -1555,35 +1558,47 @@ async function queryPerplexity(agent, destination, stops, budget = 'budget', ret
 
     const budgetContext = budgetDescriptions[budget] || budgetDescriptions.budget;
 
-    // Adjust max_tokens based on stops (more stops = more tokens needed)
-    const maxTokens = Math.min(1000 + (stops * 100), 2000);
+    // Request 2x cities for route optimization (we'll pick the best ones)
+    const requestedCities = stops * 2;
+
+    // Adjust max_tokens based on requested cities
+    const maxTokens = Math.min(1500 + (requestedCities * 150), 3000);
 
     const prompt = `${agent.prompt}
 
-Create a road trip from Aix-en-Provence to ${destination} with ${stops} CITY stops.
+Create a road trip from Aix-en-Provence to ${destination} with ${requestedCities} CITY candidates (we need ${stops} final stops, but provide ${requestedCities} options for route optimization).
 
 BUDGET: ${budgetContext}
 
 CRITICAL RULES:
 1. Each waypoint MUST be a CITY or TOWN name only
-2. Do NOT use attraction names as waypoints
-3. Examples of CORRECT names: "Grenoble", "Annecy", "Lyon"
-4. Examples of WRONG names: "Pont du Gard", "Mont Blanc", "Louvre Museum"
+2. Do NOT include the origin (Aix-en-Provence) or destination (${destination}) as stops
+3. Do NOT use attraction names as waypoints
+4. Examples of CORRECT names: "Grenoble", "Annecy", "Lyon"
+5. Examples of WRONG names: "Pont du Gard", "Mont Blanc", "Louvre Museum"
+6. MUST include exact coordinates in decimal format (latitude, longitude)
+7. Include current events, festivals, or seasonal happenings in the city (check upcoming dates)
 
 Return ONLY valid JSON (no extra text before or after):
 {
   "waypoints": [
     {
       "name": "CITY_NAME",
-      "coordinates": [longitude, latitude],
+      "latitude": 45.1234,
+      "longitude": 5.6789,
       "description": "Why this city is great for ${agent.name.toLowerCase()}",
       "activities": ["activity 1", "activity 2", "activity 3"],
+      "currentEvents": "Any festivals, markets, or special events happening soon (or 'None' if nothing special)",
       "duration": "1-2 days"
     }
   ]
 }
 
-IMPORTANT: Return ONLY the JSON object, no markdown formatting, no extra text.`;
+IMPORTANT:
+- Return ONLY the JSON object, no markdown formatting, no extra text
+- Provide exactly ${requestedCities} cities
+- DO NOT include ${destination} or Aix-en-Provence as stops
+- Coordinates MUST be valid decimal numbers (latitude between -90 and 90, longitude between -180 and 180)`;
 
     console.log(`[${agent.name}] Querying Perplexity (attempt ${retryCount + 1}/${maxRetries + 1}, timeout: ${baseTimeout}ms, maxTokens: ${maxTokens})`);
 
