@@ -6,7 +6,7 @@ import { QRCodeSVG } from 'qrcode.react'
 interface ShareRouteModalProps {
   isOpen: boolean
   onClose: () => void
-  routeId: string
+  routeId?: string
   routeName: string
   shareToken?: string | null
   isPublic: boolean
