@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
+const path = require('path');
 require('dotenv').config();
 const ZTLService = require('./services/ztl-service');
 
@@ -3160,6 +3161,21 @@ app.get('/api/ztl/zones', (req, res) => {
     cities: allZones,
     totalCities: allZones.length
   });
+});
+
+// =====================================================
+// CATCH-ALL ROUTE - Serve React app for client-side routing
+// =====================================================
+// This must be AFTER all API routes but BEFORE server startup
+// Handles React Router routes like /shared/:token, /my-routes, etc.
+app.get('*', (req, res) => {
+  // Don't intercept API routes or static files
+  if (req.path.startsWith('/api/') || req.path.includes('.')) {
+    return res.status(404).send('Not found');
+  }
+
+  // Serve the React app's index.html for all other routes
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // =====================================================
