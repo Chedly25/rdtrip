@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { MapPin, Calendar, Star, Trash2, Eye } from 'lucide-react'
+import { MapPin, Calendar, Star, Trash2, Eye, Share2, Users } from 'lucide-react'
 
 interface SavedRoute {
   id: string
@@ -15,6 +15,8 @@ interface SavedRoute {
   isPublic: boolean
   createdAt: string
   updatedAt: string
+  shareToken?: string | null
+  viewCount?: number
 }
 
 interface SavedRouteCardProps {
@@ -22,6 +24,7 @@ interface SavedRouteCardProps {
   onView: (route: SavedRoute) => void
   onToggleFavorite: (routeId: string, isFavorite: boolean) => void
   onDelete: (routeId: string) => void
+  onShare: (routeId: string) => void
 }
 
 const agentColors: Record<string, string> = {
@@ -38,7 +41,7 @@ const agentNames: Record<string, string> = {
   'hidden-gems': 'Hidden Gems'
 }
 
-export default function SavedRouteCard({ route, onView, onToggleFavorite, onDelete }: SavedRouteCardProps) {
+export default function SavedRouteCard({ route, onView, onToggleFavorite, onDelete, onShare }: SavedRouteCardProps) {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
     return date.toLocaleDateString('en-US', {
@@ -110,10 +113,21 @@ export default function SavedRouteCard({ route, onView, onToggleFavorite, onDele
           </div>
         </div>
 
-        {/* Date */}
-        <div className="flex items-center gap-2 text-sm text-gray-500 mb-6">
-          <Calendar className="h-4 w-4" />
-          <span>Created {formatDate(route.createdAt)}</span>
+        {/* Date & Public Badge */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <Calendar className="h-4 w-4" />
+            <span>Created {formatDate(route.createdAt)}</span>
+          </div>
+          {route.isPublic && (
+            <div className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+              <Users className="h-3 w-3" />
+              <span>Public</span>
+              {route.viewCount !== undefined && route.viewCount > 0 && (
+                <span className="ml-1 text-green-600">· {route.viewCount} views</span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Actions */}
@@ -126,8 +140,16 @@ export default function SavedRouteCard({ route, onView, onToggleFavorite, onDele
             View Route
           </button>
           <button
+            onClick={() => onShare(route.id)}
+            className="px-4 py-3 border-2 border-slate-200 text-slate-700 rounded-lg font-medium hover:bg-slate-50 hover:border-slate-300 transition-colors"
+            title="Share route"
+          >
+            <Share2 className="h-4 w-4" />
+          </button>
+          <button
             onClick={() => onDelete(route.id)}
             className="px-4 py-3 border-2 border-red-200 text-red-600 rounded-lg font-medium hover:bg-red-50 hover:border-red-300 transition-colors"
+            title="Delete route"
           >
             <Trash2 className="h-4 w-4" />
           </button>
