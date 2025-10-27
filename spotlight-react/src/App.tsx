@@ -82,15 +82,28 @@ function extractWaypoints(routeData: any): Waypoint[] {
       if (parsed && parsed.waypoints && Array.isArray(parsed.waypoints)) {
         parsed.waypoints.forEach((waypoint: any) => {
           if (waypoint.name) {
+            // Handle coordinates from backend (latitude, longitude fields)
+            let coords;
+            if (waypoint.latitude && waypoint.longitude) {
+              coords = { lat: waypoint.latitude, lng: waypoint.longitude };
+            } else if (waypoint.coordinates && Array.isArray(waypoint.coordinates)) {
+              // Fallback for old array format [lng, lat]
+              coords = { lat: waypoint.coordinates[1], lng: waypoint.coordinates[0] };
+            } else if (waypoint.coordinates && waypoint.coordinates.lat && waypoint.coordinates.lng) {
+              // Already in correct format
+              coords = waypoint.coordinates;
+            } else {
+              // Random fallback
+              coords = { lat: 44.0 + Math.random() * 6.0, lng: 2.0 + Math.random() * 8.0 };
+            }
+
             waypoints.push({
               id: `city-${waypoints.length + 1}`,
               name: extractCityName(waypoint.name),
               order: waypoints.length,
               activities: waypoint.activities || ['Explore the city', 'Try local cuisine'],
               imageUrl: waypoint.imageUrl,
-              coordinates: waypoint.coordinates
-                ? { lat: waypoint.coordinates[1], lng: waypoint.coordinates[0] }
-                : { lat: 44.0 + Math.random() * 6.0, lng: 2.0 + Math.random() * 8.0 },
+              coordinates: coords,
             })
           }
         })
