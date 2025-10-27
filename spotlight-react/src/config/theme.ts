@@ -1,4 +1,4 @@
-export type AgentType = 'adventure' | 'culture' | 'food' | 'hidden-gems'
+export type AgentType = 'best-overall' | 'adventure' | 'culture' | 'food' | 'hidden-gems'
 
 export interface ThemeConfig {
   primary: string
@@ -13,6 +13,17 @@ export interface ThemeConfig {
 }
 
 export const agentThemes: Record<AgentType, ThemeConfig> = {
+  'best-overall': {
+    primary: '#064d51', // turquoise (logo color)
+    secondary: '#0a6b70',
+    gradient: 'from-teal-800 to-teal-600',
+    tailwind: {
+      bg: 'bg-teal-800',
+      text: 'text-teal-800',
+      border: 'border-teal-800',
+      hover: 'hover:bg-teal-700',
+    },
+  },
   adventure: {
     primary: '#0f5132', // dark green
     secondary: '#198754',
@@ -60,5 +71,5 @@ export const agentThemes: Record<AgentType, ThemeConfig> = {
 }
 
 export function getTheme(agent: AgentType): ThemeConfig {
-  return agentThemes[agent]
+  return agentThemes[agent] || agentThemes['best-overall'] // fallback to best-overall
 }

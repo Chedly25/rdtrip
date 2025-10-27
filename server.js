@@ -117,7 +117,7 @@ Each waypoint must be a CITY NAME that tourists typically miss. Explain what mak
   },
   "best-overall": {
     name: "Best Overall",
-    color: "#6366f1",
+    color: "#064d51",
     icon: "⭐",
     isMerged: true, // Special flag to indicate this merges other results
     description: "A perfectly balanced route combining the best of adventure, culture, food, and hidden gems",
