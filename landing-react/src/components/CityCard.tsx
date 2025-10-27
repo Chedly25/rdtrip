@@ -21,9 +21,25 @@ interface CityCardProps {
   city: City
   index: number
   themeColor: string
+  showThemeBadges?: boolean
+  themes?: string[]
 }
 
-export function CityCard({ city, index, themeColor }: CityCardProps) {
+const themeColors: Record<string, string> = {
+  adventure: '#055948',
+  culture: '#a87600',
+  food: '#650411',
+  'hidden-gems': '#081d5b'
+}
+
+const themeNames: Record<string, string> = {
+  adventure: 'Adventure',
+  culture: 'Culture',
+  food: 'Food',
+  'hidden-gems': 'Hidden Gems'
+}
+
+export function CityCard({ city, index, themeColor, showThemeBadges = false, themes = [] }: CityCardProps) {
   const [imageUrl, setImageUrl] = useState<string | null>(city.image || city.imageUrl || null)
   const [loading, setLoading] = useState(!city.image && !city.imageUrl)
   const [showFallback, setShowFallback] = useState(false)
@@ -95,6 +111,21 @@ export function CityCard({ city, index, themeColor }: CityCardProps) {
         >
           {city.name}
         </h4>
+
+        {/* Theme Badges for Best Overall */}
+        {showThemeBadges && themes.length > 0 && (
+          <div className="mb-3 flex flex-wrap gap-2">
+            {themes.map((theme) => (
+              <span
+                key={theme}
+                className="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium text-white"
+                style={{ backgroundColor: themeColors[theme] || '#6b7280' }}
+              >
+                {themeNames[theme] || theme}
+              </span>
+            ))}
+          </div>
+        )}
 
         {city.description && (
           <p className="mb-4 text-sm text-gray-600 line-clamp-2">
