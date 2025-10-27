@@ -171,11 +171,18 @@ function selectOptimalCities(cities, origin, destination, count) {
     const hasCoords = typeof city.latitude === 'number' && typeof city.longitude === 'number';
     if (!hasCoords) {
       console.warn(`Skipping ${city.name} - missing coordinates`);
+    } else {
+      console.log(`  ${city.name}: lat=${city.latitude}, lon=${city.longitude} (before swap detection)`);
     }
     return hasCoords;
   }).map(city => detectAndFixSwappedCoordinates(city));
 
   console.log(`After validating coordinates: ${filtered.length} cities`);
+
+  // Log coordinates after swap detection
+  filtered.forEach(city => {
+    console.log(`  ${city.name} (after swap check): lat=${city.latitude}, lon=${city.longitude}`);
+  });
 
   // Calculate scores for each city
   const originCoords = { lat: origin.latitude, lon: origin.longitude };
