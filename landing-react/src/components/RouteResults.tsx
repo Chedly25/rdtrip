@@ -542,16 +542,33 @@ export function RouteResults({ routeData, onViewMap, onStartOver }: RouteResults
                     Cities & Highlights ({cities.length})
                   </h3>
                   <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                    {cities.map((city, cityIndex) => (
-                      <CityCard
-                        key={cityIndex}
-                        city={city}
-                        index={cityIndex}
-                        themeColor={theme.color}
-                        showThemeBadges={agentResult.agent === 'best-overall'}
-                        themes={city.themes || []}
-                      />
-                    ))}
+                    {cities.map((city, cityIndex) => {
+                      // Check if this city was added by user (not in original waypoints)
+                      const isUserAdded = modifiedWaypoints[index] && parsedRecs?.waypoints &&
+                        !parsedRecs.waypoints.some((origCity: City) => origCity.name === city.name)
+
+                      return (
+                        <div key={cityIndex} className="relative">
+                          <CityCard
+                            city={city}
+                            index={cityIndex}
+                            themeColor={theme.color}
+                            showThemeBadges={agentResult.agent === 'best-overall'}
+                            themes={city.themes || []}
+                          />
+                          {isUserAdded && (
+                            <motion.div
+                              initial={{ scale: 0 }}
+                              animate={{ scale: 1 }}
+                              className="absolute top-2 right-2 flex items-center gap-1 rounded-full bg-purple-600 px-3 py-1 text-xs font-bold text-white shadow-lg"
+                            >
+                              <Sparkles className="h-3 w-3" />
+                              <span>Added by you</span>
+                            </motion.div>
+                          )}
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
 

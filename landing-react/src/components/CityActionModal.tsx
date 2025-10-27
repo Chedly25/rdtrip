@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Plus, RefreshCw, ArrowRight, MapPin } from 'lucide-react'
+import { X, Plus, RefreshCw, ArrowRight, MapPin, ArrowDown } from 'lucide-react'
 
 interface Activity {
   name?: string
@@ -45,11 +45,13 @@ export default function CityActionModal({
   const [step, setStep] = useState<ActionStep>('choose-action')
   const [selectedPosition, setSelectedPosition] = useState<number | null>(null)
   const [selectedReplacement, setSelectedReplacement] = useState<number | null>(null)
+  const [isProcessing, setIsProcessing] = useState(false)
 
   const handleClose = () => {
     setStep('choose-action')
     setSelectedPosition(null)
     setSelectedReplacement(null)
+    setIsProcessing(false)
     onClose()
   }
 
@@ -61,15 +63,19 @@ export default function CityActionModal({
     }
   }
 
-  const handleConfirmAdd = () => {
+  const handleConfirmAdd = async () => {
     if (selectedPosition !== null) {
+      setIsProcessing(true)
+      await new Promise(resolve => setTimeout(resolve, 300)) // Brief animation delay
       onAddCity(selectedPosition)
       handleClose()
     }
   }
 
-  const handleConfirmReplace = () => {
+  const handleConfirmReplace = async () => {
     if (selectedReplacement !== null) {
+      setIsProcessing(true)
+      await new Promise(resolve => setTimeout(resolve, 300)) // Brief animation delay
       onReplaceCity(selectedReplacement)
       handleClose()
     }
@@ -232,7 +238,7 @@ export default function CityActionModal({
                         {/* Insert at beginning button */}
                         <button
                           onClick={() => setSelectedPosition(0)}
-                          className={`w-full rounded-lg border-2 p-3 text-center text-sm font-semibold transition-all ${
+                          className={`group w-full rounded-lg border-2 p-3 text-center text-sm font-semibold transition-all hover:scale-102 ${
                             selectedPosition === 0
                               ? 'border-transparent shadow-lg'
                               : 'border-dashed border-gray-300 bg-white hover:border-gray-400 hover:bg-gray-50'
@@ -243,7 +249,17 @@ export default function CityActionModal({
                               : {}
                           }
                         >
-                          {selectedPosition === 0 ? '✓ ' : '+ '}Insert here (Position 1)
+                          <div className="flex items-center justify-center gap-2">
+                            {selectedPosition === 0 ? (
+                              <>
+                                <ArrowDown className="h-4 w-4 animate-bounce" />
+                                <span>✓ {selectedCity.name} will be inserted here</span>
+                                <ArrowDown className="h-4 w-4 animate-bounce" />
+                              </>
+                            ) : (
+                              <span className="group-hover:scale-105 transition-transform">+ Insert here (Position 1)</span>
+                            )}
+                          </div>
                         </button>
 
                         {/* Current route cities with insert buttons between */}
@@ -265,7 +281,7 @@ export default function CityActionModal({
                             {/* Insert button after this city */}
                             <button
                               onClick={() => setSelectedPosition(index + 1)}
-                              className={`mt-3 w-full rounded-lg border-2 p-3 text-center text-sm font-semibold transition-all ${
+                              className={`group mt-3 w-full rounded-lg border-2 p-3 text-center text-sm font-semibold transition-all hover:scale-102 ${
                                 selectedPosition === index + 1
                                   ? 'border-transparent shadow-lg'
                                   : 'border-dashed border-gray-300 bg-white hover:border-gray-400 hover:bg-gray-50'
@@ -276,7 +292,17 @@ export default function CityActionModal({
                                   : {}
                               }
                             >
-                              {selectedPosition === index + 1 ? '✓ ' : '+ '}Insert here (Position {index + 2})
+                              <div className="flex items-center justify-center gap-2">
+                                {selectedPosition === index + 1 ? (
+                                  <>
+                                    <ArrowDown className="h-4 w-4 animate-bounce" />
+                                    <span>✓ {selectedCity.name} will be inserted here</span>
+                                    <ArrowDown className="h-4 w-4 animate-bounce" />
+                                  </>
+                                ) : (
+                                  <span className="group-hover:scale-105 transition-transform">+ Insert here (Position {index + 2})</span>
+                                )}
+                              </div>
                             </button>
                           </div>
                         ))}
@@ -308,13 +334,15 @@ export default function CityActionModal({
                       </p>
 
                       {currentRoute.map((city, index) => (
-                        <button
+                        <motion.button
                           key={index}
                           onClick={() => setSelectedReplacement(index)}
+                          whileHover={{ scale: 1.02, y: -2 }}
+                          whileTap={{ scale: 0.98 }}
                           className={`w-full rounded-xl border-2 p-4 text-left transition-all ${
                             selectedReplacement === index
-                              ? 'border-transparent shadow-lg'
-                              : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-md'
+                              ? 'border-transparent shadow-xl'
+                              : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-lg'
                           }`}
                           style={
                             selectedReplacement === index
@@ -324,7 +352,7 @@ export default function CityActionModal({
                         >
                           <div className="flex items-center gap-4">
                             <div
-                              className="flex h-12 w-12 items-center justify-center rounded-full text-white font-bold"
+                              className="flex h-12 w-12 items-center justify-center rounded-full text-white font-bold transition-all"
                               style={{ backgroundColor: agentTheme.color }}
                             >
                               {index + 1}
@@ -340,12 +368,17 @@ export default function CityActionModal({
                               )}
                             </div>
                             {selectedReplacement === index && (
-                              <div className="rounded-full bg-white p-2" style={{ color: agentTheme.color }}>
+                              <motion.div
+                                initial={{ scale: 0, rotate: -180 }}
+                                animate={{ scale: 1, rotate: 0 }}
+                                className="rounded-full bg-white p-2 shadow-md"
+                                style={{ color: agentTheme.color }}
+                              >
                                 <RefreshCw className="h-5 w-5" />
-                              </div>
+                              </motion.div>
                             )}
                           </div>
-                        </button>
+                        </motion.button>
                       ))}
                     </motion.div>
                   )}
@@ -373,21 +406,41 @@ export default function CityActionModal({
                   {step === 'select-position' && (
                     <button
                       onClick={handleConfirmAdd}
-                      disabled={selectedPosition === null}
-                      className="rounded-lg px-8 py-3 font-semibold text-white shadow-md transition-all hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={selectedPosition === null || isProcessing}
+                      className="flex items-center gap-2 rounded-lg px-8 py-3 font-semibold text-white shadow-md transition-all hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                       style={{ backgroundColor: agentTheme.color }}
                     >
-                      Add City to Route
+                      {isProcessing ? (
+                        <>
+                          <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                          <span>Adding...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="h-5 w-5" />
+                          <span>Add City to Route</span>
+                        </>
+                      )}
                     </button>
                   )}
                   {step === 'select-replacement' && (
                     <button
                       onClick={handleConfirmReplace}
-                      disabled={selectedReplacement === null}
-                      className="rounded-lg px-8 py-3 font-semibold text-white shadow-md transition-all hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={selectedReplacement === null || isProcessing}
+                      className="flex items-center gap-2 rounded-lg px-8 py-3 font-semibold text-white shadow-md transition-all hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                       style={{ backgroundColor: agentTheme.color }}
                     >
-                      Replace City
+                      {isProcessing ? (
+                        <>
+                          <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                          <span>Replacing...</span>
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCw className="h-5 w-5" />
+                          <span>Replace City</span>
+                        </>
+                      )}
                     </button>
                   )}
                 </div>
