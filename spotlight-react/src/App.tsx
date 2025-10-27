@@ -192,18 +192,42 @@ function AppContent() {
         // Add origin as first waypoint
         if (routeData.origin) {
           console.log('Adding origin:', routeData.origin);
-          try {
-            const originCoords = await geocodeCity(routeData.origin);
-            finalWaypoints.push({
-              id: 'origin',
-              name: routeData.origin,
-              order: 0,
-              activities: ['Starting point'],
-              coordinates: originCoords,
-            });
-          } catch (error) {
-            console.error('Failed to geocode origin:', error);
+
+          // CRITICAL FIX: Use coordinates from backend if available (already swap-corrected)
+          let originCoords;
+
+          // Check if backend sent origin object with coordinates
+          const agentResult = routeData.agentResults && routeData.agentResults[0];
+          if (agentResult && agentResult.recommendations) {
+            try {
+              const parsed = JSON.parse(agentResult.recommendations);
+              if (parsed.origin && parsed.origin.latitude && parsed.origin.longitude) {
+                originCoords = { lat: parsed.origin.latitude, lng: parsed.origin.longitude };
+                console.log(`✅ Using backend coordinates for origin: lat=${originCoords.lat}, lng=${originCoords.lng}`);
+              }
+            } catch (e) {
+              console.warn('Could not parse origin coordinates from backend:', e);
+            }
           }
+
+          // Fallback: geocode if no backend coordinates
+          if (!originCoords) {
+            try {
+              console.log('⚠️ No backend coordinates for origin, geocoding...');
+              originCoords = await geocodeCity(routeData.origin);
+            } catch (error) {
+              console.error('Failed to geocode origin:', error);
+              originCoords = { lat: 43.5297, lng: 5.4474 }; // Default Aix-en-Provence
+            }
+          }
+
+          finalWaypoints.push({
+            id: 'origin',
+            name: routeData.origin,
+            order: 0,
+            activities: ['Starting point'],
+            coordinates: originCoords,
+          });
         }
 
         // Add intermediate waypoints
@@ -217,18 +241,42 @@ function AppContent() {
         // Add destination as last waypoint
         if (routeData.destination) {
           console.log('Adding destination:', routeData.destination);
-          try {
-            const destCoords = await geocodeCity(routeData.destination);
-            finalWaypoints.push({
-              id: 'destination',
-              name: routeData.destination,
-              order: finalWaypoints.length,
-              activities: ['Final destination'],
-              coordinates: destCoords,
-            });
-          } catch (error) {
-            console.error('Failed to geocode destination:', error);
+
+          // CRITICAL FIX: Use coordinates from backend if available (already swap-corrected)
+          let destCoords;
+
+          // Check if backend sent destination object with coordinates
+          const agentResult = routeData.agentResults && routeData.agentResults[0];
+          if (agentResult && agentResult.recommendations) {
+            try {
+              const parsed = JSON.parse(agentResult.recommendations);
+              if (parsed.destination && parsed.destination.latitude && parsed.destination.longitude) {
+                destCoords = { lat: parsed.destination.latitude, lng: parsed.destination.longitude };
+                console.log(`✅ Using backend coordinates for destination: lat=${destCoords.lat}, lng=${destCoords.lng}`);
+              }
+            } catch (e) {
+              console.warn('Could not parse destination coordinates from backend:', e);
+            }
           }
+
+          // Fallback: geocode if no backend coordinates
+          if (!destCoords) {
+            try {
+              console.log('⚠️ No backend coordinates for destination, geocoding...');
+              destCoords = await geocodeCity(routeData.destination);
+            } catch (error) {
+              console.error('Failed to geocode destination:', error);
+              destCoords = { lat: 48.8566, lng: 2.3522 }; // Default Paris
+            }
+          }
+
+          finalWaypoints.push({
+            id: 'destination',
+            name: routeData.destination,
+            order: finalWaypoints.length,
+            activities: ['Final destination'],
+            coordinates: destCoords,
+          });
         }
 
         console.log('Final waypoints with origin and destination:', finalWaypoints);
