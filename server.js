@@ -926,74 +926,144 @@ async function processRouteJob(jobId, destination, stops, selectedAgents, budget
   console.log(`\n=== Route job ${jobId} completed ===\n`);
 }
 
-// Create Best Overall route by merging top cities from all agents
+// Create Best Overall route by merging and optimizing cities from all agents
 function createBestOverallRoute(agentResults, requestedStops) {
-  const allCities = [];
-  const cityScores = new Map(); // Track which themes each city has
+  console.log('\n=== Creating Best Overall Route ===');
 
-  // Parse all agent results and collect cities
+  // Step 1: Pool ALL cities from all agents (selected + alternatives)
+  const cityPool = new Map(); // Use Map to deduplicate by city name
+  let origin = null;
+  let destination = null;
+
   agentResults.forEach(result => {
     try {
       const parsed = JSON.parse(result.recommendations);
+      const agent = result.agent;
+
+      // Extract origin and destination from first result that has them
+      if (!origin && parsed.origin) {
+        origin = parsed.origin;
+        destination = parsed.destination;
+      }
+
+      // Pool selected waypoints
       if (parsed.waypoints && Array.isArray(parsed.waypoints)) {
-        parsed.waypoints.forEach((city, index) => {
-          const cityName = city.name;
-          const agent = result.agent;
+        parsed.waypoints.forEach(city => {
+          const cityKey = city.name.toLowerCase().trim();
 
-          // Score cities higher if they appear earlier in their agent's list
-          const positionScore = (parsed.waypoints.length - index) / parsed.waypoints.length;
-
-          if (!cityScores.has(cityName)) {
-            cityScores.set(cityName, {
-              city: { ...city },
-              themes: [],
-              score: 0,
-              count: 0
+          if (!cityPool.has(cityKey)) {
+            cityPool.set(cityKey, {
+              ...city,
+              themes: [agent],
+              themeCount: 1
             });
-          }
+          } else {
+            // City appears in multiple themes - merge data
+            const existing = cityPool.get(cityKey);
+            existing.themes.push(agent);
+            existing.themeCount = existing.themes.length;
 
-          const cityData = cityScores.get(cityName);
-          cityData.themes.push(agent);
-          cityData.score += positionScore;
-          cityData.count += 1;
-
-          // Merge activities from different agents
-          if (city.activities && Array.isArray(city.activities)) {
-            if (!cityData.city.activities) {
-              cityData.city.activities = [];
+            // Merge activities (deduplicate)
+            if (city.activities && Array.isArray(city.activities)) {
+              if (!existing.activities) {
+                existing.activities = [];
+              }
+              const activitySet = new Set([...existing.activities, ...city.activities]);
+              existing.activities = Array.from(activitySet);
             }
-            cityData.city.activities = [...cityData.city.activities, ...city.activities];
+
+            // Keep currentEvents if available
+            if (city.currentEvents && city.currentEvents !== 'None') {
+              existing.currentEvents = city.currentEvents;
+            }
+          }
+        });
+      }
+
+      // Pool alternatives
+      if (parsed.alternatives && Array.isArray(parsed.alternatives)) {
+        parsed.alternatives.forEach(city => {
+          const cityKey = city.name.toLowerCase().trim();
+
+          if (!cityPool.has(cityKey)) {
+            cityPool.set(cityKey, {
+              ...city,
+              themes: [agent],
+              themeCount: 1
+            });
+          } else {
+            // City appears in multiple themes
+            const existing = cityPool.get(cityKey);
+            if (!existing.themes.includes(agent)) {
+              existing.themes.push(agent);
+              existing.themeCount = existing.themes.length;
+            }
           }
         });
       }
     } catch (e) {
-      console.error('Error parsing agent result:', e.message);
+      console.error(`Error parsing ${result.agent} result:`, e.message);
     }
   });
 
-  // Sort cities by score (cities appearing in multiple themes rank higher)
-  const sortedCities = Array.from(cityScores.values())
-    .sort((a, b) => {
-      // Prioritize cities with multiple themes
-      if (a.themes.length !== b.themes.length) {
-        return b.themes.length - a.themes.length;
+  const pooledCities = Array.from(cityPool.values());
+  console.log(`Pooled ${pooledCities.length} unique cities from all agents`);
+
+  // Step 2: If we have origin/destination, run geographic optimization
+  if (origin && destination && origin.latitude && destination.latitude) {
+    console.log(`Running optimization from ${origin.name} to ${destination.name}`);
+
+    const optimized = selectOptimalCities(pooledCities, origin, destination, requestedStops);
+
+    // Step 3: Add theme metadata to selected cities
+    const selectedWithThemes = optimized.selected.map(city => ({
+      ...city,
+      themesDisplay: city.themes.map(t => agents[t]?.name || t).join(', ')
+    }));
+
+    // Step 4: Add theme metadata to alternatives
+    const alternativesWithThemes = optimized.alternatives.map(city => ({
+      ...city,
+      themesDisplay: city.themes.map(t => agents[t]?.name || t).join(', ')
+    }));
+
+    console.log(`Selected ${selectedWithThemes.length} cities, ${alternativesWithThemes.length} alternatives`);
+    console.log(`Theme distribution: ${selectedWithThemes.map(c => `${c.name} (${c.themes.length})`).join(', ')}`);
+
+    return {
+      origin,
+      destination,
+      waypoints: selectedWithThemes,
+      alternatives: alternativesWithThemes,
+      description: `A perfectly balanced route combining the best of ${Array.from(new Set(selectedWithThemes.flatMap(c => c.themes))).map(t => agents[t]?.name || t).join(', ')}. Each city has been selected for its unique mix of experiences and optimal positioning along your route.`
+    };
+  } else {
+    // Fallback: No optimization data, use theme-based scoring
+    console.warn('No optimization data available, using theme-based scoring');
+
+    // Sort by theme count (multi-theme cities ranked higher)
+    const sorted = pooledCities.sort((a, b) => {
+      if (a.themeCount !== b.themeCount) {
+        return b.themeCount - a.themeCount;
       }
-      // Then by score
-      return b.score - a.score;
-    })
-    .slice(0, requestedStops); // Take top N cities
+      return 0;
+    });
 
-  // Build final waypoints with theme information
-  const waypoints = sortedCities.map(cityData => ({
-    ...cityData.city,
-    themes: cityData.themes, // Add themes array to each city
-    themesDisplay: cityData.themes.map(t => agents[t]?.name || t).join(', ')
-  }));
+    const selected = sorted.slice(0, requestedStops);
+    const alternatives = sorted.slice(requestedStops);
 
-  return {
-    waypoints,
-    description: `A perfectly balanced route combining the best of ${Array.from(new Set(sortedCities.flatMap(c => c.themes))).map(t => agents[t]?.name || t).join(', ')}. Each city has been selected for its unique mix of experiences.`
-  };
+    return {
+      waypoints: selected.map(c => ({
+        ...c,
+        themesDisplay: c.themes.map(t => agents[t]?.name || t).join(', ')
+      })),
+      alternatives: alternatives.map(c => ({
+        ...c,
+        themesDisplay: c.themes.map(t => agents[t]?.name || t).join(', ')
+      })),
+      description: `A perfectly balanced route combining the best of ${Array.from(new Set(selected.flatMap(c => c.themes))).map(t => agents[t]?.name || t).join(', ')}.`
+    };
+  }
 }
 
 // Get hotels and restaurants for a city
