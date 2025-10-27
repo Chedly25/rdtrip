@@ -2,11 +2,12 @@ import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
 
 export interface RouteData {
-  agent: 'adventure' | 'culture' | 'food' | 'hidden-gems'
+  agent: 'adventure' | 'culture' | 'food' | 'hidden-gems' | 'best-overall'
   destination: string
   origin: string
   totalStops: number
   waypoints?: any[]
+  alternatives?: any[]
   agentResults: Array<{
     agent: string
     recommendations: string

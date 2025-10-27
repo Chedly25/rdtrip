@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Plus, MapPin } from 'lucide-react'
+import { Plus, MapPin, RefreshCw } from 'lucide-react'
 import { useSpotlightStore } from '../../stores/spotlightStore'
+import { useRouteDataStore } from '../../stores/routeDataStore'
 import { SortableCityCard } from './SortableCityCard'
 import { AddDestinationModal } from './AddDestinationModal'
 import { CityDetailsModal } from './CityDetailsModal'
 import { AddStopButton } from './AddStopButton'
 import { Button } from '../ui/Button'
+import { getTheme } from '../../config/theme'
 import {
   DndContext,
   closestCenter,
@@ -26,9 +28,15 @@ import type { Waypoint } from '../../types'
 
 export function CitiesSection() {
   const { waypoints, addWaypoint, removeWaypoint, setWaypoints } = useSpotlightStore()
+  const { routeData } = useRouteDataStore()
   const [showAddModal, setShowAddModal] = useState(false)
   const [insertIndex, setInsertIndex] = useState<number>(0)
   const [selectedWaypoint, setSelectedWaypoint] = useState<Waypoint | null>(null)
+
+  // Get alternatives from route data
+  const alternatives = routeData?.alternatives || []
+  const agent = routeData?.agent || 'adventure'
+  const theme = getTheme(agent)
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -62,6 +70,30 @@ export function CitiesSection() {
     if (waypoint) {
       setSelectedWaypoint(waypoint)
     }
+  }
+
+  const handleSwapCity = (waypointIndex: number, alternativeCity: any) => {
+    // Convert alternative city to waypoint format
+    const newWaypoint: Waypoint = {
+      id: `waypoint-${Date.now()}`,
+      order: waypointIndex + 1,
+      name: alternativeCity.name,
+      description: alternativeCity.description || '',
+      activities: alternativeCity.activities || [],
+      duration: alternativeCity.duration || '1-2 days',
+      coordinates: alternativeCity.latitude && alternativeCity.longitude
+        ? { lat: alternativeCity.latitude, lng: alternativeCity.longitude }
+        : undefined,
+      image: alternativeCity.image || alternativeCity.imageUrl,
+      themes: alternativeCity.themes,
+      themesDisplay: alternativeCity.themesDisplay,
+      currentEvents: alternativeCity.currentEvents
+    }
+
+    // Replace the waypoint at the specified index
+    const updatedWaypoints = [...waypoints]
+    updatedWaypoints[waypointIndex] = newWaypoint
+    setWaypoints(updatedWaypoints)
   }
 
   return (
@@ -136,6 +168,106 @@ export function CitiesSection() {
             </div>
           </SortableContext>
         </DndContext>
+      )}
+
+      {/* Alternatives Section */}
+      {alternatives.length > 0 && waypoints.length > 0 && (
+        <div className="mt-12 space-y-6">
+          <div className="flex items-center gap-3">
+            <RefreshCw className="h-6 w-6" style={{ color: theme.primary }} />
+            <h3 className="text-2xl font-bold text-gray-900">
+              Alternative Cities ({alternatives.length})
+            </h3>
+          </div>
+          <p className="text-gray-600">
+            These cities were also considered for your route. Click a city card and select which city to replace.
+          </p>
+
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {alternatives.map((altCity: any, altIndex: number) => (
+              <motion.div
+                key={altIndex}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: altIndex * 0.1 }}
+                className="group relative overflow-hidden rounded-xl bg-white shadow-lg transition-all hover:shadow-xl"
+              >
+                {/* City Image */}
+                {altCity.image && (
+                  <div className="relative h-48 overflow-hidden">
+                    <img
+                      src={altCity.image}
+                      alt={altCity.name}
+                      className="h-full w-full object-cover transition-transform group-hover:scale-110"
+                    />
+                    {/* Theme Badges */}
+                    {altCity.themes && altCity.themes.length > 0 && (
+                      <div className="absolute left-3 top-3 flex flex-wrap gap-2">
+                        {altCity.themes.map((themeName: string) => (
+                          <span
+                            key={themeName}
+                            className="rounded-full bg-black/50 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm"
+                          >
+                            {themeName}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* City Content */}
+                <div className="p-6">
+                  <h4 className="mb-2 text-xl font-bold text-gray-900">{altCity.name}</h4>
+                  {altCity.description && (
+                    <p className="mb-4 line-clamp-3 text-sm text-gray-600">{altCity.description}</p>
+                  )}
+
+                  {/* Activities */}
+                  {altCity.activities && altCity.activities.length > 0 && (
+                    <div className="mb-4">
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                        Highlights
+                      </p>
+                      <ul className="space-y-1">
+                        {altCity.activities.slice(0, 3).map((activity: string, idx: number) => (
+                          <li key={idx} className="flex items-start gap-2 text-sm text-gray-700">
+                            <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full" style={{ backgroundColor: theme.primary }}></span>
+                            <span>{activity}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Swap Dropdown and Button */}
+                  <div className="space-y-2">
+                    <select
+                      className="w-full rounded-lg border-2 border-gray-300 p-3 text-sm font-semibold text-gray-700 transition-all hover:border-gray-400 focus:border-indigo-500 focus:outline-none"
+                      onChange={(e) => {
+                        const waypointIndex = parseInt(e.target.value)
+                        if (!isNaN(waypointIndex)) {
+                          handleSwapCity(waypointIndex, altCity)
+                          e.target.value = '' // Reset selection
+                        }
+                      }}
+                      defaultValue=""
+                    >
+                      <option value="" disabled>
+                        Replace which city?
+                      </option>
+                      {waypoints.map((wp, wpIndex) => (
+                        <option key={wp.id} value={wpIndex}>
+                          Replace {wp.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
       )}
 
       <AddDestinationModal
