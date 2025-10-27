@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { MapPin, DollarSign, ArrowRight, Map, Save, RefreshCw } from 'lucide-react'
+import { MapPin, DollarSign, ArrowRight, Map, Save, RefreshCw, Share2 } from 'lucide-react'
 import { CityCard } from './CityCard'
 import { useAuth } from '../contexts/AuthContext'
 import SaveRouteModal from './SaveRouteModal'
+import ShareRouteModal from './ShareRouteModal'
 
 interface Activity {
   name?: string
@@ -67,6 +68,11 @@ export function RouteResults({ routeData, onViewMap, onStartOver }: RouteResults
   const [activeTab, setActiveTab] = useState(0)
   const [showSaveModal, setShowSaveModal] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
+  const [showShareModal, setShowShareModal] = useState(false)
+  const [savedRouteId, setSavedRouteId] = useState<string | undefined>(routeData.id)
+  const [shareToken, setShareToken] = useState<string | null>(null)
+  const [isPublic, setIsPublic] = useState(false)
+  const [viewCount] = useState(0)
   const { token, isAuthenticated } = useAuth()
 
   // State to manage modified waypoints per agent (for swapping cities)
@@ -111,8 +117,74 @@ export function RouteResults({ routeData, onViewMap, onStartOver }: RouteResults
       throw new Error(error.error || 'Failed to save route')
     }
 
+    const savedRoute = await response.json()
+    setSavedRouteId(savedRoute.id)
     setSaveSuccess(true)
     setTimeout(() => setSaveSuccess(false), 3000)
+
+    return savedRoute.id
+  }
+
+  const handleShareClick = async () => {
+    if (!isAuthenticated) {
+      alert('Please sign in to share routes')
+      return
+    }
+
+    // If route isn't saved yet, save it first
+    if (!savedRouteId) {
+      try {
+        const routeId = await handleSaveRoute(`${routeData.origin} to ${routeData.destination}`)
+        setSavedRouteId(routeId)
+      } catch (error) {
+        console.error('Error saving route before sharing:', error)
+        alert('Please save the route first before sharing')
+        return
+      }
+    }
+
+    setShowShareModal(true)
+  }
+
+  const handleShareRoute = async (): Promise<{ shareUrl: string; shareToken: string }> => {
+    if (!savedRouteId) {
+      throw new Error('Route must be saved before sharing')
+    }
+
+    const response = await fetch(`/api/routes/${savedRouteId}/share`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+
+    if (!response.ok) {
+      throw new Error('Failed to generate share link')
+    }
+
+    const data = await response.json()
+    setShareToken(data.shareToken)
+    setIsPublic(true)
+
+    return { shareUrl: data.shareUrl, shareToken: data.shareToken }
+  }
+
+  const handleStopSharing = async () => {
+    if (!savedRouteId) return
+
+    const response = await fetch(`/api/routes/${savedRouteId}/share`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+
+    if (!response.ok) {
+      throw new Error('Failed to stop sharing')
+    }
+
+    setShareToken(null)
+    setIsPublic(false)
   }
 
   const totalCities = routeData?.agentResults?.reduce((total, agentResult) => {
@@ -442,14 +514,24 @@ export function RouteResults({ routeData, onViewMap, onStartOver }: RouteResults
           </button>
 
           {isAuthenticated ? (
-            <button
-              onClick={() => setShowSaveModal(true)}
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 px-8 py-4 text-lg font-semibold text-white shadow-lg transition-all hover:from-indigo-700 hover:to-purple-700 hover:shadow-xl disabled:opacity-50"
-              disabled={saveSuccess}
-            >
-              <Save className="h-5 w-5" />
-              {saveSuccess ? 'Saved!' : 'Save Route'}
-            </button>
+            <>
+              <button
+                onClick={() => setShowSaveModal(true)}
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 px-8 py-4 text-lg font-semibold text-white shadow-lg transition-all hover:from-indigo-700 hover:to-purple-700 hover:shadow-xl disabled:opacity-50"
+                disabled={saveSuccess}
+              >
+                <Save className="h-5 w-5" />
+                {saveSuccess ? 'Saved!' : 'Save Route'}
+              </button>
+
+              <button
+                onClick={handleShareClick}
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-green-600 to-teal-600 px-8 py-4 text-lg font-semibold text-white shadow-lg transition-all hover:from-green-700 hover:to-teal-700 hover:shadow-xl"
+              >
+                <Share2 className="h-5 w-5" />
+                Share Route
+              </button>
+            </>
           ) : (
             <button
               onClick={() => alert('Please sign in to save routes')}
@@ -474,6 +556,18 @@ export function RouteResults({ routeData, onViewMap, onStartOver }: RouteResults
           onClose={() => setShowSaveModal(false)}
           onSave={handleSaveRoute}
           routeData={routeData as any}
+        />
+
+        {/* Share Route Modal */}
+        <ShareRouteModal
+          isOpen={showShareModal}
+          onClose={() => setShowShareModal(false)}
+          routeName={`${routeData.origin} to ${routeData.destination}`}
+          shareToken={shareToken}
+          isPublic={isPublic}
+          viewCount={viewCount}
+          onShare={handleShareRoute}
+          onStopSharing={handleStopSharing}
         />
       </div>
     </section>
