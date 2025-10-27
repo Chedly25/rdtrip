@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { Map, Loader2, AlertCircle, PlusCircle } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import SavedRouteCard from '../components/SavedRouteCard'
+import ShareRouteModal from '../components/ShareRouteModal'
 
 interface SavedRoute {
   id: string
@@ -19,6 +20,8 @@ interface SavedRoute {
   isPublic: boolean
   createdAt: string
   updatedAt: string
+  shareToken?: string | null
+  viewCount?: number
 }
 
 export default function MyRoutes() {
@@ -28,6 +31,8 @@ export default function MyRoutes() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+  const [shareModalOpen, setShareModalOpen] = useState(false)
+  const [selectedRouteForShare, setSelectedRouteForShare] = useState<SavedRoute | null>(null)
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -113,6 +118,81 @@ export default function MyRoutes() {
   const handleViewRoute = (route: SavedRoute) => {
     // Navigate to route view - we'll implement this by passing the route data back to the main app
     navigate('/', { state: { routeData: route.routeData } })
+  }
+
+  const handleOpenShareModal = (routeId: string) => {
+    const route = routes.find(r => r.id === routeId)
+    if (route) {
+      setSelectedRouteForShare(route)
+      setShareModalOpen(true)
+    }
+  }
+
+  const handleShareRoute = async (): Promise<{ shareUrl: string; shareToken: string }> => {
+    if (!selectedRouteForShare) {
+      throw new Error('No route selected')
+    }
+
+    const response = await fetch(`/api/routes/${selectedRouteForShare.id}/share`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+
+    if (!response.ok) {
+      throw new Error('Failed to share route')
+    }
+
+    const data = await response.json()
+
+    // Update the route in state
+    setRoutes(routes.map(route =>
+      route.id === selectedRouteForShare.id
+        ? { ...route, isPublic: true, shareToken: data.shareToken }
+        : route
+    ))
+
+    // Update selected route
+    setSelectedRouteForShare({
+      ...selectedRouteForShare,
+      isPublic: true,
+      shareToken: data.shareToken
+    })
+
+    return {
+      shareUrl: data.shareUrl,
+      shareToken: data.shareToken
+    }
+  }
+
+  const handleStopSharing = async () => {
+    if (!selectedRouteForShare) return
+
+    const response = await fetch(`/api/routes/${selectedRouteForShare.id}/share`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+
+    if (!response.ok) {
+      throw new Error('Failed to stop sharing')
+    }
+
+    // Update the route in state
+    setRoutes(routes.map(route =>
+      route.id === selectedRouteForShare.id
+        ? { ...route, isPublic: false, shareToken: null }
+        : route
+    ))
+
+    // Update selected route
+    setSelectedRouteForShare({
+      ...selectedRouteForShare,
+      isPublic: false,
+      shareToken: null
+    })
   }
 
   const favoriteRoutes = routes.filter(r => r.isFavorite)
@@ -203,6 +283,7 @@ export default function MyRoutes() {
                         onView={handleViewRoute}
                         onToggleFavorite={handleToggleFavorite}
                         onDelete={handleDelete}
+                        onShare={handleOpenShareModal}
                       />
                     ))}
                   </AnimatePresence>
@@ -229,6 +310,7 @@ export default function MyRoutes() {
                         onView={handleViewRoute}
                         onToggleFavorite={handleToggleFavorite}
                         onDelete={handleDelete}
+                        onShare={handleOpenShareModal}
                       />
                     ))}
                   </AnimatePresence>
@@ -252,6 +334,21 @@ export default function MyRoutes() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Share Route Modal */}
+      {selectedRouteForShare && (
+        <ShareRouteModal
+          isOpen={shareModalOpen}
+          onClose={() => setShareModalOpen(false)}
+          routeId={selectedRouteForShare.id}
+          routeName={selectedRouteForShare.name}
+          shareToken={selectedRouteForShare.shareToken}
+          isPublic={selectedRouteForShare.isPublic}
+          viewCount={selectedRouteForShare.viewCount}
+          onShare={handleShareRoute}
+          onStopSharing={handleStopSharing}
+        />
+      )}
     </div>
   )
 }
