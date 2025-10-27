@@ -885,8 +885,8 @@ async function processRouteJob(jobId, destination, stops, selectedAgents, budget
       // Update time estimate based on actual performance
       const completedTime = Date.now();
       const totalElapsed = completedTime - job.progress.startTime;
-      const avgTimePerAgent = totalElapsed / (i + 1);
-      job.progress.estimatedTimeRemaining = Math.round(avgTimePerAgent * (selectedAgents.length - (i + 1)));
+      const actualAvgTimePerAgent = totalElapsed / (i + 1);
+      job.progress.estimatedTimeRemaining = Math.round(actualAvgTimePerAgent * (selectedAgents.length - (i + 1)));
 
       job.agentResults = agentResults;
       job.updatedAt = new Date();
