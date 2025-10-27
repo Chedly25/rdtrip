@@ -13,6 +13,11 @@ export interface City {
 export interface Waypoint extends City {
   order: number
   isLandmark?: boolean
+  duration?: string
+  image?: string
+  themes?: string[]
+  themesDisplay?: string
+  currentEvents?: string
 }
 
 export interface Route {
