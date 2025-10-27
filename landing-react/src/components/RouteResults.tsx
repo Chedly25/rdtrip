@@ -141,10 +141,44 @@ export function RouteResults({ routeData, onViewMap, onStartOver }: RouteResults
     }))
   }
 
+  // Create enriched route data with modifications
+  const getEnrichedRouteData = () => {
+    const enrichedAgentResults = routeData.agentResults.map((agentResult, index) => {
+      // If this agent has modified waypoints, update its recommendations
+      if (modifiedWaypoints[index]) {
+        try {
+          const parsedRecs = JSON.parse(agentResult.recommendations)
+          const enrichedRecs = {
+            ...parsedRecs,
+            waypoints: modifiedWaypoints[index],
+            originalWaypoints: parsedRecs.waypoints, // Keep original for reference
+            modified: true
+          }
+          return {
+            ...agentResult,
+            recommendations: JSON.stringify(enrichedRecs)
+          }
+        } catch (error) {
+          console.error('Failed to enrich agent data:', error)
+          return agentResult
+        }
+      }
+      return agentResult
+    })
+
+    return {
+      ...routeData,
+      agentResults: enrichedAgentResults
+    }
+  }
+
   const handleSaveRoute = async (name: string) => {
     if (!token) {
       throw new Error('You must be logged in to save routes')
     }
+
+    // Get enriched route data with modifications
+    const enrichedRouteData = getEnrichedRouteData()
 
     const response = await fetch('/api/routes', {
       method: 'POST',
@@ -154,12 +188,12 @@ export function RouteResults({ routeData, onViewMap, onStartOver }: RouteResults
       },
       body: JSON.stringify({
         name,
-        origin: routeData.origin,
-        destination: routeData.destination,
-        stops: routeData.totalStops || routeData.agentResults?.length || 0,
-        budget: routeData.budget || 'budget',
-        selectedAgents: routeData.agentResults?.map(r => r.agent) || [],
-        routeData: routeData
+        origin: enrichedRouteData.origin,
+        destination: enrichedRouteData.destination,
+        stops: enrichedRouteData.totalStops || enrichedRouteData.agentResults?.length || 0,
+        budget: enrichedRouteData.budget || 'budget',
+        selectedAgents: enrichedRouteData.agentResults?.map(r => r.agent) || [],
+        routeData: enrichedRouteData
       })
     })
 
@@ -174,6 +208,26 @@ export function RouteResults({ routeData, onViewMap, onStartOver }: RouteResults
     setTimeout(() => setSaveSuccess(false), 3000)
 
     return savedRoute.id
+  }
+
+  // Wrapper for View Map that includes modifications
+  const handleViewMapWithModifications = (agent?: string) => {
+    // Get enriched route data with modifications
+    const enrichedRouteData = getEnrichedRouteData()
+
+    // Store enriched data in localStorage so spotlight can use it
+    const dataToStore = agent
+      ? {
+          ...enrichedRouteData,
+          agentResults: enrichedRouteData.agentResults.filter((ar: any) => ar.agent === agent),
+          agent: agent
+        }
+      : enrichedRouteData
+
+    localStorage.setItem('spotlightData', JSON.stringify(dataToStore))
+
+    // Call the original onViewMap which will navigate to spotlight
+    onViewMap(agent)
   }
 
   const handleShareClick = async () => {
@@ -511,7 +565,7 @@ export function RouteResults({ routeData, onViewMap, onStartOver }: RouteResults
                 {/* View Map Button for this theme */}
                 <div className="flex justify-center">
                   <button
-                    onClick={() => onViewMap(agentResult.agent)}
+                    onClick={() => handleViewMapWithModifications(agentResult.agent)}
                     className="inline-flex items-center justify-center gap-2 rounded-lg px-8 py-4 text-lg font-semibold text-white shadow-lg transition-all hover:shadow-xl hover:scale-105"
                     style={{ backgroundColor: theme.color }}
                   >
@@ -533,7 +587,7 @@ export function RouteResults({ routeData, onViewMap, onStartOver }: RouteResults
           className="mt-12 flex flex-col gap-4 sm:flex-row sm:justify-center"
         >
           <button
-            onClick={() => onViewMap()}
+            onClick={() => handleViewMapWithModifications()}
             className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-8 py-4 text-lg font-semibold text-white shadow-lg transition-all hover:bg-slate-800 hover:shadow-xl"
           >
             <Map className="h-5 w-5" />
