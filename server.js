@@ -813,16 +813,57 @@ async function processRouteJob(jobId, destination, stops, selectedAgents, budget
 
       const result = await queryPerplexityWithMetrics(agentConfig, destination, stops, budget);
 
-      agentResults.push({
-        agent: agentType,
-        agentConfig: {
-          name: agentConfig.name,
-          color: agentConfig.color,
-          icon: agentConfig.icon
-        },
-        recommendations: result.recommendations,
-        metrics: result.metrics
-      });
+      // Parse the response to extract origin, destination, and waypoints
+      let parsedResult;
+      try {
+        parsedResult = JSON.parse(result.recommendations);
+      } catch (error) {
+        console.error(`Failed to parse recommendations for ${agentConfig.name}:`, error.message);
+        throw error;
+      }
+
+      // If we have origin, destination, and waypoints, run optimization
+      if (parsedResult.origin && parsedResult.destination && parsedResult.waypoints) {
+        console.log(`Running city optimization for ${agentConfig.name}...`);
+        const optimized = selectOptimalCities(
+          parsedResult.waypoints,
+          parsedResult.origin,
+          parsedResult.destination,
+          stops
+        );
+
+        // Create optimized result with both selected and alternatives
+        const optimizedResult = {
+          origin: parsedResult.origin,
+          destination: parsedResult.destination,
+          waypoints: optimized.selected,
+          alternatives: optimized.alternatives
+        };
+
+        agentResults.push({
+          agent: agentType,
+          agentConfig: {
+            name: agentConfig.name,
+            color: agentConfig.color,
+            icon: agentConfig.icon
+          },
+          recommendations: JSON.stringify(optimizedResult),
+          metrics: result.metrics
+        });
+      } else {
+        // Fallback: use result as-is if no optimization data
+        console.warn(`No optimization data for ${agentConfig.name}, using raw response`);
+        agentResults.push({
+          agent: agentType,
+          agentConfig: {
+            name: agentConfig.name,
+            color: agentConfig.color,
+            icon: agentConfig.icon
+          },
+          recommendations: result.recommendations,
+          metrics: result.metrics
+        });
+      }
 
       // Update progress
       job.progress.completed = i + 1;
@@ -1581,6 +1622,16 @@ CRITICAL RULES:
 
 Return ONLY valid JSON (no extra text before or after):
 {
+  "origin": {
+    "name": "Aix-en-Provence",
+    "latitude": 43.5297,
+    "longitude": 5.4474
+  },
+  "destination": {
+    "name": "${destination}",
+    "latitude": XX.XXXX,
+    "longitude": XX.XXXX
+  },
   "waypoints": [
     {
       "name": "CITY_NAME",
