@@ -114,6 +114,8 @@ export function useAsyncCityDetails(cityName: string, country?: string, isOpen?:
   const pollingIntervalRef = useRef<number | null>(null)
   const messageRotationRef = useRef<number | null>(null)
   const currentJobIdRef = useRef<string | null>(null)
+  const pollingFailuresRef = useRef<number>(0)
+  const MAX_POLLING_FAILURES = 3
 
   // Get appropriate loading message based on progress
   const getLoadingMessage = (progress: number): string => {
@@ -136,13 +138,24 @@ export function useAsyncCityDetails(cityName: string, country?: string, isOpen?:
       messageRotationRef.current = null
     }
     currentJobIdRef.current = null
+    pollingFailuresRef.current = 0
   }
 
-  // Poll job status
+  // Poll job status with retry logic
   const pollJobStatus = async (jobId: string) => {
     try {
-      const response = await fetch(`${API_BASE}/api/cities/details/job/${jobId}`)
+      const response = await fetch(`${API_BASE}/api/cities/details/job/${jobId}`, {
+        signal: AbortSignal.timeout(10000) // 10 second timeout for polling requests
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+
       const result = await response.json()
+
+      // Reset failure counter on successful poll
+      pollingFailuresRef.current = 0
 
       if (!result.success) {
         // Job not found or failed
@@ -188,13 +201,22 @@ export function useAsyncCityDetails(cityName: string, country?: string, isOpen?:
       // Otherwise keep polling (status is 'processing')
     } catch (error: any) {
       console.error('Polling error:', error)
-      cleanup()
-      setState(prev => ({
-        ...prev,
-        loading: false,
-        error: 'Network error while checking status',
-        message: ''
-      }))
+      pollingFailuresRef.current++
+
+      // If we've failed too many times, give up
+      if (pollingFailuresRef.current >= MAX_POLLING_FAILURES) {
+        console.error(`Too many polling failures (${MAX_POLLING_FAILURES}), giving up`)
+        cleanup()
+        setState(prev => ({
+          ...prev,
+          loading: false,
+          error: '🌐 Connection lost. Please check your internet and try again.',
+          message: ''
+        }))
+      } else {
+        // Otherwise, just log and continue polling (will retry on next interval)
+        console.warn(`Polling failure ${pollingFailuresRef.current}/${MAX_POLLING_FAILURES}, will retry...`)
+      }
     }
   }
 

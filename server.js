@@ -3657,6 +3657,9 @@ app.get('/api/cities/details/job/:jobId', async (req, res) => {
 
 // Background processor for city details jobs
 async function processCityDetailsJobAsync(jobId, cityName, country) {
+  const startTime = Date.now();
+  const JOB_TIMEOUT = 2 * 60 * 1000; // 2 minutes max
+
   try {
     const job = cityDetailsJobs.get(jobId);
     if (!job) return;
@@ -3667,8 +3670,26 @@ async function processCityDetailsJobAsync(jobId, cityName, country) {
     job.progress = 10;
     job.message = 'Analyzing city data...';
 
-    // Generate city details using Perplexity API (can take 30+ seconds, no timeout!)
-    const cityDetails = await generateCityDetails(cityName, country);
+    // Wrap generateCityDetails with retry logic and timeout
+    const cityDetails = await Promise.race([
+      retryWithBackoff(
+        () => generateCityDetails(cityName, country),
+        2, // Max 2 attempts
+        `Perplexity API for ${cityName}`
+      ),
+      // Job timeout promise
+      new Promise((_, reject) => {
+        setTimeout(() => {
+          reject(new Error('City generation took too long (2-minute timeout). Please try again.'));
+        }, JOB_TIMEOUT);
+      })
+    ]);
+
+    // Check if job was cancelled or timed out
+    const elapsed = Date.now() - startTime;
+    if (elapsed > JOB_TIMEOUT) {
+      throw new Error('Job timeout exceeded');
+    }
 
     job.progress = 80;
     job.message = 'Saving to database...';
@@ -3739,7 +3760,27 @@ async function processCityDetailsJobAsync(jobId, cityName, country) {
     const job = cityDetailsJobs.get(jobId);
     if (job) {
       job.status = 'failed';
-      job.error = error.message;
+      job.progress = 0;
+
+      // User-friendly error messages
+      if (error.message.includes('timeout') || error.message.includes('took too long')) {
+        job.error = `⏱️ Generation took too long. This city might have limited data. Please try again or choose a different city.`;
+        job.errorType = 'timeout';
+      } else if (error.message.includes('rate limit')) {
+        job.error = `⏳ Too many requests. Please wait a moment and try again.`;
+        job.errorType = 'rate_limit';
+      } else if (error.message.includes('API') || error.message.includes('network')) {
+        job.error = `🌐 Connection issue. Please check your internet and try again.`;
+        job.errorType = 'network';
+      } else if (error.message.includes('JSON') || error.message.includes('parse')) {
+        job.error = `❌ Invalid data received. Please try again.`;
+        job.errorType = 'data_error';
+      } else {
+        job.error = `❌ Failed to generate city details. ${error.message}`;
+        job.errorType = 'unknown';
+      }
+
+      console.log(`💬 User-friendly error: ${job.error}`);
     }
   }
 }
@@ -4037,6 +4078,47 @@ function findOptimalPosition(newCity, currentWaypoints) {
 
   return { position: bestPosition, newRoute };
 }
+
+// ==================== ERROR HANDLING & RETRY LOGIC ====================
+
+/**
+ * Retry wrapper with exponential backoff
+ * @param {Function} fn - Async function to retry
+ * @param {number} maxRetries - Maximum number of retries
+ * @param {string} operationName - Name for logging
+ * @returns {Promise<any>} Result of the function
+ */
+async function retryWithBackoff(fn, maxRetries = 2, operationName = 'operation') {
+  let lastError;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`🔄 ${operationName}: Attempt ${attempt}/${maxRetries}`);
+      const result = await fn();
+      if (attempt > 1) {
+        console.log(`✅ ${operationName}: Succeeded on attempt ${attempt}`);
+      }
+      return result;
+    } catch (error) {
+      lastError = error;
+      console.warn(`⚠️  ${operationName}: Attempt ${attempt}/${maxRetries} failed:`, error.message);
+
+      // Don't retry on the last attempt
+      if (attempt < maxRetries) {
+        // Exponential backoff: 2s, 4s, 8s, etc.
+        const delay = Math.min(2000 * Math.pow(2, attempt - 1), 10000);
+        console.log(`⏳ ${operationName}: Retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+
+  // All retries failed
+  console.error(`❌ ${operationName}: All ${maxRetries} attempts failed`);
+  throw lastError;
+}
+
+// ==================== CITY DETAILS GENERATION ====================
 
 /**
  * Generate detailed city information using Perplexity AI
