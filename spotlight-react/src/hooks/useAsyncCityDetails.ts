@@ -143,22 +143,28 @@ export function useAsyncCityDetails(cityName: string, country?: string, isOpen?:
 
   // Poll job status with retry logic
   const pollJobStatus = async (jobId: string) => {
+    console.log(`📡 [useAsyncCityDetails] Polling job: ${jobId}`)
+
     try {
       const response = await fetch(`${API_BASE}/api/cities/details/job/${jobId}`, {
         signal: AbortSignal.timeout(10000) // 10 second timeout for polling requests
       })
+
+      console.log(`📡 [useAsyncCityDetails] Poll response status: ${response.status}`)
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`)
       }
 
       const result = await response.json()
+      console.log(`📡 [useAsyncCityDetails] Poll result:`, result)
 
       // Reset failure counter on successful poll
       pollingFailuresRef.current = 0
 
       if (!result.success) {
         // Job not found or failed
+        console.warn(`⚠️  [useAsyncCityDetails] Job failed or not found`)
         cleanup()
         setState(prev => ({
           ...prev,
@@ -173,6 +179,8 @@ export function useAsyncCityDetails(cityName: string, country?: string, isOpen?:
       const progress = result.progress || 0
       const message = getLoadingMessage(progress)
 
+      console.log(`📊 [useAsyncCityDetails] Progress: ${progress}%, Message: ${message}, Status: ${result.status}`)
+
       setState(prev => ({
         ...prev,
         progress,
@@ -181,6 +189,7 @@ export function useAsyncCityDetails(cityName: string, country?: string, isOpen?:
 
       // Check if job is complete
       if (result.status === 'complete' && result.data) {
+        console.log(`✅ [useAsyncCityDetails] Job complete! Cleaning up and setting data.`)
         cleanup()
         setState({
           data: result.data,
@@ -190,6 +199,7 @@ export function useAsyncCityDetails(cityName: string, country?: string, isOpen?:
           message: 'Complete!'
         })
       } else if (result.status === 'failed') {
+        console.error(`❌ [useAsyncCityDetails] Job failed:`, result.error)
         cleanup()
         setState(prev => ({
           ...prev,
@@ -197,15 +207,17 @@ export function useAsyncCityDetails(cityName: string, country?: string, isOpen?:
           error: result.error || 'Failed to generate city details',
           message: ''
         }))
+      } else {
+        console.log(`⏳ [useAsyncCityDetails] Job still processing, will poll again in 2s`)
       }
       // Otherwise keep polling (status is 'processing')
     } catch (error: any) {
-      console.error('Polling error:', error)
+      console.error('❌ [useAsyncCityDetails] Polling error:', error)
       pollingFailuresRef.current++
 
       // If we've failed too many times, give up
       if (pollingFailuresRef.current >= MAX_POLLING_FAILURES) {
-        console.error(`Too many polling failures (${MAX_POLLING_FAILURES}), giving up`)
+        console.error(`❌ [useAsyncCityDetails] Too many polling failures (${MAX_POLLING_FAILURES}), giving up`)
         cleanup()
         setState(prev => ({
           ...prev,
@@ -215,14 +227,17 @@ export function useAsyncCityDetails(cityName: string, country?: string, isOpen?:
         }))
       } else {
         // Otherwise, just log and continue polling (will retry on next interval)
-        console.warn(`Polling failure ${pollingFailuresRef.current}/${MAX_POLLING_FAILURES}, will retry...`)
+        console.warn(`⚠️  [useAsyncCityDetails] Polling failure ${pollingFailuresRef.current}/${MAX_POLLING_FAILURES}, will retry...`)
       }
     }
   }
 
   // Start async city details generation
   const startAsyncGeneration = async () => {
+    console.log(`🎬 [useAsyncCityDetails] Starting async generation for: ${cityName}${country ? `, ${country}` : ''}`)
+
     try {
+      console.log('📊 [useAsyncCityDetails] Setting initial loading state...')
       setState({
         data: null,
         loading: true,
@@ -230,6 +245,8 @@ export function useAsyncCityDetails(cityName: string, country?: string, isOpen?:
         progress: 0,
         message: getLoadingMessage(0)
       })
+
+      console.log(`🌐 [useAsyncCityDetails] Calling API: POST ${API_BASE}/api/cities/details/async`)
 
       // Call the async endpoint
       const response = await fetch(`${API_BASE}/api/cities/details/async`, {
@@ -240,7 +257,10 @@ export function useAsyncCityDetails(cityName: string, country?: string, isOpen?:
         body: JSON.stringify({ cityName, country })
       })
 
+      console.log(`📥 [useAsyncCityDetails] Got response status: ${response.status}`)
+
       const result = await response.json()
+      console.log(`📦 [useAsyncCityDetails] Response data:`, result)
 
       if (!result.success) {
         throw new Error(result.error || 'Failed to start city details generation')
@@ -248,6 +268,7 @@ export function useAsyncCityDetails(cityName: string, country?: string, isOpen?:
 
       // Check if cached (instant return)
       if (result.cached && result.data) {
+        console.log(`✅ [useAsyncCityDetails] Cache HIT! Loading instantly. Timing:`, result.timing)
         setState({
           data: result.data,
           loading: false,
@@ -262,20 +283,23 @@ export function useAsyncCityDetails(cityName: string, country?: string, isOpen?:
       const jobId = result.jobId
       currentJobIdRef.current = jobId
 
-      console.log(`🚀 Started background job: ${jobId}`)
+      console.log(`🚀 [useAsyncCityDetails] Cache MISS - Started background job: ${jobId}`)
+      console.log(`⏱️  [useAsyncCityDetails] Setting up polling every 2 seconds...`)
 
       // Poll every 2 seconds
       pollingIntervalRef.current = setInterval(() => {
         if (currentJobIdRef.current === jobId) {
+          console.log(`🔄 [useAsyncCityDetails] Polling job status...`)
           pollJobStatus(jobId)
         }
       }, 2000)
 
       // Immediately poll once
+      console.log(`🔄 [useAsyncCityDetails] Immediate first poll...`)
       pollJobStatus(jobId)
 
     } catch (error: any) {
-      console.error('Error starting async generation:', error)
+      console.error('❌ [useAsyncCityDetails] Error starting async generation:', error)
       setState({
         data: null,
         loading: false,
@@ -294,12 +318,18 @@ export function useAsyncCityDetails(cityName: string, country?: string, isOpen?:
 
   // Effect to start generation when modal opens
   useEffect(() => {
+    console.log(`🔌 [useAsyncCityDetails] Effect triggered - isOpen: ${isOpen}, cityName: ${cityName}, country: ${country}`)
+
     if (isOpen && cityName) {
+      console.log(`▶️  [useAsyncCityDetails] Modal is open, starting generation...`)
       startAsyncGeneration()
+    } else {
+      console.log(`⏸️  [useAsyncCityDetails] Modal closed or no city name, skipping...`)
     }
 
     // Cleanup on unmount or when modal closes
     return () => {
+      console.log(`🧹 [useAsyncCityDetails] Cleaning up...`)
       cleanup()
     }
   }, [isOpen, cityName, country])
