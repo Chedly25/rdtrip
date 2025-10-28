@@ -3268,6 +3268,151 @@ app.post('/api/cities/details', async (req, res) => {
 });
 
 /**
+ * POST /api/route/impact
+ * Calculate the impact of adding a city to an existing route
+ * Returns: distance delta, time delta, optimal position
+ */
+app.post('/api/route/impact', async (req, res) => {
+  try {
+    const { cityName, currentRoute } = req.body;
+
+    if (!cityName || !currentRoute || !currentRoute.waypoints || currentRoute.waypoints.length < 2) {
+      return res.status(400).json({
+        success: false,
+        error: 'cityName and currentRoute with at least 2 waypoints are required'
+      });
+    }
+
+    console.log(`📊 Calculating route impact for adding ${cityName}`);
+
+    // Get city coordinates from database
+    const cityResult = await db.query(
+      'SELECT latitude, longitude FROM city_details WHERE LOWER(city_name) = LOWER($1)',
+      [cityName]
+    );
+
+    if (cityResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'City not found - please view city details first to cache coordinates'
+      });
+    }
+
+    const newCity = {
+      name: cityName,
+      latitude: cityResult.rows[0].latitude,
+      longitude: cityResult.rows[0].longitude
+    };
+
+    // Calculate original route distance and time
+    const originalDistance = calculateRouteDistance(currentRoute.waypoints);
+    const originalTime = estimateRouteTime(originalDistance);
+
+    console.log(`  Original route: ${originalDistance.toFixed(1)} km, ${Math.round(originalTime)} min`);
+
+    // Find optimal position for new city
+    const { position, newRoute } = findOptimalPosition(newCity, currentRoute.waypoints);
+
+    // Calculate new route distance and time
+    const newDistance = calculateRouteDistance(newRoute);
+    const newTime = estimateRouteTime(newDistance);
+
+    console.log(`  New route: ${newDistance.toFixed(1)} km, ${Math.round(newTime)} min`);
+
+    // Calculate deltas
+    const distanceDelta = newDistance - originalDistance;
+    const timeDelta = newTime - originalTime;
+
+    console.log(`  Delta: +${distanceDelta.toFixed(1)} km, +${Math.round(timeDelta)} min (position: ${position})`);
+
+    res.json({
+      success: true,
+      impact: {
+        distanceDelta: Math.round(distanceDelta),
+        timeDelta: Math.round(timeDelta),
+        optimalPosition: position,
+        original: {
+          distance: Math.round(originalDistance),
+          time: Math.round(originalTime)
+        },
+        new: {
+          distance: Math.round(newDistance),
+          time: Math.round(newTime),
+          route: newRoute
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Route impact error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to calculate route impact',
+      message: error.message
+    });
+  }
+});
+
+// Helper function to calculate total route distance
+function calculateRouteDistance(waypoints) {
+  if (!waypoints || waypoints.length < 2) return 0;
+
+  let totalDistance = 0;
+  for (let i = 0; i < waypoints.length - 1; i++) {
+    const from = waypoints[i];
+    const to = waypoints[i + 1];
+    const dist = calculateDistance(
+      from.latitude,
+      from.longitude,
+      to.latitude,
+      to.longitude
+    );
+    totalDistance += dist;
+  }
+
+  return totalDistance;
+}
+
+// Helper function to estimate route time (using average speed of 80 km/h)
+function estimateRouteTime(distanceKm) {
+  const averageSpeed = 80; // km/h
+  return (distanceKm / averageSpeed) * 60; // return minutes
+}
+
+// Helper function to find optimal position for new city in route
+function findOptimalPosition(newCity, currentWaypoints) {
+  let bestPosition = 1; // default to after origin
+  let minDetour = Infinity;
+
+  // Try inserting the city at each position (except at start/end)
+  for (let i = 1; i < currentWaypoints.length; i++) {
+    // Create route with city inserted at position i
+    const testRoute = [
+      ...currentWaypoints.slice(0, i),
+      newCity,
+      ...currentWaypoints.slice(i)
+    ];
+
+    // Calculate detour for this position
+    const detour = calculateRouteDistance(testRoute) - calculateRouteDistance(currentWaypoints);
+
+    if (detour < minDetour) {
+      minDetour = detour;
+      bestPosition = i;
+    }
+  }
+
+  // Create final route with city at optimal position
+  const newRoute = [
+    ...currentWaypoints.slice(0, bestPosition),
+    newCity,
+    ...currentWaypoints.slice(bestPosition)
+  ];
+
+  return { position: bestPosition, newRoute };
+}
+
+/**
  * Generate detailed city information using Perplexity AI
  */
 async function generateCityDetails(cityName, country) {

@@ -77,6 +77,20 @@ interface CityDetail {
   } | null
 }
 
+interface RouteImpact {
+  distanceDelta: number
+  timeDelta: number
+  optimalPosition: number
+  original: {
+    distance: number
+    time: number
+  }
+  new: {
+    distance: number
+    time: number
+  }
+}
+
 interface CityDetailModalProps {
   isOpen: boolean
   onClose: () => void
@@ -84,6 +98,13 @@ interface CityDetailModalProps {
   country?: string
   onAddToRoute?: () => void
   themeColor?: string
+  currentRoute?: {
+    waypoints: Array<{
+      name: string
+      latitude: number
+      longitude: number
+    }>
+  }
 }
 
 export default function CityDetailModal({
