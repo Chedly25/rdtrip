@@ -61,9 +61,16 @@ export function SpotlightPageComplete() {
   }
 
   const handleExportWaze = () => {
+    // Note: Waze URL scheme does NOT support multiple waypoints as of 2025
+    // We can only navigate to the final destination
+    // Users will need to manually add stops within the Waze app
+    const firstWaypoint = waypoints[0]
     const lastWaypoint = waypoints[waypoints.length - 1]
-    if (lastWaypoint?.coordinates) {
-      const url = `https://waze.com/ul?ll=${lastWaypoint.coordinates.lat},${lastWaypoint.coordinates.lng}&navigate=yes`
+
+    if (firstWaypoint?.coordinates && lastWaypoint?.coordinates) {
+      // Navigate from origin to destination (Waze will calculate the route)
+      // Format: https://www.waze.com/ul?ll=lat,lng&navigate=yes
+      const url = `https://www.waze.com/ul?ll=${lastWaypoint.coordinates.lat},${lastWaypoint.coordinates.lng}&navigate=yes`
       window.open(url, '_blank')
     }
   }
