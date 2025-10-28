@@ -192,6 +192,7 @@ export function useAsyncCityDetails(cityName: string, country?: string, isOpen?:
         setState(prev => ({
           ...prev,
           quickData: result.data,
+          loading: false, // CRITICAL: Exit loading state so content shows!
           phase: 'quick',
           progress,
           message: '✨ Loading detailed information...'
