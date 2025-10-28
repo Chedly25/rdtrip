@@ -270,16 +270,16 @@ export default function CityDetailModal({
                   </div>
                 )}
 
-                {!loading && !error && cityDetails && (
+                {!loading && !error && displayData && (
                   <div className="p-6 space-y-8">
                     {/* Hero Section */}
                     <div className="space-y-4">
                       {/* Hero Image */}
-                      {cityDetails.mainImageUrl ? (
+                      {displayData.mainImageUrl ? (
                         <div className="relative h-64 rounded-xl overflow-hidden">
                           <img
-                            src={cityDetails.mainImageUrl}
-                            alt={cityDetails.cityName}
+                            src={displayData.mainImageUrl}
+                            alt={displayData.cityName}
                             className="w-full h-full object-cover"
                           />
                         </div>
@@ -292,7 +292,7 @@ export default function CityDetailModal({
                         >
                           <div className="text-center">
                             <MapPin className="w-16 h-16 mx-auto mb-2" style={{ color: themeColor }} />
-                            <p className="text-2xl font-bold text-gray-800">{cityDetails.cityName}</p>
+                            <p className="text-2xl font-bold text-gray-800">{displayData.cityName}</p>
                           </div>
                         </div>
                       )}
@@ -300,26 +300,26 @@ export default function CityDetailModal({
                       {/* Tagline and Quick Stats */}
                       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                         <div>
-                          <h3 className="text-2xl font-bold text-gray-900">{cityDetails.cityName}</h3>
-                          <p className="text-lg text-gray-600 italic">{cityDetails.tagline}</p>
+                          <h3 className="text-2xl font-bold text-gray-900">{displayData.cityName}</h3>
+                          <p className="text-lg text-gray-600 italic">{displayData.tagline}</p>
                         </div>
                         <div className="flex items-center gap-4">
                           <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg">
                             <Clock className="w-4 h-4 text-gray-500" />
                             <span className="text-sm font-medium text-gray-700">
-                              {cityDetails.recommendedDuration}
+                              {displayData.recommendedDuration}
                             </span>
                           </div>
                           <div className="px-3 py-2 bg-gray-50 rounded-lg">
-                            {renderStars(cityDetails.rating)}
+                            {renderStars(displayData.rating)}
                           </div>
                         </div>
                       </div>
 
                       {/* Best For Tags with Brand Icons */}
-                      {cityDetails.bestFor && cityDetails.bestFor.length > 0 && (
+                      {displayData.bestFor && displayData.bestFor.length > 0 && (
                         <div className="flex flex-wrap gap-2">
-                          {parseTravelerType(cityDetails.bestFor).map((travelerType, index) => (
+                          {parseTravelerType(displayData.bestFor).map((travelerType, index) => (
                             <span
                               key={index}
                               className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold shadow-sm"
@@ -347,26 +347,26 @@ export default function CityDetailModal({
                       className="p-6 rounded-xl"
                       style={{ backgroundColor: `${themeColor}08` }}
                     >
-                      <h4 className="text-lg font-bold text-gray-900 mb-3">Why Visit {cityDetails.cityName}?</h4>
+                      <h4 className="text-lg font-bold text-gray-900 mb-3">Why Visit {displayData.cityName}?</h4>
                       <p className="text-gray-700 leading-relaxed whitespace-pre-line">
-                        {cityDetails.whyVisit}
+                        {displayData.whyVisit}
                       </p>
                     </div>
 
                     {/* Environmental Zones Warning (if applicable) */}
-                    {cityDetails.environmentalZones?.hasRestrictions && (
+                    {displayData.environmentalZones?.hasRestrictions && (
                       <div className="p-4 bg-amber-50 border-2 border-amber-200 rounded-xl">
                         <div className="flex items-start gap-3">
                           <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
                           <div>
                             <h5 className="font-bold text-amber-900 mb-1">
-                              {cityDetails.environmentalZones.type}
+                              {displayData.environmentalZones.type}
                             </h5>
                             <p className="text-sm text-amber-800 mb-2">
-                              {cityDetails.environmentalZones.description}
+                              {displayData.environmentalZones.description}
                             </p>
                             <p className="text-sm text-amber-700 font-medium">
-                              💡 {cityDetails.environmentalZones.advice}
+                              💡 {displayData.environmentalZones.advice}
                             </p>
                           </div>
                         </div>
@@ -376,10 +376,10 @@ export default function CityDetailModal({
                     {/* Top Highlights */}
                     <div>
                       <h4 className="text-lg font-bold text-gray-900 mb-4">
-                        Top Highlights ({cityDetails.highlights.length})
+                        Top Highlights ({displayData.highlights.length})
                       </h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {cityDetails.highlights.map((highlight, index) => (
+                        {displayData.highlights.map((highlight, index) => (
                           <div
                             key={index}
                             className="p-4 bg-white border-2 border-gray-100 rounded-xl hover:border-gray-200 hover:shadow-md transition-all"
@@ -415,16 +415,16 @@ export default function CityDetailModal({
                     {/* Restaurants Section - Show loading if Phase 1 (quick data) */}
                     {phase === 'quick' && (!displayData?.restaurants || displayData.restaurants.length === 0) ? (
                       <RestaurantsLoading />
-                    ) : cityDetails.restaurants && cityDetails.restaurants.length > 0 && (
+                    ) : displayData.restaurants && displayData.restaurants.length > 0 && (
                       <div>
                         <div className="flex items-center gap-2 mb-4">
                           <UtensilsCrossed className="w-5 h-5" style={{ color: themeColor }} />
                           <h4 className="text-lg font-bold text-gray-900">
-                            Where to Eat ({cityDetails.restaurants.length})
+                            Where to Eat ({displayData.restaurants.length})
                           </h4>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {cityDetails.restaurants.map((restaurant, index) => (
+                          {displayData.restaurants.map((restaurant, index) => (
                             <div
                               key={index}
                               className="group overflow-hidden bg-white border-2 border-gray-100 rounded-xl hover:border-gray-300 hover:shadow-lg transition-all"
@@ -554,16 +554,16 @@ export default function CityDetailModal({
                     {/* Accommodations Section - Show loading if Phase 1 (quick data) */}
                     {phase === 'quick' && (!displayData?.accommodations || displayData.accommodations.length === 0) ? (
                       <HotelsLoading />
-                    ) : cityDetails.accommodations && cityDetails.accommodations.length > 0 && (
+                    ) : displayData.accommodations && displayData.accommodations.length > 0 && (
                       <div>
                         <div className="flex items-center gap-2 mb-4">
                           <Hotel className="w-5 h-5" style={{ color: themeColor }} />
                           <h4 className="text-lg font-bold text-gray-900">
-                            Where to Stay ({cityDetails.accommodations.length})
+                            Where to Stay ({displayData.accommodations.length})
                           </h4>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {cityDetails.accommodations.map((accommodation, index) => (
+                          {displayData.accommodations.map((accommodation, index) => (
                             <div
                               key={index}
                               className="group overflow-hidden bg-white border-2 border-gray-100 rounded-xl hover:border-gray-300 hover:shadow-lg transition-all"
@@ -582,7 +582,7 @@ export default function CityDetailModal({
                                     alt={accommodation.areaName}
                                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                     onError={(e) => {
-                                      e.currentTarget.src = `https://source.unsplash.com/800x600/?${encodeURIComponent(accommodation.areaName + ' ' + cityDetails.cityName + ' hotels')}`
+                                      e.currentTarget.src = `https://source.unsplash.com/800x600/?${encodeURIComponent(accommodation.areaName + ' ' + displayData.cityName + ' hotels')}`
                                     }}
                                   />
                                   <div className="absolute top-2 right-2 px-3 py-1 bg-green-500/90 backdrop-blur-sm rounded-full">
@@ -696,7 +696,7 @@ export default function CityDetailModal({
                     )}
 
                     {/* Parking Information */}
-                    {cityDetails.parking && (
+                    {displayData.parking && (
                       <div className="p-4 bg-blue-50 border-2 border-blue-200 rounded-xl">
                         <div className="flex items-start gap-3">
                           <ParkingCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
@@ -704,14 +704,14 @@ export default function CityDetailModal({
                             <div className="flex items-center justify-between mb-2">
                               <h5 className="font-bold text-blue-900">Parking Information</h5>
                               <span className={`text-xs font-semibold px-2 py-1 rounded-full ${
-                                cityDetails.parking.difficulty === 'Easy' ? 'bg-green-100 text-green-700' :
-                                cityDetails.parking.difficulty === 'Moderate' ? 'bg-yellow-100 text-yellow-700' :
+                                displayData.parking.difficulty === 'Easy' ? 'bg-green-100 text-green-700' :
+                                displayData.parking.difficulty === 'Moderate' ? 'bg-yellow-100 text-yellow-700' :
                                 'bg-red-100 text-red-700'
                               }`}>
-                                {cityDetails.parking.difficulty}
+                                {displayData.parking.difficulty}
                               </span>
                             </div>
-                            <p className="text-sm text-blue-800">{cityDetails.parking.info}</p>
+                            <p className="text-sm text-blue-800">{displayData.parking.info}</p>
                           </div>
                         </div>
                       </div>
@@ -720,16 +720,16 @@ export default function CityDetailModal({
                     {/* Local Tips - Show loading if Phase 1 (quick data) */}
                     {phase === 'quick' && (!displayData?.localTips || displayData.localTips.length === 0) ? (
                       <TipsLoading />
-                    ) : cityDetails.localTips && cityDetails.localTips.length > 0 && (
+                    ) : displayData.localTips && displayData.localTips.length > 0 && (
                       <div>
                         <div className="flex items-center gap-2 mb-4">
                           <Lightbulb className="w-5 h-5" style={{ color: themeColor }} />
                           <h4 className="text-lg font-bold text-gray-900">
-                            Good to Know ({cityDetails.localTips.length} tips)
+                            Good to Know ({displayData.localTips.length} tips)
                           </h4>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          {cityDetails.localTips.map((tip, index) => (
+                          {displayData.localTips.map((tip, index) => (
                             <div
                               key={index}
                               className="flex items-start gap-3 p-3 bg-white border-2 border-gray-100 rounded-lg"
@@ -743,7 +743,7 @@ export default function CityDetailModal({
                     )}
 
                     {/* Best Time to Visit */}
-                    {cityDetails.bestTimeToVisit && (
+                    {displayData.bestTimeToVisit && (
                       <div className="p-4 bg-green-50 border-2 border-green-200 rounded-xl">
                         <div className="flex items-start gap-3">
                           <Calendar className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
@@ -752,15 +752,15 @@ export default function CityDetailModal({
                             <div className="space-y-2">
                               <div>
                                 <span className="text-xs font-semibold text-green-700 uppercase">Ideal Period</span>
-                                <p className="text-sm text-green-800">{cityDetails.bestTimeToVisit.ideal}</p>
+                                <p className="text-sm text-green-800">{displayData.bestTimeToVisit.ideal}</p>
                               </div>
-                              {cityDetails.bestTimeToVisit.reasoning && (
-                                <p className="text-sm text-green-700">{cityDetails.bestTimeToVisit.reasoning}</p>
+                              {displayData.bestTimeToVisit.reasoning && (
+                                <p className="text-sm text-green-700">{displayData.bestTimeToVisit.reasoning}</p>
                               )}
-                              {cityDetails.bestTimeToVisit.avoid && (
+                              {displayData.bestTimeToVisit.avoid && (
                                 <div>
                                   <span className="text-xs font-semibold text-green-700 uppercase">Avoid</span>
-                                  <p className="text-sm text-green-800">{cityDetails.bestTimeToVisit.avoid}</p>
+                                  <p className="text-sm text-green-800">{displayData.bestTimeToVisit.avoid}</p>
                                 </div>
                               )}
                             </div>
@@ -770,13 +770,13 @@ export default function CityDetailModal({
                     )}
 
                     {/* Weather Overview */}
-                    {cityDetails.weatherOverview && (
+                    {displayData.weatherOverview && (
                       <div className="p-4 bg-sky-50 border-2 border-sky-200 rounded-xl">
                         <div className="flex items-start gap-3">
                           <CloudSun className="w-5 h-5 text-sky-600 flex-shrink-0 mt-0.5" />
                           <div className="flex-1">
                             <h5 className="font-bold text-sky-900 mb-2">Weather Overview</h5>
-                            <p className="text-sm text-sky-800">{cityDetails.weatherOverview}</p>
+                            <p className="text-sm text-sky-800">{displayData.weatherOverview}</p>
                           </div>
                         </div>
                       </div>
@@ -785,16 +785,16 @@ export default function CityDetailModal({
                     {/* Events & Festivals - Show loading if Phase 1 (quick data) */}
                     {phase === 'quick' && (!displayData?.eventsFestivals || displayData.eventsFestivals.length === 0) ? (
                       <EventsLoading />
-                    ) : cityDetails.eventsFestivals && cityDetails.eventsFestivals.length > 0 && (
+                    ) : displayData.eventsFestivals && displayData.eventsFestivals.length > 0 && (
                       <div>
                         <div className="flex items-center gap-2 mb-4">
                           <PartyPopper className="w-5 h-5" style={{ color: themeColor }} />
                           <h4 className="text-lg font-bold text-gray-900">
-                            Events & Festivals ({cityDetails.eventsFestivals.length})
+                            Events & Festivals ({displayData.eventsFestivals.length})
                           </h4>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {cityDetails.eventsFestivals.map((event, index) => (
+                          {displayData.eventsFestivals.map((event, index) => (
                             <div
                               key={index}
                               className="group overflow-hidden bg-white border-2 border-gray-100 rounded-xl hover:border-gray-300 hover:shadow-lg transition-all"
@@ -813,7 +813,7 @@ export default function CityDetailModal({
                                     alt={event.name}
                                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                     onError={(e) => {
-                                      e.currentTarget.src = `https://source.unsplash.com/800x600/?${encodeURIComponent(event.name + ' festival ' + cityDetails.cityName)}`
+                                      e.currentTarget.src = `https://source.unsplash.com/800x600/?${encodeURIComponent(event.name + ' festival ' + displayData.cityName)}`
                                     }}
                                   />
                                   {(event.month || event.dates) && (
@@ -899,14 +899,14 @@ export default function CityDetailModal({
                     )}
 
                     {/* Warnings */}
-                    {cityDetails.warnings && cityDetails.warnings.length > 0 && (
+                    {displayData.warnings && displayData.warnings.length > 0 && (
                       <div className="p-4 bg-red-50 border-2 border-red-200 rounded-xl">
                         <div className="flex items-start gap-3">
                           <ShieldAlert className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
                           <div className="flex-1">
                             <h5 className="font-bold text-red-900 mb-3">Important Warnings</h5>
                             <ul className="space-y-2">
-                              {cityDetails.warnings.map((warning, index) => (
+                              {displayData.warnings.map((warning, index) => (
                                 <li key={index} className="flex items-start gap-2">
                                   <span className="text-red-600 mt-0.5">⚠️</span>
                                   <span className="text-sm text-red-800">{warning}</span>
