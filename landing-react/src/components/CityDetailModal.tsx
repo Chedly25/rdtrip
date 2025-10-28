@@ -109,6 +109,17 @@ export default function CityDetailModal({
   // Use quickData if available and full data isn't ready yet
   const displayData = cityDetails || quickData
 
+  // Debug logging
+  if (displayData) {
+    console.log(`🖼️  [CityDetailModal] displayData for ${displayData.cityName}:`, {
+      mainImageUrl: displayData.mainImageUrl,
+      hasRestaurants: !!displayData.restaurants?.length,
+      hasAccommodations: !!displayData.accommodations?.length,
+      hasEvents: !!displayData.eventsFestivals?.length,
+      phase: phase
+    })
+  }
+
   // Fetch scraped images for restaurants, hotels, and events (use displayData to support Phase 1)
   const { images: scrapedImages, loading: imagesLoading } = useScrapedImages(displayData)
 
@@ -281,6 +292,11 @@ export default function CityDetailModal({
                             src={displayData.mainImageUrl}
                             alt={displayData.cityName}
                             className="w-full h-full object-cover"
+                            onError={(e) => {
+                              console.error(`❌ Hero image failed to load: ${displayData.mainImageUrl}`)
+                              e.currentTarget.src = `https://source.unsplash.com/1200x800/?${encodeURIComponent(displayData.cityName)},cityscape`
+                            }}
+                            onLoad={() => console.log(`✅ Hero image loaded: ${displayData.mainImageUrl}`)}
                           />
                         </div>
                       ) : (
