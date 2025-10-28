@@ -3499,6 +3499,125 @@ app.post('/api/cities/details', async (req, res) => {
 });
 
 /**
+ * POST /api/images/scrape
+ * Scrape images for restaurants, hotels, and events
+ * Request body: { entities: [{ type, name, city, website }] }
+ * Returns: { results: [{ name, imageUrl, source }] }
+ */
+app.post('/api/images/scrape', async (req, res) => {
+  try {
+    const { entities } = req.body;
+
+    if (!entities || !Array.isArray(entities)) {
+      return res.status(400).json({ error: 'entities array is required' });
+    }
+
+    console.log(`📸 Scraping images for ${entities.length} entities`);
+
+    const results = [];
+
+    // Process entities with max 5 concurrent scrapes
+    const batchSize = 5;
+    for (let i = 0; i < entities.length; i += batchSize) {
+      const batch = entities.slice(i, i + batchSize);
+
+      const batchResults = await Promise.all(
+        batch.map(async (entity) => {
+          const { type, name, city, website } = entity;
+
+          // Validate entity
+          if (!type || !name || !city) {
+            console.error(`Invalid entity:`, entity);
+            return {
+              name,
+              imageUrl: `https://source.unsplash.com/800x600/?${encodeURIComponent(name + ' ' + city)}`,
+              source: 'unsplash'
+            };
+          }
+
+          try {
+            // Check database cache first
+            const cacheResult = await db.query(
+              `SELECT image_url, source_type, expires_at
+               FROM scraped_images
+               WHERE entity_type = $1 AND entity_name = $2 AND city = $3
+               AND expires_at > NOW()`,
+              [type, name, city]
+            );
+
+            if (cacheResult.rows.length > 0) {
+              const cached = cacheResult.rows[0];
+              console.log(`✅ Cache hit for ${name} (${cached.source_type})`);
+              return {
+                name,
+                imageUrl: cached.image_url,
+                source: cached.source_type
+              };
+            }
+
+            // Not in cache - scrape it
+            console.log(`🔍 Cache miss for ${name} - scraping...`);
+
+            let imageUrl = null;
+            let source = 'unsplash';
+
+            if (website) {
+              // Try scraping the website
+              const scrapeResult = await scrapeWithFallback(website, name, city);
+              imageUrl = scrapeResult.imageUrl;
+              source = scrapeResult.source;
+            } else {
+              // No website - use Unsplash fallback
+              imageUrl = `https://source.unsplash.com/800x600/?${encodeURIComponent(name + ' ' + city)}`;
+              source = 'unsplash';
+            }
+
+            // Save to database (90-day cache)
+            await db.query(
+              `INSERT INTO scraped_images
+               (entity_type, entity_name, city, image_url, source_url, source_type, scraped_at, expires_at)
+               VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW() + INTERVAL '90 days')
+               ON CONFLICT (entity_type, entity_name, city)
+               DO UPDATE SET
+                 image_url = $4,
+                 source_url = $5,
+                 source_type = $6,
+                 scraped_at = NOW(),
+                 expires_at = NOW() + INTERVAL '90 days'`,
+              [type, name, city, imageUrl, website || null, source]
+            );
+
+            console.log(`💾 Saved to cache: ${name} (${source})`);
+
+            return { name, imageUrl, source };
+          } catch (entityError) {
+            console.error(`Error scraping ${name}:`, entityError.message);
+            // Return Unsplash fallback on error
+            return {
+              name,
+              imageUrl: `https://source.unsplash.com/800x600/?${encodeURIComponent(name + ' ' + city)}`,
+              source: 'unsplash'
+            };
+          }
+        })
+      );
+
+      results.push(...batchResults);
+    }
+
+    console.log(`✅ Scraping complete: ${results.length} images processed`);
+
+    res.json({ results });
+  } catch (error) {
+    console.error('Image scraping error:', error);
+    res.status(500).json({
+      error: 'Failed to scrape images',
+      message: error.message
+    });
+  }
+});
+
+/**
  * POST /api/route/impact
  * Calculate the impact of adding a city to an existing route
  * Returns: distance delta, time delta, optimal position
