@@ -1755,64 +1755,54 @@ async function getRestaurantImage(restaurantName, cuisine = 'restaurant') {
   };
 }
 
-// Helper function to get city images from Wikimedia
-async function getCityImages(city) {
+// Helper function to get city images from Wikimedia with Unsplash fallback
+async function getCityImages(city, country) {
   try {
-    // Search for city images on Wikipedia/Wikimedia Commons
-    const searchResponse = await axios.get('https://en.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(city));
-
-    const images = [];
+    // Try Wikipedia first
+    const searchTerm = country ? `${city}, ${country}` : city;
+    const searchResponse = await axios.get('https://en.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(searchTerm));
 
     // Get main image from Wikipedia
-    if (searchResponse.data.originalimage) {
-      images.push({
-        url: searchResponse.data.originalimage.source,
-        caption: `${city} - Main view`,
-        source: 'Wikipedia'
-      });
+    if (searchResponse.data.originalimage && searchResponse.data.originalimage.source) {
+      console.log(`✅ Found Wikipedia image for ${city}`);
+      return searchResponse.data.originalimage.source;
     }
 
-    // If we have the main image, try to get a few more from Wikimedia Commons
-    if (images.length > 0) {
-      try {
-        const commonsSearch = await axios.get(`https://commons.wikimedia.org/w/api.php`, {
-          params: {
-            action: 'query',
-            generator: 'search',
-            gsrnamespace: 6,
-            gsrsearch: `${city} landscape OR ${city} cityscape OR ${city} architecture`,
-            gsrlimit: 3,
-            prop: 'imageinfo',
-            iiprop: 'url|size',
-            iiurlwidth: 800,
-            format: 'json'
-          }
-        });
-
-        if (commonsSearch.data.query && commonsSearch.data.query.pages) {
-          Object.values(commonsSearch.data.query.pages).forEach(page => {
-            if (page.imageinfo && page.imageinfo[0] && page.imageinfo[0].thumburl) {
-              images.push({
-                url: page.imageinfo[0].thumburl,
-                caption: page.title.replace('File:', '').replace(/\.(jpg|png|jpeg)$/i, ''),
-                source: 'Wikimedia Commons'
-              });
-            }
-          });
-        }
-      } catch (commonsError) {
-        console.warn('Could not fetch additional images from Commons:', commonsError.message);
+    // Try without country if we had one
+    if (country) {
+      const fallbackResponse = await axios.get('https://en.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(city));
+      if (fallbackResponse.data.originalimage && fallbackResponse.data.originalimage.source) {
+        console.log(`✅ Found Wikipedia image for ${city} (without country)`);
+        return fallbackResponse.data.originalimage.source;
       }
     }
 
-    return images.slice(0, 4); // Limit to 4 images
+    // If Wikipedia fails, fall back to Unsplash
+    console.log(`⚠️  No Wikipedia image for ${city}, trying Unsplash...`);
+    const unsplashResponse = await axios.get('https://api.unsplash.com/search/photos', {
+      params: {
+        query: `${city} ${country || ''} cityscape landmark`,
+        per_page: 1,
+        orientation: 'landscape'
+      },
+      headers: {
+        'Accept-Version': 'v1',
+        'Authorization': `Client-ID ${UNSPLASH_ACCESS_KEY}`
+      }
+    });
+
+    if (unsplashResponse.data.results && unsplashResponse.data.results.length > 0) {
+      console.log(`✅ Found Unsplash image for ${city}`);
+      return unsplashResponse.data.results[0].urls.regular;
+    }
+
+    // Final fallback to a generic image
+    console.warn(`⚠️  No images found for ${city}, using placeholder`);
+    return `https://source.unsplash.com/800x600/?${encodeURIComponent(city)},cityscape`;
   } catch (error) {
-    console.error('Error fetching city images:', error);
-    return [{
-      url: 'https://via.placeholder.com/800x400?text=' + encodeURIComponent(city),
-      caption: `${city} - Image not available`,
-      source: 'Placeholder'
-    }];
+    console.error(`❌ Error fetching image for ${city}:`, error.message);
+    // Return Unsplash source as ultimate fallback
+    return `https://source.unsplash.com/800x600/?${encodeURIComponent(city)},cityscape`;
   }
 }
 
@@ -3415,12 +3405,16 @@ Return the JSON object now:`;
 
     const cityData = JSON.parse(jsonMatch[0]);
 
+    // Fetch city image from Wikipedia/Unsplash
+    console.log(`🖼️  Fetching image for ${cityName}...`);
+    const mainImageUrl = await getCityImages(cityName, cityData.country);
+
     // Convert to database-friendly format
     return {
       cityName: cityData.cityName || cityName,
       country: cityData.country,
       tagline: cityData.tagline,
-      mainImageUrl: cityData.mainImageUrl || null,
+      mainImageUrl: mainImageUrl,
       rating: cityData.rating,
       recommendedDuration: cityData.recommendedDuration,
       whyVisit: cityData.whyVisit,
