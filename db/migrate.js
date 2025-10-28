@@ -1,67 +1,50 @@
+#!/usr/bin/env node
+/**
+ * Database migration runner
+ * Usage: node db/migrate.js <migration-file.sql>
+ * Example: node db/migrate.js create_scraped_images.sql
+ */
+
+const { Pool } = require('pg');
 const fs = require('fs');
 const path = require('path');
-const db = require('./connection');
 
-/**
- * Run database migrations
- * Reads and executes schema.sql to create tables
- */
-async function runMigrations() {
-  console.log('\n🔧 Starting database migrations...\n');
+// Get migration file from command line
+const migrationFile = process.argv[2];
+if (!migrationFile) {
+  console.error('Usage: node db/migrate.js <migration-file.sql>');
+  process.exit(1);
+}
+
+// Database connection
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.DATABASE_URL?.includes('amazonaws.com') ? { rejectUnauthorized: false } : false
+});
+
+async function runMigration() {
+  const migrationPath = path.join(__dirname, 'migrations', migrationFile);
+
+  console.log(`Reading migration: ${migrationPath}`);
+  const sql = fs.readFileSync(migrationPath, 'utf8');
+
+  console.log('Connecting to database...');
+  const client = await pool.connect();
 
   try {
-    // Read schema.sql file
-    const schemaPath = path.join(__dirname, 'schema.sql');
-    const schemaSql = fs.readFileSync(schemaPath, 'utf8');
-
-    console.log('📄 Reading schema from:', schemaPath);
-    console.log('📊 Executing SQL...\n');
-
-    // Execute the schema
-    await db.query(schemaSql);
-
-    console.log('✅ Migrations completed successfully!\n');
-    console.log('📋 Tables created:');
-    console.log('   - users');
-    console.log('   - routes');
-    console.log('   - searches');
-    console.log('\n🎉 Database is ready to use!\n');
-
-    // Verify tables exist
-    const result = await db.query(`
-      SELECT table_name
-      FROM information_schema.tables
-      WHERE table_schema = 'public'
-      AND table_type = 'BASE TABLE'
-      ORDER BY table_name;
-    `);
-
-    console.log('✓ Verified tables in database:');
-    result.rows.forEach(row => {
-      console.log(`   - ${row.table_name}`);
-    });
-    console.log('');
-
+    console.log('Running migration...');
+    await client.query(sql);
+    console.log('✅ Migration successful!');
   } catch (error) {
-    console.error('❌ Migration failed:', error);
+    console.error('❌ Migration failed:', error.message);
     throw error;
   } finally {
-    // Close the database connection
-    await db.close();
+    client.release();
+    await pool.end();
   }
 }
 
-// Run migrations if this script is executed directly
-if (require.main === module) {
-  runMigrations()
-    .then(() => {
-      console.log('Migration process complete');
-      process.exit(0);
-    })
-    .catch((error) => {
-      console.error('Migration process failed:', error);
-      process.exit(1);
-    });
-}
-
-module.exports = { runMigrations };
+runMigration().catch(err => {
+  console.error(err);
+  process.exit(1);
+});
