@@ -3682,7 +3682,8 @@ async function processCityDetailsJobAsync(jobId, cityName, country) {
     job.message = 'Getting basic city info...';
 
     // ========== PHASE 1: QUICK GENERATION (5-10 seconds) ==========
-    console.log(`🚀 Phase 1: Quick generation for ${cityName}`);
+    const phase1Start = Date.now();
+    console.log(`🚀 Phase 1: Quick generation for ${cityName} - Starting at ${new Date().toISOString()}`);
     const quickDetails = await Promise.race([
       retryWithBackoff(
         () => generateCityDetailsQuick(cityName, country),
@@ -3696,6 +3697,9 @@ async function processCityDetailsJobAsync(jobId, cityName, country) {
         }, 60000);
       })
     ]);
+
+    const phase1Duration = Date.now() - phase1Start;
+    console.log(`✅ Phase 1 complete for ${cityName} in ${phase1Duration}ms (${(phase1Duration/1000).toFixed(2)}s)`);
 
     job.progress = 40;
     job.message = 'Saving basic info...';
@@ -3756,7 +3760,8 @@ async function processCityDetailsJobAsync(jobId, cityName, country) {
     console.log(`✅ Phase 1 complete for ${cityName}, starting Phase 2...`);
 
     // ========== PHASE 2: FULL GENERATION (30-45 seconds) ==========
-    console.log(`🚀 Phase 2: Full generation for ${cityName}`);
+    const phase2Start = Date.now();
+    console.log(`🚀 Phase 2: Full generation for ${cityName} - Starting at ${new Date().toISOString()}`);
     const fullDetails = await Promise.race([
       retryWithBackoff(
         () => generateCityDetailsFull(cityName, country),
@@ -3770,6 +3775,11 @@ async function processCityDetailsJobAsync(jobId, cityName, country) {
         }, 60000);
       })
     ]);
+
+    const phase2Duration = Date.now() - phase2Start;
+    const totalDuration = Date.now() - phase1Start;
+    console.log(`✅ Phase 2 complete for ${cityName} in ${phase2Duration}ms (${(phase2Duration/1000).toFixed(2)}s)`);
+    console.log(`⏱️  Total generation time for ${cityName}: ${totalDuration}ms (${(totalDuration/1000).toFixed(2)}s)`);
 
     job.progress = 90;
     job.message = 'Saving complete details...';
@@ -4752,9 +4762,65 @@ async function warmCacheForPopularCities() {
         alreadyCached++;
       } else {
         needsGeneration++;
-        // Generate in background (don't await - let it run)
-        generateCityDetails(city.name, city.country)
-          .then(() => {
+        // Generate full details in background (don't await - let it run)
+        generateCityDetailsFull(city.name, city.country)
+          .then(async (fullDetails) => {
+            // Save to database
+            await db.query(`
+              INSERT INTO city_details (
+                city_name, country, tagline, main_image_url, rating, recommended_duration,
+                why_visit, best_for, highlights, restaurants, accommodations,
+                parking_info, parking_difficulty, environmental_zones, best_time_to_visit,
+                events_festivals, local_tips, warnings, weather_overview, latitude, longitude,
+                generation_phase
+              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
+              ON CONFLICT (city_name) DO UPDATE SET
+                country = EXCLUDED.country,
+                tagline = EXCLUDED.tagline,
+                main_image_url = EXCLUDED.main_image_url,
+                rating = EXCLUDED.rating,
+                recommended_duration = EXCLUDED.recommended_duration,
+                why_visit = EXCLUDED.why_visit,
+                best_for = EXCLUDED.best_for,
+                highlights = EXCLUDED.highlights,
+                restaurants = EXCLUDED.restaurants,
+                accommodations = EXCLUDED.accommodations,
+                parking_info = EXCLUDED.parking_info,
+                parking_difficulty = EXCLUDED.parking_difficulty,
+                environmental_zones = EXCLUDED.environmental_zones,
+                best_time_to_visit = EXCLUDED.best_time_to_visit,
+                events_festivals = EXCLUDED.events_festivals,
+                local_tips = EXCLUDED.local_tips,
+                warnings = EXCLUDED.warnings,
+                weather_overview = EXCLUDED.weather_overview,
+                latitude = EXCLUDED.latitude,
+                longitude = EXCLUDED.longitude,
+                generation_phase = EXCLUDED.generation_phase,
+                updated_at = CURRENT_TIMESTAMP
+            `, [
+              city.name,
+              fullDetails.country,
+              fullDetails.tagline,
+              fullDetails.mainImageUrl,
+              fullDetails.rating,
+              fullDetails.recommendedDuration,
+              fullDetails.whyVisit,
+              JSON.stringify(fullDetails.bestFor),
+              JSON.stringify(fullDetails.highlights),
+              JSON.stringify(fullDetails.restaurants),
+              JSON.stringify(fullDetails.accommodations),
+              fullDetails.parking?.info,
+              fullDetails.parking?.difficulty,
+              JSON.stringify(fullDetails.environmentalZones),
+              JSON.stringify(fullDetails.bestTimeToVisit),
+              JSON.stringify(fullDetails.eventsFestivals),
+              JSON.stringify(fullDetails.localTips),
+              JSON.stringify(fullDetails.warnings),
+              fullDetails.weatherOverview,
+              fullDetails.coordinates?.latitude,
+              fullDetails.coordinates?.longitude,
+              'complete'
+            ]);
             console.log(`✅ Cache warmed: ${city.name}`);
           })
           .catch(err => {
@@ -4778,8 +4844,8 @@ runDatabaseMigrations().then(() => {
     console.log(`🚗 Road Trip Planner MVP running on port ${PORT}`);
     console.log(`📍 Loaded ${europeanLandmarks.length} European landmarks`);
 
-    // Optional: Uncomment to enable cache warming on startup
-    // warmCacheForPopularCities();
+    // Cache warming enabled for instant loads on popular cities
+    warmCacheForPopularCities();
   });
 }).catch(error => {
   console.error('Failed to start server:', error);
