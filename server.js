@@ -3970,7 +3970,7 @@ Return the JSON object now:`;
         'Authorization': `Bearer ${process.env.PERPLEXITY_API_KEY}`,
         'Content-Type': 'application/json'
       },
-      timeout: 25000 // 25 second timeout (Heroku has 30s request limit)
+      timeout: 20000 // 20 second timeout (Heroku has 30s request limit, need buffer)
     });
 
     const content = response.data.choices[0].message.content;
