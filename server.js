@@ -20,6 +20,19 @@ const UNSPLASH_ACCESS_KEY = process.env.UNSPLASH_ACCESS_KEY || 'lEwczWVNzGvFAp1B
 
 // In-memory job storage (in production, use Redis or a database)
 const routeJobs = new Map();
+const cityDetailsJobs = new Map();
+
+// Job cleanup: Remove jobs older than 5 minutes
+setInterval(() => {
+  const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+
+  for (const [jobId, job] of cityDetailsJobs.entries()) {
+    if (job.createdAt < fiveMinutesAgo) {
+      console.log(`🧹 Cleaning up old city job: ${jobId}`);
+      cityDetailsJobs.delete(jobId);
+    }
+  }
+}, 60000); // Clean every minute
 
 // ==================== WEB SCRAPING UTILITIES ====================
 
@@ -3517,6 +3530,219 @@ app.post('/api/cities/details', async (req, res) => {
     });
   }
 });
+
+/**
+ * POST /api/cities/details/async
+ * Start background job to generate city details
+ * Body: { cityName: "Lyon", country: "France" }
+ * Returns: { jobId: "abc123", status: "processing" }
+ */
+app.post('/api/cities/details/async', async (req, res) => {
+  try {
+    const { cityName, country } = req.body;
+
+    if (!cityName) {
+      return res.status(400).json({
+        success: false,
+        error: 'City name is required'
+      });
+    }
+
+    console.log(`📍 Async city details requested: ${cityName}${country ? `, ${country}` : ''}`);
+
+    // Check if city details exist in database (cache)
+    const cachedResult = await db.query(
+      'SELECT * FROM city_details WHERE LOWER(city_name) = LOWER($1)',
+      [cityName]
+    );
+
+    if (cachedResult.rows.length > 0) {
+      console.log(`✅ Cache HIT for ${cityName} - returning immediately`);
+      return res.json({
+        success: true,
+        cached: true,
+        status: 'complete',
+        data: cachedResult.rows[0]
+      });
+    }
+
+    // Not cached - create background job
+    const jobId = `city_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    cityDetailsJobs.set(jobId, {
+      id: jobId,
+      cityName,
+      country,
+      status: 'processing',
+      progress: 0,
+      createdAt: Date.now(),
+      result: null,
+      error: null
+    });
+
+    console.log(`🚀 Created background job ${jobId} for ${cityName}`);
+
+    // Start background processing (don't await)
+    processCityDetailsJobAsync(jobId, cityName, country);
+
+    res.json({
+      success: true,
+      jobId,
+      status: 'processing',
+      message: 'City details generation started'
+    });
+
+  } catch (error) {
+    console.error('❌ Async city details error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to start city details job',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/cities/details/job/:jobId
+ * Check status of background job
+ * Returns: { status: "processing" | "complete" | "failed", data?: {...}, error?: "..." }
+ */
+app.get('/api/cities/details/job/:jobId', async (req, res) => {
+  try {
+    const { jobId } = req.params;
+
+    const job = cityDetailsJobs.get(jobId);
+
+    if (!job) {
+      return res.status(404).json({
+        success: false,
+        error: 'Job not found',
+        message: 'Job may have expired or never existed'
+      });
+    }
+
+    if (job.status === 'complete') {
+      return res.json({
+        success: true,
+        status: 'complete',
+        data: job.result
+      });
+    }
+
+    if (job.status === 'failed') {
+      return res.json({
+        success: false,
+        status: 'failed',
+        error: job.error
+      });
+    }
+
+    // Still processing
+    res.json({
+      success: true,
+      status: 'processing',
+      progress: job.progress,
+      message: job.message || 'Generating city details...'
+    });
+
+  } catch (error) {
+    console.error('❌ Job status error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get job status',
+      message: error.message
+    });
+  }
+});
+
+// Background processor for city details jobs
+async function processCityDetailsJobAsync(jobId, cityName, country) {
+  try {
+    const job = cityDetailsJobs.get(jobId);
+    if (!job) return;
+
+    console.log(`⚙️  Processing job ${jobId} for ${cityName}...`);
+
+    job.status = 'processing';
+    job.progress = 10;
+    job.message = 'Analyzing city data...';
+
+    // Generate city details using Perplexity API (can take 30+ seconds, no timeout!)
+    const cityDetails = await generateCityDetails(cityName, country);
+
+    job.progress = 80;
+    job.message = 'Saving to database...';
+
+    // Store in database for future requests
+    await db.query(`
+      INSERT INTO city_details (
+        city_name, country, tagline, main_image_url, rating, recommended_duration,
+        why_visit, best_for, highlights, restaurants, accommodations,
+        parking_info, parking_difficulty, environmental_zones, best_time_to_visit,
+        events_festivals, local_tips, warnings, weather_overview, latitude, longitude
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+      ON CONFLICT (city_name) DO UPDATE SET
+        country = EXCLUDED.country,
+        tagline = EXCLUDED.tagline,
+        main_image_url = EXCLUDED.main_image_url,
+        rating = EXCLUDED.rating,
+        recommended_duration = EXCLUDED.recommended_duration,
+        why_visit = EXCLUDED.why_visit,
+        best_for = EXCLUDED.best_for,
+        highlights = EXCLUDED.highlights,
+        restaurants = EXCLUDED.restaurants,
+        accommodations = EXCLUDED.accommodations,
+        parking_info = EXCLUDED.parking_info,
+        parking_difficulty = EXCLUDED.parking_difficulty,
+        environmental_zones = EXCLUDED.environmental_zones,
+        best_time_to_visit = EXCLUDED.best_time_to_visit,
+        events_festivals = EXCLUDED.events_festivals,
+        local_tips = EXCLUDED.local_tips,
+        warnings = EXCLUDED.warnings,
+        weather_overview = EXCLUDED.weather_overview,
+        latitude = EXCLUDED.latitude,
+        longitude = EXCLUDED.longitude,
+        updated_at = CURRENT_TIMESTAMP
+    `, [
+      cityName,
+      cityDetails.country,
+      cityDetails.tagline,
+      cityDetails.mainImageUrl,
+      cityDetails.rating,
+      cityDetails.recommendedDuration,
+      cityDetails.whyVisit,
+      JSON.stringify(cityDetails.bestFor),
+      JSON.stringify(cityDetails.highlights),
+      JSON.stringify(cityDetails.restaurants),
+      JSON.stringify(cityDetails.accommodations),
+      cityDetails.parking?.info,
+      cityDetails.parking?.difficulty,
+      JSON.stringify(cityDetails.environmentalZones),
+      JSON.stringify(cityDetails.bestTimeToVisit),
+      JSON.stringify(cityDetails.eventsFestivals),
+      JSON.stringify(cityDetails.localTips),
+      JSON.stringify(cityDetails.warnings),
+      cityDetails.weatherOverview,
+      cityDetails.coordinates?.latitude,
+      cityDetails.coordinates?.longitude
+    ]);
+
+    job.status = 'complete';
+    job.progress = 100;
+    job.result = cityDetails;
+    job.message = 'Complete!';
+
+    console.log(`✅ Job ${jobId} completed successfully for ${cityName}`);
+
+  } catch (error) {
+    console.error(`❌ Job ${jobId} failed:`, error);
+    const job = cityDetailsJobs.get(jobId);
+    if (job) {
+      job.status = 'failed';
+      job.error = error.message;
+    }
+  }
+}
 
 /**
  * POST /api/images/scrape
