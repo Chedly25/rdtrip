@@ -3967,9 +3967,37 @@ app.post('/api/images/scrape', async (req, res) => {
               imageUrl = scrapeResult.imageUrl;
               source = scrapeResult.source;
             } else {
-              // No website - use Unsplash fallback
-              imageUrl = `https://source.unsplash.com/800x600/?${encodeURIComponent(name + ' ' + city)}`;
-              source = 'unsplash';
+              // No website - use Unsplash API fallback
+              console.log(`⚠️  No website for ${name}, trying Unsplash API...`);
+              try {
+                const searchQuery = `${name} ${city} ${type}`;
+                const unsplashResponse = await axios.get('https://api.unsplash.com/search/photos', {
+                  params: {
+                    query: searchQuery,
+                    per_page: 1,
+                    orientation: 'landscape'
+                  },
+                  headers: {
+                    'Accept-Version': 'v1',
+                    'Authorization': `Client-ID ${UNSPLASH_ACCESS_KEY}`
+                  }
+                });
+
+                if (unsplashResponse.data.results && unsplashResponse.data.results.length > 0) {
+                  imageUrl = unsplashResponse.data.results[0].urls.small; // Use 'small' (400px) for cards
+                  source = 'unsplash-api';
+                  console.log(`✅ Found Unsplash API image for ${name}`);
+                } else {
+                  // Last resort: source.unsplash.com (deprecated but still works sometimes)
+                  imageUrl = `https://source.unsplash.com/800x600/?${encodeURIComponent(name + ' ' + city)}`;
+                  source = 'unsplash-source';
+                  console.log(`⚠️  No Unsplash API results for ${name}, using source fallback`);
+                }
+              } catch (unsplashError) {
+                console.error(`❌ Unsplash API error for ${name}:`, unsplashError.message);
+                imageUrl = `https://source.unsplash.com/800x600/?${encodeURIComponent(name + ' ' + city)}`;
+                source = 'unsplash-source';
+              }
             }
 
             // Save to database (90-day cache)
@@ -3995,11 +4023,38 @@ app.post('/api/images/scrape', async (req, res) => {
             return { name, imageUrl, source };
           } catch (entityError) {
             console.error(`Error scraping ${name}:`, entityError.message);
-            // Return Unsplash fallback on error
+            // Return Unsplash API fallback on error
+            try {
+              const searchQuery = `${name} ${city} ${type}`;
+              const unsplashResponse = await axios.get('https://api.unsplash.com/search/photos', {
+                params: {
+                  query: searchQuery,
+                  per_page: 1,
+                  orientation: 'landscape'
+                },
+                headers: {
+                  'Accept-Version': 'v1',
+                  'Authorization': `Client-ID ${UNSPLASH_ACCESS_KEY}`
+                }
+              });
+
+              if (unsplashResponse.data.results && unsplashResponse.data.results.length > 0) {
+                console.log(`✅ Fallback: Found Unsplash API image for ${name} after error`);
+                return {
+                  name,
+                  imageUrl: unsplashResponse.data.results[0].urls.small,
+                  source: 'unsplash-api'
+                };
+              }
+            } catch (unsplashError) {
+              console.error(`❌ Unsplash API also failed for ${name}:`, unsplashError.message);
+            }
+
+            // Last resort: source.unsplash.com
             return {
               name,
               imageUrl: `https://source.unsplash.com/800x600/?${encodeURIComponent(name + ' ' + city)}`,
-              source: 'unsplash'
+              source: 'unsplash-source'
             };
           }
         })
