@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   X,
@@ -24,8 +23,11 @@ import {
   TrendingUp,
   Award,
   Users,
-  MessageCircle
+  MessageCircle,
+  Loader2
 } from 'lucide-react'
+import { useScrapedImages } from '../hooks/useScrapedImages'
+import { useAsyncCityDetails } from '../hooks/useAsyncCityDetails'
 
 // Traveler type mapping to brand colors and icons
 const travelerTypeMapping: Record<string, { color: string; icon: string; label: string }> = {
@@ -62,84 +64,6 @@ function parseTravelerType(bestFor: string[]): Array<{ color: string; icon: stri
   return result
 }
 
-interface CityDetail {
-  cityName: string
-  country: string
-  tagline: string
-  mainImageUrl: string | null
-  rating: number
-  recommendedDuration: string
-  whyVisit: string
-  bestFor: string[]
-  highlights: Array<{
-    name: string
-    description: string
-    duration: string
-    rating: number
-    type: string
-  }>
-  restaurants: Array<{
-    name: string
-    cuisine: string
-    priceRange: string
-    description: string
-    rating: number
-    specialty: string
-    imageUrl?: string
-    website?: string
-    googleMapsUrl?: string
-    address?: string
-    reviewCount?: number
-    tripAdvisorRating?: number
-    badges?: string[]
-  }>
-  accommodations: Array<{
-    areaName: string
-    description: string
-    priceFrom: string
-    bestFor: string
-    imageUrl?: string
-    bookingUrl?: string
-    hotelExample?: string
-    rating?: number
-    reviewCount?: number
-    badges?: string[]
-  }>
-  parking: {
-    info: string
-    difficulty: string
-  } | null
-  environmentalZones: {
-    hasRestrictions: boolean
-    type: string
-    description: string
-    advice: string
-  } | null
-  bestTimeToVisit: {
-    ideal: string
-    reasoning: string
-    avoid: string
-  } | null
-  eventsFestivals: Array<{
-    name: string
-    month: string
-    description: string
-    imageUrl?: string
-    website?: string
-    ticketUrl?: string
-    dates?: string
-    popularity?: string
-    badges?: string[]
-  }>
-  localTips: string[]
-  warnings: string[]
-  weatherOverview: string
-  coordinates: {
-    latitude: number
-    longitude: number
-  } | null
-}
-
 interface CityDetailModalProps {
   isOpen: boolean
   onClose: () => void
@@ -164,43 +88,18 @@ export default function CityDetailModal({
   onAddToRoute,
   themeColor = '#055948'
 }: CityDetailModalProps) {
-  const [cityDetails, setCityDetails] = useState<CityDetail | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  // Use the new async hook with polling
+  const {
+    data: cityDetails,
+    loading,
+    error,
+    progress,
+    message,
+    retry
+  } = useAsyncCityDetails(cityName, country, isOpen)
 
-  useEffect(() => {
-    if (isOpen && cityName) {
-      fetchCityDetails()
-    }
-  }, [isOpen, cityName])
-
-  const fetchCityDetails = async () => {
-    setLoading(true)
-    setError(null)
-
-    try {
-      const response = await fetch('https://rdtrip-4d4035861576.herokuapp.com/api/cities/details', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ cityName, country })
-      })
-
-      const result = await response.json()
-
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to load city details')
-      }
-
-      setCityDetails(result.data)
-    } catch (err: any) {
-      console.error('Error fetching city details:', err)
-      setError(err.message || 'Failed to load city information')
-    } finally {
-      setLoading(false)
-    }
-  }
+  // Fetch scraped images for restaurants, hotels, and events
+  const { images: scrapedImages, loading: imagesLoading } = useScrapedImages(cityDetails)
 
   const renderStars = (rating: number) => {
     return (
@@ -263,16 +162,83 @@ export default function CityDetailModal({
               {/* Content - Scrollable */}
               <div className="flex-1 overflow-y-auto">
                 {loading && (
-                  <div className="flex items-center justify-center h-96">
-                    <div className="text-center">
-                      <div
-                        className="w-16 h-16 border-4 border-t-transparent rounded-full animate-spin mx-auto mb-4"
-                        style={{ borderColor: `${themeColor}40`, borderTopColor: 'transparent' }}
-                      />
-                      <p className="text-gray-600">Loading city details...</p>
-                      <p className="text-sm text-gray-400 mt-2">
-                        This may take a few seconds
+                  <div className="flex items-center justify-center min-h-[500px] p-8">
+                    <div className="text-center max-w-md w-full">
+                      {/* Animated Logo/Icon */}
+                      <motion.div
+                        animate={{
+                          rotate: [0, 360],
+                          scale: [1, 1.1, 1]
+                        }}
+                        transition={{
+                          duration: 2,
+                          repeat: Infinity,
+                          ease: "easeInOut"
+                        }}
+                        className="mx-auto mb-6"
+                      >
+                        <div
+                          className="w-20 h-20 rounded-full flex items-center justify-center mx-auto"
+                          style={{ backgroundColor: `${themeColor}15` }}
+                        >
+                          <Loader2
+                            className="w-10 h-10 animate-spin"
+                            style={{ color: themeColor }}
+                          />
+                        </div>
+                      </motion.div>
+
+                      {/* Progress Bar */}
+                      <div className="mb-6">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium text-gray-700">
+                            Generating your city guide...
+                          </span>
+                          <span className="text-sm font-bold" style={{ color: themeColor }}>
+                            {progress}%
+                          </span>
+                        </div>
+                        <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
+                          <motion.div
+                            className="h-full rounded-full"
+                            style={{ backgroundColor: themeColor }}
+                            initial={{ width: 0 }}
+                            animate={{ width: `${progress}%` }}
+                            transition={{ duration: 0.5, ease: "easeOut" }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Rotating Message */}
+                      <AnimatePresence mode="wait">
+                        <motion.p
+                          key={message}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          transition={{ duration: 0.3 }}
+                          className="text-gray-600 text-base mb-3"
+                        >
+                          {message}
+                        </motion.p>
+                      </AnimatePresence>
+
+                      {/* Subtext */}
+                      <p className="text-sm text-gray-400">
+                        Crafting a personalized guide just for you
                       </p>
+
+                      {/* Fun facts carousel (optional) */}
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 2 }}
+                        className="mt-8 p-4 bg-gray-50 rounded-xl border border-gray-100"
+                      >
+                        <p className="text-xs text-gray-500 italic">
+                          💡 <span className="font-medium">Pro tip:</span> Our AI is analyzing thousands of data points to give you the best recommendations
+                        </p>
+                      </motion.div>
                     </div>
                   </div>
                 )}
@@ -284,7 +250,7 @@ export default function CityDetailModal({
                       <p className="text-gray-900 font-medium mb-2">Failed to load city details</p>
                       <p className="text-gray-600 text-sm">{error}</p>
                       <button
-                        onClick={fetchCityDetails}
+                        onClick={retry}
                         className="mt-4 px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
                       >
                         Try Again
@@ -451,10 +417,16 @@ export default function CityDetailModal({
                               className="group overflow-hidden bg-white border-2 border-gray-100 rounded-xl hover:border-gray-300 hover:shadow-lg transition-all"
                             >
                               {/* Restaurant Image */}
-                              {restaurant.imageUrl && (
+                              {imagesLoading ? (
+                                <div className="relative h-48 overflow-hidden bg-gray-200 animate-pulse">
+                                  <div className="absolute inset-0 flex items-center justify-center">
+                                    <UtensilsCrossed className="w-12 h-12 text-gray-400" />
+                                  </div>
+                                </div>
+                              ) : (scrapedImages[restaurant.name] || restaurant.imageUrl) ? (
                                 <div className="relative h-48 overflow-hidden">
                                   <img
-                                    src={restaurant.imageUrl}
+                                    src={scrapedImages[restaurant.name] || restaurant.imageUrl}
                                     alt={restaurant.name}
                                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                     onError={(e) => {
@@ -469,7 +441,7 @@ export default function CityDetailModal({
                                     <span className="text-xs font-bold text-gray-900">{restaurant.priceRange}</span>
                                   </div>
                                 </div>
-                              )}
+                              ) : null}
 
                               <div className="p-4">
                                 <h5 className="font-bold text-gray-900 mb-1">{restaurant.name}</h5>
@@ -582,10 +554,16 @@ export default function CityDetailModal({
                               className="group overflow-hidden bg-white border-2 border-gray-100 rounded-xl hover:border-gray-300 hover:shadow-lg transition-all"
                             >
                               {/* Accommodation Image */}
-                              {accommodation.imageUrl && (
+                              {imagesLoading ? (
+                                <div className="relative h-48 overflow-hidden bg-gray-200 animate-pulse">
+                                  <div className="absolute inset-0 flex items-center justify-center">
+                                    <Hotel className="w-12 h-12 text-gray-400" />
+                                  </div>
+                                </div>
+                              ) : (scrapedImages[accommodation.areaName] || accommodation.imageUrl) ? (
                                 <div className="relative h-48 overflow-hidden">
                                   <img
-                                    src={accommodation.imageUrl}
+                                    src={scrapedImages[accommodation.areaName] || accommodation.imageUrl}
                                     alt={accommodation.areaName}
                                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                     onError={(e) => {
@@ -599,7 +577,7 @@ export default function CityDetailModal({
                                     </span>
                                   </div>
                                 </div>
-                              )}
+                              ) : null}
 
                               <div className="p-4">
                                 <h5 className="font-bold text-gray-900 mb-2">{accommodation.areaName}</h5>
@@ -803,10 +781,16 @@ export default function CityDetailModal({
                               className="group overflow-hidden bg-white border-2 border-gray-100 rounded-xl hover:border-gray-300 hover:shadow-lg transition-all"
                             >
                               {/* Event Image */}
-                              {event.imageUrl && (
+                              {imagesLoading ? (
+                                <div className="relative h-40 overflow-hidden bg-gray-200 animate-pulse">
+                                  <div className="absolute inset-0 flex items-center justify-center">
+                                    <PartyPopper className="w-12 h-12 text-gray-400" />
+                                  </div>
+                                </div>
+                              ) : (scrapedImages[event.name] || event.imageUrl) ? (
                                 <div className="relative h-40 overflow-hidden">
                                   <img
-                                    src={event.imageUrl}
+                                    src={scrapedImages[event.name] || event.imageUrl}
                                     alt={event.name}
                                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                     onError={(e) => {
@@ -822,7 +806,7 @@ export default function CityDetailModal({
                                     </div>
                                   )}
                                 </div>
-                              )}
+                              ) : null}
 
                               <div className="p-4">
                                 <h5 className="font-bold text-gray-900 mb-2">{event.name}</h5>
