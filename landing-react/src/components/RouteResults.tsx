@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext'
 import SaveRouteModal from './SaveRouteModal'
 import ShareRouteModal from './ShareRouteModal'
 import CityActionModal from './CityActionModal'
+import CityDetailModal from './CityDetailModal'
 import Toast, { type ToastType } from './Toast'
 import { getPositionDescription } from '../utils/routeOptimization'
 
@@ -80,6 +81,8 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
   const [showCityActionModal, setShowCityActionModal] = useState(false)
   const [selectedAlternativeCity, setSelectedAlternativeCity] = useState<City | null>(null)
   const [currentAgentIndex, setCurrentAgentIndex] = useState<number>(0)
+  const [showCityDetailModal, setShowCityDetailModal] = useState(false)
+  const [selectedCityForDetails, setSelectedCityForDetails] = useState<{ name: string; country?: string } | null>(null)
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null)
   const { token, isAuthenticated } = useAuth()
 
@@ -101,6 +104,12 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
     setSelectedAlternativeCity(city)
     setCurrentAgentIndex(agentIndex)
     setShowCityActionModal(true)
+  }
+
+  // Open city detail modal
+  const handleOpenCityDetails = (cityName: string, country?: string) => {
+    setSelectedCityForDetails({ name: cityName, country })
+    setShowCityDetailModal(true)
   }
 
   // Add city at specific position
@@ -636,6 +645,7 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
                             themeColor={theme.color}
                             showThemeBadges={agentResult.agent === 'best-overall'}
                             themes={city.themes || []}
+                            onClick={() => handleOpenCityDetails(city.name)}
                           />
                           {isUserAdded && (
                             <motion.div
@@ -674,6 +684,7 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
                             themeColor={theme.color}
                             showThemeBadges={agentResult.agent === 'best-overall'}
                             themes={altCity.themes || []}
+                            onClick={() => handleOpenCityDetails(altCity.name)}
                           />
                           {/* Add to Route Button */}
                           <div className="mt-4">
@@ -889,6 +900,26 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
             type={toast.type}
             isVisible={true}
             onClose={() => setToast(null)}
+          />
+        )}
+
+        {/* City Detail Modal */}
+        {selectedCityForDetails && (
+          <CityDetailModal
+            isOpen={showCityDetailModal}
+            onClose={() => {
+              setShowCityDetailModal(false)
+              setSelectedCityForDetails(null)
+            }}
+            cityName={selectedCityForDetails.name}
+            country={selectedCityForDetails.country}
+            themeColor={agentThemes[routeData.agentResults[activeTab]?.agent]?.color || '#055948'}
+            onAddToRoute={() => {
+              if (selectedCityForDetails) {
+                const agentIndex = activeTab
+                handleOpenCityAction({ name: selectedCityForDetails.name, activities: [] }, agentIndex)
+              }
+            }}
           />
         )}
       </div>

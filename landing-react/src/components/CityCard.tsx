@@ -23,6 +23,7 @@ interface CityCardProps {
   themeColor: string
   showThemeBadges?: boolean
   themes?: string[]
+  onClick?: () => void
 }
 
 const themeColors: Record<string, string> = {
@@ -39,7 +40,7 @@ const themeNames: Record<string, string> = {
   'hidden-gems': 'Hidden Gems'
 }
 
-export function CityCard({ city, index, themeColor, showThemeBadges = false, themes = [] }: CityCardProps) {
+export function CityCard({ city, index, themeColor, showThemeBadges = false, themes = [], onClick }: CityCardProps) {
   const [imageUrl, setImageUrl] = useState<string | null>(city.image || city.imageUrl || null)
   const [loading, setLoading] = useState(!city.image && !city.imageUrl)
   const [showFallback, setShowFallback] = useState(false)
@@ -71,7 +72,8 @@ export function CityCard({ city, index, themeColor, showThemeBadges = false, the
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ delay: index * 0.1 }}
-      className="group overflow-hidden rounded-2xl bg-white shadow-lg transition-all hover:shadow-2xl hover:-translate-y-2"
+      onClick={onClick}
+      className="group overflow-hidden rounded-2xl bg-white shadow-lg transition-all hover:shadow-2xl hover:-translate-y-2 cursor-pointer"
     >
       {/* City Image */}
       <div className="relative h-64 w-full overflow-hidden">
