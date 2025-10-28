@@ -3453,7 +3453,11 @@ Please search the internet for current information and respond with a JSON objec
       "priceRange": "€€",
       "description": "One sentence description",
       "rating": 4.6,
-      "specialty": "What they're known for"
+      "specialty": "What they're known for",
+      "imageUrl": "Direct URL to a high-quality image of the restaurant or its food",
+      "website": "Official website URL (if available)",
+      "googleMapsUrl": "Google Maps search URL for this restaurant",
+      "address": "Street address"
     }
   ],
 
@@ -3462,7 +3466,10 @@ Please search the internet for current information and respond with a JSON objec
       "areaName": "Neighborhood name",
       "description": "Why this area is good for travelers",
       "priceFrom": "€120/night",
-      "bestFor": "First-timers, central location"
+      "bestFor": "First-timers, central location",
+      "imageUrl": "Direct URL to a high-quality image of the neighborhood or typical hotel",
+      "bookingUrl": "URL to search hotels in this area (e.g., booking.com search link)",
+      "hotelExample": "Name of a good hotel in this area"
     }
   ],
 
@@ -3488,7 +3495,11 @@ Please search the internet for current information and respond with a JSON objec
     {
       "name": "Festival name",
       "month": "Month",
-      "description": "Brief description"
+      "description": "Brief description",
+      "imageUrl": "Direct URL to event poster, banner, or representative image",
+      "website": "Official event website URL",
+      "ticketUrl": "URL to purchase tickets (if applicable)",
+      "dates": "Specific dates (e.g., 'June 15-20')"
     }
   ],
 
@@ -3523,6 +3534,15 @@ IMPORTANT INSTRUCTIONS:
 10. Include 6-8 highlights, 4-5 restaurants, 3-4 accommodations
 11. Price ranges: €, €€, €€€, €€€€
 12. bestFor should have 2-4 traveler types with emojis
+
+IMAGES AND LINKS (CRITICAL):
+13. For restaurants: Find actual website URLs, high-quality food/interior images
+14. For accommodations: Find booking.com search URLs, neighborhood images
+15. For events: Find official event website, poster/banner images, ticket purchase links
+16. googleMapsUrl format: https://www.google.com/maps/search/?api=1&query={restaurant_name}+{city}
+17. bookingUrl format: https://www.booking.com/searchresults.html?ss={neighborhood}+{city}
+18. All image URLs must be direct links to actual images (jpg, png, webp)
+19. If you cannot find a real URL, use null - DO NOT make up URLs
 
 Return the JSON object now:`;
 
