@@ -55,45 +55,39 @@ export function useScrapedImages(cityDetails: CityDetails | null) {
           website?: string
         }> = []
 
-        // Add restaurants
+        // Add restaurants - ALL of them, even without website (Unsplash API will handle fallback)
         if (cityDetails.restaurants) {
           cityDetails.restaurants.forEach((restaurant) => {
-            if (restaurant.website) {
-              entities.push({
-                type: 'restaurant',
-                name: restaurant.name,
-                city: cityDetails.cityName,
-                website: restaurant.website
-              })
-            }
+            entities.push({
+              type: 'restaurant',
+              name: restaurant.name,
+              city: cityDetails.cityName,
+              website: restaurant.website // Can be undefined, backend will use Unsplash API
+            })
           })
         }
 
-        // Add accommodations (use areaName as the entity name)
+        // Add accommodations - ALL of them (use areaName as the entity name)
         if (cityDetails.accommodations) {
           cityDetails.accommodations.forEach((accommodation) => {
-            if (accommodation.bookingUrl) {
-              entities.push({
-                type: 'hotel',
-                name: accommodation.areaName,
-                city: cityDetails.cityName,
-                website: accommodation.bookingUrl
-              })
-            }
+            entities.push({
+              type: 'hotel',
+              name: accommodation.areaName,
+              city: cityDetails.cityName,
+              website: accommodation.bookingUrl // Can be undefined, backend will use Unsplash API
+            })
           })
         }
 
-        // Add events/festivals
+        // Add events/festivals - ALL of them
         if (cityDetails.eventsFestivals) {
           cityDetails.eventsFestivals.forEach((event) => {
-            if (event.website) {
-              entities.push({
-                type: 'event',
-                name: event.name,
-                city: cityDetails.cityName,
-                website: event.website
-              })
-            }
+            entities.push({
+              type: 'event',
+              name: event.name,
+              city: cityDetails.cityName,
+              website: event.website // Can be undefined, backend will use Unsplash API
+            })
           })
         }
 

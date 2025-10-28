@@ -450,7 +450,7 @@ export default function CityDetailModal({
                               key={index}
                               className="group overflow-hidden bg-white border-2 border-gray-100 rounded-xl hover:border-gray-300 hover:shadow-lg transition-all"
                             >
-                              {/* Restaurant Image */}
+                              {/* Restaurant Image - ALWAYS show something */}
                               {imagesLoading ? (
                                 <div className="relative h-48 overflow-hidden bg-gray-200 animate-pulse">
                                   <div className="absolute inset-0 flex items-center justify-center">
@@ -475,7 +475,22 @@ export default function CityDetailModal({
                                     <span className="text-xs font-bold text-gray-900">{restaurant.priceRange}</span>
                                   </div>
                                 </div>
-                              ) : null}
+                              ) : (
+                                <div className="relative h-48 overflow-hidden" style={{
+                                  background: `linear-gradient(135deg, ${themeColor}15 0%, ${themeColor}30 100%)`
+                                }}>
+                                  <div className="absolute inset-0 flex items-center justify-center">
+                                    <UtensilsCrossed className="w-16 h-16 opacity-40" style={{ color: themeColor }} />
+                                  </div>
+                                  <div className="absolute top-2 right-2 flex items-center gap-1 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full">
+                                    <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                                    <span className="text-xs font-bold text-gray-900">{restaurant.rating}</span>
+                                  </div>
+                                  <div className="absolute bottom-2 left-2 px-2 py-1 bg-white/90 backdrop-blur-sm rounded-full">
+                                    <span className="text-xs font-bold text-gray-900">{restaurant.priceRange}</span>
+                                  </div>
+                                </div>
+                              )}
 
                               <div className="p-4">
                                 <h5 className="font-bold text-gray-900 mb-1">{restaurant.name}</h5>
@@ -589,7 +604,7 @@ export default function CityDetailModal({
                               key={index}
                               className="group overflow-hidden bg-white border-2 border-gray-100 rounded-xl hover:border-gray-300 hover:shadow-lg transition-all"
                             >
-                              {/* Accommodation Image */}
+                              {/* Accommodation Image - ALWAYS show something */}
                               {imagesLoading ? (
                                 <div className="relative h-48 overflow-hidden bg-gray-200 animate-pulse">
                                   <div className="absolute inset-0 flex items-center justify-center">
@@ -615,7 +630,21 @@ export default function CityDetailModal({
                                     </span>
                                   </div>
                                 </div>
-                              ) : null}
+                              ) : (
+                                <div className="relative h-48 overflow-hidden" style={{
+                                  background: `linear-gradient(135deg, ${themeColor}15 0%, ${themeColor}30 100%)`
+                                }}>
+                                  <div className="absolute inset-0 flex items-center justify-center">
+                                    <Hotel className="w-16 h-16 opacity-40" style={{ color: themeColor }} />
+                                  </div>
+                                  <div className="absolute top-2 right-2 px-3 py-1 bg-green-500/90 backdrop-blur-sm rounded-full">
+                                    <span className="text-xs font-bold text-white flex items-center gap-1">
+                                      <DollarSign className="w-3 h-3" />
+                                      {accommodation.priceFrom}
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
 
                               <div className="p-4">
                                 <h5 className="font-bold text-gray-900 mb-2">{accommodation.areaName}</h5>
@@ -822,7 +851,7 @@ export default function CityDetailModal({
                               key={index}
                               className="group overflow-hidden bg-white border-2 border-gray-100 rounded-xl hover:border-gray-300 hover:shadow-lg transition-all"
                             >
-                              {/* Event Image */}
+                              {/* Event Image - ALWAYS show something */}
                               {imagesLoading ? (
                                 <div className="relative h-40 overflow-hidden bg-gray-200 animate-pulse">
                                   <div className="absolute inset-0 flex items-center justify-center">
@@ -848,7 +877,23 @@ export default function CityDetailModal({
                                     </div>
                                   )}
                                 </div>
-                              ) : null}
+                              ) : (
+                                <div className="relative h-40 overflow-hidden" style={{
+                                  background: `linear-gradient(135deg, ${themeColor}15 0%, ${themeColor}30 100%)`
+                                }}>
+                                  <div className="absolute inset-0 flex items-center justify-center">
+                                    <PartyPopper className="w-16 h-16 opacity-40" style={{ color: themeColor }} />
+                                  </div>
+                                  {(event.month || event.dates) && (
+                                    <div className="absolute top-2 right-2 px-3 py-1 bg-purple-500/90 backdrop-blur-sm rounded-full">
+                                      <span className="text-xs font-bold text-white flex items-center gap-1">
+                                        <Calendar className="w-3 h-3" />
+                                        {event.dates || event.month}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
 
                               <div className="p-4">
                                 <h5 className="font-bold text-gray-900 mb-2">{event.name}</h5>
