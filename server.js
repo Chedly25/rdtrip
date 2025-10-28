@@ -5,7 +5,6 @@ const path = require('path');
 require('dotenv').config();
 const ZTLService = require('./services/ztl-service');
 const cheerio = require('cheerio');
-const robotsParser = require('robots-parser');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
