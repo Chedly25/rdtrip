@@ -9,7 +9,13 @@ import {
   Plus,
   UtensilsCrossed,
   Hotel,
-  DollarSign
+  DollarSign,
+  ParkingCircle,
+  Lightbulb,
+  Calendar,
+  CloudSun,
+  PartyPopper,
+  ShieldAlert
 } from 'lucide-react'
 
 interface CityDetail {
@@ -427,6 +433,142 @@ export default function CityDetailModal({
                               </div>
                             </div>
                           ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Parking Information */}
+                    {cityDetails.parking && (
+                      <div className="p-4 bg-blue-50 border-2 border-blue-200 rounded-xl">
+                        <div className="flex items-start gap-3">
+                          <ParkingCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between mb-2">
+                              <h5 className="font-bold text-blue-900">Parking Information</h5>
+                              <span className={`text-xs font-semibold px-2 py-1 rounded-full ${
+                                cityDetails.parking.difficulty === 'Easy' ? 'bg-green-100 text-green-700' :
+                                cityDetails.parking.difficulty === 'Moderate' ? 'bg-yellow-100 text-yellow-700' :
+                                'bg-red-100 text-red-700'
+                              }`}>
+                                {cityDetails.parking.difficulty}
+                              </span>
+                            </div>
+                            <p className="text-sm text-blue-800">{cityDetails.parking.info}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Local Tips - Good to Know */}
+                    {cityDetails.localTips && cityDetails.localTips.length > 0 && (
+                      <div>
+                        <div className="flex items-center gap-2 mb-4">
+                          <Lightbulb className="w-5 h-5" style={{ color: themeColor }} />
+                          <h4 className="text-lg font-bold text-gray-900">
+                            Good to Know ({cityDetails.localTips.length} tips)
+                          </h4>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {cityDetails.localTips.map((tip, index) => (
+                            <div
+                              key={index}
+                              className="flex items-start gap-3 p-3 bg-white border-2 border-gray-100 rounded-lg"
+                            >
+                              <span className="text-lg flex-shrink-0">💡</span>
+                              <p className="text-sm text-gray-700">{tip}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Best Time to Visit */}
+                    {cityDetails.bestTimeToVisit && (
+                      <div className="p-4 bg-green-50 border-2 border-green-200 rounded-xl">
+                        <div className="flex items-start gap-3">
+                          <Calendar className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                          <div className="flex-1">
+                            <h5 className="font-bold text-green-900 mb-2">Best Time to Visit</h5>
+                            <div className="space-y-2">
+                              <div>
+                                <span className="text-xs font-semibold text-green-700 uppercase">Ideal Period</span>
+                                <p className="text-sm text-green-800">{cityDetails.bestTimeToVisit.ideal}</p>
+                              </div>
+                              {cityDetails.bestTimeToVisit.reasoning && (
+                                <p className="text-sm text-green-700">{cityDetails.bestTimeToVisit.reasoning}</p>
+                              )}
+                              {cityDetails.bestTimeToVisit.avoid && (
+                                <div>
+                                  <span className="text-xs font-semibold text-green-700 uppercase">Avoid</span>
+                                  <p className="text-sm text-green-800">{cityDetails.bestTimeToVisit.avoid}</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Weather Overview */}
+                    {cityDetails.weatherOverview && (
+                      <div className="p-4 bg-sky-50 border-2 border-sky-200 rounded-xl">
+                        <div className="flex items-start gap-3">
+                          <CloudSun className="w-5 h-5 text-sky-600 flex-shrink-0 mt-0.5" />
+                          <div className="flex-1">
+                            <h5 className="font-bold text-sky-900 mb-2">Weather Overview</h5>
+                            <p className="text-sm text-sky-800">{cityDetails.weatherOverview}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Events & Festivals */}
+                    {cityDetails.eventsFestivals && cityDetails.eventsFestivals.length > 0 && (
+                      <div>
+                        <div className="flex items-center gap-2 mb-4">
+                          <PartyPopper className="w-5 h-5" style={{ color: themeColor }} />
+                          <h4 className="text-lg font-bold text-gray-900">
+                            Events & Festivals ({cityDetails.eventsFestivals.length})
+                          </h4>
+                        </div>
+                        <div className="space-y-3">
+                          {cityDetails.eventsFestivals.map((event, index) => (
+                            <div
+                              key={index}
+                              className="p-4 bg-white border-2 border-gray-100 rounded-xl hover:border-gray-200 hover:shadow-md transition-all"
+                            >
+                              <div className="flex items-start justify-between mb-2">
+                                <h5 className="font-semibold text-gray-900 flex-1">{event.name}</h5>
+                                {event.month && (
+                                  <span className="text-xs font-medium px-2 py-1 rounded-full flex-shrink-0 ml-2"
+                                        style={{ backgroundColor: `${themeColor}20`, color: themeColor }}>
+                                    {event.month}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-sm text-gray-600">{event.description}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Warnings */}
+                    {cityDetails.warnings && cityDetails.warnings.length > 0 && (
+                      <div className="p-4 bg-red-50 border-2 border-red-200 rounded-xl">
+                        <div className="flex items-start gap-3">
+                          <ShieldAlert className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                          <div className="flex-1">
+                            <h5 className="font-bold text-red-900 mb-3">Important Warnings</h5>
+                            <ul className="space-y-2">
+                              {cityDetails.warnings.map((warning, index) => (
+                                <li key={index} className="flex items-start gap-2">
+                                  <span className="text-red-600 mt-0.5">⚠️</span>
+                                  <span className="text-sm text-red-800">{warning}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
                         </div>
                       </div>
                     )}
