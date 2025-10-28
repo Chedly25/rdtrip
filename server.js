@@ -23,6 +23,19 @@ const routeJobs = new Map();
 
 // ==================== WEB SCRAPING UTILITIES ====================
 
+// In-memory cache for this session (reduces DB hits)
+const sessionImageCache = new Map();
+
+// Success rate tracking
+const scrapingStats = {
+  total: 0,
+  opengraph: 0,
+  jsonld: 0,
+  dom: 0,
+  unsplash: 0,
+  failed: 0
+};
+
 // Rate limiter: 2 seconds per domain
 const domainLastRequest = new Map();
 
@@ -221,29 +234,37 @@ async function scrapeDomImages(url) {
 
 // Fallback chain: Try all strategies in order
 async function scrapeWithFallback(url, entityName, city) {
-  console.log(`🔍 Scraping image for: ${entityName} in ${city}`);
+  scrapingStats.total++;
+  console.log(`🔍 [${scrapingStats.total}] Scraping: ${entityName} in ${city}`);
   console.log(`   URL: ${url}`);
 
   // Try Open Graph (fastest, most reliable)
   const ogImage = await scrapeOpenGraphImage(url);
   if (ogImage) {
+    scrapingStats.opengraph++;
+    console.log(`✅ [OG ${scrapingStats.opengraph}/${scrapingStats.total}] Success: ${entityName}`);
     return { imageUrl: ogImage, source: 'opengraph' };
   }
 
   // Try JSON-LD structured data
   const jsonLdImage = await scrapeJsonLdImage(url);
   if (jsonLdImage) {
+    scrapingStats.jsonld++;
+    console.log(`✅ [JSON-LD ${scrapingStats.jsonld}/${scrapingStats.total}] Success: ${entityName}`);
     return { imageUrl: jsonLdImage, source: 'jsonld' };
   }
 
   // Try DOM parsing
   const domImage = await scrapeDomImages(url);
   if (domImage) {
+    scrapingStats.dom++;
+    console.log(`✅ [DOM ${scrapingStats.dom}/${scrapingStats.total}] Success: ${entityName}`);
     return { imageUrl: domImage, source: 'dom' };
   }
 
   // Final fallback: Unsplash
-  console.log(`⚠️  No image found, using Unsplash fallback`);
+  scrapingStats.unsplash++;
+  console.log(`⚠️  [Unsplash ${scrapingStats.unsplash}/${scrapingStats.total}] Fallback: ${entityName}`);
   const unsplashUrl = `https://source.unsplash.com/800x600/?${encodeURIComponent(entityName + ' ' + city)}`;
   return { imageUrl: unsplashUrl, source: 'unsplash' };
 }
@@ -3535,7 +3556,19 @@ app.post('/api/images/scrape', async (req, res) => {
           }
 
           try {
-            // Check database cache first
+            // Check session cache first (in-memory, fastest)
+            const sessionCacheKey = `${type}:${name}:${city}`;
+            if (sessionImageCache.has(sessionCacheKey)) {
+              const cached = sessionImageCache.get(sessionCacheKey);
+              console.log(`⚡ Session cache hit for ${name} (${cached.source})`);
+              return {
+                name,
+                imageUrl: cached.imageUrl,
+                source: cached.source
+              };
+            }
+
+            // Check database cache second
             const cacheResult = await db.query(
               `SELECT image_url, source_type, expires_at
                FROM scraped_images
@@ -3546,7 +3579,14 @@ app.post('/api/images/scrape', async (req, res) => {
 
             if (cacheResult.rows.length > 0) {
               const cached = cacheResult.rows[0];
-              console.log(`✅ Cache hit for ${name} (${cached.source_type})`);
+              console.log(`💾 DB cache hit for ${name} (${cached.source_type})`);
+
+              // Store in session cache for next time
+              sessionImageCache.set(sessionCacheKey, {
+                imageUrl: cached.image_url,
+                source: cached.source_type
+              });
+
               return {
                 name,
                 imageUrl: cached.image_url,
@@ -3586,7 +3626,10 @@ app.post('/api/images/scrape', async (req, res) => {
               [type, name, city, imageUrl, website || null, source]
             );
 
-            console.log(`💾 Saved to cache: ${name} (${source})`);
+            // Also save to session cache
+            sessionImageCache.set(sessionCacheKey, { imageUrl, source });
+
+            console.log(`💾 Saved to DB & session cache: ${name} (${source})`);
 
             return { name, imageUrl, source };
           } catch (entityError) {
@@ -3604,7 +3647,15 @@ app.post('/api/images/scrape', async (req, res) => {
       results.push(...batchResults);
     }
 
+    // Print success rate summary
+    const realImages = scrapingStats.opengraph + scrapingStats.jsonld + scrapingStats.dom;
+    const successRate = scrapingStats.total > 0
+      ? ((realImages / scrapingStats.total) * 100).toFixed(1)
+      : '0.0';
+
     console.log(`✅ Scraping complete: ${results.length} images processed`);
+    console.log(`📊 Success Rate: ${successRate}% (${realImages}/${scrapingStats.total} real images)`);
+    console.log(`   Open Graph: ${scrapingStats.opengraph} | JSON-LD: ${scrapingStats.jsonld} | DOM: ${scrapingStats.dom} | Unsplash: ${scrapingStats.unsplash}`);
 
     res.json({ results });
   } catch (error) {
