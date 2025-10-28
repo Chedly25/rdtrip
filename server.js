@@ -3679,40 +3679,36 @@ async function processCityDetailsJobAsync(jobId, cityName, country) {
 
     job.status = 'processing';
     job.progress = 10;
-    job.message = 'Analyzing city data...';
+    job.message = 'Getting basic city info...';
 
-    // Wrap generateCityDetails with retry logic and timeout
-    const cityDetails = await Promise.race([
+    // ========== PHASE 1: QUICK GENERATION (5-10 seconds) ==========
+    console.log(`🚀 Phase 1: Quick generation for ${cityName}`);
+    const quickDetails = await Promise.race([
       retryWithBackoff(
-        () => generateCityDetails(cityName, country),
+        () => generateCityDetailsQuick(cityName, country),
         2, // Max 2 attempts
-        `Perplexity API for ${cityName}`
+        `Phase 1 (Quick) for ${cityName}`
       ),
-      // Job timeout promise
+      // Phase 1 timeout
       new Promise((_, reject) => {
         setTimeout(() => {
-          reject(new Error('City generation took too long (2-minute timeout). Please try again.'));
-        }, JOB_TIMEOUT);
+          reject(new Error('Phase 1 took too long (60s timeout)'));
+        }, 60000);
       })
     ]);
 
-    // Check if job was cancelled or timed out
-    const elapsed = Date.now() - startTime;
-    if (elapsed > JOB_TIMEOUT) {
-      throw new Error('Job timeout exceeded');
-    }
+    job.progress = 40;
+    job.message = 'Saving basic info...';
 
-    job.progress = 80;
-    job.message = 'Saving to database...';
-
-    // Store in database for future requests
+    // Save Phase 1 data to database
     await db.query(`
       INSERT INTO city_details (
         city_name, country, tagline, main_image_url, rating, recommended_duration,
         why_visit, best_for, highlights, restaurants, accommodations,
         parking_info, parking_difficulty, environmental_zones, best_time_to_visit,
-        events_festivals, local_tips, warnings, weather_overview, latitude, longitude
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+        events_festivals, local_tips, warnings, weather_overview, latitude, longitude,
+        generation_phase
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
       ON CONFLICT (city_name) DO UPDATE SET
         country = EXCLUDED.country,
         tagline = EXCLUDED.tagline,
@@ -3722,49 +3718,119 @@ async function processCityDetailsJobAsync(jobId, cityName, country) {
         why_visit = EXCLUDED.why_visit,
         best_for = EXCLUDED.best_for,
         highlights = EXCLUDED.highlights,
-        restaurants = EXCLUDED.restaurants,
-        accommodations = EXCLUDED.accommodations,
-        parking_info = EXCLUDED.parking_info,
-        parking_difficulty = EXCLUDED.parking_difficulty,
-        environmental_zones = EXCLUDED.environmental_zones,
-        best_time_to_visit = EXCLUDED.best_time_to_visit,
-        events_festivals = EXCLUDED.events_festivals,
-        local_tips = EXCLUDED.local_tips,
-        warnings = EXCLUDED.warnings,
         weather_overview = EXCLUDED.weather_overview,
         latitude = EXCLUDED.latitude,
         longitude = EXCLUDED.longitude,
+        generation_phase = EXCLUDED.generation_phase,
         updated_at = CURRENT_TIMESTAMP
     `, [
       cityName,
-      cityDetails.country,
-      cityDetails.tagline,
-      cityDetails.mainImageUrl,
-      cityDetails.rating,
-      cityDetails.recommendedDuration,
-      cityDetails.whyVisit,
-      JSON.stringify(cityDetails.bestFor),
-      JSON.stringify(cityDetails.highlights),
-      JSON.stringify(cityDetails.restaurants),
-      JSON.stringify(cityDetails.accommodations),
-      cityDetails.parking?.info,
-      cityDetails.parking?.difficulty,
-      JSON.stringify(cityDetails.environmentalZones),
-      JSON.stringify(cityDetails.bestTimeToVisit),
-      JSON.stringify(cityDetails.eventsFestivals),
-      JSON.stringify(cityDetails.localTips),
-      JSON.stringify(cityDetails.warnings),
-      cityDetails.weatherOverview,
-      cityDetails.coordinates?.latitude,
-      cityDetails.coordinates?.longitude
+      quickDetails.country,
+      quickDetails.tagline,
+      quickDetails.mainImageUrl,
+      quickDetails.rating,
+      quickDetails.recommendedDuration,
+      quickDetails.whyVisit,
+      JSON.stringify(quickDetails.bestFor),
+      JSON.stringify(quickDetails.highlights),
+      JSON.stringify(quickDetails.restaurants),
+      JSON.stringify(quickDetails.accommodations),
+      quickDetails.parking?.info,
+      quickDetails.parking?.difficulty,
+      JSON.stringify(quickDetails.environmentalZones),
+      JSON.stringify(quickDetails.bestTimeToVisit),
+      JSON.stringify(quickDetails.eventsFestivals),
+      JSON.stringify(quickDetails.localTips),
+      JSON.stringify(quickDetails.warnings),
+      quickDetails.weatherOverview,
+      quickDetails.coordinates?.latitude,
+      quickDetails.coordinates?.longitude,
+      'quick' // Phase 1 marker
+    ]);
+
+    // Update job with Phase 1 data (user can see this immediately)
+    job.result = quickDetails;
+    job.progress = 50;
+    job.message = 'Getting detailed info...';
+
+    console.log(`✅ Phase 1 complete for ${cityName}, starting Phase 2...`);
+
+    // ========== PHASE 2: FULL GENERATION (30-45 seconds) ==========
+    console.log(`🚀 Phase 2: Full generation for ${cityName}`);
+    const fullDetails = await Promise.race([
+      retryWithBackoff(
+        () => generateCityDetailsFull(cityName, country),
+        2, // Max 2 attempts
+        `Phase 2 (Full) for ${cityName}`
+      ),
+      // Phase 2 timeout
+      new Promise((_, reject) => {
+        setTimeout(() => {
+          reject(new Error('Phase 2 took too long (60s timeout)'));
+        }, 60000);
+      })
+    ]);
+
+    job.progress = 90;
+    job.message = 'Saving complete details...';
+
+    // Update database with Phase 2 data (complete)
+    await db.query(`
+      UPDATE city_details SET
+        country = $2,
+        tagline = $3,
+        main_image_url = $4,
+        rating = $5,
+        recommended_duration = $6,
+        why_visit = $7,
+        best_for = $8,
+        highlights = $9,
+        restaurants = $10,
+        accommodations = $11,
+        parking_info = $12,
+        parking_difficulty = $13,
+        environmental_zones = $14,
+        best_time_to_visit = $15,
+        events_festivals = $16,
+        local_tips = $17,
+        warnings = $18,
+        weather_overview = $19,
+        latitude = $20,
+        longitude = $21,
+        generation_phase = $22,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE city_name = $1
+    `, [
+      cityName,
+      fullDetails.country,
+      fullDetails.tagline,
+      fullDetails.mainImageUrl,
+      fullDetails.rating,
+      fullDetails.recommendedDuration,
+      fullDetails.whyVisit,
+      JSON.stringify(fullDetails.bestFor),
+      JSON.stringify(fullDetails.highlights),
+      JSON.stringify(fullDetails.restaurants),
+      JSON.stringify(fullDetails.accommodations),
+      fullDetails.parking?.info,
+      fullDetails.parking?.difficulty,
+      JSON.stringify(fullDetails.environmentalZones),
+      JSON.stringify(fullDetails.bestTimeToVisit),
+      JSON.stringify(fullDetails.eventsFestivals),
+      JSON.stringify(fullDetails.localTips),
+      JSON.stringify(fullDetails.warnings),
+      fullDetails.weatherOverview,
+      fullDetails.coordinates?.latitude,
+      fullDetails.coordinates?.longitude,
+      'complete' // Phase 2 marker
     ]);
 
     job.status = 'complete';
     job.progress = 100;
-    job.result = cityDetails;
+    job.result = fullDetails;
     job.message = 'Complete!';
 
-    console.log(`✅ Job ${jobId} completed successfully for ${cityName}`);
+    console.log(`✅ Job ${jobId} completed successfully for ${cityName} (2-phase generation)`);
 
   } catch (error) {
     console.error(`❌ Job ${jobId} failed:`, error);
@@ -4134,7 +4200,121 @@ async function retryWithBackoff(fn, maxRetries = 2, operationName = 'operation')
 /**
  * Generate detailed city information using Perplexity AI
  */
-async function generateCityDetails(cityName, country) {
+/**
+ * Phase 1: Quick city details generation (5-10 seconds)
+ * Returns basic information to show users immediately
+ */
+async function generateCityDetailsQuick(cityName, country) {
+  const fullCityName = country ? `${cityName}, ${country}` : cityName;
+
+  const prompt = `You are a travel expert creating a quick city overview for road trip travelers.
+
+Research the following city using internet search and provide BASIC information quickly:
+
+CITY: ${fullCityName}
+
+Please search the internet and respond with a JSON object containing ONLY:
+
+{
+  "cityName": "${cityName}",
+  "country": "Country name",
+  "tagline": "One short compelling tagline (max 60 chars)",
+  "whyVisit": "1-2 paragraph description of why this city is worth visiting. Include the vibe and what makes it unique.",
+  "bestFor": ["🍷 Foodies", "🏛️ History buffs"],
+  "recommendedDuration": "2-3 days",
+  "rating": 4.7,
+
+  "highlights": [
+    {
+      "name": "Attraction name",
+      "description": "One sentence about this attraction",
+      "duration": "2-3 hours",
+      "rating": 4.8,
+      "type": "landmark"
+    }
+  ],
+
+  "weatherOverview": "Brief 2-3 sentence overview of typical weather by season.",
+
+  "coordinates": {
+    "latitude": 45.7640,
+    "longitude": 4.8357
+  }
+}
+
+IMPORTANT INSTRUCTIONS:
+1. Search the internet for CURRENT information
+2. Be SPECIFIC with names - no generic advice
+3. Include 3-4 highlights ONLY
+4. Ratings should be realistic (most cities 4.5-4.8 range)
+5. Return ONLY valid JSON, no markdown formatting
+6. Verify coordinates are accurate
+7. Keep it FAST - we'll get detailed info later
+
+Return the JSON object now:`;
+
+  try {
+    const response = await axios.post('https://api.perplexity.ai/chat/completions', {
+      model: 'sonar',
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: 1500, // Reduced for faster response
+      temperature: 0.2
+    }, {
+      headers: {
+        'Authorization': `Bearer ${process.env.PERPLEXITY_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      timeout: 60000 // 60 second timeout
+    });
+
+    const content = response.data.choices[0].message.content;
+
+    // Try to parse JSON from response
+    let jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      throw new Error('No JSON found in Perplexity response');
+    }
+
+    const cityData = JSON.parse(jsonMatch[0]);
+
+    // Fetch city image from Wikipedia/Unsplash
+    console.log(`🖼️  Fetching image for ${cityName}...`);
+    const mainImageUrl = await getCityImages(cityName, cityData.country);
+
+    // Return basic structure (Phase 1)
+    return {
+      cityName: cityData.cityName || cityName,
+      country: cityData.country,
+      tagline: cityData.tagline,
+      mainImageUrl: mainImageUrl,
+      rating: cityData.rating,
+      recommendedDuration: cityData.recommendedDuration,
+      whyVisit: cityData.whyVisit,
+      bestFor: cityData.bestFor || [],
+      highlights: cityData.highlights || [],
+      restaurants: [], // Empty for Phase 1
+      accommodations: [], // Empty for Phase 1
+      parking: null, // Empty for Phase 1
+      environmentalZones: null, // Empty for Phase 1
+      bestTimeToVisit: null, // Empty for Phase 1
+      eventsFestivals: [], // Empty for Phase 1
+      localTips: [], // Empty for Phase 1
+      warnings: [], // Empty for Phase 1
+      weatherOverview: cityData.weatherOverview,
+      coordinates: cityData.coordinates || null
+    };
+
+  } catch (error) {
+    console.error('Perplexity API error (quick):', error.message);
+    throw new Error(`Failed to generate quick city details: ${error.message}`);
+  }
+}
+
+/**
+ * Phase 2: Full city details generation (30-45 seconds)
+ * Returns complete information with all details
+ */
+async function generateCityDetailsFull(cityName, country) {
   const fullCityName = country ? `${cityName}, ${country}` : cityName;
 
   const prompt = `You are a travel expert creating a comprehensive city guide for road trip travelers.
@@ -4289,7 +4469,7 @@ Return the JSON object now:`;
         'Authorization': `Bearer ${process.env.PERPLEXITY_API_KEY}`,
         'Content-Type': 'application/json'
       },
-      timeout: 20000 // 20 second timeout (Heroku has 30s request limit, need buffer)
+      timeout: 60000 // 60 second timeout (background jobs can handle this)
     });
 
     const content = response.data.choices[0].message.content;
@@ -4498,6 +4678,24 @@ async function runDatabaseMigrations() {
       `);
 
       console.log('✅ Migration completed: scraped_images table created');
+    }
+
+    // Check if generation_phase column exists in city_details
+    const generationPhaseCheck = await db.query(`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_name = 'city_details' AND column_name = 'generation_phase'
+    `);
+
+    if (generationPhaseCheck.rows.length === 0) {
+      console.log('📦 Running migration: Adding generation_phase column...');
+
+      await db.query(`
+        ALTER TABLE city_details
+        ADD COLUMN IF NOT EXISTS generation_phase VARCHAR(20) DEFAULT 'complete';
+      `);
+
+      console.log('✅ Migration completed: generation_phase column added');
     }
 
   } catch (error) {
