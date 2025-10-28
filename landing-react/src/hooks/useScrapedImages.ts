@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 interface ScrapedImage {
   name: string
@@ -26,13 +26,21 @@ export function useScrapedImages(cityDetails: CityDetails | null) {
   const [images, setImages] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const fetchedCityRef = useRef<string | null>(null)
 
   useEffect(() => {
     if (!cityDetails) {
       setImages({})
       setLoading(false)
+      fetchedCityRef.current = null
       return
     }
+
+    // CRITICAL: Only fetch once per city to prevent infinite loop
+    if (fetchedCityRef.current === cityDetails.cityName) {
+      return
+    }
+    fetchedCityRef.current = cityDetails.cityName
 
     const fetchImages = async () => {
       setLoading(true)
