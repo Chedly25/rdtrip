@@ -15,7 +15,11 @@ import {
   Calendar,
   CloudSun,
   PartyPopper,
-  ShieldAlert
+  ShieldAlert,
+  ExternalLink,
+  Globe,
+  Ticket,
+  Navigation
 } from 'lucide-react'
 
 interface CityDetail {
@@ -86,20 +90,6 @@ interface CityDetail {
     latitude: number
     longitude: number
   } | null
-}
-
-interface RouteImpact {
-  distanceDelta: number
-  timeDelta: number
-  optimalPosition: number
-  original: {
-    distance: number
-    time: number
-  }
-  new: {
-    distance: number
-    time: number
-  }
 }
 
 interface CityDetailModalProps {
@@ -399,32 +389,79 @@ export default function CityDetailModal({
                             Where to Eat ({cityDetails.restaurants.length})
                           </h4>
                         </div>
-                        <div className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {cityDetails.restaurants.map((restaurant, index) => (
                             <div
                               key={index}
-                              className="p-4 bg-white border-2 border-gray-100 rounded-xl hover:border-gray-200 hover:shadow-md transition-all"
+                              className="group overflow-hidden bg-white border-2 border-gray-100 rounded-xl hover:border-gray-300 hover:shadow-lg transition-all"
                             >
-                              <div className="flex items-start justify-between mb-2">
-                                <div className="flex-1">
-                                  <h5 className="font-semibold text-gray-900 mb-1">{restaurant.name}</h5>
-                                  <p className="text-xs text-gray-500">{restaurant.cuisine}</p>
-                                </div>
-                                <div className="flex flex-col items-end gap-1 flex-shrink-0 ml-3">
-                                  <div className="flex items-center gap-1">
+                              {/* Restaurant Image */}
+                              {restaurant.imageUrl && (
+                                <div className="relative h-48 overflow-hidden">
+                                  <img
+                                    src={restaurant.imageUrl}
+                                    alt={restaurant.name}
+                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                    onError={(e) => {
+                                      e.currentTarget.src = `https://source.unsplash.com/800x600/?${encodeURIComponent(restaurant.name + ' food ' + restaurant.cuisine)}`
+                                    }}
+                                  />
+                                  <div className="absolute top-2 right-2 flex items-center gap-1 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full">
                                     <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-                                    <span className="text-xs font-medium text-gray-600">{restaurant.rating}</span>
+                                    <span className="text-xs font-bold text-gray-900">{restaurant.rating}</span>
                                   </div>
-                                  <span className="text-sm font-medium text-gray-700">{restaurant.priceRange}</span>
-                                </div>
-                              </div>
-                              <p className="text-sm text-gray-600 mb-2">{restaurant.description}</p>
-                              {restaurant.specialty && (
-                                <div className="flex items-center gap-1 text-xs">
-                                  <span className="font-medium text-gray-500">Specialty:</span>
-                                  <span className="text-gray-700">{restaurant.specialty}</span>
+                                  <div className="absolute bottom-2 left-2 px-2 py-1 bg-white/90 backdrop-blur-sm rounded-full">
+                                    <span className="text-xs font-bold text-gray-900">{restaurant.priceRange}</span>
+                                  </div>
                                 </div>
                               )}
+
+                              <div className="p-4">
+                                <h5 className="font-bold text-gray-900 mb-1">{restaurant.name}</h5>
+                                <p className="text-xs text-gray-500 mb-2">{restaurant.cuisine}</p>
+                                <p className="text-sm text-gray-600 mb-3 line-clamp-2">{restaurant.description}</p>
+
+                                {restaurant.specialty && (
+                                  <div className="mb-3 p-2 bg-amber-50 rounded-lg border border-amber-200">
+                                    <p className="text-xs font-medium text-amber-900">
+                                      <span className="font-bold">Specialty:</span> {restaurant.specialty}
+                                    </p>
+                                  </div>
+                                )}
+
+                                {/* Action Buttons */}
+                                <div className="flex gap-2">
+                                  {restaurant.googleMapsUrl && (
+                                    <a
+                                      href={restaurant.googleMapsUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white text-xs font-medium rounded-lg transition-colors"
+                                    >
+                                      <Navigation className="w-3 h-3" />
+                                      Directions
+                                    </a>
+                                  )}
+                                  {restaurant.website && (
+                                    <a
+                                      href={restaurant.website}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="flex-1 flex items-center justify-center gap-1 px-3 py-2 border-2 border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700 text-xs font-medium rounded-lg transition-colors"
+                                    >
+                                      <Globe className="w-3 h-3" />
+                                      Website
+                                    </a>
+                                  )}
+                                </div>
+
+                                {restaurant.address && (
+                                  <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                                    <MapPin className="w-3 h-3" />
+                                    {restaurant.address}
+                                  </p>
+                                )}
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -444,24 +481,63 @@ export default function CityDetailModal({
                           {cityDetails.accommodations.map((accommodation, index) => (
                             <div
                               key={index}
-                              className="p-4 bg-white border-2 border-gray-100 rounded-xl hover:border-gray-200 hover:shadow-md transition-all"
+                              className="group overflow-hidden bg-white border-2 border-gray-100 rounded-xl hover:border-gray-300 hover:shadow-lg transition-all"
                             >
-                              <div className="flex items-start justify-between mb-2">
-                                <h5 className="font-semibold text-gray-900 flex-1">{accommodation.areaName}</h5>
-                                <div className="flex items-center gap-1 flex-shrink-0 ml-2">
-                                  <DollarSign className="w-3 h-3 text-green-600" />
-                                  <span className="text-xs font-medium text-gray-700">{accommodation.priceFrom}</span>
+                              {/* Accommodation Image */}
+                              {accommodation.imageUrl && (
+                                <div className="relative h-48 overflow-hidden">
+                                  <img
+                                    src={accommodation.imageUrl}
+                                    alt={accommodation.areaName}
+                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                    onError={(e) => {
+                                      e.currentTarget.src = `https://source.unsplash.com/800x600/?${encodeURIComponent(accommodation.areaName + ' ' + cityDetails.cityName + ' hotels')}`
+                                    }}
+                                  />
+                                  <div className="absolute top-2 right-2 px-3 py-1 bg-green-500/90 backdrop-blur-sm rounded-full">
+                                    <span className="text-xs font-bold text-white flex items-center gap-1">
+                                      <DollarSign className="w-3 h-3" />
+                                      {accommodation.priceFrom}
+                                    </span>
+                                  </div>
                                 </div>
-                              </div>
-                              <p className="text-sm text-gray-600 mb-2">{accommodation.description}</p>
-                              <div
-                                className="inline-block px-2 py-1 rounded-full text-xs font-medium"
-                                style={{
-                                  backgroundColor: `${themeColor}10`,
-                                  color: themeColor
-                                }}
-                              >
-                                {accommodation.bestFor}
+                              )}
+
+                              <div className="p-4">
+                                <h5 className="font-bold text-gray-900 mb-2">{accommodation.areaName}</h5>
+                                <p className="text-sm text-gray-600 mb-3 line-clamp-2">{accommodation.description}</p>
+
+                                <div
+                                  className="inline-block px-3 py-1 rounded-full text-xs font-medium mb-3"
+                                  style={{
+                                    backgroundColor: `${themeColor}20`,
+                                    color: themeColor
+                                  }}
+                                >
+                                  {accommodation.bestFor}
+                                </div>
+
+                                {accommodation.hotelExample && (
+                                  <p className="text-xs text-gray-500 mb-3 flex items-center gap-1">
+                                    <Hotel className="w-3 h-3" />
+                                    Try: {accommodation.hotelExample}
+                                  </p>
+                                )}
+
+                                {/* Action Button */}
+                                {accommodation.bookingUrl && (
+                                  <a
+                                    href={accommodation.bookingUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="block text-center px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-colors"
+                                  >
+                                    <span className="flex items-center justify-center gap-2">
+                                      <ExternalLink className="w-4 h-4" />
+                                      Check Availability
+                                    </span>
+                                  </a>
+                                )}
                               </div>
                             </div>
                           ))}
@@ -563,22 +639,64 @@ export default function CityDetailModal({
                             Events & Festivals ({cityDetails.eventsFestivals.length})
                           </h4>
                         </div>
-                        <div className="space-y-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {cityDetails.eventsFestivals.map((event, index) => (
                             <div
                               key={index}
-                              className="p-4 bg-white border-2 border-gray-100 rounded-xl hover:border-gray-200 hover:shadow-md transition-all"
+                              className="group overflow-hidden bg-white border-2 border-gray-100 rounded-xl hover:border-gray-300 hover:shadow-lg transition-all"
                             >
-                              <div className="flex items-start justify-between mb-2">
-                                <h5 className="font-semibold text-gray-900 flex-1">{event.name}</h5>
-                                {event.month && (
-                                  <span className="text-xs font-medium px-2 py-1 rounded-full flex-shrink-0 ml-2"
-                                        style={{ backgroundColor: `${themeColor}20`, color: themeColor }}>
-                                    {event.month}
-                                  </span>
-                                )}
+                              {/* Event Image */}
+                              {event.imageUrl && (
+                                <div className="relative h-40 overflow-hidden">
+                                  <img
+                                    src={event.imageUrl}
+                                    alt={event.name}
+                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                    onError={(e) => {
+                                      e.currentTarget.src = `https://source.unsplash.com/800x600/?${encodeURIComponent(event.name + ' festival ' + cityDetails.cityName)}`
+                                    }}
+                                  />
+                                  {(event.month || event.dates) && (
+                                    <div className="absolute top-2 right-2 px-3 py-1 bg-purple-500/90 backdrop-blur-sm rounded-full">
+                                      <span className="text-xs font-bold text-white flex items-center gap-1">
+                                        <Calendar className="w-3 h-3" />
+                                        {event.dates || event.month}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+
+                              <div className="p-4">
+                                <h5 className="font-bold text-gray-900 mb-2">{event.name}</h5>
+                                <p className="text-sm text-gray-600 mb-3 line-clamp-3">{event.description}</p>
+
+                                {/* Action Buttons */}
+                                <div className="flex gap-2">
+                                  {event.ticketUrl && (
+                                    <a
+                                      href={event.ticketUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-purple-500 hover:bg-purple-600 text-white text-xs font-medium rounded-lg transition-colors"
+                                    >
+                                      <Ticket className="w-3 h-3" />
+                                      Get Tickets
+                                    </a>
+                                  )}
+                                  {event.website && (
+                                    <a
+                                      href={event.website}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="flex-1 flex items-center justify-center gap-1 px-3 py-2 border-2 border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700 text-xs font-medium rounded-lg transition-colors"
+                                    >
+                                      <Globe className="w-3 h-3" />
+                                      Learn More
+                                    </a>
+                                  )}
+                                </div>
                               </div>
-                              <p className="text-sm text-gray-600">{event.description}</p>
                             </div>
                           ))}
                         </div>
