@@ -68,7 +68,7 @@ const agentThemes: Record<string, { color: string; icon: string }> = {
   'hidden-gems': { color: '#081d5b', icon: '/images/icons/hidden_gem_icon.png' }
 }
 
-export function RouteResults({ routeData, onViewMap, onStartOver }: RouteResultsProps) {
+export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
   const [activeTab, setActiveTab] = useState(0)
   const [showSaveModal, setShowSaveModal] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
@@ -324,8 +324,8 @@ export function RouteResults({ routeData, onViewMap, onStartOver }: RouteResults
 
     localStorage.setItem('spotlightData', JSON.stringify(dataToStore))
 
-    // Call the original onViewMap which will navigate to spotlight
-    onViewMap(agent)
+    // Navigate directly to spotlight.html (don't call onViewMap which would overwrite localStorage)
+    window.location.href = `/spotlight.html?routeId=${routeData.id || Date.now()}&agent=${agent || 'adventure'}`
   }
 
   const handleShareClick = async () => {
