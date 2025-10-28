@@ -8,6 +8,7 @@ import { CitiesSection } from './CitiesSection'
 import { StayDineSection } from './StayDineSection'
 import { ItinerarySection } from './ItinerarySection'
 import { MapView } from './MapView'
+import { WazeCitySelector } from './WazeCitySelector'
 import { useSpotlightStore } from '../../stores/spotlightStore'
 import { useRouteDataStore } from '../../stores/routeDataStore'
 import { getTheme } from '../../config/theme'
@@ -40,6 +41,7 @@ export function SpotlightPageComplete() {
   const { waypoints } = useSpotlightStore()
   const { routeData } = useRouteDataStore()
   const [activeSection, setActiveSection] = useState('overview')
+  const [showWazeModal, setShowWazeModal] = useState(false)
 
   // Get agent details and theme
   const agent = routeData?.agent || 'adventure'
@@ -61,18 +63,9 @@ export function SpotlightPageComplete() {
   }
 
   const handleExportWaze = () => {
-    // Note: Waze URL scheme does NOT support multiple waypoints as of 2025
-    // We can only navigate to the final destination
-    // Users will need to manually add stops within the Waze app
-    const firstWaypoint = waypoints[0]
-    const lastWaypoint = waypoints[waypoints.length - 1]
-
-    if (firstWaypoint?.coordinates && lastWaypoint?.coordinates) {
-      // Navigate from origin to destination (Waze will calculate the route)
-      // Format: https://www.waze.com/ul?ll=lat,lng&navigate=yes
-      const url = `https://www.waze.com/ul?ll=${lastWaypoint.coordinates.lat},${lastWaypoint.coordinates.lng}&navigate=yes`
-      window.open(url, '_blank')
-    }
+    // Open modal to let user choose which city to navigate to
+    // Since Waze doesn't support multi-stop routes, we let them pick one destination
+    setShowWazeModal(true)
   }
 
   return (
@@ -172,6 +165,13 @@ export function SpotlightPageComplete() {
           />
         </div>
       </div>
+
+      {/* Waze City Selector Modal */}
+      <WazeCitySelector
+        waypoints={waypoints}
+        isOpen={showWazeModal}
+        onClose={() => setShowWazeModal(false)}
+      />
     </div>
   )
 }
