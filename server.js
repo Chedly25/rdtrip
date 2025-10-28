@@ -3765,29 +3765,42 @@ async function processCityDetailsJobAsync(jobId, cityName, country) {
     job.progress = 50;
     job.message = 'Getting detailed info...';
 
-    console.log(`✅ Phase 1 complete for ${cityName}, starting Phase 2...`);
+    console.log(`✅ Phase 1 complete for ${cityName}, starting Phase 2 (parallel agents)...`);
 
-    // ========== PHASE 2: FULL GENERATION (30-45 seconds) ==========
+    // ========== PHASE 2: PARALLEL AGENTS (5-8 seconds total) ==========
     const phase2Start = Date.now();
-    console.log(`🚀 Phase 2: Full generation for ${cityName} - Starting at ${new Date().toISOString()}`);
-    const fullDetails = await Promise.race([
-      retryWithBackoff(
-        () => generateCityDetailsFull(cityName, country),
-        2, // Max 2 attempts
-        `Phase 2 (Full) for ${cityName}`
-      ),
-      // Phase 2 timeout
-      new Promise((_, reject) => {
-        setTimeout(() => {
-          reject(new Error('Phase 2 took too long (60s timeout)'));
-        }, 60000);
+    console.log(`🚀 Phase 2: Launching 4 parallel agents for ${cityName} - Starting at ${new Date().toISOString()}`);
+
+    // Launch all 4 agents in PARALLEL with Promise.allSettled (one failure doesn't break others)
+    const agentResults = await Promise.allSettled([
+      generateRestaurants(cityName, quickDetails.country).catch(err => {
+        console.error(`Agent 1 (Restaurants) error:`, err);
+        return [];
+      }),
+      generateAccommodations(cityName, quickDetails.country).catch(err => {
+        console.error(`Agent 2 (Accommodations) error:`, err);
+        return [];
+      }),
+      generatePracticalInfo(cityName, quickDetails.country).catch(err => {
+        console.error(`Agent 3 (Practical Info) error:`, err);
+        return { parking: null, environmentalZones: null, bestTimeToVisit: null };
+      }),
+      generateEventsAndTips(cityName, quickDetails.country).catch(err => {
+        console.error(`Agent 4 (Events & Tips) error:`, err);
+        return { eventsFestivals: [], localTips: [], warnings: [] };
       })
     ]);
 
     const phase2Duration = Date.now() - phase2Start;
     const totalDuration = Date.now() - phase1Start;
-    console.log(`✅ Phase 2 complete for ${cityName} in ${phase2Duration}ms (${(phase2Duration/1000).toFixed(2)}s)`);
+    console.log(`✅ Phase 2 parallel agents complete for ${cityName} in ${phase2Duration}ms (${(phase2Duration/1000).toFixed(2)}s)`);
     console.log(`⏱️  Total generation time for ${cityName}: ${totalDuration}ms (${(totalDuration/1000).toFixed(2)}s)`);
+
+    // Extract results (use default values if agent failed)
+    const restaurants = agentResults[0].status === 'fulfilled' ? agentResults[0].value : [];
+    const accommodations = agentResults[1].status === 'fulfilled' ? agentResults[1].value : [];
+    const practicalInfo = agentResults[2].status === 'fulfilled' ? agentResults[2].value : { parking: null, environmentalZones: null, bestTimeToVisit: null };
+    const eventsAndTips = agentResults[3].status === 'fulfilled' ? agentResults[3].value : { eventsFestivals: [], localTips: [], warnings: [] };
 
     job.progress = 90;
     job.message = 'Saving complete details...';
@@ -3795,60 +3808,51 @@ async function processCityDetailsJobAsync(jobId, cityName, country) {
     // Update database with Phase 2 data (complete)
     await db.query(`
       UPDATE city_details SET
-        country = $2,
-        tagline = $3,
-        main_image_url = $4,
-        rating = $5,
-        recommended_duration = $6,
-        why_visit = $7,
-        best_for = $8,
-        highlights = $9,
-        restaurants = $10,
-        accommodations = $11,
-        parking_info = $12,
-        parking_difficulty = $13,
-        environmental_zones = $14,
-        best_time_to_visit = $15,
-        events_festivals = $16,
-        local_tips = $17,
-        warnings = $18,
-        weather_overview = $19,
-        latitude = $20,
-        longitude = $21,
-        generation_phase = $22,
+        restaurants = $2,
+        accommodations = $3,
+        parking_info = $4,
+        parking_difficulty = $5,
+        environmental_zones = $6,
+        best_time_to_visit = $7,
+        events_festivals = $8,
+        local_tips = $9,
+        warnings = $10,
+        generation_phase = $11,
         updated_at = CURRENT_TIMESTAMP
       WHERE city_name = $1
     `, [
       cityName,
-      fullDetails.country,
-      fullDetails.tagline,
-      fullDetails.mainImageUrl,
-      fullDetails.rating,
-      fullDetails.recommendedDuration,
-      fullDetails.whyVisit,
-      JSON.stringify(fullDetails.bestFor),
-      JSON.stringify(fullDetails.highlights),
-      JSON.stringify(fullDetails.restaurants),
-      JSON.stringify(fullDetails.accommodations),
-      fullDetails.parking?.info,
-      fullDetails.parking?.difficulty,
-      JSON.stringify(fullDetails.environmentalZones),
-      JSON.stringify(fullDetails.bestTimeToVisit),
-      JSON.stringify(fullDetails.eventsFestivals),
-      JSON.stringify(fullDetails.localTips),
-      JSON.stringify(fullDetails.warnings),
-      fullDetails.weatherOverview,
-      fullDetails.coordinates?.latitude,
-      fullDetails.coordinates?.longitude,
+      JSON.stringify(restaurants),
+      JSON.stringify(accommodations),
+      practicalInfo.parking?.info,
+      practicalInfo.parking?.difficulty,
+      JSON.stringify(practicalInfo.environmentalZones),
+      JSON.stringify(practicalInfo.bestTimeToVisit),
+      JSON.stringify(eventsAndTips.eventsFestivals),
+      JSON.stringify(eventsAndTips.localTips),
+      JSON.stringify(eventsAndTips.warnings),
       'complete' // Phase 2 marker
     ]);
+
+    // Merge Phase 1 + Phase 2 data for final result
+    const fullDetails = {
+      ...quickDetails,
+      restaurants,
+      accommodations,
+      parking: practicalInfo.parking,
+      environmentalZones: practicalInfo.environmentalZones,
+      bestTimeToVisit: practicalInfo.bestTimeToVisit,
+      eventsFestivals: eventsAndTips.eventsFestivals,
+      localTips: eventsAndTips.localTips,
+      warnings: eventsAndTips.warnings
+    };
 
     job.status = 'complete';
     job.progress = 100;
     job.result = fullDetails;
     job.message = 'Complete!';
 
-    console.log(`✅ Job ${jobId} completed successfully for ${cityName} (2-phase generation)`);
+    console.log(`✅ Job ${jobId} completed successfully for ${cityName} (parallel agents: ${phase2Duration}ms)`);
 
   } catch (error) {
     console.error(`❌ Job ${jobId} failed:`, error);
@@ -4619,6 +4623,297 @@ Return the JSON object now:`;
   } catch (error) {
     console.error('Perplexity API error:', error.message);
     throw new Error(`Failed to generate city details: ${error.message}`);
+  }
+}
+
+// ==================== PHASE 2 PARALLEL AGENTS ====================
+// These run independently and update the database as they complete
+
+/**
+ * Agent 1: Restaurants (5-8 seconds)
+ * Finds best restaurants with real URLs and social proof
+ */
+async function generateRestaurants(cityName, country) {
+  const fullCityName = country ? `${cityName}, ${country}` : cityName;
+
+  const prompt = `Find the top 5-6 restaurants in ${fullCityName} for road trip travelers.
+
+Research current information and return ONLY a JSON object:
+
+{
+  "restaurants": [
+    {
+      "name": "Restaurant name",
+      "cuisine": "Cuisine type",
+      "priceRange": "€€",
+      "description": "One compelling sentence",
+      "rating": 4.6,
+      "specialty": "What they're famous for",
+      "website": "Official website URL (or null)",
+      "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=RestaurantName+${cityName}",
+      "address": "Street address",
+      "reviewCount": 250,
+      "tripAdvisorRating": 4.5,
+      "badges": ["Popular", "Local Favorite"]
+    }
+  ]
+}
+
+CRITICAL REQUIREMENTS:
+1. All restaurants must be REAL and currently operating
+2. Include mix of price ranges: 2x €, 2x €€, 1-2x €€€
+3. Include actual Google Maps search URLs
+4. Website URLs must be real or null - NO fake URLs
+5. Ratings and review counts must be realistic
+6. Badges: Choose 0-2 from [Popular, Trending, Local Favorite, Michelin Guide, Hidden Gem]
+7. Return ONLY valid JSON, no markdown
+8. 5-6 restaurants total
+
+Return JSON now:`;
+
+  try {
+    const response = await axios.post('https://api.perplexity.ai/chat/completions', {
+      model: 'sonar',
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: 2000,
+      temperature: 0.3
+    }, {
+      headers: {
+        'Authorization': `Bearer ${process.env.PERPLEXITY_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      timeout: 15000 // 15 second timeout
+    });
+
+    const content = response.data.choices[0].message.content;
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('No JSON in restaurants response');
+
+    const data = JSON.parse(jsonMatch[0]);
+    console.log(`✅ Agent 1 (Restaurants): Generated ${data.restaurants?.length || 0} restaurants for ${cityName}`);
+    return data.restaurants || [];
+
+  } catch (error) {
+    console.error(`❌ Agent 1 (Restaurants) failed for ${cityName}:`, error.message);
+    return []; // Return empty array on failure
+  }
+}
+
+/**
+ * Agent 2: Accommodations (4-6 seconds)
+ * Finds best neighborhoods with booking links
+ */
+async function generateAccommodations(cityName, country) {
+  const fullCityName = country ? `${cityName}, ${country}` : cityName;
+
+  const prompt = `Find the 3-4 best neighborhoods/areas for accommodation in ${fullCityName}.
+
+Research current information and return ONLY a JSON object:
+
+{
+  "accommodations": [
+    {
+      "areaName": "Neighborhood name",
+      "description": "Why this area is perfect for travelers (2 sentences)",
+      "priceFrom": "€120/night",
+      "bestFor": "First-timers, families, central location",
+      "bookingUrl": "https://www.booking.com/searchresults.html?ss=${cityName}+AreaName",
+      "hotelExample": "Name of a good hotel here",
+      "rating": 8.5,
+      "reviewCount": 450,
+      "badges": ["Popular", "Great Value"]
+    }
+  ]
+}
+
+CRITICAL REQUIREMENTS:
+1. Areas must be real neighborhoods
+2. Include price range (budget €60-90, mid €90-150, upscale €150+)
+3. Booking.com search URLs must use real neighborhood names
+4. Hotel examples must be real hotels
+5. Ratings out of 10 (Booking.com style)
+6. Badges: Choose 0-2 from [Popular, Great Value, Best Location, Quiet, Central, Trendy]
+7. Return ONLY valid JSON, no markdown
+8. 3-4 areas total
+
+Return JSON now:`;
+
+  try {
+    const response = await axios.post('https://api.perplexity.ai/chat/completions', {
+      model: 'sonar',
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: 1500,
+      temperature: 0.3
+    }, {
+      headers: {
+        'Authorization': `Bearer ${process.env.PERPLEXITY_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      timeout: 12000 // 12 second timeout
+    });
+
+    const content = response.data.choices[0].message.content;
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('No JSON in accommodations response');
+
+    const data = JSON.parse(jsonMatch[0]);
+    console.log(`✅ Agent 2 (Accommodations): Generated ${data.accommodations?.length || 0} areas for ${cityName}`);
+    return data.accommodations || [];
+
+  } catch (error) {
+    console.error(`❌ Agent 2 (Accommodations) failed for ${cityName}:`, error.message);
+    return []; // Return empty array on failure
+  }
+}
+
+/**
+ * Agent 3: Practical Info (3-5 seconds)
+ * Parking, ZTL/environmental zones, best time to visit
+ */
+async function generatePracticalInfo(cityName, country) {
+  const fullCityName = country ? `${cityName}, ${country}` : cityName;
+
+  const prompt = `Provide practical travel information for ${fullCityName} - focus on road trippers driving into the city.
+
+Research current information and return ONLY a JSON object:
+
+{
+  "parking": {
+    "info": "Specific parking recommendations: garage names, street parking zones, costs per hour/day, best locations",
+    "difficulty": "Easy/Moderate/Difficult"
+  },
+  "environmentalZones": {
+    "hasRestrictions": true,
+    "type": "ZTL/ZFE/LEZ/None",
+    "description": "Detailed restrictions: which vehicles affected, permit requirements, restricted hours, fines",
+    "advice": "Practical advice for road trippers"
+  },
+  "bestTimeToVisit": {
+    "ideal": "April to June",
+    "reasoning": "Why this is best (weather, crowds, events)",
+    "avoid": "July-August (too hot and crowded)"
+  }
+}
+
+CRITICAL REQUIREMENTS:
+1. Be SPECIFIC: actual garage names, actual costs, actual zones
+2. Environmental zones are CRITICAL - research thoroughly (ZTL in Italy, ZFE in France, etc.)
+3. If no environmental restrictions exist, set hasRestrictions: false
+4. Parking difficulty based on: availability, cost, ease of finding spots
+5. Best time reasoning should mention weather AND crowds
+6. Return ONLY valid JSON, no markdown
+
+Return JSON now:`;
+
+  try {
+    const response = await axios.post('https://api.perplexity.ai/chat/completions', {
+      model: 'sonar',
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: 1200,
+      temperature: 0.2
+    }, {
+      headers: {
+        'Authorization': `Bearer ${process.env.PERPLEXITY_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      timeout: 10000 // 10 second timeout
+    });
+
+    const content = response.data.choices[0].message.content;
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('No JSON in practical info response');
+
+    const data = JSON.parse(jsonMatch[0]);
+    console.log(`✅ Agent 3 (Practical Info): Generated for ${cityName}`);
+    return {
+      parking: data.parking || null,
+      environmentalZones: data.environmentalZones || null,
+      bestTimeToVisit: data.bestTimeToVisit || null
+    };
+
+  } catch (error) {
+    console.error(`❌ Agent 3 (Practical Info) failed for ${cityName}:`, error.message);
+    return { parking: null, environmentalZones: null, bestTimeToVisit: null };
+  }
+}
+
+/**
+ * Agent 4: Events & Tips (4-7 seconds)
+ * Major events/festivals, local tips, warnings
+ */
+async function generateEventsAndTips(cityName, country) {
+  const fullCityName = country ? `${cityName}, ${country}` : cityName;
+
+  const prompt = `Find events/festivals and local knowledge for ${fullCityName}.
+
+Research current information and return ONLY a JSON object:
+
+{
+  "eventsFestivals": [
+    {
+      "name": "Festival/Event name",
+      "month": "June",
+      "description": "Brief exciting description",
+      "website": "Official website URL (or null)",
+      "ticketUrl": "Ticket purchase URL (or null)",
+      "dates": "June 15-20" or "Every weekend in summer",
+      "popularity": "High/Medium/Low",
+      "badges": ["Trending", "Annual Tradition"]
+    }
+  ],
+  "localTips": [
+    "Practical tip about getting around",
+    "Insider tip about best time to visit attractions",
+    "Money-saving tip",
+    "Cultural etiquette tip"
+  ],
+  "warnings": [
+    "Safety warning (pickpockets in X area)",
+    "Scam warning (common tourist scams)",
+    "Practical warning (shops closed on Sundays)"
+  ]
+}
+
+CRITICAL REQUIREMENTS:
+1. Events must be REAL, recurring annual events (not one-time past events)
+2. Include 2-4 major events/festivals
+3. Website/ticket URLs must be real or null
+4. Badges: Choose 0-2 from [Trending, Sold Out Often, Annual Tradition, Free Entry, Family-Friendly]
+5. localTips: 3-5 practical, actionable tips
+6. warnings: 2-4 important things to know (safety, scams, practical)
+7. Return ONLY valid JSON, no markdown
+
+Return JSON now:`;
+
+  try {
+    const response = await axios.post('https://api.perplexity.ai/chat/completions', {
+      model: 'sonar',
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: 1800,
+      temperature: 0.3
+    }, {
+      headers: {
+        'Authorization': `Bearer ${process.env.PERPLEXITY_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      timeout: 15000 // 15 second timeout
+    });
+
+    const content = response.data.choices[0].message.content;
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('No JSON in events/tips response');
+
+    const data = JSON.parse(jsonMatch[0]);
+    console.log(`✅ Agent 4 (Events & Tips): Generated ${data.eventsFestivals?.length || 0} events, ${data.localTips?.length || 0} tips for ${cityName}`);
+    return {
+      eventsFestivals: data.eventsFestivals || [],
+      localTips: data.localTips || [],
+      warnings: data.warnings || []
+    };
+
+  } catch (error) {
+    console.error(`❌ Agent 4 (Events & Tips) failed for ${cityName}:`, error.message);
+    return { eventsFestivals: [], localTips: [], warnings: [] };
   }
 }
 
