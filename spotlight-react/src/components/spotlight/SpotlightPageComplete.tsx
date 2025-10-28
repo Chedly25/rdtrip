@@ -52,15 +52,22 @@ export function SpotlightPageComplete() {
   const agent = routeData?.agent || 'adventure'
   const config = agentConfig[agent]
   const theme = getTheme(agent)
-  const origin = routeData?.origin || 'Your Starting Point'
-  const destination = routeData?.destination || waypoints[waypoints.length - 1]?.name || 'Your Destination'
+
+  // Get origin and destination from waypoints (they have full city names with countries)
+  // Waypoints are ordered, first is origin, last is destination
+  const originWaypoint = waypoints[0]
+  const destinationWaypoint = waypoints[waypoints.length - 1]
+
+  const origin = originWaypoint?.name || routeData?.origin || 'Your Starting Point'
+  const destination = destinationWaypoint?.name || routeData?.destination || 'Your Destination'
 
   // Load country data for origin and destination
   useEffect(() => {
     const loadCountryData = async () => {
       // Process origin
       let originCountry = extractCountry(origin)
-      if (!originCountry) {
+      if (!originCountry && originWaypoint?.coordinates) {
+        // Try reverse geocoding with coordinates if available
         originCountry = await getCountryFromGeocoding(origin)
       }
       const originFormatted = formatCityWithCountry(origin, originCountry)
@@ -68,17 +75,18 @@ export function SpotlightPageComplete() {
 
       // Process destination
       let destCountry = extractCountry(destination)
-      if (!destCountry) {
+      if (!destCountry && destinationWaypoint?.coordinates) {
+        // Try reverse geocoding with coordinates if available
         destCountry = await getCountryFromGeocoding(destination)
       }
       const destFormatted = formatCityWithCountry(destination, destCountry)
       setDestinationData({ display: destFormatted.display, flag: destFormatted.flag })
     }
 
-    if (origin && destination) {
+    if (origin && destination && waypoints.length > 0) {
       loadCountryData()
     }
-  }, [origin, destination])
+  }, [origin, destination, waypoints.length, originWaypoint, destinationWaypoint])
 
   const handleBack = () => {
     window.location.href = '/index.html'
