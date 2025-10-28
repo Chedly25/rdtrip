@@ -82,10 +82,12 @@ interface CityDetail {
 
 interface AsyncCityDetailsState {
   data: CityDetail | null
+  quickData: CityDetail | null // Phase 1 data
   loading: boolean
   error: string | null
   progress: number
   message: string
+  phase: 'quick' | 'complete' | null // Track which phase we're in
 }
 
 // Rotating loading messages - engaging and informative
@@ -105,10 +107,12 @@ const LOADING_MESSAGES = [
 export function useAsyncCityDetails(cityName: string, country?: string, isOpen?: boolean) {
   const [state, setState] = useState<AsyncCityDetailsState>({
     data: null,
+    quickData: null,
     loading: false,
     error: null,
     progress: 0,
-    message: ''
+    message: '',
+    phase: null
   })
 
   const pollingIntervalRef = useRef<number | null>(null)
@@ -181,22 +185,33 @@ export function useAsyncCityDetails(cityName: string, country?: string, isOpen?:
 
       console.log(`📊 [useAsyncCityDetails] Progress: ${progress}%, Message: ${message}, Status: ${result.status}`)
 
-      setState(prev => ({
-        ...prev,
-        progress,
-        message
-      }))
+      // ========== PHASE DETECTION ==========
+      // Check if we got Phase 1 (quick) data
+      if (result.status === 'processing' && result.data && progress >= 40 && progress < 90) {
+        console.log(`🚀 [useAsyncCityDetails] Phase 1 (Quick) data received! Showing partial content...`)
+        setState(prev => ({
+          ...prev,
+          quickData: result.data,
+          phase: 'quick',
+          progress,
+          message: '✨ Loading detailed information...'
+        }))
+        // Keep polling for Phase 2
+        return
+      }
 
-      // Check if job is complete
+      // Check if job is complete (Phase 2 done)
       if (result.status === 'complete' && result.data) {
-        console.log(`✅ [useAsyncCityDetails] Job complete! Cleaning up and setting data.`)
+        console.log(`✅ [useAsyncCityDetails] Phase 2 (Complete) - Job fully complete!`)
         cleanup()
         setState({
           data: result.data,
+          quickData: null, // Clear quick data once we have full data
           loading: false,
           error: null,
           progress: 100,
-          message: 'Complete!'
+          message: 'Complete!',
+          phase: 'complete'
         })
       } else if (result.status === 'failed') {
         console.error(`❌ [useAsyncCityDetails] Job failed:`, result.error)
@@ -205,10 +220,17 @@ export function useAsyncCityDetails(cityName: string, country?: string, isOpen?:
           ...prev,
           loading: false,
           error: result.error || 'Failed to generate city details',
-          message: ''
+          message: '',
+          phase: null
         }))
       } else {
-        console.log(`⏳ [useAsyncCityDetails] Job still processing, will poll again in 2s`)
+        // Still processing (Phase 1 not done yet or between phases)
+        console.log(`⏳ [useAsyncCityDetails] Job still processing (progress: ${progress}%), will poll again in 2s`)
+        setState(prev => ({
+          ...prev,
+          progress,
+          message
+        }))
       }
       // Otherwise keep polling (status is 'processing')
     } catch (error: any) {
@@ -240,10 +262,12 @@ export function useAsyncCityDetails(cityName: string, country?: string, isOpen?:
       console.log('📊 [useAsyncCityDetails] Setting initial loading state...')
       setState({
         data: null,
+        quickData: null,
         loading: true,
         error: null,
         progress: 0,
-        message: getLoadingMessage(0)
+        message: getLoadingMessage(0),
+        phase: null
       })
 
       console.log(`🌐 [useAsyncCityDetails] Calling API: POST ${API_BASE}/api/cities/details/async`)
@@ -271,10 +295,12 @@ export function useAsyncCityDetails(cityName: string, country?: string, isOpen?:
         console.log(`✅ [useAsyncCityDetails] Cache HIT! Loading instantly. Timing:`, result.timing)
         setState({
           data: result.data,
+          quickData: null,
           loading: false,
           error: null,
           progress: 100,
-          message: 'Loaded from cache!'
+          message: 'Loaded from cache!',
+          phase: 'complete'
         })
         return
       }
@@ -302,10 +328,12 @@ export function useAsyncCityDetails(cityName: string, country?: string, isOpen?:
       console.error('❌ [useAsyncCityDetails] Error starting async generation:', error)
       setState({
         data: null,
+        quickData: null,
         loading: false,
         error: error.message || 'Failed to load city information',
         progress: 0,
-        message: ''
+        message: '',
+        phase: null
       })
     }
   }
@@ -336,10 +364,12 @@ export function useAsyncCityDetails(cityName: string, country?: string, isOpen?:
 
   return {
     data: state.data,
+    quickData: state.quickData,
     loading: state.loading,
     error: state.error,
     progress: state.progress,
     message: state.message,
+    phase: state.phase,
     retry
   }
 }
