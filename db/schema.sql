@@ -109,3 +109,62 @@ CREATE TRIGGER update_routes_updated_at
 
 -- Delete old searches (cleanup - keep last 90 days)
 -- DELETE FROM searches WHERE created_at < NOW() - INTERVAL '90 days';
+
+-- =====================================================
+-- CITY DETAILS TABLE (Rich city information for modals)
+-- =====================================================
+CREATE TABLE IF NOT EXISTS city_details (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  city_name VARCHAR(255) NOT NULL UNIQUE,
+  country VARCHAR(100),
+
+  -- Hero section
+  tagline TEXT,
+  main_image_url TEXT,
+  rating DECIMAL(2,1),
+  recommended_duration VARCHAR(50),
+
+  -- Why visit (AI-generated)
+  why_visit TEXT,
+  best_for JSONB, -- ["🍷 Foodies", "🏛️ History buffs"]
+
+  -- Highlights (array of objects)
+  highlights JSONB, -- [{ name, description, duration, rating, type, imageUrl }]
+
+  -- Restaurants (array of objects)
+  restaurants JSONB, -- [{ name, cuisine, priceRange, description, rating, specialty }]
+
+  -- Hotels/neighborhoods (array of objects)
+  accommodations JSONB, -- [{ areaName, description, priceFrom, bestFor }]
+
+  -- Practical info
+  parking_info TEXT,
+  parking_difficulty VARCHAR(20), -- Easy, Moderate, Difficult
+  environmental_zones JSONB, -- { hasRestrictions, type, description, advice }
+  best_time_to_visit JSONB, -- { ideal, reasoning, avoid }
+  events_festivals JSONB, -- [{ name, month, description }]
+  local_tips JSONB, -- ["Get Lyon City Card", ...]
+  warnings JSONB, -- ["Many places close in August", ...]
+
+  -- Weather (optional, can be text summary)
+  weather_overview TEXT,
+
+  -- Metadata
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  data_source VARCHAR(50) DEFAULT 'perplexity',
+
+  -- Coordinates (for route calculations)
+  latitude DECIMAL(10, 8),
+  longitude DECIMAL(11, 8)
+);
+
+-- Index for fast lookups
+CREATE INDEX IF NOT EXISTS idx_city_details_city_name ON city_details(city_name);
+CREATE INDEX IF NOT EXISTS idx_city_details_country ON city_details(country);
+
+-- Trigger for city_details table
+CREATE TRIGGER update_city_details_updated_at
+  BEFORE UPDATE ON city_details
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();

@@ -3164,6 +3164,287 @@ app.get('/api/ztl/zones', (req, res) => {
 });
 
 // =====================================================
+// CITY DETAILS API - Rich city information for modals
+// =====================================================
+
+/**
+ * Get detailed city information (cached from database or generated via Perplexity)
+ * POST /api/cities/details
+ * Body: { cityName: "Lyon", country: "France" }
+ */
+app.post('/api/cities/details', async (req, res) => {
+  try {
+    const { cityName, country } = req.body;
+
+    if (!cityName) {
+      return res.status(400).json({
+        success: false,
+        error: 'City name is required'
+      });
+    }
+
+    console.log(`📍 City details requested: ${cityName}${country ? `, ${country}` : ''}`);
+
+    // Check if city details exist in database (cache)
+    const cachedResult = await db.query(
+      'SELECT * FROM city_details WHERE LOWER(city_name) = LOWER($1)',
+      [cityName]
+    );
+
+    if (cachedResult.rows.length > 0) {
+      console.log(`✅ Cache HIT for ${cityName}`);
+      return res.json({
+        success: true,
+        cached: true,
+        data: cachedResult.rows[0]
+      });
+    }
+
+    console.log(`🔍 Cache MISS for ${cityName} - Generating via Perplexity...`);
+
+    // Generate city details using Perplexity API
+    const cityDetails = await generateCityDetails(cityName, country);
+
+    // Store in database for future requests
+    await db.query(`
+      INSERT INTO city_details (
+        city_name, country, tagline, main_image_url, rating, recommended_duration,
+        why_visit, best_for, highlights, restaurants, accommodations,
+        parking_info, parking_difficulty, environmental_zones, best_time_to_visit,
+        events_festivals, local_tips, warnings, weather_overview, latitude, longitude
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+      ON CONFLICT (city_name) DO UPDATE SET
+        country = EXCLUDED.country,
+        tagline = EXCLUDED.tagline,
+        main_image_url = EXCLUDED.main_image_url,
+        rating = EXCLUDED.rating,
+        recommended_duration = EXCLUDED.recommended_duration,
+        why_visit = EXCLUDED.why_visit,
+        best_for = EXCLUDED.best_for,
+        highlights = EXCLUDED.highlights,
+        restaurants = EXCLUDED.restaurants,
+        accommodations = EXCLUDED.accommodations,
+        parking_info = EXCLUDED.parking_info,
+        parking_difficulty = EXCLUDED.parking_difficulty,
+        environmental_zones = EXCLUDED.environmental_zones,
+        best_time_to_visit = EXCLUDED.best_time_to_visit,
+        events_festivals = EXCLUDED.events_festivals,
+        local_tips = EXCLUDED.local_tips,
+        warnings = EXCLUDED.warnings,
+        weather_overview = EXCLUDED.weather_overview,
+        latitude = EXCLUDED.latitude,
+        longitude = EXCLUDED.longitude,
+        updated_at = CURRENT_TIMESTAMP
+    `, [
+      cityName,
+      cityDetails.country,
+      cityDetails.tagline,
+      cityDetails.mainImageUrl,
+      cityDetails.rating,
+      cityDetails.recommendedDuration,
+      cityDetails.whyVisit,
+      JSON.stringify(cityDetails.bestFor),
+      JSON.stringify(cityDetails.highlights),
+      JSON.stringify(cityDetails.restaurants),
+      JSON.stringify(cityDetails.accommodations),
+      cityDetails.parking?.info,
+      cityDetails.parking?.difficulty,
+      JSON.stringify(cityDetails.environmentalZones),
+      JSON.stringify(cityDetails.bestTimeToVisit),
+      JSON.stringify(cityDetails.eventsFestivals),
+      JSON.stringify(cityDetails.localTips),
+      JSON.stringify(cityDetails.warnings),
+      cityDetails.weatherOverview,
+      cityDetails.coordinates?.latitude,
+      cityDetails.coordinates?.longitude
+    ]);
+
+    console.log(`✅ Generated and cached city details for ${cityName}`);
+
+    res.json({
+      success: true,
+      cached: false,
+      data: cityDetails
+    });
+
+  } catch (error) {
+    console.error('❌ City details error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get city details',
+      message: error.message
+    });
+  }
+});
+
+/**
+ * Generate detailed city information using Perplexity AI
+ */
+async function generateCityDetails(cityName, country) {
+  const fullCityName = country ? `${cityName}, ${country}` : cityName;
+
+  const prompt = `You are a travel expert creating a comprehensive city guide for road trip travelers.
+
+Research the following city using internet search and provide detailed, practical information:
+
+CITY: ${fullCityName}
+CONTEXT: This city is a potential stop on a road trip.
+
+Please search the internet for current information and respond with a JSON object containing:
+
+{
+  "cityName": "${cityName}",
+  "country": "Country name",
+  "tagline": "One short compelling tagline (max 60 chars)",
+  "whyVisit": "2-3 paragraph description of why this city is worth visiting. Include the vibe, main attractions, and what makes it unique. Be specific and engaging.",
+  "bestFor": ["🍷 Foodies", "🏛️ History buffs", "🎨 Art lovers"],
+  "recommendedDuration": "2-3 days",
+  "rating": 4.7,
+
+  "highlights": [
+    {
+      "name": "Attraction name",
+      "description": "One sentence about this attraction",
+      "duration": "2-3 hours",
+      "rating": 4.8,
+      "type": "landmark"
+    }
+  ],
+
+  "restaurants": [
+    {
+      "name": "Restaurant name",
+      "cuisine": "Cuisine type",
+      "priceRange": "€€",
+      "description": "One sentence description",
+      "rating": 4.6,
+      "specialty": "What they're known for"
+    }
+  ],
+
+  "accommodations": [
+    {
+      "areaName": "Neighborhood name",
+      "description": "Why this area is good for travelers",
+      "priceFrom": "€120/night",
+      "bestFor": "First-timers, central location"
+    }
+  ],
+
+  "parking": {
+    "info": "Specific parking recommendations, costs, best garages",
+    "difficulty": "Moderate"
+  },
+
+  "environmentalZones": {
+    "hasRestrictions": true,
+    "type": "ZFE, ZTL, LEZ, or other",
+    "description": "Detailed explanation of restrictions, which vehicles affected, how to get permits, fines",
+    "advice": "Practical advice for road trippers"
+  },
+
+  "bestTimeToVisit": {
+    "ideal": "April to June",
+    "reasoning": "Why this is the best time",
+    "avoid": "Times to avoid"
+  },
+
+  "eventsFestivals": [
+    {
+      "name": "Festival name",
+      "month": "Month",
+      "description": "Brief description"
+    }
+  ],
+
+  "localTips": [
+    "Practical tip 1",
+    "Practical tip 2"
+  ],
+
+  "warnings": [
+    "Important warning 1",
+    "Important warning 2"
+  ],
+
+  "weatherOverview": "Brief 2-3 sentence overview of typical weather by season.",
+
+  "coordinates": {
+    "latitude": 45.7640,
+    "longitude": 4.8357
+  }
+}
+
+IMPORTANT INSTRUCTIONS:
+1. Search the internet for CURRENT information
+2. Be SPECIFIC with names, prices, locations - no generic advice
+3. Focus on PRACTICAL information for road trippers
+4. Environmental zones (ZTL/ZFE/LEZ) are CRITICAL - research thoroughly
+5. Include actual restaurant/hotel names when possible
+6. Ratings should be realistic (most cities 4.5-4.8 range)
+7. Return ONLY valid JSON, no markdown formatting
+8. If information isn't available, use null rather than making it up
+9. Verify coordinates are accurate
+10. Include 6-8 highlights, 4-5 restaurants, 3-4 accommodations
+11. Price ranges: €, €€, €€€, €€€€
+12. bestFor should have 2-4 traveler types with emojis
+
+Return the JSON object now:`;
+
+  try {
+    const response = await axios.post('https://api.perplexity.ai/chat/completions', {
+      model: 'sonar',
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: 4000, // Increased for detailed response
+      temperature: 0.2 // Lower for more factual responses
+    }, {
+      headers: {
+        'Authorization': `Bearer ${process.env.PERPLEXITY_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      timeout: 60000 // 60 second timeout
+    });
+
+    const content = response.data.choices[0].message.content;
+
+    // Try to parse JSON from response (handle markdown code blocks)
+    let jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      throw new Error('No JSON found in Perplexity response');
+    }
+
+    const cityData = JSON.parse(jsonMatch[0]);
+
+    // Convert to database-friendly format
+    return {
+      cityName: cityData.cityName || cityName,
+      country: cityData.country,
+      tagline: cityData.tagline,
+      mainImageUrl: cityData.mainImageUrl || null,
+      rating: cityData.rating,
+      recommendedDuration: cityData.recommendedDuration,
+      whyVisit: cityData.whyVisit,
+      bestFor: cityData.bestFor || [],
+      highlights: cityData.highlights || [],
+      restaurants: cityData.restaurants || [],
+      accommodations: cityData.accommodations || [],
+      parking: cityData.parking || null,
+      environmentalZones: cityData.environmentalZones || null,
+      bestTimeToVisit: cityData.bestTimeToVisit || null,
+      eventsFestivals: cityData.eventsFestivals || [],
+      localTips: cityData.localTips || [],
+      warnings: cityData.warnings || [],
+      weatherOverview: cityData.weatherOverview,
+      coordinates: cityData.coordinates || null
+    };
+
+  } catch (error) {
+    console.error('Perplexity API error:', error.message);
+    throw new Error(`Failed to generate city details: ${error.message}`);
+  }
+}
+
+// =====================================================
 // CATCH-ALL ROUTE - Serve React app for client-side routing
 // =====================================================
 // This must be AFTER all API routes but BEFORE server startup
