@@ -27,6 +27,41 @@ import {
   MessageCircle
 } from 'lucide-react'
 
+// Traveler type mapping to brand colors and icons
+const travelerTypeMapping: Record<string, { color: string; icon: string; label: string }> = {
+  'adventure': { color: '#055948', icon: '/images/icons/adventure_icon.png', label: 'Adventure Seekers' },
+  'adventurer': { color: '#055948', icon: '/images/icons/adventure_icon.png', label: 'Adventure Seekers' },
+  'adventure seeker': { color: '#055948', icon: '/images/icons/adventure_icon.png', label: 'Adventure Seekers' },
+  'culture': { color: '#a87600', icon: '/images/icons/culture_icon.png', label: 'Culture Lovers' },
+  'history': { color: '#a87600', icon: '/images/icons/culture_icon.png', label: 'History Buffs' },
+  'history buff': { color: '#a87600', icon: '/images/icons/culture_icon.png', label: 'History Buffs' },
+  'culture lover': { color: '#a87600', icon: '/images/icons/culture_icon.png', label: 'Culture Lovers' },
+  'food': { color: '#650411', icon: '/images/icons/food_icon.png', label: 'Food Lovers' },
+  'foodie': { color: '#650411', icon: '/images/icons/food_icon.png', label: 'Food Lovers' },
+  'food lover': { color: '#650411', icon: '/images/icons/food_icon.png', label: 'Food Lovers' },
+  'hidden': { color: '#081d5b', icon: '/images/icons/hidden_gem_icon.png', label: 'Off-the-beaten-path' },
+  'hidden gem': { color: '#081d5b', icon: '/images/icons/hidden_gem_icon.png', label: 'Off-the-beaten-path' },
+  'offbeat': { color: '#081d5b', icon: '/images/icons/hidden_gem_icon.png', label: 'Off-the-beaten-path' }
+}
+
+function parseTravelerType(bestFor: string[]): Array<{ color: string; icon: string; label: string }> {
+  const result: Array<{ color: string; icon: string; label: string }> = []
+  const seen = new Set<string>()
+
+  for (const item of bestFor) {
+    const itemLower = item.toLowerCase().trim()
+    for (const [key, value] of Object.entries(travelerTypeMapping)) {
+      if (itemLower.includes(key) && !seen.has(value.label)) {
+        result.push(value)
+        seen.add(value.label)
+        break
+      }
+    }
+  }
+
+  return result
+}
+
 interface CityDetail {
   cityName: string
   country: string
@@ -304,19 +339,26 @@ export default function CityDetailModal({
                         </div>
                       </div>
 
-                      {/* Best For Tags */}
+                      {/* Best For Tags with Brand Icons */}
                       {cityDetails.bestFor && cityDetails.bestFor.length > 0 && (
                         <div className="flex flex-wrap gap-2">
-                          {cityDetails.bestFor.map((tag, index) => (
+                          {parseTravelerType(cityDetails.bestFor).map((travelerType, index) => (
                             <span
                               key={index}
-                              className="px-3 py-1 rounded-full text-sm font-medium"
+                              className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold shadow-sm"
                               style={{
-                                backgroundColor: `${themeColor}15`,
-                                color: themeColor
+                                backgroundColor: `${travelerType.color}15`,
+                                color: travelerType.color,
+                                border: `2px solid ${travelerType.color}40`
                               }}
                             >
-                              {tag}
+                              <img
+                                src={travelerType.icon}
+                                alt={travelerType.label}
+                                className="w-5 h-5 object-contain"
+                                style={{ filter: 'none' }}
+                              />
+                              {travelerType.label}
                             </span>
                           ))}
                         </div>
@@ -597,15 +639,31 @@ export default function CityDetailModal({
 
                                 <p className="text-sm text-gray-600 mb-3 line-clamp-2">{accommodation.description}</p>
 
-                                <div
-                                  className="inline-block px-3 py-1 rounded-full text-xs font-medium mb-3"
-                                  style={{
-                                    backgroundColor: `${themeColor}20`,
-                                    color: themeColor
-                                  }}
-                                >
-                                  {accommodation.bestFor}
-                                </div>
+                                {/* Best For badge - parse for traveler types */}
+                                {(() => {
+                                  const travelerTypes = parseTravelerType([accommodation.bestFor])
+                                  if (travelerTypes.length > 0) {
+                                    const type = travelerTypes[0]
+                                    return (
+                                      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold mb-3 shadow-sm" style={{
+                                        backgroundColor: `${type.color}15`,
+                                        color: type.color,
+                                        border: `1.5px solid ${type.color}40`
+                                      }}>
+                                        <img src={type.icon} alt={type.label} className="w-4 h-4 object-contain" />
+                                        {accommodation.bestFor}
+                                      </div>
+                                    )
+                                  }
+                                  return (
+                                    <div className="inline-block px-3 py-1 rounded-full text-xs font-medium mb-3" style={{
+                                      backgroundColor: `${themeColor}20`,
+                                      color: themeColor
+                                    }}>
+                                      {accommodation.bestFor}
+                                    </div>
+                                  )
+                                })()}
 
                                 {accommodation.hotelExample && (
                                   <p className="text-xs text-gray-500 mb-3 flex items-center gap-1">
