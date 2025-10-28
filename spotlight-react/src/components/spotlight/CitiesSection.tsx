@@ -5,7 +5,7 @@ import { useSpotlightStore } from '../../stores/spotlightStore'
 import { useRouteDataStore } from '../../stores/routeDataStore'
 import { SortableCityCard } from './SortableCityCard'
 import { AddDestinationModal } from './AddDestinationModal'
-import { CityDetailsModal } from './CityDetailsModal'
+import CityDetailModal from './CityDetailModal'
 import { AddStopButton } from './AddStopButton'
 import { Button } from '../ui/Button'
 import { getTheme } from '../../config/theme'
@@ -31,7 +31,8 @@ export function CitiesSection() {
   const { routeData } = useRouteDataStore()
   const [showAddModal, setShowAddModal] = useState(false)
   const [insertIndex, setInsertIndex] = useState<number>(0)
-  const [selectedWaypoint, setSelectedWaypoint] = useState<Waypoint | null>(null)
+  const [selectedCityName, setSelectedCityName] = useState<string | null>(null)
+  const [showCityDetailModal, setShowCityDetailModal] = useState(false)
 
   // Get alternatives from route data
   const alternatives = routeData?.alternatives || []
@@ -68,7 +69,8 @@ export function CitiesSection() {
   const handleCityClick = (waypointId: string) => {
     const waypoint = waypoints.find(wp => wp.id === waypointId)
     if (waypoint) {
-      setSelectedWaypoint(waypoint)
+      setSelectedCityName(waypoint.name)
+      setShowCityDetailModal(true)
     }
   }
 
@@ -277,11 +279,17 @@ export function CitiesSection() {
         insertIndex={insertIndex}
       />
 
-      <CityDetailsModal
-        isOpen={selectedWaypoint !== null}
-        onClose={() => setSelectedWaypoint(null)}
-        waypoint={selectedWaypoint}
-      />
+      {selectedCityName && (
+        <CityDetailModal
+          isOpen={showCityDetailModal}
+          onClose={() => {
+            setShowCityDetailModal(false)
+            setSelectedCityName(null)
+          }}
+          cityName={selectedCityName}
+          themeColor={theme.primary}
+        />
+      )}
     </div>
   )
 }
