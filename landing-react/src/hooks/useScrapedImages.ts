@@ -116,9 +116,10 @@ export function useScrapedImages(cityDetails: CityDetails | null) {
         const imageMap: Record<string, string> = {}
         data.results.forEach((result: ScrapedImage) => {
           imageMap[result.name] = result.imageUrl
-          console.log(`✅ Image for "${result.name}": ${result.source}`)
+          console.log(`✅ Image for "${result.name}": ${result.source}`, result.imageUrl)
         })
 
+        console.log('📦 Full image map:', imageMap)
         setImages(imageMap)
       } catch (err: any) {
         console.error('Error fetching scraped images:', err)
