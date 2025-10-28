@@ -3648,12 +3648,13 @@ app.get('/api/cities/details/job/:jobId', async (req, res) => {
       });
     }
 
-    // Still processing
+    // Still processing - but may have partial data (Phase 1)
     res.json({
       success: true,
       status: 'processing',
       progress: job.progress,
-      message: job.message || 'Generating city details...'
+      message: job.message || 'Generating city details...',
+      data: job.result || null // Include Phase 1 data if available
     });
 
   } catch (error) {
