@@ -3538,6 +3538,8 @@ app.post('/api/cities/details', async (req, res) => {
  * Returns: { jobId: "abc123", status: "processing" }
  */
 app.post('/api/cities/details/async', async (req, res) => {
+  const startTime = Date.now();
+
   try {
     const { cityName, country } = req.body;
 
@@ -3551,20 +3553,29 @@ app.post('/api/cities/details/async', async (req, res) => {
     console.log(`📍 Async city details requested: ${cityName}${country ? `, ${country}` : ''}`);
 
     // Check if city details exist in database (cache)
+    const cacheCheckStart = Date.now();
     const cachedResult = await db.query(
       'SELECT * FROM city_details WHERE LOWER(city_name) = LOWER($1)',
       [cityName]
     );
+    const cacheCheckTime = Date.now() - cacheCheckStart;
 
     if (cachedResult.rows.length > 0) {
-      console.log(`✅ Cache HIT for ${cityName} - returning immediately`);
+      const totalTime = Date.now() - startTime;
+      console.log(`✅ Cache HIT for ${cityName} - cache check: ${cacheCheckTime}ms, total: ${totalTime}ms`);
       return res.json({
         success: true,
         cached: true,
         status: 'complete',
-        data: cachedResult.rows[0]
+        data: cachedResult.rows[0],
+        timing: {
+          total: totalTime,
+          cacheCheck: cacheCheckTime
+        }
       });
     }
+
+    console.log(`🔍 Cache MISS for ${cityName} - cache check: ${cacheCheckTime}ms`);
 
     // Not cached - create background job
     const jobId = `city_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -4324,6 +4335,79 @@ Return the JSON object now:`;
   }
 }
 
+// ==================== CACHE STATISTICS & MONITORING ====================
+
+/**
+ * Get cache statistics for monitoring
+ * GET /api/cache/stats
+ */
+app.get('/api/cache/stats', async (req, res) => {
+  try {
+    // Get city details cache stats
+    const cityDetailsStats = await db.query(`
+      SELECT
+        COUNT(*) as total_cities,
+        COUNT(DISTINCT country) as total_countries,
+        MAX(created_at) as latest_cached_city,
+        MIN(created_at) as oldest_cached_city
+      FROM city_details
+    `);
+
+    // Get scraped images cache stats
+    const imagesStats = await db.query(`
+      SELECT
+        COUNT(*) as total_images,
+        COUNT(*) FILTER (WHERE entity_type = 'restaurant') as restaurant_images,
+        COUNT(*) FILTER (WHERE entity_type = 'hotel') as hotel_images,
+        COUNT(*) FILTER (WHERE entity_type = 'event') as event_images,
+        COUNT(*) FILTER (WHERE expires_at < NOW()) as expired_images,
+        COUNT(*) FILTER (WHERE expires_at >= NOW()) as active_images
+      FROM scraped_images
+    `);
+
+    // Get top cached cities
+    const topCities = await db.query(`
+      SELECT city_name, country, created_at
+      FROM city_details
+      ORDER BY created_at DESC
+      LIMIT 10
+    `);
+
+    // Job queue stats
+    const activeJobs = cityDetailsJobs.size;
+    const processingJobs = Array.from(cityDetailsJobs.values()).filter(j => j.status === 'processing').length;
+    const completedJobs = Array.from(cityDetailsJobs.values()).filter(j => j.status === 'complete').length;
+    const failedJobs = Array.from(cityDetailsJobs.values()).filter(j => j.status === 'failed').length;
+
+    res.json({
+      success: true,
+      timestamp: new Date().toISOString(),
+      cache: {
+        cityDetails: cityDetailsStats.rows[0],
+        scrapedImages: imagesStats.rows[0],
+        sessionCache: {
+          size: sessionImageCache.size,
+          description: 'In-memory cache for current session'
+        }
+      },
+      jobs: {
+        active: activeJobs,
+        processing: processingJobs,
+        completed: completedJobs,
+        failed: failedJobs
+      },
+      recentCities: topCities.rows
+    });
+
+  } catch (error) {
+    console.error('Error fetching cache stats:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch cache statistics'
+    });
+  }
+});
+
 // =====================================================
 // CATCH-ALL ROUTE - Serve React app for client-side routing
 // =====================================================
@@ -4422,79 +4506,6 @@ async function runDatabaseMigrations() {
     console.warn('⚠️  Server will continue, but sharing features may not work');
   }
 }
-
-// ==================== CACHE STATISTICS & MONITORING ====================
-
-/**
- * Get cache statistics for monitoring
- * GET /api/cache/stats
- */
-app.get('/api/cache/stats', async (req, res) => {
-  try {
-    // Get city details cache stats
-    const cityDetailsStats = await db.query(`
-      SELECT
-        COUNT(*) as total_cities,
-        COUNT(DISTINCT country) as total_countries,
-        MAX(created_at) as latest_cached_city,
-        MIN(created_at) as oldest_cached_city
-      FROM city_details
-    `);
-
-    // Get scraped images cache stats
-    const imagesStats = await db.query(`
-      SELECT
-        COUNT(*) as total_images,
-        COUNT(*) FILTER (WHERE entity_type = 'restaurant') as restaurant_images,
-        COUNT(*) FILTER (WHERE entity_type = 'hotel') as hotel_images,
-        COUNT(*) FILTER (WHERE entity_type = 'event') as event_images,
-        COUNT(*) FILTER (WHERE expires_at < NOW()) as expired_images,
-        COUNT(*) FILTER (WHERE expires_at >= NOW()) as active_images
-      FROM scraped_images
-    `);
-
-    // Get top cached cities
-    const topCities = await db.query(`
-      SELECT city_name, country, created_at
-      FROM city_details
-      ORDER BY created_at DESC
-      LIMIT 10
-    `);
-
-    // Job queue stats
-    const activeJobs = cityDetailsJobs.size;
-    const processingJobs = Array.from(cityDetailsJobs.values()).filter(j => j.status === 'processing').length;
-    const completedJobs = Array.from(cityDetailsJobs.values()).filter(j => j.status === 'complete').length;
-    const failedJobs = Array.from(cityDetailsJobs.values()).filter(j => j.status === 'failed').length;
-
-    res.json({
-      success: true,
-      timestamp: new Date().toISOString(),
-      cache: {
-        cityDetails: cityDetailsStats.rows[0],
-        scrapedImages: imagesStats.rows[0],
-        sessionCache: {
-          size: sessionImageCache.size,
-          description: 'In-memory cache for current session'
-        }
-      },
-      jobs: {
-        active: activeJobs,
-        processing: processingJobs,
-        completed: completedJobs,
-        failed: failedJobs
-      },
-      recentCities: topCities.rows
-    });
-
-  } catch (error) {
-    console.error('Error fetching cache stats:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch cache statistics'
-    });
-  }
-});
 
 // ==================== CACHE WARMING (OPTIONAL) ====================
 
