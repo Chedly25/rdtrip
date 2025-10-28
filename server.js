@@ -2021,8 +2021,8 @@ async function getRestaurantImage(restaurantName, cuisine = 'restaurant') {
 
 // Helper function to get city images from Wikimedia with Unsplash fallback
 async function getCityImages(city, country) {
+  // Try Wikipedia first (with error handling)
   try {
-    // Try Wikipedia first
     const searchTerm = country ? `${city}, ${country}` : city;
     const searchResponse = await axios.get('https://en.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(searchTerm));
 
@@ -2031,18 +2031,26 @@ async function getCityImages(city, country) {
       console.log(`✅ Found Wikipedia image for ${city}`);
       return searchResponse.data.originalimage.source;
     }
+  } catch (error) {
+    console.log(`⚠️  Wikipedia error for ${city}: ${error.message}`);
+  }
 
-    // Try without country if we had one
-    if (country) {
+  // Try without country if we had one
+  if (country) {
+    try {
       const fallbackResponse = await axios.get('https://en.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(city));
       if (fallbackResponse.data.originalimage && fallbackResponse.data.originalimage.source) {
         console.log(`✅ Found Wikipedia image for ${city} (without country)`);
         return fallbackResponse.data.originalimage.source;
       }
+    } catch (error) {
+      console.log(`⚠️  Wikipedia error for ${city} (without country): ${error.message}`);
     }
+  }
 
-    // If Wikipedia fails, fall back to Unsplash
-    console.log(`⚠️  No Wikipedia image for ${city}, trying Unsplash...`);
+  // If Wikipedia fails, fall back to Unsplash API
+  console.log(`⚠️  No Wikipedia image for ${city}, trying Unsplash API...`);
+  try {
     const unsplashResponse = await axios.get('https://api.unsplash.com/search/photos', {
       params: {
         query: `${city} ${country || ''} cityscape landmark`,
@@ -2056,18 +2064,16 @@ async function getCityImages(city, country) {
     });
 
     if (unsplashResponse.data.results && unsplashResponse.data.results.length > 0) {
-      console.log(`✅ Found Unsplash image for ${city}`);
+      console.log(`✅ Found Unsplash API image for ${city}`);
       return unsplashResponse.data.results[0].urls.regular;
     }
-
-    // Final fallback to a generic image
-    console.warn(`⚠️  No images found for ${city}, using placeholder`);
-    return `https://source.unsplash.com/800x600/?${encodeURIComponent(city)},cityscape`;
   } catch (error) {
-    console.error(`❌ Error fetching image for ${city}:`, error.message);
-    // Return Unsplash source as ultimate fallback
-    return `https://source.unsplash.com/800x600/?${encodeURIComponent(city)},cityscape`;
+    console.error(`❌ Unsplash API error for ${city}:`, error.message);
   }
+
+  // Final fallback to a generic image
+  console.warn(`⚠️  No images found for ${city}, using Unsplash source fallback`);
+  return `https://source.unsplash.com/800x600/?${encodeURIComponent(city)},cityscape`;
 }
 
 async function queryPerplexityWithMetrics(agent, destination, stops, budget = 'budget') {
