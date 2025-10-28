@@ -94,6 +94,161 @@ function isValidImageUrl(url) {
   }
 }
 
+// ==================== SCRAPING STRATEGIES ====================
+
+// Strategy 1: Open Graph meta tags (most reliable)
+async function scrapeOpenGraphImage(url) {
+  try {
+    const response = await rateLimitedFetch(url);
+    if (!response) return null;
+
+    const $ = cheerio.load(response.data);
+
+    // Try multiple OG tags in priority order
+    const ogImage =
+      $('meta[property="og:image"]').attr('content') ||
+      $('meta[property="og:image:secure_url"]').attr('content') ||
+      $('meta[name="twitter:image"]').attr('content') ||
+      $('meta[name="twitter:image:src"]').attr('content') ||
+      $('meta[property="twitter:image"]').attr('content');
+
+    if (ogImage) {
+      const resolved = resolveImageUrl(ogImage, url);
+      if (isValidImageUrl(resolved)) {
+        console.log(`✅ Open Graph image found: ${resolved}`);
+        return resolved;
+      }
+    }
+
+    return null;
+  } catch (error) {
+    console.error(`Open Graph scrape error for ${url}:`, error.message);
+    return null;
+  }
+}
+
+// Strategy 2: JSON-LD structured data
+async function scrapeJsonLdImage(url) {
+  try {
+    const response = await rateLimitedFetch(url);
+    if (!response) return null;
+
+    const $ = cheerio.load(response.data);
+
+    // Find all JSON-LD scripts
+    const jsonLdScripts = $('script[type="application/ld+json"]');
+
+    for (let i = 0; i < jsonLdScripts.length; i++) {
+      try {
+        const jsonText = $(jsonLdScripts[i]).html();
+        const json = JSON.parse(jsonText);
+
+        // Handle array of objects
+        const items = Array.isArray(json) ? json : [json];
+
+        for (const item of items) {
+          // Check for image in various schema.org formats
+          const imageUrl =
+            item.image?.url ||
+            item.image?.contentUrl ||
+            (typeof item.image === 'string' ? item.image : null) ||
+            (Array.isArray(item.image) ? item.image[0]?.url || item.image[0] : null);
+
+          if (imageUrl) {
+            const resolved = resolveImageUrl(imageUrl, url);
+            if (isValidImageUrl(resolved)) {
+              console.log(`✅ JSON-LD image found: ${resolved}`);
+              return resolved;
+            }
+          }
+        }
+      } catch (parseError) {
+        // Skip malformed JSON-LD
+        continue;
+      }
+    }
+
+    return null;
+  } catch (error) {
+    console.error(`JSON-LD scrape error for ${url}:`, error.message);
+    return null;
+  }
+}
+
+// Strategy 3: DOM parsing (last resort)
+async function scrapeDomImages(url) {
+  try {
+    const response = await rateLimitedFetch(url);
+    if (!response) return null;
+
+    const $ = cheerio.load(response.data);
+
+    // Look for common hero image patterns
+    const selectors = [
+      '.hero img',
+      '.hero-image img',
+      '.main-image img',
+      '.featured-image img',
+      '.banner img',
+      'article img:first',
+      '.gallery img:first',
+      '.photo img:first',
+      '#main-image',
+      '.restaurant-image img',
+      '.hotel-image img',
+      '.venue-image img',
+      'img[class*="hero"]',
+      'img[class*="main"]',
+      'img[class*="featured"]'
+    ];
+
+    for (const selector of selectors) {
+      const imgSrc = $(selector).first().attr('src') || $(selector).first().attr('data-src');
+      if (imgSrc) {
+        const resolved = resolveImageUrl(imgSrc, url);
+        if (isValidImageUrl(resolved)) {
+          console.log(`✅ DOM image found: ${resolved}`);
+          return resolved;
+        }
+      }
+    }
+
+    return null;
+  } catch (error) {
+    console.error(`DOM scrape error for ${url}:`, error.message);
+    return null;
+  }
+}
+
+// Fallback chain: Try all strategies in order
+async function scrapeWithFallback(url, entityName, city) {
+  console.log(`🔍 Scraping image for: ${entityName} in ${city}`);
+  console.log(`   URL: ${url}`);
+
+  // Try Open Graph (fastest, most reliable)
+  const ogImage = await scrapeOpenGraphImage(url);
+  if (ogImage) {
+    return { imageUrl: ogImage, source: 'opengraph' };
+  }
+
+  // Try JSON-LD structured data
+  const jsonLdImage = await scrapeJsonLdImage(url);
+  if (jsonLdImage) {
+    return { imageUrl: jsonLdImage, source: 'jsonld' };
+  }
+
+  // Try DOM parsing
+  const domImage = await scrapeDomImages(url);
+  if (domImage) {
+    return { imageUrl: domImage, source: 'dom' };
+  }
+
+  // Final fallback: Unsplash
+  console.log(`⚠️  No image found, using Unsplash fallback`);
+  const unsplashUrl = `https://source.unsplash.com/800x600/?${encodeURIComponent(entityName + ' ' + city)}`;
+  return { imageUrl: unsplashUrl, source: 'unsplash' };
+}
+
 // ==================== END WEB SCRAPING UTILITIES ====================
 
 // Auth utilities and middleware
