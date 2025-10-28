@@ -3969,8 +3969,11 @@ app.post('/api/images/scrape', async (req, res) => {
             } else {
               // No website - use Unsplash API fallback
               console.log(`⚠️  No website for ${name}, trying Unsplash API...`);
+              console.log(`🔑 Using Unsplash API Key: ${UNSPLASH_ACCESS_KEY ? UNSPLASH_ACCESS_KEY.substring(0, 10) + '...' : 'MISSING'}`);
               try {
                 const searchQuery = `${name} ${city} ${type}`;
+                console.log(`🔍 Unsplash API query: "${searchQuery}"`);
+
                 const unsplashResponse = await axios.get('https://api.unsplash.com/search/photos', {
                   params: {
                     query: searchQuery,
@@ -3983,10 +3986,13 @@ app.post('/api/images/scrape', async (req, res) => {
                   }
                 });
 
+                console.log(`📊 Unsplash API response status: ${unsplashResponse.status}`);
+                console.log(`📊 Unsplash API results count: ${unsplashResponse.data.results ? unsplashResponse.data.results.length : 0}`);
+
                 if (unsplashResponse.data.results && unsplashResponse.data.results.length > 0) {
                   imageUrl = unsplashResponse.data.results[0].urls.small; // Use 'small' (400px) for cards
                   source = 'unsplash-api';
-                  console.log(`✅ Found Unsplash API image for ${name}`);
+                  console.log(`✅ Found Unsplash API image for ${name}: ${imageUrl}`);
                 } else {
                   // Last resort: source.unsplash.com (deprecated but still works sometimes)
                   imageUrl = `https://source.unsplash.com/800x600/?${encodeURIComponent(name + ' ' + city)}`;
@@ -3995,6 +4001,7 @@ app.post('/api/images/scrape', async (req, res) => {
                 }
               } catch (unsplashError) {
                 console.error(`❌ Unsplash API error for ${name}:`, unsplashError.message);
+                console.error(`❌ Full error:`, unsplashError.response?.data || unsplashError);
                 imageUrl = `https://source.unsplash.com/800x600/?${encodeURIComponent(name + ' ' + city)}`;
                 source = 'unsplash-source';
               }
@@ -4024,8 +4031,12 @@ app.post('/api/images/scrape', async (req, res) => {
           } catch (entityError) {
             console.error(`Error scraping ${name}:`, entityError.message);
             // Return Unsplash API fallback on error
+            console.log(`🔄 Trying Unsplash API as error fallback for ${name}...`);
+            console.log(`🔑 Using Unsplash API Key: ${UNSPLASH_ACCESS_KEY ? UNSPLASH_ACCESS_KEY.substring(0, 10) + '...' : 'MISSING'}`);
             try {
               const searchQuery = `${name} ${city} ${type}`;
+              console.log(`🔍 Unsplash API query (fallback): "${searchQuery}"`);
+
               const unsplashResponse = await axios.get('https://api.unsplash.com/search/photos', {
                 params: {
                   query: searchQuery,
@@ -4038,6 +4049,9 @@ app.post('/api/images/scrape', async (req, res) => {
                 }
               });
 
+              console.log(`📊 Unsplash API response status (fallback): ${unsplashResponse.status}`);
+              console.log(`📊 Unsplash API results count (fallback): ${unsplashResponse.data.results ? unsplashResponse.data.results.length : 0}`);
+
               if (unsplashResponse.data.results && unsplashResponse.data.results.length > 0) {
                 console.log(`✅ Fallback: Found Unsplash API image for ${name} after error`);
                 return {
@@ -4048,9 +4062,11 @@ app.post('/api/images/scrape', async (req, res) => {
               }
             } catch (unsplashError) {
               console.error(`❌ Unsplash API also failed for ${name}:`, unsplashError.message);
+              console.error(`❌ Full error:`, unsplashError.response?.data || unsplashError);
             }
 
             // Last resort: source.unsplash.com
+            console.log(`⚠️  Using deprecated source.unsplash.com as last resort for ${name}`);
             return {
               name,
               imageUrl: `https://source.unsplash.com/800x600/?${encodeURIComponent(name + ' ' + city)}`,
