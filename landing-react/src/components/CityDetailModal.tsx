@@ -109,8 +109,8 @@ export default function CityDetailModal({
   // Use quickData if available and full data isn't ready yet
   const displayData = cityDetails || quickData
 
-  // Fetch scraped images for restaurants, hotels, and events
-  const { images: scrapedImages, loading: imagesLoading } = useScrapedImages(cityDetails)
+  // Fetch scraped images for restaurants, hotels, and events (use displayData to support Phase 1)
+  const { images: scrapedImages, loading: imagesLoading } = useScrapedImages(displayData)
 
   const renderStars = (rating: number) => {
     return (
