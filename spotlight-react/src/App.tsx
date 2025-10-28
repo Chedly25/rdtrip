@@ -192,18 +192,34 @@ function AppContent() {
               // Check if this agent result has modified waypoints (from RouteResults customization)
               if (parsed.modified && parsed.waypoints && parsed.waypoints.length > 0) {
                 console.log('✅ Using MODIFIED waypoints from recommendations:', parsed.waypoints);
-                waypointsToSet = parsed.waypoints.map((wp: any, index: number) => ({
-                  id: wp.id || `waypoint-${index}`,
-                  name: wp.name,
-                  order: index,
-                  activities: wp.activities || [],
-                  coordinates: Array.isArray(wp.coordinates)
-                    ? { lng: wp.coordinates[0], lat: wp.coordinates[1] }
-                    : wp.coordinates,
-                  description: wp.description,
-                  imageUrl: wp.imageUrl || wp.image,
-                  themes: wp.themes,
-                }));
+                waypointsToSet = parsed.waypoints.map((wp: any, index: number) => {
+                  // Handle multiple coordinate formats
+                  let coords;
+                  if (wp.latitude && wp.longitude) {
+                    // Backend format: latitude/longitude fields
+                    coords = { lat: wp.latitude, lng: wp.longitude };
+                  } else if (Array.isArray(wp.coordinates)) {
+                    // Array format: [lng, lat]
+                    coords = { lng: wp.coordinates[0], lat: wp.coordinates[1] };
+                  } else if (wp.coordinates && typeof wp.coordinates === 'object') {
+                    // Object format: {lat, lng}
+                    coords = wp.coordinates;
+                  } else {
+                    // No coordinates found
+                    coords = undefined;
+                  }
+
+                  return {
+                    id: wp.id || `waypoint-${index}`,
+                    name: wp.name,
+                    order: index,
+                    activities: wp.activities || [],
+                    coordinates: coords,
+                    description: wp.description,
+                    imageUrl: wp.imageUrl || wp.image,
+                    themes: wp.themes,
+                  };
+                });
               }
             } catch (e) {
               console.warn('Could not parse recommendations for modified waypoints:', e);
