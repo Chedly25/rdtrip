@@ -182,7 +182,37 @@ function AppContent() {
 
       const processWaypoints = async () => {
         let waypointsToSet: Waypoint[] = [];
-        if (routeData.waypoints && routeData.waypoints.length > 0) {
+
+        // PRIORITY 1: Check if agentResults have modified waypoints in recommendations
+        if (routeData.agentResults && routeData.agentResults.length > 0) {
+          const agentResult = routeData.agentResults[0];
+          if (agentResult.recommendations) {
+            try {
+              const parsed = JSON.parse(agentResult.recommendations);
+              // Check if this agent result has modified waypoints (from RouteResults customization)
+              if (parsed.modified && parsed.waypoints && parsed.waypoints.length > 0) {
+                console.log('✅ Using MODIFIED waypoints from recommendations:', parsed.waypoints);
+                waypointsToSet = parsed.waypoints.map((wp: any, index: number) => ({
+                  id: wp.id || `waypoint-${index}`,
+                  name: wp.name,
+                  order: index,
+                  activities: wp.activities || [],
+                  coordinates: Array.isArray(wp.coordinates)
+                    ? { lng: wp.coordinates[0], lat: wp.coordinates[1] }
+                    : wp.coordinates,
+                  description: wp.description,
+                  imageUrl: wp.imageUrl || wp.image,
+                  themes: wp.themes,
+                }));
+              }
+            } catch (e) {
+              console.warn('Could not parse recommendations for modified waypoints:', e);
+            }
+          }
+        }
+
+        // PRIORITY 2: Check for top-level waypoints (backwards compatibility)
+        if (waypointsToSet.length === 0 && routeData.waypoints && routeData.waypoints.length > 0) {
           console.log('Using pre-extracted waypoints:', routeData.waypoints);
           waypointsToSet = routeData.waypoints.map((wp: any, index: number) => ({
             id: wp.id || `waypoint-${index}`,
@@ -193,7 +223,10 @@ function AppContent() {
               ? { lng: wp.coordinates[0], lat: wp.coordinates[1] }
               : wp.coordinates,
           }));
-        } else {
+        }
+
+        // PRIORITY 3: Extract from route data if nothing found above
+        if (waypointsToSet.length === 0) {
           console.log('Extracting waypoints from route data...');
           console.log('Calling extractWaypoints with:', routeData);
           waypointsToSet = extractWaypoints(routeData);
