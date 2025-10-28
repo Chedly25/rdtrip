@@ -6,7 +6,10 @@ import {
   Clock,
   Star,
   AlertTriangle,
-  Plus
+  Plus,
+  UtensilsCrossed,
+  Hotel,
+  DollarSign
 } from 'lucide-react'
 
 interface CityDetail {
@@ -348,6 +351,85 @@ export default function CityDetailModal({
                         ))}
                       </div>
                     </div>
+
+                    {/* Restaurants Section */}
+                    {cityDetails.restaurants && cityDetails.restaurants.length > 0 && (
+                      <div>
+                        <div className="flex items-center gap-2 mb-4">
+                          <UtensilsCrossed className="w-5 h-5" style={{ color: themeColor }} />
+                          <h4 className="text-lg font-bold text-gray-900">
+                            Where to Eat ({cityDetails.restaurants.length})
+                          </h4>
+                        </div>
+                        <div className="space-y-4">
+                          {cityDetails.restaurants.map((restaurant, index) => (
+                            <div
+                              key={index}
+                              className="p-4 bg-white border-2 border-gray-100 rounded-xl hover:border-gray-200 hover:shadow-md transition-all"
+                            >
+                              <div className="flex items-start justify-between mb-2">
+                                <div className="flex-1">
+                                  <h5 className="font-semibold text-gray-900 mb-1">{restaurant.name}</h5>
+                                  <p className="text-xs text-gray-500">{restaurant.cuisine}</p>
+                                </div>
+                                <div className="flex flex-col items-end gap-1 flex-shrink-0 ml-3">
+                                  <div className="flex items-center gap-1">
+                                    <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                                    <span className="text-xs font-medium text-gray-600">{restaurant.rating}</span>
+                                  </div>
+                                  <span className="text-sm font-medium text-gray-700">{restaurant.priceRange}</span>
+                                </div>
+                              </div>
+                              <p className="text-sm text-gray-600 mb-2">{restaurant.description}</p>
+                              {restaurant.specialty && (
+                                <div className="flex items-center gap-1 text-xs">
+                                  <span className="font-medium text-gray-500">Specialty:</span>
+                                  <span className="text-gray-700">{restaurant.specialty}</span>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Accommodations Section */}
+                    {cityDetails.accommodations && cityDetails.accommodations.length > 0 && (
+                      <div>
+                        <div className="flex items-center gap-2 mb-4">
+                          <Hotel className="w-5 h-5" style={{ color: themeColor }} />
+                          <h4 className="text-lg font-bold text-gray-900">
+                            Where to Stay ({cityDetails.accommodations.length})
+                          </h4>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {cityDetails.accommodations.map((accommodation, index) => (
+                            <div
+                              key={index}
+                              className="p-4 bg-white border-2 border-gray-100 rounded-xl hover:border-gray-200 hover:shadow-md transition-all"
+                            >
+                              <div className="flex items-start justify-between mb-2">
+                                <h5 className="font-semibold text-gray-900 flex-1">{accommodation.areaName}</h5>
+                                <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+                                  <DollarSign className="w-3 h-3 text-green-600" />
+                                  <span className="text-xs font-medium text-gray-700">{accommodation.priceFrom}</span>
+                                </div>
+                              </div>
+                              <p className="text-sm text-gray-600 mb-2">{accommodation.description}</p>
+                              <div
+                                className="inline-block px-2 py-1 rounded-full text-xs font-medium"
+                                style={{
+                                  backgroundColor: `${themeColor}10`,
+                                  color: themeColor
+                                }}
+                              >
+                                {accommodation.bestFor}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
