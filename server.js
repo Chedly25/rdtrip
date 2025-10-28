@@ -4341,11 +4341,154 @@ async function runDatabaseMigrations() {
   }
 }
 
+// ==================== CACHE STATISTICS & MONITORING ====================
+
+/**
+ * Get cache statistics for monitoring
+ * GET /api/cache/stats
+ */
+app.get('/api/cache/stats', async (req, res) => {
+  try {
+    // Get city details cache stats
+    const cityDetailsStats = await db.query(`
+      SELECT
+        COUNT(*) as total_cities,
+        COUNT(DISTINCT country) as total_countries,
+        MAX(created_at) as latest_cached_city,
+        MIN(created_at) as oldest_cached_city
+      FROM city_details
+    `);
+
+    // Get scraped images cache stats
+    const imagesStats = await db.query(`
+      SELECT
+        COUNT(*) as total_images,
+        COUNT(*) FILTER (WHERE entity_type = 'restaurant') as restaurant_images,
+        COUNT(*) FILTER (WHERE entity_type = 'hotel') as hotel_images,
+        COUNT(*) FILTER (WHERE entity_type = 'event') as event_images,
+        COUNT(*) FILTER (WHERE expires_at < NOW()) as expired_images,
+        COUNT(*) FILTER (WHERE expires_at >= NOW()) as active_images
+      FROM scraped_images
+    `);
+
+    // Get top cached cities
+    const topCities = await db.query(`
+      SELECT city_name, country, created_at
+      FROM city_details
+      ORDER BY created_at DESC
+      LIMIT 10
+    `);
+
+    // Job queue stats
+    const activeJobs = cityDetailsJobs.size;
+    const processingJobs = Array.from(cityDetailsJobs.values()).filter(j => j.status === 'processing').length;
+    const completedJobs = Array.from(cityDetailsJobs.values()).filter(j => j.status === 'complete').length;
+    const failedJobs = Array.from(cityDetailsJobs.values()).filter(j => j.status === 'failed').length;
+
+    res.json({
+      success: true,
+      timestamp: new Date().toISOString(),
+      cache: {
+        cityDetails: cityDetailsStats.rows[0],
+        scrapedImages: imagesStats.rows[0],
+        sessionCache: {
+          size: sessionImageCache.size,
+          description: 'In-memory cache for current session'
+        }
+      },
+      jobs: {
+        active: activeJobs,
+        processing: processingJobs,
+        completed: completedJobs,
+        failed: failedJobs
+      },
+      recentCities: topCities.rows
+    });
+
+  } catch (error) {
+    console.error('Error fetching cache stats:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch cache statistics'
+    });
+  }
+});
+
+// ==================== CACHE WARMING (OPTIONAL) ====================
+
+/**
+ * Warm cache for popular European cities on startup
+ * This pre-generates city details for instant loads
+ */
+async function warmCacheForPopularCities() {
+  const popularCities = [
+    { name: 'Paris', country: 'France' },
+    { name: 'Barcelona', country: 'Spain' },
+    { name: 'Rome', country: 'Italy' },
+    { name: 'Amsterdam', country: 'Netherlands' },
+    { name: 'Prague', country: 'Czech Republic' },
+    { name: 'Vienna', country: 'Austria' },
+    { name: 'Lisbon', country: 'Portugal' },
+    { name: 'Budapest', country: 'Hungary' },
+    { name: 'Berlin', country: 'Germany' },
+    { name: 'Copenhagen', country: 'Denmark' },
+    { name: 'Dublin', country: 'Ireland' },
+    { name: 'Edinburgh', country: 'Scotland' },
+    { name: 'Bruges', country: 'Belgium' },
+    { name: 'Santorini', country: 'Greece' },
+    { name: 'Venice', country: 'Italy' },
+    { name: 'Florence', country: 'Italy' },
+    { name: 'Lyon', country: 'France' },
+    { name: 'Porto', country: 'Portugal' },
+    { name: 'Krakow', country: 'Poland' },
+    { name: 'Seville', country: 'Spain' }
+  ];
+
+  console.log(`🔥 Starting cache warming for ${popularCities.length} popular cities...`);
+
+  let alreadyCached = 0;
+  let needsGeneration = 0;
+
+  for (const city of popularCities) {
+    try {
+      // Check if already cached
+      const cached = await db.query(
+        'SELECT city_name FROM city_details WHERE LOWER(city_name) = LOWER($1)',
+        [city.name]
+      );
+
+      if (cached.rows.length > 0) {
+        alreadyCached++;
+      } else {
+        needsGeneration++;
+        // Generate in background (don't await - let it run)
+        generateCityDetails(city.name, city.country)
+          .then(() => {
+            console.log(`✅ Cache warmed: ${city.name}`);
+          })
+          .catch(err => {
+            console.warn(`⚠️  Failed to warm cache for ${city.name}:`, err.message);
+          });
+
+        // Add small delay to avoid rate limiting
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+    } catch (error) {
+      console.warn(`⚠️  Error checking cache for ${city.name}:`, error.message);
+    }
+  }
+
+  console.log(`🔥 Cache warming status: ${alreadyCached} already cached, ${needsGeneration} generating...`);
+}
+
 // Run migrations and then start server
 runDatabaseMigrations().then(() => {
   app.listen(PORT, () => {
     console.log(`🚗 Road Trip Planner MVP running on port ${PORT}`);
     console.log(`📍 Loaded ${europeanLandmarks.length} European landmarks`);
+
+    // Optional: Uncomment to enable cache warming on startup
+    // warmCacheForPopularCities();
   });
 }).catch(error => {
   console.error('Failed to start server:', error);
