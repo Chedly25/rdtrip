@@ -7,6 +7,7 @@ import SaveRouteModal from './SaveRouteModal'
 import ShareRouteModal from './ShareRouteModal'
 import CityActionModal from './CityActionModal'
 import Toast, { type ToastType } from './Toast'
+import { getPositionDescription } from '../utils/routeOptimization'
 
 interface Activity {
   name?: string
@@ -22,6 +23,7 @@ interface City {
   description?: string
   themes?: string[]
   themesDisplay?: string
+  coordinates?: [number, number] // [lng, lat]
 }
 
 interface ParsedRecommendations {
@@ -117,13 +119,16 @@ export function RouteResults({ routeData, onViewMap, onStartOver }: RouteResults
     const originalWaypoints = parsedRecs?.waypoints || []
     const currentWaypoints = modifiedWaypoints[currentAgentIndex] || originalWaypoints
 
+    // Get human-readable position description
+    const positionDesc = getPositionDescription(position, currentWaypoints)
+
     // Save to history before making changes
     setHistory(prev => [
       ...prev,
       {
         agentIndex: currentAgentIndex,
         previousWaypoints: [...currentWaypoints],
-        action: `Added ${selectedAlternativeCity.name} at position ${position + 1}`,
+        action: `Added ${selectedAlternativeCity.name} ${positionDesc} (optimal position)`,
         timestamp: Date.now()
       }
     ])
@@ -137,12 +142,12 @@ export function RouteResults({ routeData, onViewMap, onStartOver }: RouteResults
       [currentAgentIndex]: updatedWaypoints
     }))
 
-    // Show success toast
+    // Show success toast with position information
     setToast({
-      message: `${selectedAlternativeCity.name} added to your route!`,
+      message: `✓ Added ${selectedAlternativeCity.name} ${positionDesc}`,
       type: 'success'
     })
-    setTimeout(() => setToast(null), 3000)
+    setTimeout(() => setToast(null), 4000)
   }
 
   // Replace city at specific index
@@ -876,8 +881,6 @@ export function RouteResults({ routeData, onViewMap, onStartOver }: RouteResults
             }}
             onAddCity={handleAddCity}
             onReplaceCity={handleReplaceCity}
-            origin={routeData.origin}
-            destination={routeData.destination}
           />
         )}
 

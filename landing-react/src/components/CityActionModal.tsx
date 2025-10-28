@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, Plus, RefreshCw, ArrowRight, MapPin, ArrowDown } from 'lucide-react'
+import { X, Plus, RefreshCw, ArrowRight, MapPin } from 'lucide-react'
+import { calculateOptimalInsertPosition } from '../utils/routeOptimization'
 
 interface Activity {
   name?: string
@@ -15,6 +16,7 @@ interface City {
   imageUrl?: string
   description?: string
   themes?: string[]
+  coordinates?: [number, number] // [lng, lat]
 }
 
 interface CityActionModalProps {
@@ -25,11 +27,9 @@ interface CityActionModalProps {
   agentTheme: { color: string; name: string }
   onAddCity: (position: number) => void
   onReplaceCity: (cityIndexToReplace: number) => void
-  origin?: string
-  destination?: string
 }
 
-type ActionStep = 'choose-action' | 'select-position' | 'select-replacement'
+type ActionStep = 'choose-action' | 'select-replacement'
 
 export default function CityActionModal({
   isOpen,
@@ -38,38 +38,35 @@ export default function CityActionModal({
   currentRoute,
   agentTheme,
   onAddCity,
-  onReplaceCity,
-  origin = 'Origin',
-  destination = 'Destination'
+  onReplaceCity
 }: CityActionModalProps) {
   const [step, setStep] = useState<ActionStep>('choose-action')
-  const [selectedPosition, setSelectedPosition] = useState<number | null>(null)
   const [selectedReplacement, setSelectedReplacement] = useState<number | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
 
   const handleClose = () => {
     setStep('choose-action')
-    setSelectedPosition(null)
     setSelectedReplacement(null)
     setIsProcessing(false)
     onClose()
   }
 
   const handleBack = () => {
-    if (step === 'select-position' || step === 'select-replacement') {
+    if (step === 'select-replacement') {
       setStep('choose-action')
-      setSelectedPosition(null)
       setSelectedReplacement(null)
     }
   }
 
   const handleConfirmAdd = async () => {
-    if (selectedPosition !== null) {
-      setIsProcessing(true)
-      await new Promise(resolve => setTimeout(resolve, 300)) // Brief animation delay
-      onAddCity(selectedPosition)
-      handleClose()
-    }
+    setIsProcessing(true)
+    await new Promise(resolve => setTimeout(resolve, 300)) // Brief animation delay
+
+    // Calculate optimal position automatically
+    const optimalPosition = calculateOptimalInsertPosition(currentRoute, selectedCity)
+
+    onAddCity(optimalPosition)
+    handleClose()
   }
 
   const handleConfirmReplace = async () => {
@@ -120,7 +117,6 @@ export default function CityActionModal({
                 <h2 className="text-2xl font-bold">Add {selectedCity.name} to Route</h2>
                 <p className="mt-1 text-white/90">
                   {step === 'choose-action' && 'Choose how to add this city to your route'}
-                  {step === 'select-position' && 'Choose where to insert this city'}
                   {step === 'select-replacement' && 'Choose which city to replace'}
                 </p>
               </div>
@@ -167,23 +163,32 @@ export default function CityActionModal({
 
                       {/* Action Cards */}
                       <button
-                        onClick={() => setStep('select-position')}
-                        className="group w-full rounded-xl border-2 border-gray-200 bg-white p-6 text-left transition-all hover:border-gray-300 hover:shadow-lg"
+                        onClick={handleConfirmAdd}
+                        disabled={isProcessing}
+                        className="group w-full rounded-xl border-2 border-gray-200 bg-white p-6 text-left transition-all hover:border-gray-300 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <div className="flex items-start gap-4">
                           <div
                             className="rounded-full p-3"
                             style={{ backgroundColor: `${agentTheme.color}20` }}
                           >
-                            <Plus className="h-6 w-6" style={{ color: agentTheme.color }} />
+                            {isProcessing ? (
+                              <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-transparent" style={{ borderTopColor: agentTheme.color }} />
+                            ) : (
+                              <Plus className="h-6 w-6" style={{ color: agentTheme.color }} />
+                            )}
                           </div>
                           <div className="flex-1">
-                            <h4 className="text-lg font-bold text-gray-900">Add to Route</h4>
+                            <h4 className="text-lg font-bold text-gray-900">
+                              {isProcessing ? 'Adding to Route...' : 'Add to Route'}
+                            </h4>
                             <p className="mt-1 text-sm text-gray-600">
-                              Insert this city at a specific position in your route. Great for adding an extra stop!
+                              We'll automatically insert this city at the optimal position to minimize travel distance
                             </p>
                           </div>
-                          <ArrowRight className="h-5 w-5 text-gray-400 transition-transform group-hover:translate-x-1" />
+                          {!isProcessing && (
+                            <ArrowRight className="h-5 w-5 text-gray-400 transition-transform group-hover:translate-x-1" />
+                          )}
                         </div>
                       </button>
 
@@ -210,117 +215,7 @@ export default function CityActionModal({
                     </motion.div>
                   )}
 
-                  {/* Step 2a: Select Position to Add */}
-                  {step === 'select-position' && (
-                    <motion.div
-                      key="select-position"
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 20 }}
-                      className="space-y-4"
-                    >
-                      <p className="mb-4 text-sm text-gray-600">
-                        Click on a position to insert <span className="font-semibold">{selectedCity.name}</span>
-                      </p>
-
-                      {/* Route Visualization with Insert Positions */}
-                      <div className="space-y-3">
-                        {/* Origin */}
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 text-sm font-bold text-green-700">
-                            S
-                          </div>
-                          <div className="flex-1 rounded-lg bg-gray-100 px-4 py-2">
-                            <p className="font-semibold text-gray-900">{origin}</p>
-                          </div>
-                        </div>
-
-                        {/* Insert at beginning button */}
-                        <button
-                          onClick={() => setSelectedPosition(0)}
-                          className={`group w-full rounded-lg border-2 p-3 text-center text-sm font-semibold transition-all hover:scale-102 ${
-                            selectedPosition === 0
-                              ? 'border-transparent shadow-lg'
-                              : 'border-dashed border-gray-300 bg-white hover:border-gray-400 hover:bg-gray-50'
-                          }`}
-                          style={
-                            selectedPosition === 0
-                              ? { backgroundColor: agentTheme.color, color: 'white' }
-                              : {}
-                          }
-                        >
-                          <div className="flex items-center justify-center gap-2">
-                            {selectedPosition === 0 ? (
-                              <>
-                                <ArrowDown className="h-4 w-4 animate-bounce" />
-                                <span>✓ {selectedCity.name} will be inserted here</span>
-                                <ArrowDown className="h-4 w-4 animate-bounce" />
-                              </>
-                            ) : (
-                              <span className="group-hover:scale-105 transition-transform">+ Insert here (Position 1)</span>
-                            )}
-                          </div>
-                        </button>
-
-                        {/* Current route cities with insert buttons between */}
-                        {currentRoute.map((city, index) => (
-                          <div key={index}>
-                            {/* City */}
-                            <div className="flex items-center gap-3">
-                              <div
-                                className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-white"
-                                style={{ backgroundColor: agentTheme.color }}
-                              >
-                                {index + 1}
-                              </div>
-                              <div className="flex-1 rounded-lg bg-gray-100 px-4 py-2">
-                                <p className="font-semibold text-gray-900">{city.name}</p>
-                              </div>
-                            </div>
-
-                            {/* Insert button after this city */}
-                            <button
-                              onClick={() => setSelectedPosition(index + 1)}
-                              className={`group mt-3 w-full rounded-lg border-2 p-3 text-center text-sm font-semibold transition-all hover:scale-102 ${
-                                selectedPosition === index + 1
-                                  ? 'border-transparent shadow-lg'
-                                  : 'border-dashed border-gray-300 bg-white hover:border-gray-400 hover:bg-gray-50'
-                              }`}
-                              style={
-                                selectedPosition === index + 1
-                                  ? { backgroundColor: agentTheme.color, color: 'white' }
-                                  : {}
-                              }
-                            >
-                              <div className="flex items-center justify-center gap-2">
-                                {selectedPosition === index + 1 ? (
-                                  <>
-                                    <ArrowDown className="h-4 w-4 animate-bounce" />
-                                    <span>✓ {selectedCity.name} will be inserted here</span>
-                                    <ArrowDown className="h-4 w-4 animate-bounce" />
-                                  </>
-                                ) : (
-                                  <span className="group-hover:scale-105 transition-transform">+ Insert here (Position {index + 2})</span>
-                                )}
-                              </div>
-                            </button>
-                          </div>
-                        ))}
-
-                        {/* Destination */}
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 text-sm font-bold text-red-700">
-                            E
-                          </div>
-                          <div className="flex-1 rounded-lg bg-gray-100 px-4 py-2">
-                            <p className="font-semibold text-gray-900">{destination}</p>
-                          </div>
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-
-                  {/* Step 2b: Select City to Replace */}
+                  {/* Step 2: Select City to Replace */}
                   {step === 'select-replacement' && (
                     <motion.div
                       key="select-replacement"
@@ -403,26 +298,6 @@ export default function CityActionModal({
                     Cancel
                   </button>
                   <div className="flex-1" />
-                  {step === 'select-position' && (
-                    <button
-                      onClick={handleConfirmAdd}
-                      disabled={selectedPosition === null || isProcessing}
-                      className="flex items-center gap-2 rounded-lg px-8 py-3 font-semibold text-white shadow-md transition-all hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                      style={{ backgroundColor: agentTheme.color }}
-                    >
-                      {isProcessing ? (
-                        <>
-                          <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                          <span>Adding...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Plus className="h-5 w-5" />
-                          <span>Add City to Route</span>
-                        </>
-                      )}
-                    </button>
-                  )}
                   {step === 'select-replacement' && (
                     <button
                       onClick={handleConfirmReplace}
