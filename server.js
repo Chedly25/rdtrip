@@ -3457,7 +3457,10 @@ Please search the internet for current information and respond with a JSON objec
       "imageUrl": "Direct URL to a high-quality image of the restaurant or its food",
       "website": "Official website URL (if available)",
       "googleMapsUrl": "Google Maps search URL for this restaurant",
-      "address": "Street address"
+      "address": "Street address",
+      "reviewCount": 250,
+      "tripAdvisorRating": 4.5,
+      "badges": ["Popular", "Trending", "Local Favorite", "Michelin Guide"] (include 0-2 relevant badges)
     }
   ],
 
@@ -3469,7 +3472,10 @@ Please search the internet for current information and respond with a JSON objec
       "bestFor": "First-timers, central location",
       "imageUrl": "Direct URL to a high-quality image of the neighborhood or typical hotel",
       "bookingUrl": "URL to search hotels in this area (e.g., booking.com search link)",
-      "hotelExample": "Name of a good hotel in this area"
+      "hotelExample": "Name of a good hotel in this area",
+      "rating": 8.5,
+      "reviewCount": 450,
+      "badges": ["Popular", "Great Value", "Best Location"] (include 0-2 relevant badges)
     }
   ],
 
@@ -3499,7 +3505,9 @@ Please search the internet for current information and respond with a JSON objec
       "imageUrl": "Direct URL to event poster, banner, or representative image",
       "website": "Official event website URL",
       "ticketUrl": "URL to purchase tickets (if applicable)",
-      "dates": "Specific dates (e.g., 'June 15-20')"
+      "dates": "Specific dates (e.g., 'June 15-20')",
+      "popularity": "High",
+      "badges": ["Trending", "Sold Out Often", "Annual Tradition"] (include 0-2 relevant badges)
     }
   ],
 
@@ -3543,6 +3551,14 @@ IMAGES AND LINKS (CRITICAL):
 17. bookingUrl format: https://www.booking.com/searchresults.html?ss={neighborhood}+{city}
 18. All image URLs must be direct links to actual images (jpg, png, webp)
 19. If you cannot find a real URL, use null - DO NOT make up URLs
+
+SOCIAL PROOF (IMPORTANT):
+20. For restaurants: Include Google/TripAdvisor ratings, review counts, and relevant badges
+21. For accommodations: Include Booking.com ratings (out of 10), review counts, and badges
+22. For events: Include popularity level and relevant badges (Trending, Sold Out Often, etc.)
+23. Badges should be realistic and based on actual popularity/recognition
+24. Review counts should be realistic for the city size
+25. Only include badges that truly apply - don't over-badge everything
 
 Return the JSON object now:`;
 

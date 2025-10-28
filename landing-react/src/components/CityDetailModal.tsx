@@ -19,7 +19,12 @@ import {
   ExternalLink,
   Globe,
   Ticket,
-  Navigation
+  Navigation,
+  BookmarkPlus,
+  TrendingUp,
+  Award,
+  Users,
+  MessageCircle
 } from 'lucide-react'
 
 interface CityDetail {
@@ -49,6 +54,9 @@ interface CityDetail {
     website?: string
     googleMapsUrl?: string
     address?: string
+    reviewCount?: number
+    tripAdvisorRating?: number
+    badges?: string[]
   }>
   accommodations: Array<{
     areaName: string
@@ -58,6 +66,9 @@ interface CityDetail {
     imageUrl?: string
     bookingUrl?: string
     hotelExample?: string
+    rating?: number
+    reviewCount?: number
+    badges?: string[]
   }>
   parking: {
     info: string
@@ -82,6 +93,8 @@ interface CityDetail {
     website?: string
     ticketUrl?: string
     dates?: string
+    popularity?: string
+    badges?: string[]
   }>
   localTips: string[]
   warnings: string[]
@@ -419,6 +432,40 @@ export default function CityDetailModal({
                               <div className="p-4">
                                 <h5 className="font-bold text-gray-900 mb-1">{restaurant.name}</h5>
                                 <p className="text-xs text-gray-500 mb-2">{restaurant.cuisine}</p>
+
+                                {/* Social Proof */}
+                                <div className="flex items-center gap-3 mb-2">
+                                  {restaurant.reviewCount && (
+                                    <div className="flex items-center gap-1 text-xs text-gray-500">
+                                      <MessageCircle className="w-3 h-3" />
+                                      <span>{restaurant.reviewCount.toLocaleString()} reviews</span>
+                                    </div>
+                                  )}
+                                  {restaurant.tripAdvisorRating && (
+                                    <div className="flex items-center gap-1 text-xs text-green-600">
+                                      <Award className="w-3 h-3" />
+                                      <span className="font-medium">{restaurant.tripAdvisorRating} TripAdvisor</span>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Badges */}
+                                {restaurant.badges && restaurant.badges.length > 0 && (
+                                  <div className="flex flex-wrap gap-1 mb-3">
+                                    {restaurant.badges.map((badge, badgeIndex) => (
+                                      <span
+                                        key={badgeIndex}
+                                        className="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-700 text-xs font-medium rounded-full"
+                                      >
+                                        {badge === 'Trending' && <TrendingUp className="w-3 h-3" />}
+                                        {badge === 'Popular' && <Users className="w-3 h-3" />}
+                                        {badge === 'Michelin Guide' && <Award className="w-3 h-3" />}
+                                        {badge}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+
                                 <p className="text-sm text-gray-600 mb-3 line-clamp-2">{restaurant.description}</p>
 
                                 {restaurant.specialty && (
@@ -430,7 +477,7 @@ export default function CityDetailModal({
                                 )}
 
                                 {/* Action Buttons */}
-                                <div className="flex gap-2">
+                                <div className="flex gap-2 mb-2">
                                   {restaurant.googleMapsUrl && (
                                     <a
                                       href={restaurant.googleMapsUrl}
@@ -454,6 +501,15 @@ export default function CityDetailModal({
                                     </a>
                                   )}
                                 </div>
+
+                                {/* Add to Itinerary Button */}
+                                <button
+                                  onClick={() => alert(`Adding "${restaurant.name}" to your itinerary...`)}
+                                  className="w-full flex items-center justify-center gap-2 px-3 py-2 border-2 border-dashed border-gray-300 hover:border-gray-400 hover:bg-gray-50 text-gray-700 text-xs font-medium rounded-lg transition-colors"
+                                >
+                                  <BookmarkPlus className="w-3 h-3" />
+                                  Add to Itinerary
+                                </button>
 
                                 {restaurant.address && (
                                   <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
@@ -505,6 +561,40 @@ export default function CityDetailModal({
 
                               <div className="p-4">
                                 <h5 className="font-bold text-gray-900 mb-2">{accommodation.areaName}</h5>
+
+                                {/* Social Proof */}
+                                <div className="flex items-center gap-3 mb-2">
+                                  {accommodation.rating && (
+                                    <div className="flex items-center gap-1 text-xs text-green-600">
+                                      <Star className="w-3 h-3 fill-green-600" />
+                                      <span className="font-bold">{accommodation.rating}/10</span>
+                                    </div>
+                                  )}
+                                  {accommodation.reviewCount && (
+                                    <div className="flex items-center gap-1 text-xs text-gray-500">
+                                      <MessageCircle className="w-3 h-3" />
+                                      <span>{accommodation.reviewCount.toLocaleString()} reviews</span>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Badges */}
+                                {accommodation.badges && accommodation.badges.length > 0 && (
+                                  <div className="flex flex-wrap gap-1 mb-3">
+                                    {accommodation.badges.map((badge, badgeIndex) => (
+                                      <span
+                                        key={badgeIndex}
+                                        className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded-full"
+                                      >
+                                        {badge === 'Popular' && <Users className="w-3 h-3" />}
+                                        {badge === 'Great Value' && <DollarSign className="w-3 h-3" />}
+                                        {badge === 'Best Location' && <MapPin className="w-3 h-3" />}
+                                        {badge}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+
                                 <p className="text-sm text-gray-600 mb-3 line-clamp-2">{accommodation.description}</p>
 
                                 <div
@@ -530,7 +620,7 @@ export default function CityDetailModal({
                                     href={accommodation.bookingUrl}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="block text-center px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-colors"
+                                    className="block text-center px-4 py-2 mb-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-colors"
                                   >
                                     <span className="flex items-center justify-center gap-2">
                                       <ExternalLink className="w-4 h-4" />
@@ -538,6 +628,15 @@ export default function CityDetailModal({
                                     </span>
                                   </a>
                                 )}
+
+                                {/* Add to Itinerary Button */}
+                                <button
+                                  onClick={() => alert(`Adding "${accommodation.areaName}" to your itinerary...`)}
+                                  className="w-full flex items-center justify-center gap-2 px-3 py-2 border-2 border-dashed border-gray-300 hover:border-gray-400 hover:bg-gray-50 text-gray-700 text-xs font-medium rounded-lg transition-colors"
+                                >
+                                  <BookmarkPlus className="w-3 h-3" />
+                                  Add to Itinerary
+                                </button>
                               </div>
                             </div>
                           ))}
@@ -669,10 +768,36 @@ export default function CityDetailModal({
 
                               <div className="p-4">
                                 <h5 className="font-bold text-gray-900 mb-2">{event.name}</h5>
+
+                                {/* Badges */}
+                                {event.badges && event.badges.length > 0 && (
+                                  <div className="flex flex-wrap gap-1 mb-3">
+                                    {event.badges.map((badge, badgeIndex) => (
+                                      <span
+                                        key={badgeIndex}
+                                        className="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 text-orange-700 text-xs font-medium rounded-full"
+                                      >
+                                        {badge === 'Trending' && <TrendingUp className="w-3 h-3" />}
+                                        {badge === 'Sold Out Often' && <Users className="w-3 h-3" />}
+                                        {badge === 'Annual Tradition' && <Award className="w-3 h-3" />}
+                                        {badge}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+
                                 <p className="text-sm text-gray-600 mb-3 line-clamp-3">{event.description}</p>
 
+                                {/* Popularity */}
+                                {event.popularity && (
+                                  <div className="mb-3 flex items-center gap-1 text-xs text-purple-600">
+                                    <TrendingUp className="w-3 h-3" />
+                                    <span className="font-medium">{event.popularity} Popularity</span>
+                                  </div>
+                                )}
+
                                 {/* Action Buttons */}
-                                <div className="flex gap-2">
+                                <div className="flex gap-2 mb-2">
                                   {event.ticketUrl && (
                                     <a
                                       href={event.ticketUrl}
@@ -696,6 +821,15 @@ export default function CityDetailModal({
                                     </a>
                                   )}
                                 </div>
+
+                                {/* Add to Itinerary Button */}
+                                <button
+                                  onClick={() => alert(`Adding "${event.name}" to your itinerary...`)}
+                                  className="w-full flex items-center justify-center gap-2 px-3 py-2 border-2 border-dashed border-gray-300 hover:border-gray-400 hover:bg-gray-50 text-gray-700 text-xs font-medium rounded-lg transition-colors"
+                                >
+                                  <BookmarkPlus className="w-3 h-3" />
+                                  Add to Itinerary
+                                </button>
                               </div>
                             </div>
                           ))}
