@@ -41,12 +41,19 @@ interface CityDetail {
     description: string
     rating: number
     specialty: string
+    imageUrl?: string
+    website?: string
+    googleMapsUrl?: string
+    address?: string
   }>
   accommodations: Array<{
     areaName: string
     description: string
     priceFrom: string
     bestFor: string
+    imageUrl?: string
+    bookingUrl?: string
+    hotelExample?: string
   }>
   parking: {
     info: string
@@ -67,6 +74,10 @@ interface CityDetail {
     name: string
     month: string
     description: string
+    imageUrl?: string
+    website?: string
+    ticketUrl?: string
+    dates?: string
   }>
   localTips: string[]
   warnings: string[]
