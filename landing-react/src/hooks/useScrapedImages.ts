@@ -20,6 +20,10 @@ interface CityDetails {
     name: string
     website?: string
   }>
+  highlights?: Array<{
+    name: string
+    type?: string
+  }>
 }
 
 export function useScrapedImages(cityDetails: CityDetails | null) {
@@ -49,7 +53,7 @@ export function useScrapedImages(cityDetails: CityDetails | null) {
       try {
         // Build entity array from cityDetails
         const entities: Array<{
-          type: 'restaurant' | 'hotel' | 'event'
+          type: 'restaurant' | 'hotel' | 'event' | 'highlight'
           name: string
           city: string
           website?: string
@@ -87,6 +91,18 @@ export function useScrapedImages(cityDetails: CityDetails | null) {
               name: event.name,
               city: cityDetails.cityName,
               website: event.website // Can be undefined, backend will use Unsplash API
+            })
+          })
+        }
+
+        // Add highlights - ALL of them (landmarks are perfect for Unsplash!)
+        if (cityDetails.highlights) {
+          cityDetails.highlights.forEach((highlight) => {
+            entities.push({
+              type: 'highlight',
+              name: highlight.name,
+              city: cityDetails.cityName,
+              website: undefined // Highlights never have websites, will use Unsplash API
             })
           })
         }
