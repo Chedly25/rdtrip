@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Navigation, Map as MapIcon } from 'lucide-react'
+import { ArrowLeft, Navigation, Map as MapIcon, ArrowRight } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { TableOfContents } from './TableOfContents'
 import { RouteOverview } from './RouteOverview'
@@ -12,6 +12,7 @@ import { WazeCitySelector } from './WazeCitySelector'
 import { useSpotlightStore } from '../../stores/spotlightStore'
 import { useRouteDataStore } from '../../stores/routeDataStore'
 import { getTheme } from '../../config/theme'
+import { extractCountry, getCountryFromGeocoding, formatCityWithCountry } from '../../utils/countryFlags'
 
 // Agent configuration
 const agentConfig = {
@@ -43,12 +44,41 @@ export function SpotlightPageComplete() {
   const [activeSection, setActiveSection] = useState('overview')
   const [showWazeModal, setShowWazeModal] = useState(false)
 
+  // Country data state
+  const [originData, setOriginData] = useState<{ display: string; flag: string }>({ display: '', flag: '' })
+  const [destinationData, setDestinationData] = useState<{ display: string; flag: string }>({ display: '', flag: '' })
+
   // Get agent details and theme
   const agent = routeData?.agent || 'adventure'
   const config = agentConfig[agent]
   const theme = getTheme(agent)
   const origin = routeData?.origin || 'Your Starting Point'
   const destination = routeData?.destination || waypoints[waypoints.length - 1]?.name || 'Your Destination'
+
+  // Load country data for origin and destination
+  useEffect(() => {
+    const loadCountryData = async () => {
+      // Process origin
+      let originCountry = extractCountry(origin)
+      if (!originCountry) {
+        originCountry = await getCountryFromGeocoding(origin)
+      }
+      const originFormatted = formatCityWithCountry(origin, originCountry)
+      setOriginData({ display: originFormatted.display, flag: originFormatted.flag })
+
+      // Process destination
+      let destCountry = extractCountry(destination)
+      if (!destCountry) {
+        destCountry = await getCountryFromGeocoding(destination)
+      }
+      const destFormatted = formatCityWithCountry(destination, destCountry)
+      setDestinationData({ display: destFormatted.display, flag: destFormatted.flag })
+    }
+
+    if (origin && destination) {
+      loadCountryData()
+    }
+  }, [origin, destination])
 
   const handleBack = () => {
     window.location.href = '/index.html'
@@ -72,58 +102,73 @@ export function SpotlightPageComplete() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-gray-200 bg-white shadow-sm">
-        <div className="mx-auto max-w-full px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleBack}
-                className="gap-2"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Back to Overview
-              </Button>
-              <div className="flex items-center gap-3">
-                {/* Agent Icon - Using actual PNG from /images/icons/ */}
-                <img
-                  src={config.icon}
-                  alt={config.name}
-                  className="h-12 w-12 object-contain"
-                />
-                <h1 className="text-2xl font-bold" style={{ color: theme.primary }}>{config.name}</h1>
-              </div>
+        <div className="mx-auto max-w-full px-6 py-4 relative">
+          {/* Back Button - Absolute positioned on left */}
+          <div className="absolute left-6 top-1/2 -translate-y-1/2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleBack}
+              className="gap-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Overview
+            </Button>
+          </div>
+
+          {/* Export Buttons - Absolute positioned on right */}
+          <div className="absolute right-6 top-1/2 -translate-y-1/2 flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportGoogleMaps}
+              className="gap-2"
+            >
+              <MapIcon className="h-4 w-4" />
+              Google Maps
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportWaze}
+              className="gap-2"
+            >
+              <Navigation className="h-4 w-4" />
+              Waze
+            </Button>
+          </div>
+
+          {/* Centered Theme and Route Info */}
+          <div className="flex flex-col items-center justify-center text-center py-2">
+            {/* Theme Title with Icon */}
+            <div className="flex items-center gap-3 mb-3">
+              <img
+                src={config.icon}
+                alt={config.name}
+                className="h-10 w-10 object-contain"
+              />
+              <h1 className="text-2xl font-bold" style={{ color: theme.primary }}>
+                {config.name}
+              </h1>
             </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleExportGoogleMaps}
-                className="gap-2"
-              >
-                <MapIcon className="h-4 w-4" />
-                Google Maps
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleExportWaze}
-                className="gap-2"
-              >
-                <Navigation className="h-4 w-4" />
-                Waze
-              </Button>
+
+            {/* Route: Origin → Destination with flags */}
+            <div className="flex items-center gap-3 text-base">
+              <span className="flex items-center gap-2">
+                <span className="text-xl">{originData.flag}</span>
+                <span className="font-semibold text-gray-800">
+                  {originData.display || origin}
+                </span>
+              </span>
+              <ArrowRight className="h-5 w-5 text-gray-400" style={{ strokeWidth: 2.5 }} />
+              <span className="flex items-center gap-2">
+                <span className="text-xl">{destinationData.flag}</span>
+                <span className="font-semibold text-gray-800">
+                  {destinationData.display || destination}
+                </span>
+              </span>
             </div>
           </div>
-          <p className="mt-2 flex items-center gap-2 text-sm text-gray-600">
-            <span className="flex items-center gap-1">
-              <span className="font-semibold">{origin}</span>
-            </span>
-            <span>→</span>
-            <span className="flex items-center gap-1">
-              <span className="font-semibold">{destination}</span>
-            </span>
-          </p>
         </div>
       </header>
 
