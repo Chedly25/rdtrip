@@ -15,8 +15,9 @@ app.use(express.json());
 app.use(express.static('public'));
 
 const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY;
-// For demo purposes - in production, get your own key from https://unsplash.com/developers
-const UNSPLASH_ACCESS_KEY = process.env.UNSPLASH_ACCESS_KEY || 'lEwczWVNzGvFAp1BtKgfV5KOtJrFbMdaDFEfL4Z6qHQ';
+// Pexels API - Free tier: 200 requests/hour, 20,000/month
+// Get your own key from https://www.pexels.com/api/
+const PEXELS_API_KEY = process.env.PEXELS_API_KEY || 'YOUR_PEXELS_API_KEY_HERE';
 
 // In-memory job storage (in production, use Redis or a database)
 const routeJobs = new Map();
@@ -3967,43 +3968,62 @@ app.post('/api/images/scrape', async (req, res) => {
               imageUrl = scrapeResult.imageUrl;
               source = scrapeResult.source;
             } else {
-              // No website - use Unsplash API fallback
-              console.log(`⚠️  No website for ${name}, trying Unsplash API...`);
-              console.log(`🔑 Using Unsplash API Key: ${UNSPLASH_ACCESS_KEY ? UNSPLASH_ACCESS_KEY.substring(0, 10) + '...' : 'MISSING'}`);
+              // No website - use Pexels API fallback
+              console.log(`⚠️  No website for ${name}, trying Pexels API...`);
+              console.log(`🔑 Using Pexels API Key: ${PEXELS_API_KEY ? PEXELS_API_KEY.substring(0, 10) + '...' : 'MISSING'}`);
               try {
                 const searchQuery = `${name} ${city} ${type}`;
-                console.log(`🔍 Unsplash API query: "${searchQuery}"`);
+                console.log(`🔍 Pexels API query: "${searchQuery}"`);
 
-                const unsplashResponse = await axios.get('https://api.unsplash.com/search/photos', {
+                const pexelsResponse = await axios.get('https://api.pexels.com/v1/search', {
                   params: {
                     query: searchQuery,
                     per_page: 1,
                     orientation: 'landscape'
                   },
                   headers: {
-                    'Accept-Version': 'v1',
-                    'Authorization': `Client-ID ${UNSPLASH_ACCESS_KEY}`
+                    'Authorization': PEXELS_API_KEY
                   }
                 });
 
-                console.log(`📊 Unsplash API response status: ${unsplashResponse.status}`);
-                console.log(`📊 Unsplash API results count: ${unsplashResponse.data.results ? unsplashResponse.data.results.length : 0}`);
+                console.log(`📊 Pexels API response status: ${pexelsResponse.status}`);
+                console.log(`📊 Pexels API results count: ${pexelsResponse.data.photos ? pexelsResponse.data.photos.length : 0}`);
 
-                if (unsplashResponse.data.results && unsplashResponse.data.results.length > 0) {
-                  imageUrl = unsplashResponse.data.results[0].urls.small; // Use 'small' (400px) for cards
-                  source = 'unsplash-api';
-                  console.log(`✅ Found Unsplash API image for ${name}: ${imageUrl}`);
+                if (pexelsResponse.data.photos && pexelsResponse.data.photos.length > 0) {
+                  imageUrl = pexelsResponse.data.photos[0].src.medium; // 350px height, good for cards
+                  source = 'pexels-api';
+                  console.log(`✅ Found Pexels API image for ${name}: ${imageUrl}`);
                 } else {
-                  // Last resort: source.unsplash.com (deprecated but still works sometimes)
-                  imageUrl = `https://source.unsplash.com/800x600/?${encodeURIComponent(name + ' ' + city)}`;
-                  source = 'unsplash-source';
-                  console.log(`⚠️  No Unsplash API results for ${name}, using source fallback`);
+                  // Fallback: try with just landmark name
+                  console.log(`⚠️  No Pexels results for full query, trying simplified query...`);
+                  const simpleResponse = await axios.get('https://api.pexels.com/v1/search', {
+                    params: {
+                      query: `${name} landmark`,
+                      per_page: 1,
+                      orientation: 'landscape'
+                    },
+                    headers: {
+                      'Authorization': PEXELS_API_KEY
+                    }
+                  });
+
+                  if (simpleResponse.data.photos && simpleResponse.data.photos.length > 0) {
+                    imageUrl = simpleResponse.data.photos[0].src.medium;
+                    source = 'pexels-api';
+                    console.log(`✅ Found Pexels image with simplified query for ${name}`);
+                  } else {
+                    // No results at all - use gradient placeholder
+                    imageUrl = null;
+                    source = 'placeholder';
+                    console.log(`⚠️  No Pexels results, will use gradient placeholder`);
+                  }
                 }
-              } catch (unsplashError) {
-                console.error(`❌ Unsplash API error for ${name}:`, unsplashError.message);
-                console.error(`❌ Full error:`, unsplashError.response?.data || unsplashError);
-                imageUrl = `https://source.unsplash.com/800x600/?${encodeURIComponent(name + ' ' + city)}`;
-                source = 'unsplash-source';
+              } catch (pexelsError) {
+                console.error(`❌ Pexels API error for ${name}:`, pexelsError.message);
+                console.error(`❌ Full error:`, pexelsError.response?.data || pexelsError);
+                // Use gradient placeholder on error
+                imageUrl = null;
+                source = 'placeholder';
               }
             }
 
@@ -4030,47 +4050,46 @@ app.post('/api/images/scrape', async (req, res) => {
             return { name, imageUrl, source };
           } catch (entityError) {
             console.error(`Error scraping ${name}:`, entityError.message);
-            // Return Unsplash API fallback on error
-            console.log(`🔄 Trying Unsplash API as error fallback for ${name}...`);
-            console.log(`🔑 Using Unsplash API Key: ${UNSPLASH_ACCESS_KEY ? UNSPLASH_ACCESS_KEY.substring(0, 10) + '...' : 'MISSING'}`);
+            // Return Pexels API fallback on error
+            console.log(`🔄 Trying Pexels API as error fallback for ${name}...`);
+            console.log(`🔑 Using Pexels API Key: ${PEXELS_API_KEY ? PEXELS_API_KEY.substring(0, 10) + '...' : 'MISSING'}`);
             try {
               const searchQuery = `${name} ${city} ${type}`;
-              console.log(`🔍 Unsplash API query (fallback): "${searchQuery}"`);
+              console.log(`🔍 Pexels API query (fallback): "${searchQuery}"`);
 
-              const unsplashResponse = await axios.get('https://api.unsplash.com/search/photos', {
+              const pexelsResponse = await axios.get('https://api.pexels.com/v1/search', {
                 params: {
                   query: searchQuery,
                   per_page: 1,
                   orientation: 'landscape'
                 },
                 headers: {
-                  'Accept-Version': 'v1',
-                  'Authorization': `Client-ID ${UNSPLASH_ACCESS_KEY}`
+                  'Authorization': PEXELS_API_KEY
                 }
               });
 
-              console.log(`📊 Unsplash API response status (fallback): ${unsplashResponse.status}`);
-              console.log(`📊 Unsplash API results count (fallback): ${unsplashResponse.data.results ? unsplashResponse.data.results.length : 0}`);
+              console.log(`📊 Pexels API response status (fallback): ${pexelsResponse.status}`);
+              console.log(`📊 Pexels API results count (fallback): ${pexelsResponse.data.photos ? pexelsResponse.data.photos.length : 0}`);
 
-              if (unsplashResponse.data.results && unsplashResponse.data.results.length > 0) {
-                console.log(`✅ Fallback: Found Unsplash API image for ${name} after error`);
+              if (pexelsResponse.data.photos && pexelsResponse.data.photos.length > 0) {
+                console.log(`✅ Fallback: Found Pexels API image for ${name} after error`);
                 return {
                   name,
-                  imageUrl: unsplashResponse.data.results[0].urls.small,
-                  source: 'unsplash-api'
+                  imageUrl: pexelsResponse.data.photos[0].src.medium,
+                  source: 'pexels-api'
                 };
               }
-            } catch (unsplashError) {
-              console.error(`❌ Unsplash API also failed for ${name}:`, unsplashError.message);
-              console.error(`❌ Full error:`, unsplashError.response?.data || unsplashError);
+            } catch (pexelsError) {
+              console.error(`❌ Pexels API also failed for ${name}:`, pexelsError.message);
+              console.error(`❌ Full error:`, pexelsError.response?.data || pexelsError);
             }
 
-            // Last resort: source.unsplash.com
-            console.log(`⚠️  Using deprecated source.unsplash.com as last resort for ${name}`);
+            // Last resort: gradient placeholder
+            console.log(`⚠️  Using gradient placeholder as last resort for ${name}`);
             return {
               name,
-              imageUrl: `https://source.unsplash.com/800x600/?${encodeURIComponent(name + ' ' + city)}`,
-              source: 'unsplash-source'
+              imageUrl: null,
+              source: 'placeholder'
             };
           }
         })
