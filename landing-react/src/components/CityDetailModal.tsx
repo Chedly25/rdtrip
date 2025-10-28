@@ -123,6 +123,11 @@ export default function CityDetailModal({
   // Fetch scraped images for restaurants, hotels, and events (use displayData to support Phase 1)
   const { images: scrapedImages, loading: imagesLoading } = useScrapedImages(displayData)
 
+  // Debug scraped images
+  if (Object.keys(scrapedImages).length > 0) {
+    console.log(`🎨 [CityDetailModal] Scraped images available:`, scrapedImages)
+  }
+
   const renderStars = (rating: number) => {
     return (
       <div className="flex items-center gap-1">
@@ -597,7 +602,9 @@ export default function CityDetailModal({
                                     src={scrapedImages[accommodation.areaName] || accommodation.imageUrl}
                                     alt={accommodation.areaName}
                                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                    onLoad={() => console.log(`✅ Accommodation image loaded for "${accommodation.areaName}": ${scrapedImages[accommodation.areaName] || accommodation.imageUrl}`)}
                                     onError={(e) => {
+                                      console.error(`❌ Accommodation image failed for "${accommodation.areaName}": ${e.currentTarget.src}`)
                                       e.currentTarget.src = `https://source.unsplash.com/800x600/?${encodeURIComponent(accommodation.areaName + ' ' + displayData.cityName + ' hotels')}`
                                     }}
                                   />
