@@ -26,6 +26,7 @@ import {
   Users,
   MessageCircle
 } from 'lucide-react'
+import { useScrapedImages } from '../../hooks/useScrapedImages'
 
 // Traveler type mapping to brand colors and icons
 const travelerTypeMapping: Record<string, { color: string; icon: string; label: string }> = {
@@ -167,6 +168,9 @@ export default function CityDetailModal({
   const [cityDetails, setCityDetails] = useState<CityDetail | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Fetch scraped images for restaurants, hotels, and events
+  const { images: scrapedImages, loading: imagesLoading } = useScrapedImages(cityDetails)
 
   useEffect(() => {
     if (isOpen && cityName) {
@@ -451,10 +455,16 @@ export default function CityDetailModal({
                               className="group overflow-hidden bg-white border-2 border-gray-100 rounded-xl hover:border-gray-300 hover:shadow-lg transition-all"
                             >
                               {/* Restaurant Image */}
-                              {restaurant.imageUrl && (
+                              {imagesLoading ? (
+                                <div className="relative h-48 overflow-hidden bg-gray-200 animate-pulse">
+                                  <div className="absolute inset-0 flex items-center justify-center">
+                                    <UtensilsCrossed className="w-12 h-12 text-gray-400" />
+                                  </div>
+                                </div>
+                              ) : (scrapedImages[restaurant.name] || restaurant.imageUrl) ? (
                                 <div className="relative h-48 overflow-hidden">
                                   <img
-                                    src={restaurant.imageUrl}
+                                    src={scrapedImages[restaurant.name] || restaurant.imageUrl}
                                     alt={restaurant.name}
                                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                     onError={(e) => {
@@ -469,7 +479,7 @@ export default function CityDetailModal({
                                     <span className="text-xs font-bold text-gray-900">{restaurant.priceRange}</span>
                                   </div>
                                 </div>
-                              )}
+                              ) : null}
 
                               <div className="p-4">
                                 <h5 className="font-bold text-gray-900 mb-1">{restaurant.name}</h5>
@@ -582,10 +592,16 @@ export default function CityDetailModal({
                               className="group overflow-hidden bg-white border-2 border-gray-100 rounded-xl hover:border-gray-300 hover:shadow-lg transition-all"
                             >
                               {/* Accommodation Image */}
-                              {accommodation.imageUrl && (
+                              {imagesLoading ? (
+                                <div className="relative h-48 overflow-hidden bg-gray-200 animate-pulse">
+                                  <div className="absolute inset-0 flex items-center justify-center">
+                                    <Hotel className="w-12 h-12 text-gray-400" />
+                                  </div>
+                                </div>
+                              ) : (scrapedImages[accommodation.areaName] || accommodation.imageUrl) ? (
                                 <div className="relative h-48 overflow-hidden">
                                   <img
-                                    src={accommodation.imageUrl}
+                                    src={scrapedImages[accommodation.areaName] || accommodation.imageUrl}
                                     alt={accommodation.areaName}
                                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                     onError={(e) => {
@@ -599,7 +615,7 @@ export default function CityDetailModal({
                                     </span>
                                   </div>
                                 </div>
-                              )}
+                              ) : null}
 
                               <div className="p-4">
                                 <h5 className="font-bold text-gray-900 mb-2">{accommodation.areaName}</h5>
@@ -803,10 +819,16 @@ export default function CityDetailModal({
                               className="group overflow-hidden bg-white border-2 border-gray-100 rounded-xl hover:border-gray-300 hover:shadow-lg transition-all"
                             >
                               {/* Event Image */}
-                              {event.imageUrl && (
+                              {imagesLoading ? (
+                                <div className="relative h-40 overflow-hidden bg-gray-200 animate-pulse">
+                                  <div className="absolute inset-0 flex items-center justify-center">
+                                    <PartyPopper className="w-12 h-12 text-gray-400" />
+                                  </div>
+                                </div>
+                              ) : (scrapedImages[event.name] || event.imageUrl) ? (
                                 <div className="relative h-40 overflow-hidden">
                                   <img
-                                    src={event.imageUrl}
+                                    src={scrapedImages[event.name] || event.imageUrl}
                                     alt={event.name}
                                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                     onError={(e) => {
@@ -822,7 +844,7 @@ export default function CityDetailModal({
                                     </div>
                                   )}
                                 </div>
-                              )}
+                              ) : null}
 
                               <div className="p-4">
                                 <h5 className="font-bold text-gray-900 mb-2">{event.name}</h5>
