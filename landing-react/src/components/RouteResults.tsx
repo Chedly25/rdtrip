@@ -104,9 +104,7 @@ export function RouteResults({ routeData, onViewMap, onStartOver }: RouteResults
   }
 
   // Add city at specific position
-  const handleAddCity = (position: number) => {
-    if (!selectedAlternativeCity) return
-
+  const handleAddCity = (position: number, cityWithCoordinates: City) => {
     const agentResult = routeData.agentResults[currentAgentIndex]
     let parsedRecs: ParsedRecommendations | null = null
     try {
@@ -128,14 +126,14 @@ export function RouteResults({ routeData, onViewMap, onStartOver }: RouteResults
       {
         agentIndex: currentAgentIndex,
         previousWaypoints: [...currentWaypoints],
-        action: `Added ${selectedAlternativeCity.name} ${positionDesc} (optimal position)`,
+        action: `Added ${cityWithCoordinates.name} ${positionDesc} (optimal position)`,
         timestamp: Date.now()
       }
     ])
 
     const updatedWaypoints = [...currentWaypoints]
-    // Insert city at the specified position
-    updatedWaypoints.splice(position, 0, selectedAlternativeCity)
+    // Insert city (with coordinates) at the specified position
+    updatedWaypoints.splice(position, 0, cityWithCoordinates)
 
     setModifiedWaypoints(prev => ({
       ...prev,
@@ -144,7 +142,7 @@ export function RouteResults({ routeData, onViewMap, onStartOver }: RouteResults
 
     // Show success toast with position information
     setToast({
-      message: `✓ Added ${selectedAlternativeCity.name} ${positionDesc}`,
+      message: `✓ Added ${cityWithCoordinates.name} ${positionDesc}`,
       type: 'success'
     })
     setTimeout(() => setToast(null), 4000)

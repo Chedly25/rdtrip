@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Plus, RefreshCw, ArrowRight, MapPin } from 'lucide-react'
 import { calculateOptimalInsertPosition } from '../utils/routeOptimization'
+import { fetchCityCoordinates, inferCountryFromRoute } from '../utils/geocoding'
 
 interface Activity {
   name?: string
@@ -25,7 +26,7 @@ interface CityActionModalProps {
   selectedCity: City
   currentRoute: City[]
   agentTheme: { color: string; name: string }
-  onAddCity: (position: number) => void
+  onAddCity: (position: number, cityWithCoordinates: City) => void
   onReplaceCity: (cityIndexToReplace: number) => void
 }
 
@@ -60,12 +61,35 @@ export default function CityActionModal({
 
   const handleConfirmAdd = async () => {
     setIsProcessing(true)
-    await new Promise(resolve => setTimeout(resolve, 300)) // Brief animation delay
 
-    // Calculate optimal position automatically
-    const optimalPosition = calculateOptimalInsertPosition(currentRoute, selectedCity)
+    // Create a copy of the city to potentially add coordinates
+    let cityToAdd = { ...selectedCity }
 
-    onAddCity(optimalPosition)
+    // If city doesn't have coordinates, fetch them
+    if (!cityToAdd.coordinates) {
+      console.log(`Fetching coordinates for ${cityToAdd.name}...`)
+
+      // Infer country from existing route for better geocoding accuracy
+      const countryHint = inferCountryFromRoute(currentRoute)
+
+      // Fetch coordinates
+      const coordinates = await fetchCityCoordinates(cityToAdd.name, countryHint)
+
+      if (coordinates) {
+        cityToAdd.coordinates = coordinates
+        console.log(`✓ Coordinates fetched for ${cityToAdd.name}:`, coordinates)
+      } else {
+        console.warn(`⚠ Could not fetch coordinates for ${cityToAdd.name}, will add at end`)
+      }
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 300)) // Brief UI delay
+
+    // Calculate optimal position automatically (with or without coordinates)
+    const optimalPosition = calculateOptimalInsertPosition(currentRoute, cityToAdd)
+
+    // Pass both position and city with coordinates
+    onAddCity(optimalPosition, cityToAdd)
     handleClose()
   }
 
