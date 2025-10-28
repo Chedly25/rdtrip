@@ -28,6 +28,12 @@ import {
 } from 'lucide-react'
 import { useScrapedImages } from '../hooks/useScrapedImages'
 import { useAsyncCityDetails } from '../hooks/useAsyncCityDetails'
+import {
+  RestaurantsLoading,
+  HotelsLoading,
+  EventsLoading,
+  TipsLoading
+} from './LoadingPlaceholders'
 
 // Traveler type mapping to brand colors and icons
 const travelerTypeMapping: Record<string, { color: string; icon: string; label: string }> = {
@@ -88,15 +94,20 @@ export default function CityDetailModal({
   onAddToRoute,
   themeColor = '#055948'
 }: CityDetailModalProps) {
-  // Use the new async hook with polling
+  // Use the new async hook with polling and phase detection
   const {
     data: cityDetails,
+    quickData,
     loading,
     error,
     progress,
     message,
+    phase,
     retry
   } = useAsyncCityDetails(cityName, country, isOpen)
+
+  // Use quickData if available and full data isn't ready yet
+  const displayData = cityDetails || quickData
 
   // Fetch scraped images for restaurants, hotels, and events
   const { images: scrapedImages, loading: imagesLoading } = useScrapedImages(cityDetails)
@@ -401,8 +412,10 @@ export default function CityDetailModal({
                       </div>
                     </div>
 
-                    {/* Restaurants Section */}
-                    {cityDetails.restaurants && cityDetails.restaurants.length > 0 && (
+                    {/* Restaurants Section - Show loading if Phase 1 (quick data) */}
+                    {phase === 'quick' && (!displayData?.restaurants || displayData.restaurants.length === 0) ? (
+                      <RestaurantsLoading />
+                    ) : cityDetails.restaurants && cityDetails.restaurants.length > 0 && (
                       <div>
                         <div className="flex items-center gap-2 mb-4">
                           <UtensilsCrossed className="w-5 h-5" style={{ color: themeColor }} />
@@ -538,8 +551,10 @@ export default function CityDetailModal({
                       </div>
                     )}
 
-                    {/* Accommodations Section */}
-                    {cityDetails.accommodations && cityDetails.accommodations.length > 0 && (
+                    {/* Accommodations Section - Show loading if Phase 1 (quick data) */}
+                    {phase === 'quick' && (!displayData?.accommodations || displayData.accommodations.length === 0) ? (
+                      <HotelsLoading />
+                    ) : cityDetails.accommodations && cityDetails.accommodations.length > 0 && (
                       <div>
                         <div className="flex items-center gap-2 mb-4">
                           <Hotel className="w-5 h-5" style={{ color: themeColor }} />
@@ -702,8 +717,10 @@ export default function CityDetailModal({
                       </div>
                     )}
 
-                    {/* Local Tips - Good to Know */}
-                    {cityDetails.localTips && cityDetails.localTips.length > 0 && (
+                    {/* Local Tips - Show loading if Phase 1 (quick data) */}
+                    {phase === 'quick' && (!displayData?.localTips || displayData.localTips.length === 0) ? (
+                      <TipsLoading />
+                    ) : cityDetails.localTips && cityDetails.localTips.length > 0 && (
                       <div>
                         <div className="flex items-center gap-2 mb-4">
                           <Lightbulb className="w-5 h-5" style={{ color: themeColor }} />
@@ -765,8 +782,10 @@ export default function CityDetailModal({
                       </div>
                     )}
 
-                    {/* Events & Festivals */}
-                    {cityDetails.eventsFestivals && cityDetails.eventsFestivals.length > 0 && (
+                    {/* Events & Festivals - Show loading if Phase 1 (quick data) */}
+                    {phase === 'quick' && (!displayData?.eventsFestivals || displayData.eventsFestivals.length === 0) ? (
+                      <EventsLoading />
+                    ) : cityDetails.eventsFestivals && cityDetails.eventsFestivals.length > 0 && (
                       <div>
                         <div className="flex items-center gap-2 mb-4">
                           <PartyPopper className="w-5 h-5" style={{ color: themeColor }} />
