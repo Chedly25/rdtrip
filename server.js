@@ -4,6 +4,8 @@ const axios = require('axios');
 const path = require('path');
 require('dotenv').config();
 const ZTLService = require('./services/ztl-service');
+const cheerio = require('cheerio');
+const robotsParser = require('robots-parser');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -19,6 +21,80 @@ const UNSPLASH_ACCESS_KEY = process.env.UNSPLASH_ACCESS_KEY || 'lEwczWVNzGvFAp1B
 
 // In-memory job storage (in production, use Redis or a database)
 const routeJobs = new Map();
+
+// ==================== WEB SCRAPING UTILITIES ====================
+
+// Rate limiter: 2 seconds per domain
+const domainLastRequest = new Map();
+
+async function rateLimitedFetch(url, timeout = 5000) {
+  try {
+    const domain = new URL(url).hostname;
+    const lastRequest = domainLastRequest.get(domain) || 0;
+    const now = Date.now();
+
+    if (now - lastRequest < 2000) {
+      await new Promise(resolve => setTimeout(resolve, 2000 - (now - lastRequest)));
+    }
+
+    domainLastRequest.set(domain, Date.now());
+
+    const response = await axios.get(url, {
+      timeout,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; RDTrip/1.0; +https://rdtrip.com)'
+      }
+    });
+
+    return response;
+  } catch (error) {
+    console.error(`Fetch error for ${url}:`, error.message);
+    return null;
+  }
+}
+
+// Validate and resolve URLs (handle relative URLs)
+function resolveImageUrl(imageUrl, baseUrl) {
+  if (!imageUrl) return null;
+
+  try {
+    // Already absolute URL
+    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+      return imageUrl;
+    }
+
+    // Protocol-relative URL
+    if (imageUrl.startsWith('//')) {
+      return `https:${imageUrl}`;
+    }
+
+    // Relative URL
+    const base = new URL(baseUrl);
+    const resolved = new URL(imageUrl, base.origin);
+    return resolved.href;
+  } catch (error) {
+    console.error(`URL resolution error:`, error.message);
+    return null;
+  }
+}
+
+// Check if URL is valid and returns an image
+function isValidImageUrl(url) {
+  if (!url) return false;
+
+  try {
+    const parsed = new URL(url);
+    const ext = parsed.pathname.toLowerCase();
+    return ext.match(/\.(jpg|jpeg|png|webp|gif)$/i) ||
+           url.includes('unsplash.com') ||
+           url.includes('images') ||
+           url.includes('photo');
+  } catch {
+    return false;
+  }
+}
+
+// ==================== END WEB SCRAPING UTILITIES ====================
 
 // Auth utilities and middleware
 const db = require('./db/connection');
@@ -3676,6 +3752,41 @@ async function runDatabaseMigrations() {
     } else {
       console.log('✅ Database schema is up to date');
     }
+
+    // Check if scraped_images table exists
+    const scrapedImagesCheck = await db.query(`
+      SELECT table_name
+      FROM information_schema.tables
+      WHERE table_name = 'scraped_images'
+    `);
+
+    if (scrapedImagesCheck.rows.length === 0) {
+      console.log('📦 Running migration: Creating scraped_images table...');
+
+      await db.query(`
+        CREATE TABLE scraped_images (
+          id SERIAL PRIMARY KEY,
+          entity_type VARCHAR(20) NOT NULL CHECK (entity_type IN ('restaurant', 'hotel', 'event')),
+          entity_name VARCHAR(255) NOT NULL,
+          city VARCHAR(100) NOT NULL,
+          image_url TEXT,
+          source_url TEXT,
+          source_type VARCHAR(50) CHECK (source_type IN ('opengraph', 'jsonld', 'dom', 'unsplash', 'failed')),
+          scraped_at TIMESTAMP DEFAULT NOW(),
+          expires_at TIMESTAMP DEFAULT NOW() + INTERVAL '90 days',
+          CONSTRAINT unique_entity UNIQUE(entity_type, entity_name, city)
+        );
+
+        CREATE INDEX idx_scraped_images_lookup
+        ON scraped_images(entity_type, entity_name, city);
+
+        CREATE INDEX idx_scraped_images_expiry
+        ON scraped_images(expires_at);
+      `);
+
+      console.log('✅ Migration completed: scraped_images table created');
+    }
+
   } catch (error) {
     console.error('❌ Migration error:', error);
     // Don't crash the server if migration fails
