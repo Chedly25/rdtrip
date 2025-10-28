@@ -53,8 +53,10 @@ export function SpotlightPageComplete() {
   }
 
   const handleExportGoogleMaps = () => {
-    const waypointsParam = waypoints.map(wp => wp.name).join('|')
-    const url = `https://www.google.com/maps/dir/${encodeURIComponent(origin)}/${waypointsParam ? encodeURIComponent(waypointsParam) + '/' : ''}${encodeURIComponent(destination)}`
+    // waypoints array includes: origin, all middle cities (added from results/spotlight), landmarks, and destination
+    // Each waypoint needs to be a separate URL segment for Google Maps to recognize them
+    const segments = waypoints.map(wp => encodeURIComponent(wp.name)).join('/')
+    const url = `https://www.google.com/maps/dir/${segments}`
     window.open(url, '_blank')
   }
 
