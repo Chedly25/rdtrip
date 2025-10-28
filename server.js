@@ -3530,7 +3530,7 @@ Return the JSON object now:`;
     const response = await axios.post('https://api.perplexity.ai/chat/completions', {
       model: 'sonar',
       messages: [{ role: 'user', content: prompt }],
-      max_tokens: 2800, // Balanced for speed and detail
+      max_tokens: 4000, // Increased for detailed response
       temperature: 0.2 // Lower for more factual responses
     }, {
       headers: {
