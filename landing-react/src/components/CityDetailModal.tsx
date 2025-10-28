@@ -394,39 +394,68 @@ export default function CityDetailModal({
                       </div>
                     )}
 
-                    {/* Top Highlights */}
+                    {/* Top Highlights - Now with beautiful images! */}
                     <div>
                       <h4 className="text-lg font-bold text-gray-900 mb-4">
                         Top Highlights ({displayData.highlights.length})
                       </h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {displayData.highlights.map((highlight, index) => (
                           <div
                             key={index}
-                            className="p-4 bg-white border-2 border-gray-100 rounded-xl hover:border-gray-200 hover:shadow-md transition-all"
+                            className="group overflow-hidden bg-white border-2 border-gray-100 rounded-xl hover:border-gray-300 hover:shadow-lg transition-all"
                           >
-                            <div className="flex items-start justify-between mb-2">
-                              <h5 className="font-semibold text-gray-900 flex-1">{highlight.name}</h5>
-                              <div className="flex items-center gap-1 flex-shrink-0 ml-2">
-                                <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-                                <span className="text-xs font-medium text-gray-600">{highlight.rating}</span>
+                            {/* Highlight Image - ALWAYS show something */}
+                            {imagesLoading ? (
+                              <div className="relative h-40 overflow-hidden bg-gray-200 animate-pulse">
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                  <Star className="w-12 h-12 text-gray-400" />
+                                </div>
                               </div>
-                            </div>
-                            <p className="text-sm text-gray-600 mb-2">{highlight.description}</p>
-                            <div className="flex items-center justify-between text-xs">
-                              <span
-                                className="px-2 py-1 rounded-full font-medium capitalize"
-                                style={{
-                                  backgroundColor: `${themeColor}10`,
-                                  color: themeColor
-                                }}
-                              >
-                                {highlight.type}
-                              </span>
-                              <span className="text-gray-500 flex items-center gap-1">
-                                <Clock className="w-3 h-3" />
-                                {highlight.duration}
-                              </span>
+                            ) : scrapedImages[highlight.name] ? (
+                              <div className="relative h-40 overflow-hidden">
+                                <img
+                                  src={scrapedImages[highlight.name]}
+                                  alt={highlight.name}
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                  onError={(e) => {
+                                    e.currentTarget.src = `https://source.unsplash.com/800x600/?${encodeURIComponent(highlight.name + ' ' + displayData.cityName + ' landmark')}`
+                                  }}
+                                />
+                                <div className="absolute top-2 right-2 flex items-center gap-1 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full">
+                                  <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                                  <span className="text-xs font-bold text-gray-900">{highlight.rating}</span>
+                                </div>
+                                <div className="absolute bottom-2 left-2 px-2 py-1 bg-white/90 backdrop-blur-sm rounded-full">
+                                  <span className="text-xs font-medium text-gray-900 capitalize">{highlight.type}</span>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="relative h-40 overflow-hidden" style={{
+                                background: `linear-gradient(135deg, ${themeColor}15 0%, ${themeColor}30 100%)`
+                              }}>
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                  <Star className="w-16 h-16 opacity-40" style={{ color: themeColor }} />
+                                </div>
+                                <div className="absolute top-2 right-2 flex items-center gap-1 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full">
+                                  <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                                  <span className="text-xs font-bold text-gray-900">{highlight.rating}</span>
+                                </div>
+                                <div className="absolute bottom-2 left-2 px-2 py-1 bg-white/90 backdrop-blur-sm rounded-full">
+                                  <span className="text-xs font-medium text-gray-900 capitalize">{highlight.type}</span>
+                                </div>
+                              </div>
+                            )}
+
+                            <div className="p-4">
+                              <h5 className="font-bold text-gray-900 mb-2">{highlight.name}</h5>
+                              <p className="text-sm text-gray-600 mb-3 line-clamp-2">{highlight.description}</p>
+                              <div className="flex items-center justify-between text-xs text-gray-500">
+                                <span className="flex items-center gap-1">
+                                  <Clock className="w-3 h-3" />
+                                  {highlight.duration}
+                                </span>
+                              </div>
                             </div>
                           </div>
                         ))}
