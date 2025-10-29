@@ -350,12 +350,15 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
   }
 
   const handleSaveRoute = async (name: string) => {
+    console.log('[DEBUG] handleSaveRoute START - name:', name, 'token exists:', !!token)
+
     if (!token) {
       throw new Error('You must be logged in to save routes')
     }
 
     // Get enriched route data with modifications
     const enrichedRouteData = getEnrichedRouteData()
+    console.log('[DEBUG] Enriched route data prepared, origin:', enrichedRouteData.origin, 'dest:', enrichedRouteData.destination)
 
     const response = await fetch('/api/routes', {
       method: 'POST',
@@ -374,17 +377,25 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
       })
     })
 
+    console.log('[DEBUG] Fetch response received - status:', response.status, 'ok:', response.ok)
+
     if (!response.ok) {
       const error = await response.json()
+      console.error('[DEBUG] Save failed:', error)
       throw new Error(error.error || 'Failed to save route')
     }
 
     const savedRoute = await response.json()
+    console.log('[DEBUG] Parsed response - savedRoute:', savedRoute, 'id:', savedRoute.id)
+
     setSavedRouteId(savedRoute.id)
     savedRouteIdRef.current = savedRoute.id // Also update ref immediately
+    console.log('[DEBUG] Set state and ref - ref is now:', savedRouteIdRef.current)
+
     setSaveSuccess(true)
     setTimeout(() => setSaveSuccess(false), 3000)
 
+    console.log('[DEBUG] handleSaveRoute RETURNING:', savedRoute.id)
     return savedRoute.id
   }
 
