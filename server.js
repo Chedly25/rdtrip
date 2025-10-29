@@ -15,9 +15,6 @@ app.use(express.json());
 app.use(express.static('public'));
 
 const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY;
-// Pexels API - Free tier: 200 requests/hour, 20,000/month
-// Get your own key from https://www.pexels.com/api/
-const PEXELS_API_KEY = process.env.PEXELS_API_KEY || 'YOUR_PEXELS_API_KEY_HERE';
 
 // In-memory job storage (in production, use Redis or a database)
 const routeJobs = new Map();
@@ -3972,59 +3969,50 @@ app.post('/api/images/scrape', async (req, res) => {
               imageUrl = scrapeResult.imageUrl;
               source = scrapeResult.source;
             } else {
-              // No website - use Pexels API fallback
-              console.log(`⚠️  No website for ${name}, trying Pexels API...`);
-              console.log(`🔑 Using Pexels API Key: ${PEXELS_API_KEY ? PEXELS_API_KEY.substring(0, 10) + '...' : 'MISSING'}`);
+              // No website - use Wikipedia API fallback (like city hero images)
+              console.log(`⚠️  No website for ${name}, trying Wikipedia API...`);
               try {
-                const searchQuery = `${name} ${city} ${type}`;
-                console.log(`🔍 Pexels API query: "${searchQuery}"`);
+                // Try with full name + city first
+                const searchTerm = city ? `${name}, ${city}` : name;
+                console.log(`🔍 Wikipedia API query: "${searchTerm}"`);
 
-                const pexelsResponse = await axios.get('https://api.pexels.com/v1/search', {
-                  params: {
-                    query: searchQuery,
-                    per_page: 1,
-                    orientation: 'landscape'
-                  },
-                  headers: {
-                    'Authorization': PEXELS_API_KEY
-                  }
-                });
+                const wikiResponse = await axios.get(
+                  'https://en.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(searchTerm),
+                  { timeout: 5000 }
+                );
 
-                console.log(`📊 Pexels API response status: ${pexelsResponse.status}`);
-                console.log(`📊 Pexels API results count: ${pexelsResponse.data.photos ? pexelsResponse.data.photos.length : 0}`);
-
-                if (pexelsResponse.data.photos && pexelsResponse.data.photos.length > 0) {
-                  imageUrl = pexelsResponse.data.photos[0].src.medium; // 350px height, good for cards
-                  source = 'pexels-api';
-                  console.log(`✅ Found Pexels API image for ${name}: ${imageUrl}`);
+                if (wikiResponse.data.originalimage && wikiResponse.data.originalimage.source) {
+                  imageUrl = wikiResponse.data.originalimage.source;
+                  source = 'wikipedia';
+                  console.log(`✅ Found Wikipedia image for ${name}: ${imageUrl}`);
                 } else {
-                  // Fallback: try with just landmark name
-                  console.log(`⚠️  No Pexels results for full query, trying simplified query...`);
-                  const simpleResponse = await axios.get('https://api.pexels.com/v1/search', {
-                    params: {
-                      query: `${name} landmark`,
-                      per_page: 1,
-                      orientation: 'landscape'
-                    },
-                    headers: {
-                      'Authorization': PEXELS_API_KEY
-                    }
-                  });
+                  // Try without city if we had one
+                  if (city) {
+                    console.log(`⚠️  No Wikipedia image with city, trying without city...`);
+                    const fallbackResponse = await axios.get(
+                      'https://en.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(name),
+                      { timeout: 5000 }
+                    );
 
-                  if (simpleResponse.data.photos && simpleResponse.data.photos.length > 0) {
-                    imageUrl = simpleResponse.data.photos[0].src.medium;
-                    source = 'pexels-api';
-                    console.log(`✅ Found Pexels image with simplified query for ${name}`);
+                    if (fallbackResponse.data.originalimage && fallbackResponse.data.originalimage.source) {
+                      imageUrl = fallbackResponse.data.originalimage.source;
+                      source = 'wikipedia';
+                      console.log(`✅ Found Wikipedia image without city for ${name}`);
+                    } else {
+                      // No Wikipedia image found - use gradient placeholder
+                      imageUrl = null;
+                      source = 'placeholder';
+                      console.log(`⚠️  No Wikipedia image found, will use gradient placeholder`);
+                    }
                   } else {
-                    // No results at all - use gradient placeholder
+                    // No Wikipedia image found - use gradient placeholder
                     imageUrl = null;
                     source = 'placeholder';
-                    console.log(`⚠️  No Pexels results, will use gradient placeholder`);
+                    console.log(`⚠️  No Wikipedia image found, will use gradient placeholder`);
                   }
                 }
-              } catch (pexelsError) {
-                console.error(`❌ Pexels API error for ${name}:`, pexelsError.message);
-                console.error(`❌ Full error:`, pexelsError.response?.data || pexelsError);
+              } catch (wikiError) {
+                console.log(`⚠️  Wikipedia API error for ${name}: ${wikiError.message}`);
                 // Use gradient placeholder on error
                 imageUrl = null;
                 source = 'placeholder';
@@ -4054,42 +4042,8 @@ app.post('/api/images/scrape', async (req, res) => {
             return { name, imageUrl, source };
           } catch (entityError) {
             console.error(`Error scraping ${name}:`, entityError.message);
-            // Return Pexels API fallback on error
-            console.log(`🔄 Trying Pexels API as error fallback for ${name}...`);
-            console.log(`🔑 Using Pexels API Key: ${PEXELS_API_KEY ? PEXELS_API_KEY.substring(0, 10) + '...' : 'MISSING'}`);
-            try {
-              const searchQuery = `${name} ${city} ${type}`;
-              console.log(`🔍 Pexels API query (fallback): "${searchQuery}"`);
-
-              const pexelsResponse = await axios.get('https://api.pexels.com/v1/search', {
-                params: {
-                  query: searchQuery,
-                  per_page: 1,
-                  orientation: 'landscape'
-                },
-                headers: {
-                  'Authorization': PEXELS_API_KEY
-                }
-              });
-
-              console.log(`📊 Pexels API response status (fallback): ${pexelsResponse.status}`);
-              console.log(`📊 Pexels API results count (fallback): ${pexelsResponse.data.photos ? pexelsResponse.data.photos.length : 0}`);
-
-              if (pexelsResponse.data.photos && pexelsResponse.data.photos.length > 0) {
-                console.log(`✅ Fallback: Found Pexels API image for ${name} after error`);
-                return {
-                  name,
-                  imageUrl: pexelsResponse.data.photos[0].src.medium,
-                  source: 'pexels-api'
-                };
-              }
-            } catch (pexelsError) {
-              console.error(`❌ Pexels API also failed for ${name}:`, pexelsError.message);
-              console.error(`❌ Full error:`, pexelsError.response?.data || pexelsError);
-            }
-
-            // Last resort: gradient placeholder
-            console.log(`⚠️  Using gradient placeholder as last resort for ${name}`);
+            // Use gradient placeholder on error
+            console.log(`⚠️  Using gradient placeholder for ${name} due to error`);
             return {
               name,
               imageUrl: null,
