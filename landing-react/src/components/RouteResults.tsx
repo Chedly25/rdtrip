@@ -388,15 +388,19 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
     const savedRoute = await response.json()
     console.log('[DEBUG] Parsed response - savedRoute:', savedRoute, 'id:', savedRoute.id)
 
-    setSavedRouteId(savedRoute.id)
-    savedRouteIdRef.current = savedRoute.id // Also update ref immediately
+    // API returns { message: '...', route: { id: '...' } }
+    const routeId = savedRoute.route?.id || savedRoute.id
+    console.log('[DEBUG] Extracted routeId:', routeId)
+
+    setSavedRouteId(routeId)
+    savedRouteIdRef.current = routeId // Also update ref immediately
     console.log('[DEBUG] Set state and ref - ref is now:', savedRouteIdRef.current)
 
     setSaveSuccess(true)
     setTimeout(() => setSaveSuccess(false), 3000)
 
-    console.log('[DEBUG] handleSaveRoute RETURNING:', savedRoute.id)
-    return savedRoute.id
+    console.log('[DEBUG] handleSaveRoute RETURNING:', routeId)
+    return routeId
   }
 
   // Wrapper for View Map that includes modifications
