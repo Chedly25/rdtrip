@@ -432,6 +432,7 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
   const handleShareRoute = async (): Promise<{ shareUrl: string; shareToken: string }> => {
     // Use ref to get the most current value, even if state hasn't updated yet
     const currentRouteId = savedRouteIdRef.current || savedRouteId
+    console.log('[DEBUG] handleShareRoute - currentRouteId:', currentRouteId, 'ref:', savedRouteIdRef.current, 'state:', savedRouteId)
 
     if (!currentRouteId) {
       throw new Error('Route must be saved before sharing')
