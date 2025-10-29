@@ -414,10 +414,14 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
       return
     }
 
+    console.log('[DEBUG] handleShareClick START - ref:', savedRouteIdRef.current, 'state:', savedRouteId)
+
     // If route isn't saved yet, save it first
     if (!savedRouteIdRef.current) {
+      console.log('[DEBUG] Route not saved, saving now...')
       try {
-        await handleSaveRoute(`${routeData.origin} to ${routeData.destination}`)
+        const routeId = await handleSaveRoute(`${routeData.origin} to ${routeData.destination}`)
+        console.log('[DEBUG] Save completed, routeId:', routeId, 'ref after save:', savedRouteIdRef.current)
         // Both state and ref are updated in handleSaveRoute
       } catch (error) {
         console.error('Error saving route before sharing:', error)
@@ -426,6 +430,7 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
       }
     }
 
+    console.log('[DEBUG] Opening share modal - ref:', savedRouteIdRef.current, 'state:', savedRouteId)
     setShowShareModal(true)
   }
 
