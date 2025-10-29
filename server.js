@@ -1552,6 +1552,370 @@ function createBestOverallRoute(agentResults, requestedStops) {
   }
 }
 
+// =====================================================
+// BUDGET CALCULATOR ENDPOINT
+// =====================================================
+
+// POST /api/calculate-budget - Calculate comprehensive trip budget using Perplexity
+app.post('/api/calculate-budget', async (req, res) => {
+  try {
+    const { route, tripDetails } = req.body;
+
+    if (!route || !tripDetails) {
+      return res.status(400).json({ error: 'Route and trip details are required' });
+    }
+
+    // Parse route if it's stringified
+    const routeData = typeof route === 'string' ? JSON.parse(route) : route;
+
+    // Validate required fields
+    if (!routeData.origin || !routeData.destination) {
+      return res.status(400).json({ error: 'Route must have origin and destination' });
+    }
+
+    console.log('🔢 Calculating budget via Perplexity...');
+    console.log(`   Route: ${routeData.origin.name} → ${routeData.destination.name}`);
+    console.log(`   Waypoints: ${routeData.waypoints?.map(w => w.name).join(', ') || 'None'}`);
+    console.log(`   Duration: ${tripDetails.duration} days, Travelers: ${tripDetails.travelers}, Budget: ${tripDetails.budgetLevel}`);
+
+    // Calculate total distance
+    const totalDistance = calculateTotalRouteDistance(routeData);
+    console.log(`   Total distance: ${totalDistance}km`);
+
+    // Build comprehensive budget prompt
+    const budgetPrompt = buildBudgetPrompt(routeData, tripDetails, totalDistance);
+
+    // Call Perplexity with retry logic
+    const budgetData = await callPerplexityForBudget(budgetPrompt);
+
+    // Add metadata
+    budgetData.metadata = {
+      calculatedAt: new Date().toISOString(),
+      route: {
+        origin: routeData.origin.name,
+        destination: routeData.destination.name,
+        waypoints: routeData.waypoints?.map(w => w.name) || [],
+        distance: totalDistance
+      },
+      tripDetails,
+      dataSource: 'perplexity',
+      apiVersion: 'v1'
+    };
+
+    console.log(`✅ Budget calculated: €${budgetData.summary.total} total (€${budgetData.summary.perPerson}/person)`);
+
+    res.json(budgetData);
+
+  } catch (error) {
+    console.error('❌ Budget calculation failed:', error);
+    res.status(500).json({
+      error: 'Budget calculation failed',
+      message: error.message,
+      fallback: generateFallbackBudget(req.body)
+    });
+  }
+});
+
+// Helper: Calculate total route distance using Haversine
+function calculateTotalRouteDistance(route) {
+  const { calculateDistance } = require('./utils/cityOptimization');
+
+  const points = [
+    route.origin,
+    ...(route.waypoints || []),
+    route.destination
+  ];
+
+  let totalDistance = 0;
+
+  for (let i = 0; i < points.length - 1; i++) {
+    const point1 = points[i];
+    const point2 = points[i + 1];
+
+    // Use calculateDistance from cityOptimization (expects lat/lon properties)
+    const distance = calculateDistance(
+      point1.latitude,
+      point1.longitude,
+      point2.latitude,
+      point2.longitude
+    );
+
+    totalDistance += distance;
+  }
+
+  // Account for road detours (roads aren't straight lines - multiply by ~1.3)
+  const actualDrivingDistance = Math.round(totalDistance * 1.3);
+
+  return actualDrivingDistance;
+}
+
+// Helper: Build comprehensive Perplexity prompt for budget calculation
+function buildBudgetPrompt(route, tripDetails, totalDistance) {
+  const { duration, travelers, budgetLevel, preferences } = tripDetails;
+
+  const waypoints = route.waypoints || [];
+  const originCountry = getCountryFromCity(route.origin.name);
+  const destCountry = getCountryFromCity(route.destination.name);
+
+  const budgetGuidance = {
+    'budget': 'Focus on hostels/budget hotels (€30-60/night), street food and casual dining (€8-20/meal), free attractions and parks. Minimize toll roads where possible.',
+    'mid': 'Focus on 3-star hotels (€70-120/night), local restaurants and cafes (€15-35/meal), main attractions and museums (€8-15 each). Use normal highways.',
+    'luxury': 'Focus on 4-5 star hotels (€150-300/night), fine dining restaurants (€40-80/meal), premium experiences and guided tours (€50-150 each). Prioritize comfort over cost.'
+  };
+
+  const currentMonth = new Date().toLocaleString('en-US', { month: 'long' });
+  const currentYear = new Date().getFullYear();
+
+  return `You are a European road trip budget calculator with access to current ${currentYear} prices. Calculate realistic cost estimates for this specific route.
+
+**Route Details:**
+- Origin: ${route.origin.name}, ${originCountry}
+- Destination: ${route.destination.name}, ${destCountry}
+- Waypoints: ${waypoints.map(w => w.name).join(', ') || 'Direct route (no stops)'}
+- Total Driving Distance: ${totalDistance}km
+- Trip Duration: ${duration} days
+- Number of Travelers: ${travelers} people
+- Budget Level: ${budgetLevel}
+- Current Month: ${currentMonth} ${currentYear}
+
+**Budget Guidelines:**
+${budgetGuidance[budgetLevel] || budgetGuidance.mid}
+
+**IMPORTANT INSTRUCTIONS:**
+1. Use CURRENT ${currentYear} prices for ${currentMonth}
+2. Account for seasonal variations (${currentMonth} may have high/low season pricing)
+3. Be specific to the actual cities in the route
+4. Include realistic toll costs for European highways
+5. Use current fuel prices (€/liter) in ${originCountry} and ${destCountry}
+6. Return ONLY valid JSON with no markdown formatting, no code blocks, no extra text
+
+**Return this EXACT JSON structure:**
+
+{
+  "transportation": {
+    "fuel": {
+      "total": <number in EUR>,
+      "pricePerLiter": <current EUR fuel price>,
+      "litersNeeded": <number>,
+      "consumption": "7L/100km"
+    },
+    "tolls": {
+      "total": <number in EUR>,
+      "breakdown": [
+        {"section": "Highway name", "cost": <number>}
+      ]
+    },
+    "parking": {
+      "total": <number in EUR>,
+      "perCity": [
+        {"city": "CityName", "days": <number>, "dailyRate": <number>, "total": <number>}
+      ]
+    }
+  },
+  "accommodation": {
+    "total": <number in EUR>,
+    "avgPerNight": <number>,
+    "nights": <number of nights = ${Math.max(1, duration - 1)}>,
+    "byCity": [
+      {"city": "CityName", "priceRange": {"min": <number>, "max": <number>}, "avgPrice": <number>, "nights": 1}
+    ]
+  },
+  "dining": {
+    "total": <number in EUR>,
+    "breakdown": {
+      "breakfast": {"perPerson": <number>, "dailyTotal": <number>, "tripTotal": <number>},
+      "lunch": {"perPerson": <number>, "dailyTotal": <number>, "tripTotal": <number>},
+      "dinner": {"perPerson": <number>, "dailyTotal": <number>, "tripTotal": <number>},
+      "snacks": {"dailyTotal": <number>, "tripTotal": <number>}
+    }
+  },
+  "activities": {
+    "total": <number in EUR>,
+    "estimatedCount": <number>,
+    "items": [
+      {"name": "Specific attraction name", "city": "CityName", "cost": <number per person>}
+    ]
+  },
+  "misc": {
+    "total": <5% of subtotal in EUR>,
+    "note": "Contingency for unexpected costs"
+  },
+  "summary": {
+    "total": <sum of all categories in EUR>,
+    "perPerson": <total divided by ${travelers} travelers>,
+    "confidence": "medium",
+    "currency": "EUR"
+  },
+  "savingsTips": [
+    "Specific actionable tip 1 with estimated savings amount",
+    "Specific actionable tip 2 with estimated savings amount",
+    "Specific actionable tip 3 with estimated savings amount"
+  ],
+  "priceContext": {
+    "bestMonthsForPrices": ["month1", "month2"],
+    "expensivePeriods": ["period1", "period2"],
+    "currentMonthContext": "Brief note about ${currentMonth} pricing trends"
+  }
+}`;
+}
+
+// Helper: Call Perplexity API for budget calculation with retry logic
+async function callPerplexityForBudget(prompt) {
+  const maxRetries = 3;
+  let lastError;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch('https://api.perplexity.ai/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${PERPLEXITY_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'sonar',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a precise budget calculator. Return ONLY valid JSON with no markdown formatting, no code blocks, no extra text. Use current 2025 European prices.'
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          temperature: 0.1, // Low temperature for consistent, factual pricing
+          max_tokens: 2500
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Perplexity API error ${response.status}: ${errorText}`);
+      }
+
+      const data = await response.json();
+      const content = data.choices[0].message.content;
+
+      // Clean markdown formatting if present
+      const jsonContent = content
+        .replace(/```json\n?/g, '')
+        .replace(/```\n?/g, '')
+        .trim();
+
+      const budgetData = JSON.parse(jsonContent);
+
+      // Validate required fields
+      if (!budgetData.summary || typeof budgetData.summary.total !== 'number') {
+        throw new Error('Invalid budget data structure - missing summary.total');
+      }
+
+      if (!budgetData.transportation || !budgetData.accommodation || !budgetData.dining) {
+        throw new Error('Invalid budget data structure - missing required categories');
+      }
+
+      return budgetData;
+
+    } catch (error) {
+      lastError = error;
+      console.warn(`⚠️  Budget calculation attempt ${attempt}/${maxRetries} failed:`, error.message);
+
+      if (attempt < maxRetries) {
+        // Exponential backoff: 1s, 2s, 4s
+        const delay = 1000 * Math.pow(2, attempt - 1);
+        console.log(`   Retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+
+  throw new Error(`Budget calculation failed after ${maxRetries} attempts: ${lastError.message}`);
+}
+
+// Helper: Get country from city name (simple heuristic)
+function getCountryFromCity(cityName) {
+  const countryMap = {
+    'france': ['aix-en-provence', 'marseille', 'montpellier', 'perpignan', 'narbonne', 'nice', 'lyon', 'toulouse', 'avignon', 'cannes', 'antibes', 'arles', 'nimes'],
+    'spain': ['barcelona', 'figueres', 'girona', 'valencia', 'madrid', 'seville', 'bilbao', 'zaragoza', 'tarragona', 'lleida'],
+    'italy': ['milan', 'rome', 'florence', 'venice', 'genoa', 'turin', 'pisa', 'verona', 'bologna', 'naples'],
+    'portugal': ['lisbon', 'porto', 'faro', 'coimbra', 'braga'],
+    'switzerland': ['geneva', 'zurich', 'bern', 'lausanne', 'basel'],
+    'germany': ['munich', 'berlin', 'hamburg', 'frankfurt', 'cologne'],
+    'belgium': ['brussels', 'bruges', 'antwerp', 'ghent']
+  };
+
+  const cityLower = cityName.toLowerCase();
+
+  for (const [country, cities] of Object.entries(countryMap)) {
+    if (cities.some(c => cityLower.includes(c) || c.includes(cityLower))) {
+      return country.charAt(0).toUpperCase() + country.slice(1);
+    }
+  }
+
+  return 'Europe';
+}
+
+// Helper: Generate fallback budget estimate if Perplexity fails
+function generateFallbackBudget(requestData) {
+  const { route, tripDetails } = requestData;
+  if (!tripDetails) {
+    return {
+      summary: { total: 0, perPerson: 0, confidence: 'error' },
+      error: 'Missing trip details'
+    };
+  }
+
+  const { duration, travelers, budgetLevel } = tripDetails;
+
+  // Ultra-simple static estimates as fallback
+  const baseRates = {
+    budget: { hotel: 45, meal: 12, activities: 15, parkingDaily: 15 },
+    mid: { hotel: 95, meal: 25, activities: 30, parkingDaily: 25 },
+    luxury: { hotel: 220, meal: 55, activities: 80, parkingDaily: 40 }
+  };
+
+  const rates = baseRates[budgetLevel] || baseRates.mid;
+  const distance = 800; // Rough estimate if we can't calculate
+
+  const accommodation = rates.hotel * Math.max(1, duration - 1);
+  const dining = rates.meal * 3 * duration * travelers;
+  const activities = rates.activities * 3 * duration * travelers;
+  const fuel = (distance / 100) * 7 * 1.65; // 7L/100km, €1.65/L
+  const tolls = 60;
+  const parking = rates.parkingDaily * duration;
+
+  const subtotal = accommodation + dining + activities + fuel + tolls + parking;
+  const misc = subtotal * 0.05;
+  const total = subtotal + misc;
+
+  return {
+    summary: {
+      total: Math.round(total),
+      perPerson: Math.round(total / travelers),
+      confidence: 'low',
+      currency: 'EUR',
+      note: 'Fallback estimate - Perplexity API unavailable. Actual prices may vary significantly.'
+    },
+    breakdown: {
+      transportation: {
+        fuel: { total: Math.round(fuel) },
+        tolls: { total: tolls },
+        parking: { total: parking }
+      },
+      accommodation: { total: accommodation, nights: Math.max(1, duration - 1) },
+      dining: { total: dining },
+      activities: { total: activities },
+      misc: { total: Math.round(misc) }
+    },
+    warning: 'This is a basic static estimate. Try again later for detailed AI-powered pricing.',
+    savingsTips: [
+      'Park outside city centers to save on parking costs',
+      'Eat at local markets and bakeries for budget meals',
+      'Visit free attractions and parks to reduce activity costs'
+    ]
+  };
+}
+
 // Get hotels and restaurants for a city
 app.post('/api/get-hotels-restaurants', async (req, res) => {
   try {
