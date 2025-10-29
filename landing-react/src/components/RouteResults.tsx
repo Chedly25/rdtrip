@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { MapPin, DollarSign, ArrowRight, Map, Save, RefreshCw, Share2, Plus, Sparkles, Undo, RotateCcw } from 'lucide-react'
 import { CityCard } from './CityCard'
+import { BudgetDisplay } from './BudgetDisplay'
 import { useAuth } from '../contexts/AuthContext'
 import SaveRouteModal from './SaveRouteModal'
 import ShareRouteModal from './ShareRouteModal'
@@ -86,6 +87,10 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null)
   const { token, isAuthenticated } = useAuth()
 
+  // Budget calculation state
+  const [budgets, setBudgets] = useState<Record<string, any>>({})
+  const [budgetLoading, setBudgetLoading] = useState(true)
+
   // State to manage modified waypoints per agent (for adding/replacing cities)
   const [modifiedWaypoints, setModifiedWaypoints] = useState<Record<number, City[]>>({})
 
@@ -98,6 +103,70 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
   }
   const [history, setHistory] = useState<HistoryEntry[]>([])
   const [showChangeHistory, setShowChangeHistory] = useState(false)
+
+  // Calculate budgets for all agents on mount
+  useEffect(() => {
+    async function calculateBudgets() {
+      setBudgetLoading(true)
+
+      const budgetPromises = routeData.agentResults.map(async (agentResult) => {
+        try {
+          const parsedRecs = JSON.parse(agentResult.recommendations)
+
+          // Estimate duration: 1.5 days per city (rounded up)
+          const waypointsCount = parsedRecs.waypoints?.length || 0
+          const estimatedDuration = Math.max(2, Math.ceil(waypointsCount * 1.5))
+
+          const response = await fetch('/api/calculate-budget', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              route: parsedRecs,
+              tripDetails: {
+                duration: estimatedDuration,
+                travelers: 2, // Default to 2 travelers
+                budgetLevel: routeData.budget || 'mid',
+                preferences: { agent: agentResult.agent }
+              }
+            })
+          })
+
+          if (!response.ok) {
+            const errorData = await response.json()
+            console.error(`Budget calc failed for ${agentResult.agent}:`, errorData)
+            return {
+              agent: agentResult.agent,
+              budget: errorData.fallback || { summary: { total: 0, perPerson: 0, confidence: 'error' }, error: true }
+            }
+          }
+
+          const budgetData = await response.json()
+          return { agent: agentResult.agent, budget: budgetData }
+
+        } catch (error) {
+          console.error(`Budget calc error for ${agentResult.agent}:`, error)
+          return {
+            agent: agentResult.agent,
+            budget: { summary: { total: 0, perPerson: 0, confidence: 'error' }, error: true }
+          }
+        }
+      })
+
+      const results = await Promise.all(budgetPromises)
+
+      const budgetsByAgent: Record<string, any> = {}
+      results.forEach(({ agent, budget }) => {
+        budgetsByAgent[agent] = budget
+      })
+
+      setBudgets(budgetsByAgent)
+      setBudgetLoading(false)
+    }
+
+    if (routeData.agentResults.length > 0) {
+      calculateBudgets()
+    }
+  }, [routeData])
 
   // Open modal for city action
   const handleOpenCityAction = (city: City, agentIndex: number) => {
@@ -625,6 +694,13 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
                     </div>
                   </div>
                 )}
+
+                {/* Budget Display */}
+                <BudgetDisplay
+                  budgetData={budgets[agentResult.agent]}
+                  loading={budgetLoading}
+                  themeColor={theme.color}
+                />
 
                 {/* Cities */}
                 <div>
