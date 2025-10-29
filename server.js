@@ -4682,7 +4682,7 @@ Return JSON now:`;
         'Authorization': `Bearer ${process.env.PERPLEXITY_API_KEY}`,
         'Content-Type': 'application/json'
       },
-      timeout: 15000 // 15 second timeout
+      timeout: 30000 // 30 second timeout (increased for reliability)
     });
 
     const content = response.data.choices[0].message.content;
@@ -4749,7 +4749,7 @@ Return JSON now:`;
         'Authorization': `Bearer ${process.env.PERPLEXITY_API_KEY}`,
         'Content-Type': 'application/json'
       },
-      timeout: 12000 // 12 second timeout
+      timeout: 30000 // 30 second timeout (increased for reliability)
     });
 
     const content = response.data.choices[0].message.content;
@@ -4816,7 +4816,7 @@ Return JSON now:`;
         'Authorization': `Bearer ${process.env.PERPLEXITY_API_KEY}`,
         'Content-Type': 'application/json'
       },
-      timeout: 10000 // 10 second timeout
+      timeout: 30000 // 30 second timeout (increased for reliability)
     });
 
     const content = response.data.choices[0].message.content;
@@ -4896,7 +4896,7 @@ Return JSON now:`;
         'Authorization': `Bearer ${process.env.PERPLEXITY_API_KEY}`,
         'Content-Type': 'application/json'
       },
-      timeout: 15000 // 15 second timeout
+      timeout: 30000 // 30 second timeout (increased for reliability)
     });
 
     const content = response.data.choices[0].message.content;
