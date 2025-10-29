@@ -9,6 +9,7 @@ import { StayDineSection } from './StayDineSection'
 import { ItinerarySection } from './ItinerarySection'
 import { MapView } from './MapView'
 import { WazeCitySelector } from './WazeCitySelector'
+import { ExportMenu } from '../ExportMenu'
 import { useSpotlightStore } from '../../stores/spotlightStore'
 import { useRouteDataStore } from '../../stores/routeDataStore'
 import { getTheme } from '../../config/theme'
@@ -52,6 +53,9 @@ export function SpotlightPageComplete() {
   const agent = routeData?.agent || 'adventure'
   const config = agentConfig[agent]
   const theme = getTheme(agent)
+
+  // Get the agent index for export menu
+  const agentIndex = routeData?.agentResults?.findIndex((result: any) => result.agent === agent) ?? 0
 
   // Get origin and destination from waypoints (they have full city names with countries)
   // Waypoints are ordered, first is origin, last is destination
@@ -144,6 +148,9 @@ export function SpotlightPageComplete() {
               <Navigation className="h-4 w-4" />
               Waze
             </Button>
+            {routeData && (
+              <ExportMenu spotlightData={routeData} agentIndex={agentIndex} />
+            )}
           </div>
 
           {/* Centered Theme and Route Info */}
