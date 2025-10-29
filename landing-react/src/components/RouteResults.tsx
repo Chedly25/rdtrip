@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { MapPin, DollarSign, ArrowRight, Map, Save, RefreshCw, Share2, Plus, Sparkles, Undo, RotateCcw } from 'lucide-react'
 import { CityCard } from './CityCard'
@@ -76,6 +76,7 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [showShareModal, setShowShareModal] = useState(false)
   const [savedRouteId, setSavedRouteId] = useState<string | undefined>(routeData.id)
+  const savedRouteIdRef = useRef<string | undefined>(routeData.id) // Keep ref in sync with state
   const [shareToken, setShareToken] = useState<string | null>(null)
   const [isPublic, setIsPublic] = useState(false)
   const [viewCount] = useState(0)
@@ -380,6 +381,7 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
 
     const savedRoute = await response.json()
     setSavedRouteId(savedRoute.id)
+    savedRouteIdRef.current = savedRoute.id // Also update ref immediately
     setSaveSuccess(true)
     setTimeout(() => setSaveSuccess(false), 3000)
 
@@ -413,10 +415,10 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
     }
 
     // If route isn't saved yet, save it first
-    if (!savedRouteId) {
+    if (!savedRouteIdRef.current) {
       try {
-        const routeId = await handleSaveRoute(`${routeData.origin} to ${routeData.destination}`)
-        setSavedRouteId(routeId)
+        await handleSaveRoute(`${routeData.origin} to ${routeData.destination}`)
+        // Both state and ref are updated in handleSaveRoute
       } catch (error) {
         console.error('Error saving route before sharing:', error)
         alert('Please save the route first before sharing')
@@ -428,11 +430,14 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
   }
 
   const handleShareRoute = async (): Promise<{ shareUrl: string; shareToken: string }> => {
-    if (!savedRouteId) {
+    // Use ref to get the most current value, even if state hasn't updated yet
+    const currentRouteId = savedRouteIdRef.current || savedRouteId
+
+    if (!currentRouteId) {
       throw new Error('Route must be saved before sharing')
     }
 
-    const response = await fetch(`/api/routes/${savedRouteId}/share`, {
+    const response = await fetch(`/api/routes/${currentRouteId}/share`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`
