@@ -39,10 +39,10 @@ export function Hero() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.4 }}
           >
-            Plan Your Perfect
+            Stop Spending Hours
             <br />
             <span className="text-white">
-              Road Trip Adventure
+              Planning on Google Maps
             </span>
           </motion.h1>
 
@@ -52,8 +52,9 @@ export function Hero() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.6 }}
           >
-            AI-powered route planning with personalized stops, activities, and hidden gems
-            tailored to your travel style
+            4 AI experts plan your European road trip in 2 minutes.
+            <br className="hidden md:block" />
+            Pick Adventure, Culture, Food, or Hidden Gems.
           </motion.p>
 
           <motion.button
@@ -65,7 +66,7 @@ export function Hero() {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
-            Start Planning
+            Generate My Route
             <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
           </motion.button>
         </motion.div>
