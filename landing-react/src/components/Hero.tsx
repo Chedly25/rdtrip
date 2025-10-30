@@ -1,5 +1,7 @@
 import { motion } from 'framer-motion'
 import { ArrowRight } from 'lucide-react'
+import { StatsBar } from './StatsBar'
+import { RecentActivity } from './RecentActivity'
 
 export function Hero() {
   const scrollToForm = () => {
@@ -69,6 +71,16 @@ export function Hero() {
             Generate My Route
             <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
           </motion.button>
+
+          {/* Stats Bar */}
+          <div className="mt-12">
+            <StatsBar />
+          </div>
+
+          {/* Recent Activity */}
+          <div className="mt-8 flex justify-center">
+            <RecentActivity />
+          </div>
         </motion.div>
 
         {/* Scroll indicator */}

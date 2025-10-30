@@ -141,6 +141,40 @@ export function Footer() {
           </motion.div>
         </div>
 
+        {/* Trust Badges */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0.4 }}
+          className="mt-12"
+        >
+          <p className="mb-4 text-center text-sm font-medium uppercase tracking-wider text-gray-500">
+            Powered By
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-8">
+            {/* Perplexity AI */}
+            <div className="group flex items-center gap-2 rounded-lg bg-gray-800/50 px-6 py-3 transition-all hover:bg-gray-800">
+              <svg className="h-6 w-6 text-gray-400 transition-colors group-hover:text-white" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z"/>
+              </svg>
+              <span className="text-sm font-semibold text-gray-400 transition-colors group-hover:text-white">
+                Perplexity AI
+              </span>
+            </div>
+
+            {/* Mapbox */}
+            <div className="group flex items-center gap-2 rounded-lg bg-gray-800/50 px-6 py-3 transition-all hover:bg-gray-800">
+              <svg className="h-6 w-6 text-gray-400 transition-colors group-hover:text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+              </svg>
+              <span className="text-sm font-semibold text-gray-400 transition-colors group-hover:text-white">
+                Mapbox
+              </span>
+            </div>
+          </div>
+        </motion.div>
+
         {/* Divider */}
         <div className="my-8 border-t border-gray-800" />
 
