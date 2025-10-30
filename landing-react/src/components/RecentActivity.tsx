@@ -24,15 +24,15 @@ function getTimeAgo(dateString: string): string {
   return `${Math.floor(seconds / 86400)}d ago`
 }
 
-// Get agent icon based on agent name
-function getAgentIcon(agent: string): string {
+// Get agent icon path based on agent name
+function getAgentIconPath(agent: string): string {
   const icons: Record<string, string> = {
-    adventure: '⛰️',
-    culture: '🏛️',
-    food: '🍽️',
-    'hidden-gems': '💎'
+    adventure: '/images/icons/adventure_icon.png',
+    culture: '/images/icons/culture_icon.png',
+    food: '/images/icons/food_icon.png',
+    'hidden-gems': '/images/icons/hidden_gem_icon.png'
   }
-  return icons[agent] || '🗺️'
+  return icons[agent] || '/images/icons/best_icon.png'
 }
 
 export function RecentActivity() {
@@ -125,7 +125,16 @@ export function RecentActivity() {
                     {currentRoute.agents && currentRoute.agents.length > 0 && (
                       <>
                         <span>•</span>
-                        <span>{currentRoute.agents.map(getAgentIcon).join(' ')}</span>
+                        <div className="flex items-center gap-1">
+                          {currentRoute.agents.map((agent, idx) => (
+                            <img
+                              key={idx}
+                              src={getAgentIconPath(agent)}
+                              alt={agent}
+                              className="h-4 w-4 object-contain"
+                            />
+                          ))}
+                        </div>
                       </>
                     )}
                   </div>

@@ -138,13 +138,13 @@ export const destinations: Destination[] = [
   }
 ]
 
-// Helper function to get agent color
+// Helper function to get agent color (matches spotlight theme colors)
 export function getAgentColor(agent: string): string {
   const colors: Record<string, string> = {
-    'adventure': '#34C759',
-    'culture': '#FFD60A',
-    'food': '#FF3B30',
-    'hidden-gems': '#9333ea'
+    'adventure': '#0f5132',    // dark green from theme.ts
+    'culture': '#d4a017',      // yellow/gold from theme.ts
+    'food': '#8b0000',         // dark red from theme.ts
+    'hidden-gems': '#1e3a8a'   // dark blue from theme.ts
   }
   return colors[agent] || '#6B7280'
 }
