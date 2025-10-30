@@ -7,24 +7,28 @@ const features = [
     title: 'Generated in 2 Minutes',
     description: 'Enter your destination and number of stops. Get 4 complete routes from different AI agents instantly. No more hours on Google Maps.',
     color: 'from-blue-500 to-cyan-500',
+    example: 'Example: "Barcelona, 3 stops" → 4 custom routes in 120 seconds'
   },
   {
     icon: Map,
     title: 'Follows Real Roads',
     description: 'Routes use Mapbox Directions API to follow actual highways and roads. Not straight lines - real driveable paths with accurate distances.',
     color: 'from-green-500 to-emerald-500',
+    example: 'Same tech as Tesla & Uber - real traffic patterns, actual routes'
   },
   {
     icon: FileText,
     title: 'Day-by-Day Itineraries',
     description: 'Each route includes detailed daily itineraries with hotels, restaurants, landmarks, and activities - researched by Perplexity AI.',
     color: 'from-orange-500 to-red-500',
+    example: 'Day 1: Morning in Montpellier, lunch at Place de la Comédie, evening Musée Fabre...'
   },
   {
     icon: Download,
     title: 'Export Everything',
     description: 'Download routes as GPX (for GPS), KML (for Google Earth), or ICS (for Google Calendar). Share links with friends.',
     color: 'from-purple-500 to-pink-500',
+    example: 'One-click export to your Garmin, Google Maps, or Apple Calendar'
   },
 ]
 
@@ -76,9 +80,14 @@ export function Features() {
                 <h3 className="relative mb-3 text-xl font-bold text-gray-900">
                   {feature.title}
                 </h3>
-                <p className="relative text-gray-600 leading-relaxed text-sm">
+                <p className="relative mb-3 text-gray-600 leading-relaxed text-sm">
                   {feature.description}
                 </p>
+
+                {/* Example */}
+                <div className="relative mt-4 rounded-lg bg-gray-50 px-3 py-2">
+                  <p className="text-xs text-gray-500">{feature.example}</p>
+                </div>
               </motion.div>
             )
           })}

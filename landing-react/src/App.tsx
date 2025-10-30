@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Navigation } from './components/Navigation'
 import { Hero } from './components/Hero'
 import { AgentShowcase } from './components/AgentShowcase'
+import { BeforeAfterComparison } from './components/BeforeAfterComparison'
 import { Features } from './components/Features'
 import { RouteForm } from './components/RouteForm'
 import { RouteResults } from './components/RouteResults'
@@ -69,6 +70,7 @@ function HomePage() {
         <>
           <Hero />
           <AgentShowcase />
+          <BeforeAfterComparison />
           <RouteForm onRouteGenerated={handleRouteGenerated} />
           <Features />
           <About />
