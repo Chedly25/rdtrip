@@ -27,7 +27,7 @@ export function Navigation() {
       className={`fixed left-0 right-0 top-0 z-50 transition-all duration-300 ${
         isScrolled
           ? 'bg-white/95 shadow-lg backdrop-blur-md'
-          : 'bg-transparent'
+          : 'bg-white/5 backdrop-blur-sm'
       }`}
       initial={{ y: -100 }}
       animate={{ y: 0 }}
@@ -37,10 +37,10 @@ export function Navigation() {
         {/* Logo */}
         <motion.a
           href="/"
-          className={`text-2xl font-bold transition-all ${
+          className={`text-2xl font-bold transition-colors ${
             isScrolled
               ? 'text-slate-900'
-              : 'text-white shadow-[0_2px_8px_rgba(0,0,0,0.8)]'
+              : 'text-white'
           }`}
           whileHover={{ scale: 1.05 }}
         >
@@ -51,24 +51,24 @@ export function Navigation() {
         <div className="hidden items-center gap-8 md:flex">
           <button
             onClick={() => scrollToSection('route-form')}
-            className={`font-medium transition-all hover:text-slate-900 ${
-              isScrolled ? 'text-gray-700' : 'text-white shadow-[0_2px_8px_rgba(0,0,0,0.8)]'
+            className={`font-medium transition-colors hover:text-slate-900 ${
+              isScrolled ? 'text-gray-700' : 'text-white'
             }`}
           >
             Plan Route
           </button>
           <button
             onClick={() => scrollToSection('features')}
-            className={`font-medium transition-all hover:text-slate-900 ${
-              isScrolled ? 'text-gray-700' : 'text-white shadow-[0_2px_8px_rgba(0,0,0,0.8)]'
+            className={`font-medium transition-colors hover:text-slate-900 ${
+              isScrolled ? 'text-gray-700' : 'text-white'
             }`}
           >
             Features
           </button>
           <button
             onClick={() => scrollToSection('about')}
-            className={`font-medium transition-all hover:text-slate-900 ${
-              isScrolled ? 'text-gray-700' : 'text-white shadow-[0_2px_8px_rgba(0,0,0,0.8)]'
+            className={`font-medium transition-colors hover:text-slate-900 ${
+              isScrolled ? 'text-gray-700' : 'text-white'
             }`}
           >
             About
@@ -79,7 +79,7 @@ export function Navigation() {
         {/* Mobile Menu Button */}
         <button
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className={`md:hidden ${isScrolled ? 'text-gray-700' : 'text-white shadow-[0_2px_8px_rgba(0,0,0,0.8)]'}`}
+          className={`md:hidden ${isScrolled ? 'text-gray-700' : 'text-white'}`}
         >
           {isMobileMenuOpen ? (
             <X className="h-6 w-6" />

@@ -100,10 +100,10 @@ export function AuthButton({ isScrolled = true }: AuthButtonProps) {
       <div className="flex items-center gap-3">
         <button
           onClick={() => setShowLoginModal(true)}
-          className={`rounded-lg px-4 py-2 text-sm font-semibold transition-all hover:bg-gray-100 ${
+          className={`rounded-lg px-4 py-2 text-sm font-semibold transition-all ${
             isScrolled
-              ? 'text-slate-900'
-              : 'text-white shadow-[0_2px_8px_rgba(0,0,0,0.8)] hover:bg-white/10'
+              ? 'text-slate-900 hover:bg-gray-100'
+              : 'text-white hover:bg-white/10'
           }`}
         >
           Sign In
