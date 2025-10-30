@@ -41,19 +41,19 @@ export function BeforeAfterComparison() {
           </p>
         </motion.div>
 
-        {/* Comparison Grid */}
-        <div className="grid gap-8 lg:grid-cols-2">
+        {/* Comparison Grid - Perfectly Aligned */}
+        <div className="grid gap-8 lg:grid-cols-2 lg:items-stretch">
           {/* The Old Way */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
-            className="relative"
+            className="relative flex"
           >
-            <div className="overflow-hidden rounded-2xl border-2 border-red-200 bg-white shadow-xl">
+            <div className="flex w-full flex-col overflow-hidden rounded-2xl border-2 border-gray-300 bg-white shadow-xl">
               {/* Header */}
-              <div className="bg-gradient-to-r from-red-500 to-rose-600 px-6 py-4">
+              <div className="bg-gradient-to-r from-gray-600 to-gray-700 px-6 py-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-2xl font-bold text-white">The Old Way</h3>
                   <div className="flex items-center gap-2 rounded-full bg-white/20 px-3 py-1">
@@ -64,20 +64,49 @@ export function BeforeAfterComparison() {
               </div>
 
               {/* Content */}
-              <div className="p-6">
-                {/* Messy Visual */}
-                <div className="mb-6 rounded-lg bg-gray-100 p-4">
-                  <div className="mb-3 space-y-2">
-                    <div className="h-8 w-3/4 rounded bg-gray-300" />
-                    <div className="h-8 w-5/6 rounded bg-gray-300" />
-                    <div className="h-8 w-2/3 rounded bg-gray-300" />
+              <div className="flex flex-1 flex-col p-6">
+                {/* Browser Mockup - Multiple Chaotic Tabs */}
+                <div className="mb-6 overflow-hidden rounded-lg border-2 border-gray-300 bg-white shadow-sm">
+                  {/* Browser Chrome */}
+                  <div className="border-b border-gray-300 bg-gray-100 px-3 py-2">
+                    <div className="flex items-center gap-2">
+                      <div className="flex gap-1.5">
+                        <div className="h-2.5 w-2.5 rounded-full bg-red-400" />
+                        <div className="h-2.5 w-2.5 rounded-full bg-yellow-400" />
+                        <div className="h-2.5 w-2.5 rounded-full bg-green-400" />
+                      </div>
+                      <div className="ml-2 flex-1 text-[10px] text-gray-500">browser tabs...</div>
+                    </div>
                   </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="h-16 rounded bg-gray-300" />
-                    <div className="h-16 rounded bg-gray-300" />
-                    <div className="h-16 rounded bg-gray-300" />
+
+                  {/* Tab Bar - Messy */}
+                  <div className="flex overflow-x-auto border-b border-gray-300 bg-gray-50">
+                    <div className="flex min-w-max gap-0.5 px-1 py-1">
+                      <div className="rounded-t bg-white px-2 py-1 text-[9px] text-gray-700 shadow-sm">Google Maps</div>
+                      <div className="rounded-t bg-gray-200 px-2 py-1 text-[9px] text-gray-600">TripAdvisor</div>
+                      <div className="rounded-t bg-gray-200 px-2 py-1 text-[9px] text-gray-600">Airbnb</div>
+                      <div className="rounded-t bg-gray-200 px-2 py-1 text-[9px] text-gray-600">Booking.com</div>
+                      <div className="rounded-t bg-gray-200 px-2 py-1 text-[9px] text-gray-600">Excel Sheet</div>
+                      <div className="rounded-t bg-gray-200 px-2 py-1 text-[9px] text-gray-600">Google: things...</div>
+                      <div className="rounded-t bg-gray-200 px-2 py-1 text-[9px] text-gray-600">+8 more</div>
+                    </div>
                   </div>
-                  <p className="mt-3 text-center text-xs text-gray-500">
+
+                  {/* Content Area - Messy Interface */}
+                  <div className="bg-white p-3">
+                    <div className="mb-2 space-y-1.5">
+                      <div className="h-4 w-3/4 rounded bg-gray-200" />
+                      <div className="h-4 w-5/6 rounded bg-gray-200" />
+                      <div className="h-4 w-2/3 rounded bg-gray-200" />
+                    </div>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      <div className="h-12 rounded bg-gray-200" />
+                      <div className="h-12 rounded bg-gray-200" />
+                      <div className="h-12 rounded bg-gray-200" />
+                    </div>
+                  </div>
+
+                  <p className="border-t border-gray-200 bg-gray-50 py-2 text-center text-[10px] text-gray-500">
                     Multiple tabs, scattered notes, confusion
                   </p>
                 </div>
@@ -86,8 +115,8 @@ export function BeforeAfterComparison() {
                 <ul className="space-y-3">
                   {oldWaySteps.map((step, index) => (
                     <li key={index} className="flex items-start gap-3">
-                      <div className="mt-1 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-red-100">
-                        <X className="h-3 w-3 text-red-600" />
+                      <div className="mt-1 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-gray-200">
+                        <X className="h-3 w-3 text-gray-600" />
                       </div>
                       <span className="text-sm text-gray-700">{step}</span>
                     </li>
@@ -95,10 +124,12 @@ export function BeforeAfterComparison() {
                 </ul>
 
                 {/* Bottom Badge */}
-                <div className="mt-6 rounded-lg bg-red-50 px-4 py-3 text-center">
-                  <p className="text-sm font-medium text-red-700">
-                    Exhausting, time-consuming, and incomplete
-                  </p>
+                <div className="mt-auto pt-6">
+                  <div className="rounded-lg border border-gray-300 bg-gray-50 px-4 py-3 text-center">
+                    <p className="text-sm font-medium text-gray-700">
+                      Exhausting, time-consuming, and incomplete
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -110,11 +141,11 @@ export function BeforeAfterComparison() {
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
-            className="relative"
+            className="relative flex"
           >
-            <div className="overflow-hidden rounded-2xl border-2 border-green-200 bg-white shadow-xl">
+            <div className="flex w-full flex-col overflow-hidden rounded-2xl border-2 border-teal-200 bg-white shadow-xl">
               {/* Header */}
-              <div className="bg-gradient-to-r from-green-500 to-emerald-600 px-6 py-4">
+              <div className="bg-gradient-to-r from-teal-700 to-teal-800 px-6 py-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-2xl font-bold text-white">The RDTrip Way</h3>
                   <div className="flex items-center gap-2 rounded-full bg-white/20 px-3 py-1">
@@ -125,31 +156,62 @@ export function BeforeAfterComparison() {
               </div>
 
               {/* Content */}
-              <div className="p-6">
-                {/* Clean Visual */}
-                <div className="mb-6 rounded-lg bg-gradient-to-br from-green-50 to-emerald-50 p-4">
-                  <div className="mb-3 flex items-center gap-2">
-                    <div className="h-10 w-10 rounded-lg bg-green-500" />
-                    <div className="flex-1">
-                      <div className="mb-1 h-3 w-24 rounded bg-green-200" />
-                      <div className="h-2 w-32 rounded bg-green-200" />
+              <div className="flex flex-1 flex-col p-6">
+                {/* App Mockup - Clean Single Interface */}
+                <div className="mb-6 overflow-hidden rounded-lg border-2 border-teal-200 bg-white shadow-sm">
+                  {/* App Chrome */}
+                  <div className="border-b border-teal-200 bg-gradient-to-r from-teal-50 to-emerald-50 px-3 py-2">
+                    <div className="flex items-center gap-2">
+                      <div className="flex gap-1.5">
+                        <div className="h-2.5 w-2.5 rounded-full bg-red-400" />
+                        <div className="h-2.5 w-2.5 rounded-full bg-yellow-400" />
+                        <div className="h-2.5 w-2.5 rounded-full bg-green-400" />
+                      </div>
+                      <div className="ml-2 flex-1 text-[10px] font-medium text-teal-800">rdtrip.com</div>
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <div className="h-6 w-6 rounded-full bg-green-500" />
-                      <div className="h-2 flex-1 rounded bg-green-200" />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="h-6 w-6 rounded-full bg-green-400" />
-                      <div className="h-2 flex-1 rounded bg-green-200" />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="h-6 w-6 rounded-full bg-green-300" />
-                      <div className="h-2 flex-1 rounded bg-green-200" />
+
+                  {/* Single Clean Tab */}
+                  <div className="border-b border-teal-100 bg-teal-50/50 px-2 py-1">
+                    <div className="inline-block rounded-t bg-white px-3 py-1 text-[9px] font-semibold text-teal-800 shadow-sm">
+                      Your Complete Route
                     </div>
                   </div>
-                  <p className="mt-3 text-center text-xs text-gray-600">
+
+                  {/* Content Area - Organized with Agent Icons */}
+                  <div className="bg-gradient-to-br from-white to-teal-50/30 p-3">
+                    {/* Route Header with All Agents */}
+                    <div className="mb-2 flex items-center gap-2 rounded-lg bg-white p-2 shadow-sm">
+                      <div className="flex -space-x-1.5">
+                        <img src="/images/icons/adventure_icon.png" alt="" className="h-6 w-6 rounded-full border-2 border-white shadow-sm" />
+                        <img src="/images/icons/culture_icon.png" alt="" className="h-6 w-6 rounded-full border-2 border-white shadow-sm" />
+                        <img src="/images/icons/food_icon.png" alt="" className="h-6 w-6 rounded-full border-2 border-white shadow-sm" />
+                        <img src="/images/icons/hidden_gem_icon.png" alt="" className="h-6 w-6 rounded-full border-2 border-white shadow-sm" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="mb-0.5 h-2 w-24 rounded bg-teal-100" />
+                        <div className="h-1.5 w-32 rounded bg-teal-50" />
+                      </div>
+                    </div>
+
+                    {/* Route Items with Color Coding */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-2 rounded bg-white p-1.5 shadow-sm">
+                        <div className="h-5 w-5 flex-shrink-0 rounded-full bg-green-800" />
+                        <div className="h-1.5 flex-1 rounded bg-teal-100" />
+                      </div>
+                      <div className="flex items-center gap-2 rounded bg-white p-1.5 shadow-sm">
+                        <div className="h-5 w-5 flex-shrink-0 rounded-full bg-yellow-600" />
+                        <div className="h-1.5 flex-1 rounded bg-teal-100" />
+                      </div>
+                      <div className="flex items-center gap-2 rounded bg-white p-1.5 shadow-sm">
+                        <div className="h-5 w-5 flex-shrink-0 rounded-full bg-red-900" />
+                        <div className="h-1.5 flex-1 rounded bg-teal-100" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <p className="border-t border-teal-100 bg-teal-50/50 py-2 text-center text-[10px] font-medium text-teal-800">
                     One clean view, everything organized
                   </p>
                 </div>
@@ -158,8 +220,8 @@ export function BeforeAfterComparison() {
                 <ul className="space-y-3">
                   {newWayFeatures.map((feature, index) => (
                     <li key={index} className="flex items-start gap-3">
-                      <div className="mt-1 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-green-100">
-                        <Check className="h-3 w-3 text-green-600" />
+                      <div className="mt-1 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-teal-100">
+                        <Check className="h-3 w-3 text-teal-700" />
                       </div>
                       <span className="text-sm text-gray-700">{feature}</span>
                     </li>
@@ -167,16 +229,18 @@ export function BeforeAfterComparison() {
                 </ul>
 
                 {/* Bottom Badge */}
-                <div className="mt-6 rounded-lg bg-green-50 px-4 py-3 text-center">
-                  <p className="text-sm font-medium text-green-700">
-                    Fast, comprehensive, and ready to go
-                  </p>
+                <div className="mt-auto pt-6">
+                  <div className="rounded-lg border border-teal-200 bg-teal-50 px-4 py-3 text-center">
+                    <p className="text-sm font-medium text-teal-800">
+                      Fast, comprehensive, and ready to go
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Floating Badge */}
-            <div className="absolute -right-4 -top-4 rounded-full bg-gradient-to-r from-green-500 to-emerald-600 px-4 py-2 shadow-lg">
+            <div className="absolute -right-4 -top-4 rounded-full bg-gradient-to-r from-teal-700 to-teal-800 px-4 py-2 shadow-lg">
               <p className="text-sm font-bold text-white">120x Faster!</p>
             </div>
           </motion.div>
