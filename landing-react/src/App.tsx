@@ -5,6 +5,7 @@ import { Navigation } from './components/Navigation'
 import { Hero } from './components/Hero'
 import { AgentShowcase } from './components/AgentShowcase'
 import { BeforeAfterComparison } from './components/BeforeAfterComparison'
+import { DestinationShowcase } from './components/DestinationShowcase'
 import { Features } from './components/Features'
 import { RouteForm } from './components/RouteForm'
 import { RouteResults } from './components/RouteResults'
@@ -71,6 +72,7 @@ function HomePage() {
           <Hero />
           <AgentShowcase />
           <BeforeAfterComparison />
+          <DestinationShowcase />
           <RouteForm onRouteGenerated={handleRouteGenerated} />
           <Features />
           <About />
