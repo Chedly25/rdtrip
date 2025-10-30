@@ -94,70 +94,72 @@ export function DestinationShowcase() {
                 </div>
 
                 {/* Content Section */}
-                <div className="p-6">
-                  {/* Pitch */}
-                  <p className="mb-4 text-sm font-medium text-gray-700 leading-relaxed">
-                    {destination.pitch}
-                  </p>
-
-                  {/* Stats Row */}
-                  <div className="mb-4 flex items-center gap-4 text-sm text-gray-600">
-                    <div className="flex items-center gap-1.5">
-                      <MapPin className="h-4 w-4" />
-                      <span>{destination.distance} km</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <TrendingUp className="h-4 w-4" />
-                      <span>{destination.recommendedStops} stops</span>
-                    </div>
-                  </div>
-
-                  {/* Best For Agents */}
-                  <div className="mb-4">
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                      Best For
+                <div className="flex flex-1 flex-col p-6">
+                  <div className="flex-1">
+                    {/* Pitch */}
+                    <p className="mb-4 text-sm font-medium text-gray-700 leading-relaxed">
+                      {destination.pitch}
                     </p>
-                    <div className="flex flex-wrap gap-2">
-                      {destination.bestFor.map((item, i) => (
-                        <div
-                          key={i}
-                          className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium"
-                          style={{
-                            backgroundColor: `${getAgentColor(item.agent)}20`,
-                            color: getAgentColor(item.agent)
-                          }}
-                        >
-                          <img
-                            src={getAgentIconPath(item.agent)}
-                            alt={item.agent}
-                            className="h-4 w-4 object-contain"
-                          />
-                          <span className="capitalize">{item.agent.replace('-', ' ')}</span>
-                        </div>
-                      ))}
+
+                    {/* Stats Row */}
+                    <div className="mb-4 flex items-center gap-4 text-sm text-gray-600">
+                      <div className="flex items-center gap-1.5">
+                        <MapPin className="h-4 w-4" />
+                        <span>{destination.distance} km</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <TrendingUp className="h-4 w-4" />
+                        <span>{destination.recommendedStops} stops</span>
+                      </div>
+                    </div>
+
+                    {/* Best For Agents */}
+                    <div className="mb-4">
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                        Best For
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {destination.bestFor.map((item, i) => (
+                          <div
+                            key={i}
+                            className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium"
+                            style={{
+                              backgroundColor: `${getAgentColor(item.agent)}20`,
+                              color: getAgentColor(item.agent)
+                            }}
+                          >
+                            <img
+                              src={getAgentIconPath(item.agent)}
+                              alt={item.agent}
+                              className="h-4 w-4 object-contain"
+                            />
+                            <span className="capitalize">{item.agent.replace('-', ' ')}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Highlights */}
+                    <div className="mb-4">
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                        Highlights
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {destination.highlights.slice(0, 3).map((highlight, i) => (
+                          <span
+                            key={i}
+                            className="rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-700"
+                          >
+                            {highlight}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   </div>
 
-                  {/* Highlights */}
-                  <div className="mb-4">
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                      Highlights
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {destination.highlights.slice(0, 3).map((highlight, i) => (
-                        <span
-                          key={i}
-                          className="rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-700"
-                        >
-                          {highlight}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* CTA Button */}
+                  {/* CTA Button - Pushed to bottom */}
                   <button
-                    className="group/btn mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-3 font-semibold text-white transition-all hover:bg-slate-800"
+                    className="group/btn mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-3 font-semibold text-white transition-all hover:bg-slate-800"
                     onClick={(e) => {
                       e.stopPropagation()
                       handleCardClick(destination.name, destination.recommendedStops)
