@@ -6,7 +6,11 @@ import { useAuth } from '../../contexts/AuthContext'
 import { LoginModal } from './LoginModal'
 import { RegisterModal } from './RegisterModal'
 
-export function AuthButton() {
+interface AuthButtonProps {
+  isScrolled?: boolean
+}
+
+export function AuthButton({ isScrolled = true }: AuthButtonProps) {
   const navigate = useNavigate()
   const { user, logout, isLoading } = useAuth()
   const [showLoginModal, setShowLoginModal] = useState(false)
@@ -96,7 +100,11 @@ export function AuthButton() {
       <div className="flex items-center gap-3">
         <button
           onClick={() => setShowLoginModal(true)}
-          className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-900 transition-all hover:bg-gray-100"
+          className={`rounded-lg px-4 py-2 text-sm font-semibold transition-all hover:bg-gray-100 ${
+            isScrolled
+              ? 'text-slate-900'
+              : 'text-white shadow-[0_2px_8px_rgba(0,0,0,0.8)] hover:bg-white/10'
+          }`}
         >
           Sign In
         </button>
