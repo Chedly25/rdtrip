@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
 import { MapPin, Clock, TrendingUp, ArrowRight } from 'lucide-react'
-import { destinations, getAgentColor, getAgentIcon } from '../data/destinations'
+import { destinations, getAgentColor, getAgentIconPath } from '../data/destinations'
 import { useFormStore } from '../stores/formStore'
 
 export function DestinationShowcase() {
@@ -49,9 +49,9 @@ export function DestinationShowcase() {
               className="group relative cursor-pointer"
               onClick={() => handleCardClick(destination.name, destination.recommendedStops)}
             >
-              <div className="overflow-hidden rounded-2xl bg-white shadow-lg transition-all duration-300 hover:shadow-2xl hover:-translate-y-2">
+              <div className="flex h-full flex-col overflow-hidden rounded-2xl bg-white shadow-lg transition-all duration-300 hover:shadow-2xl hover:-translate-y-2">
                 {/* Image Section */}
-                <div className="relative h-56 overflow-hidden">
+                <div className="relative h-56 flex-shrink-0 overflow-hidden">
                   {/* Image with fallback gradient */}
                   <div
                     className="absolute inset-0 bg-gradient-to-br"
@@ -121,13 +121,17 @@ export function DestinationShowcase() {
                       {destination.bestFor.map((item, i) => (
                         <div
                           key={i}
-                          className="flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium"
+                          className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium"
                           style={{
                             backgroundColor: `${getAgentColor(item.agent)}20`,
                             color: getAgentColor(item.agent)
                           }}
                         >
-                          <span>{getAgentIcon(item.agent)}</span>
+                          <img
+                            src={getAgentIconPath(item.agent)}
+                            alt={item.agent}
+                            className="h-4 w-4 object-contain"
+                          />
                           <span className="capitalize">{item.agent.replace('-', ' ')}</span>
                         </div>
                       ))}

@@ -149,13 +149,13 @@ export function getAgentColor(agent: string): string {
   return colors[agent] || '#6B7280'
 }
 
-// Helper function to get agent icon
-export function getAgentIcon(agent: string): string {
+// Helper function to get agent icon (returns PNG path)
+export function getAgentIconPath(agent: string): string {
   const icons: Record<string, string> = {
-    'adventure': '⛰️',
-    'culture': '🏛️',
-    'food': '🍽️',
-    'hidden-gems': '💎'
+    'adventure': '/images/icons/adventure_icon.png',
+    'culture': '/images/icons/culture_icon.png',
+    'food': '/images/icons/food_icon.png',
+    'hidden-gems': '/images/icons/hidden_gem_icon.png'
   }
-  return icons[agent] || '🗺️'
+  return icons[agent] || '/images/icons/best_icon.png'
 }
