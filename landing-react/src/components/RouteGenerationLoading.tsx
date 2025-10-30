@@ -15,29 +15,29 @@ interface RouteGenerationLoadingProps {
 }
 
 // Agent metadata for display
-const agentMetadata: Record<string, { name: string; color: string; icon: string; description: string }> = {
+const agentMetadata: Record<string, { name: string; color: string; iconPath: string; description: string }> = {
   adventure: {
     name: 'Adventure',
-    color: '#055948',
-    icon: '⛰️',
+    color: '#0f5132', // dark green from spotlight theme
+    iconPath: '/images/icons/adventure_icon.png',
     description: 'Discovering outdoor activities and scenic routes'
   },
   culture: {
     name: 'Culture',
-    color: '#a87600',
-    icon: '🏛️',
+    color: '#d4a017', // yellow/gold from spotlight theme
+    iconPath: '/images/icons/culture_icon.png',
     description: 'Finding museums, historic sites, and cultural gems'
   },
   food: {
     name: 'Food',
-    color: '#650411',
-    icon: '🍽️',
+    color: '#8b0000', // dark red from spotlight theme
+    iconPath: '/images/icons/food_icon.png',
     description: 'Locating best restaurants and local cuisine'
   },
   'hidden-gems': {
     name: 'Hidden Gems',
-    color: '#081d5b',
-    icon: '💎',
+    color: '#1e3a8a', // dark blue from spotlight theme
+    iconPath: '/images/icons/hidden_gem_icon.png',
     description: 'Uncovering charming villages and secret spots'
   }
 }
@@ -186,17 +186,27 @@ export function RouteGenerationLoading({ progress, destination, agents }: RouteG
                     <Loader2 className="w-6 h-6" style={{ color: agent.color }} />
                   </motion.div>
                 ) : (
-                  <span className="text-2xl opacity-40">{agent.icon}</span>
+                  <img
+                    src={agent.iconPath}
+                    alt={agent.name}
+                    className="w-6 h-6 opacity-40 object-contain"
+                  />
                 )}
               </div>
 
               {/* Agent Info */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
+                  <img
+                    src={agent.iconPath}
+                    alt={agent.name}
+                    className="w-5 h-5 object-contain"
+                    style={{ opacity: isCompleted || isCurrent ? 1 : 0.4 }}
+                  />
                   <span className="text-lg font-semibold" style={{
                     color: isCompleted || isCurrent ? agent.color : '#6B7280'
                   }}>
-                    {agent.icon} {agent.name} Agent
+                    {agent.name} Agent
                   </span>
                   {isCompleted && (
                     <span className="text-xs font-medium text-green-600 bg-green-100 px-2 py-1 rounded">
