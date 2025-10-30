@@ -1,5 +1,7 @@
 import { motion } from 'framer-motion'
 import { useState } from 'react'
+import { Eye } from 'lucide-react'
+import { SampleRouteModal } from './SampleRouteModal'
 
 const agents = [
   {
@@ -42,8 +44,10 @@ const agents = [
 
 export function AgentShowcase() {
   const [selectedAgent, setSelectedAgent] = useState(0)
+  const [showSampleModal, setShowSampleModal] = useState(false)
 
   return (
+    <>
     <section className="relative overflow-hidden bg-white py-24">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Header */}
@@ -167,12 +171,23 @@ export function AgentShowcase() {
           transition={{ duration: 0.6, delay: 0.4 }}
           className="mt-12 text-center"
         >
-          <p className="text-lg font-medium text-gray-900">
+          <p className="mb-4 text-lg font-medium text-gray-900">
             Get all 4 routes in one search.
             <span className="ml-2 text-gray-600">Compare and choose your favorite.</span>
           </p>
+          <button
+            onClick={() => setShowSampleModal(true)}
+            className="group inline-flex items-center gap-2 rounded-lg border-2 border-slate-900 bg-white px-6 py-3 font-semibold text-slate-900 transition-all hover:bg-slate-900 hover:text-white"
+          >
+            <Eye className="h-5 w-5" />
+            <span>See Sample Route</span>
+          </button>
         </motion.div>
       </div>
     </section>
+
+    {/* Sample Route Modal */}
+    <SampleRouteModal isOpen={showSampleModal} onClose={() => setShowSampleModal(false)} />
+    </>
   )
 }
