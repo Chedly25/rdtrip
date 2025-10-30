@@ -988,6 +988,59 @@ async function generateShareToken() {
   throw new Error('Could not generate unique share token after 10 attempts');
 }
 
+// GET /api/stats - Get public stats for landing page (no auth required)
+app.get('/api/stats', async (req, res) => {
+  try {
+    // Get total routes ever created
+    const totalResult = await db.query('SELECT COUNT(*) as count FROM routes');
+    const totalRoutes = parseInt(totalResult.rows[0].count);
+
+    // Get routes created today
+    const todayResult = await db.query(
+      `SELECT COUNT(*) as count FROM routes
+       WHERE created_at >= CURRENT_DATE`
+    );
+    const routesToday = parseInt(todayResult.rows[0].count);
+
+    // Get routes created this week
+    const weekResult = await db.query(
+      `SELECT COUNT(*) as count FROM routes
+       WHERE created_at >= CURRENT_DATE - INTERVAL '7 days'`
+    );
+    const routesThisWeek = parseInt(weekResult.rows[0].count);
+
+    // Get recent routes (last 10) with destination and time, anonymized
+    const recentResult = await db.query(
+      `SELECT destination, created_at, selected_agents
+       FROM routes
+       ORDER BY created_at DESC
+       LIMIT 10`
+    );
+
+    const recentRoutes = recentResult.rows.map(row => ({
+      destination: row.destination,
+      createdAt: row.created_at,
+      agents: row.selected_agents
+    }));
+
+    res.json({
+      totalRoutes,
+      routesToday,
+      routesThisWeek,
+      recentRoutes
+    });
+  } catch (error) {
+    console.error('Error fetching stats:', error);
+    // Return zeros if database query fails (better than error for landing page)
+    res.json({
+      totalRoutes: 0,
+      routesToday: 0,
+      routesThisWeek: 0,
+      recentRoutes: []
+    });
+  }
+});
+
 // POST /api/routes/:id/share - Generate share token and make route public
 app.post('/api/routes/:id/share', authenticate, async (req, res) => {
   try {
