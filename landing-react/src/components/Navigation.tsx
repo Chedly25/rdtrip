@@ -37,10 +37,10 @@ export function Navigation() {
         {/* Logo */}
         <motion.a
           href="/"
-          className={`text-2xl font-bold transition-colors ${
+          className={`text-2xl font-bold transition-all ${
             isScrolled
               ? 'text-slate-900'
-              : 'text-white'
+              : 'text-white shadow-[0_2px_8px_rgba(0,0,0,0.8)]'
           }`}
           whileHover={{ scale: 1.05 }}
         >
@@ -51,35 +51,35 @@ export function Navigation() {
         <div className="hidden items-center gap-8 md:flex">
           <button
             onClick={() => scrollToSection('route-form')}
-            className={`font-medium transition-colors hover:text-slate-900 ${
-              isScrolled ? 'text-gray-700' : 'text-white'
+            className={`font-medium transition-all hover:text-slate-900 ${
+              isScrolled ? 'text-gray-700' : 'text-white shadow-[0_2px_8px_rgba(0,0,0,0.8)]'
             }`}
           >
             Plan Route
           </button>
           <button
             onClick={() => scrollToSection('features')}
-            className={`font-medium transition-colors hover:text-slate-900 ${
-              isScrolled ? 'text-gray-700' : 'text-white'
+            className={`font-medium transition-all hover:text-slate-900 ${
+              isScrolled ? 'text-gray-700' : 'text-white shadow-[0_2px_8px_rgba(0,0,0,0.8)]'
             }`}
           >
             Features
           </button>
           <button
             onClick={() => scrollToSection('about')}
-            className={`font-medium transition-colors hover:text-slate-900 ${
-              isScrolled ? 'text-gray-700' : 'text-white'
+            className={`font-medium transition-all hover:text-slate-900 ${
+              isScrolled ? 'text-gray-700' : 'text-white shadow-[0_2px_8px_rgba(0,0,0,0.8)]'
             }`}
           >
             About
           </button>
-          <AuthButton />
+          <AuthButton isScrolled={isScrolled} />
         </div>
 
         {/* Mobile Menu Button */}
         <button
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className={`md:hidden ${isScrolled ? 'text-gray-700' : 'text-white'}`}
+          className={`md:hidden ${isScrolled ? 'text-gray-700' : 'text-white shadow-[0_2px_8px_rgba(0,0,0,0.8)]'}`}
         >
           {isMobileMenuOpen ? (
             <X className="h-6 w-6" />
