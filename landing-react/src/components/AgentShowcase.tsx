@@ -5,7 +5,7 @@ const agents = [
   {
     id: 'adventure',
     name: 'Adventure',
-    icon: '⛰️',
+    icon: '/images/icons/adventure_icon.png',
     color: '#34C759',
     gradient: 'from-green-500 to-emerald-600',
     description: 'Mountain trails, outdoor activities, and nature experiences',
@@ -14,7 +14,7 @@ const agents = [
   {
     id: 'culture',
     name: 'Culture',
-    icon: '🏛️',
+    icon: '/images/icons/culture_icon.png',
     color: '#FFD60A',
     gradient: 'from-yellow-400 to-amber-500',
     description: 'Museums, historic sites, art galleries, and architecture',
@@ -23,7 +23,7 @@ const agents = [
   {
     id: 'food',
     name: 'Food',
-    icon: '🍽️',
+    icon: '/images/icons/food_icon.png',
     color: '#FF3B30',
     gradient: 'from-red-500 to-rose-600',
     description: 'Local cuisine, Michelin restaurants, markets, and tastings',
@@ -32,7 +32,7 @@ const agents = [
   {
     id: 'hidden-gems',
     name: 'Hidden Gems',
-    icon: '💎',
+    icon: '/images/icons/hidden_gem_icon.png',
     color: '#9333ea',
     gradient: 'from-purple-600 to-violet-700',
     description: 'Off-the-beaten-path towns, local secrets, authentic experiences',
@@ -94,14 +94,18 @@ export function AgentShowcase() {
 
                 {/* Icon */}
                 <motion.div
-                  className="relative mb-4 text-6xl"
+                  className="relative mb-4 flex items-center justify-center"
                   animate={{
                     scale: selectedAgent === index ? 1.1 : 1,
                     rotate: selectedAgent === index ? [0, -5, 5, 0] : 0
                   }}
                   transition={{ duration: 0.5 }}
                 >
-                  {agent.icon}
+                  <img
+                    src={agent.icon}
+                    alt={`${agent.name} icon`}
+                    className="h-16 w-16 object-contain"
+                  />
                 </motion.div>
 
                 {/* Title */}
