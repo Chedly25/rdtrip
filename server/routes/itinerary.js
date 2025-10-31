@@ -83,6 +83,9 @@ router.get('/generate/:jobId/stream', (req, res) => {
   // Send initial status
   res.write(`event: status\ndata: ${JSON.stringify({ status: job.status })}\n\n`);
 
+  // Track which events we've already sent
+  let lastSentIndex = 0;
+
   // Poll for updates
   const interval = setInterval(() => {
     const currentJob = itineraryJobs.get(jobId);
@@ -94,21 +97,25 @@ router.get('/generate/:jobId/stream', (req, res) => {
     }
 
     // Send any new progress events
-    if (currentJob.progress && currentJob.progress.length > 0) {
-      const lastEvent = currentJob.progress[currentJob.progress.length - 1];
-      res.write(`event: ${lastEvent.type}\ndata: ${JSON.stringify(lastEvent.data)}\n\n`);
+    if (currentJob.progress && currentJob.progress.length > lastSentIndex) {
+      // Send all new events since last check
+      for (let i = lastSentIndex; i < currentJob.progress.length; i++) {
+        const event = currentJob.progress[i];
+        res.write(`event: ${event.type}\ndata: ${JSON.stringify(event.data)}\n\n`);
+      }
+      lastSentIndex = currentJob.progress.length;
     }
 
     // Check if complete
     if (currentJob.status === 'completed') {
-      res.write(`event: generation_complete\ndata: ${JSON.stringify(currentJob.result)}\n\n`);
+      res.write(`event: generation_complete\ndata: ${JSON.stringify({ itinerary: currentJob.result })}\n\n`);
       clearInterval(interval);
       res.end();
     }
 
     // Check if error
     if (currentJob.status === 'error') {
-      res.write(`event: error\ndata: ${JSON.stringify({ error: currentJob.error })}\n\n`);
+      res.write(`event: generation_error\ndata: ${JSON.stringify({ message: currentJob.error })}\n\n`);
       clearInterval(interval);
       res.end();
     }
@@ -207,7 +214,7 @@ function getEventType(status) {
     started: 'agent_started',
     progress: 'agent_progress',
     completed: 'agent_completed',
-    error: 'error'
+    error: 'agent_error'
   };
   return mapping[status] || 'update';
 }
