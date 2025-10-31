@@ -160,6 +160,7 @@ export function CitiesSection() {
                       waypoint={waypoint}
                       onRemove={removeWaypoint}
                       onClick={() => handleCityClick(waypoint.id)}
+                      index={index}
                     />
 
                     {/* Add Stop Button - appears between cities on hover */}

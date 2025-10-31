@@ -7,9 +7,10 @@ interface SortableCityCardProps {
   waypoint: Waypoint
   onRemove?: (id: string) => void
   onClick?: () => void
+  index?: number
 }
 
-export function SortableCityCard({ waypoint, onRemove, onClick }: SortableCityCardProps) {
+export function SortableCityCard({ waypoint, onRemove, onClick, index }: SortableCityCardProps) {
   const {
     attributes,
     listeners,
@@ -31,6 +32,7 @@ export function SortableCityCard({ waypoint, onRemove, onClick }: SortableCityCa
         onRemove={onRemove}
         onClick={onClick}
         isDragging={isDragging}
+        index={index}
       />
     </div>
   )
