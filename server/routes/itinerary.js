@@ -1,0 +1,215 @@
+/**
+ * Itinerary API Routes
+ * Premium multi-agent itinerary generation system
+ */
+
+const express = require('express');
+const router = express.Router();
+const { v4: uuidv4 } = require('uuid');
+const ItineraryAgentOrchestrator = require('../agents/ItineraryAgentOrchestrator');
+
+// Job storage (passed from main server)
+let itineraryJobs;
+let pool;
+
+function initializeRoutes(jobStorage, dbPool) {
+  itineraryJobs = jobStorage;
+  pool = dbPool;
+  return router;
+}
+
+/**
+ * POST /api/itinerary/generate
+ * Start itinerary generation and return job ID
+ */
+router.post('/generate', async (req, res) => {
+  try {
+    const { route_id, routeData, preferences } = req.body;
+
+    // Validate input
+    if (!routeData || !routeData.waypoints) {
+      return res.status(400).json({ error: 'Route data with waypoints required' });
+    }
+
+    // Create job
+    const jobId = uuidv4();
+    const job = {
+      id: jobId,
+      status: 'pending',
+      progress: [],
+      result: null,
+      error: null,
+      createdAt: Date.now()
+    };
+
+    itineraryJobs.set(jobId, job);
+
+    console.log(`🎯 Created itinerary job: ${jobId}`);
+
+    // Start generation in background
+    generateItineraryAsync(jobId, route_id, routeData, preferences);
+
+    res.json({
+      jobId,
+      estimatedDuration: 60 // seconds (rough estimate)
+    });
+
+  } catch (error) {
+    console.error('Itinerary generation start error:', error);
+    res.status(500).json({ error: 'Failed to start itinerary generation' });
+  }
+});
+
+/**
+ * GET /api/itinerary/generate/:jobId/stream
+ * SSE endpoint for real-time progress updates
+ */
+router.get('/generate/:jobId/stream', (req, res) => {
+  const { jobId } = req.params;
+  const job = itineraryJobs.get(jobId);
+
+  if (!job) {
+    return res.status(404).json({ error: 'Job not found' });
+  }
+
+  // Set up SSE
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  console.log(`📡 SSE client connected for job ${jobId}`);
+
+  // Send initial status
+  res.write(`event: status\ndata: ${JSON.stringify({ status: job.status })}\n\n`);
+
+  // Poll for updates
+  const interval = setInterval(() => {
+    const currentJob = itineraryJobs.get(jobId);
+
+    if (!currentJob) {
+      clearInterval(interval);
+      res.end();
+      return;
+    }
+
+    // Send any new progress events
+    if (currentJob.progress && currentJob.progress.length > 0) {
+      const lastEvent = currentJob.progress[currentJob.progress.length - 1];
+      res.write(`event: ${lastEvent.type}\ndata: ${JSON.stringify(lastEvent.data)}\n\n`);
+    }
+
+    // Check if complete
+    if (currentJob.status === 'completed') {
+      res.write(`event: generation_complete\ndata: ${JSON.stringify(currentJob.result)}\n\n`);
+      clearInterval(interval);
+      res.end();
+    }
+
+    // Check if error
+    if (currentJob.status === 'error') {
+      res.write(`event: error\ndata: ${JSON.stringify({ error: currentJob.error })}\n\n`);
+      clearInterval(interval);
+      res.end();
+    }
+
+  }, 500); // Poll every 500ms
+
+  // Clean up on client disconnect
+  req.on('close', () => {
+    console.log(`📡 SSE client disconnected for job ${jobId}`);
+    clearInterval(interval);
+  });
+});
+
+/**
+ * GET /api/itinerary/:itineraryId
+ * Get completed itinerary by ID
+ */
+router.get('/:itineraryId', async (req, res) => {
+  try {
+    const { itineraryId } = req.params;
+
+    const result = await pool.query(
+      'SELECT * FROM itineraries WHERE id = $1',
+      [itineraryId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Itinerary not found' });
+    }
+
+    res.json(result.rows[0]);
+
+  } catch (error) {
+    console.error('Get itinerary error:', error);
+    res.status(500).json({ error: 'Failed to get itinerary' });
+  }
+});
+
+/**
+ * Background async itinerary generation
+ */
+async function generateItineraryAsync(jobId, route_id, routeData, preferences) {
+  const job = itineraryJobs.get(jobId);
+
+  try {
+    job.status = 'running';
+    console.log(`🚀 Starting itinerary generation for job ${jobId}`);
+
+    // Progress callback
+    const progressCallback = (event) => {
+      job.progress = job.progress || [];
+      job.progress.push({
+        type: getEventType(event.status),
+        data: event,
+        timestamp: Date.now()
+      });
+
+      console.log(`📊 Progress: ${event.agent} - ${event.status}`);
+    };
+
+    // Add route_id and user_id to routeData
+    const enrichedRouteData = {
+      ...routeData,
+      id: route_id,
+      user_id: routeData.user_id || null // Will be null for anonymous users
+    };
+
+    // Create orchestrator and run
+    const orchestrator = new ItineraryAgentOrchestrator(
+      enrichedRouteData,
+      preferences,
+      pool,
+      progressCallback
+    );
+
+    const result = await orchestrator.generateComplete();
+
+    // Mark job as complete
+    job.status = 'completed';
+    job.result = result;
+
+    console.log(`✅ Itinerary generation complete for job ${jobId}`);
+
+  } catch (error) {
+    console.error(`❌ Itinerary generation failed for job ${jobId}:`, error);
+    job.status = 'error';
+    job.error = error.message;
+  }
+}
+
+/**
+ * Map agent status to SSE event types
+ */
+function getEventType(status) {
+  const mapping = {
+    started: 'agent_started',
+    progress: 'agent_progress',
+    completed: 'agent_completed',
+    error: 'error'
+  };
+  return mapping[status] || 'update';
+}
+
+module.exports = { initializeRoutes };
