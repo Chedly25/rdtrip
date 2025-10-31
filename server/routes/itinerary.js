@@ -5,7 +5,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
 const ItineraryAgentOrchestrator = require('../agents/ItineraryAgentOrchestrator');
 
 // Job storage (passed from main server)
@@ -32,7 +32,7 @@ router.post('/generate', async (req, res) => {
     }
 
     // Create job
-    const jobId = uuidv4();
+    const jobId = crypto.randomUUID();
     const job = {
       id: jobId,
       status: 'pending',
