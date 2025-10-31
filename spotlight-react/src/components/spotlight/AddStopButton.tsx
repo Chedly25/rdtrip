@@ -17,7 +17,7 @@ export function AddStopButton({ onAdd, position: _position }: AddStopButtonProps
     <motion.button
       onClick={onAdd}
       initial={{ opacity: 0, height: 0 }}
-      animate={{ opacity: 0.6, height: 'auto' }}
+      animate={{ opacity: 0, height: 'auto' }}
       whileHover={{ opacity: 1, scale: 1.02 }}
       className="group relative w-full overflow-hidden rounded-xl border-2 border-dashed px-6 py-4 transition-all hover:shadow-lg"
       style={{
