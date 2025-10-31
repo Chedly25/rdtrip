@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowLeft, Navigation, Map as MapIcon, ArrowRight } from 'lucide-react'
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
 import { Button } from '../ui/Button'
-import { TableOfContents } from './TableOfContents'
 import { RouteOverview } from './RouteOverview'
 import { CitiesSection } from './CitiesSection'
 import { StayDineSection } from './StayDineSection'
@@ -11,9 +10,11 @@ import { ItinerarySection } from './ItinerarySection'
 import { MapView } from './MapView'
 import { WazeCitySelector } from './WazeCitySelector'
 import { ExportMenu } from '../ExportMenu'
+import { SmoothSection } from '../ui/SmoothSection'
 import { LayoutProvider, useLayout } from '../../contexts/LayoutContext'
 import { LayoutSwitcher } from './LayoutSwitcher'
 import { SidebarToggle } from './SidebarToggle'
+import { FloatingNav } from './FloatingNav'
 import { useSpotlightStore } from '../../stores/spotlightStore'
 import { useRouteDataStore } from '../../stores/routeDataStore'
 import { getTheme } from '../../config/theme'
@@ -48,7 +49,6 @@ function SpotlightContent() {
   const { waypoints } = useSpotlightStore()
   const { routeData } = useRouteDataStore()
   const { isSidebarCollapsed } = useLayout()
-  const [activeSection, setActiveSection] = useState('overview')
   const [showWazeModal, setShowWazeModal] = useState(false)
 
   // Country data state
@@ -210,21 +210,34 @@ function SpotlightContent() {
                   initial={{ x: -300, opacity: 0 }}
                   animate={{ x: 0, opacity: 1 }}
                   exit={{ x: -300, opacity: 0 }}
-                  className="h-full overflow-y-auto bg-gradient-to-b from-gray-50 to-white shadow-lg"
+                  className="spotlight-sidebar h-full overflow-y-auto bg-gradient-to-b from-gray-50 to-white shadow-lg"
                 >
                   <div className="px-8 py-6">
-                    {/* Table of Contents */}
-                    <TableOfContents
-                      activeSection={activeSection}
-                      onSectionChange={setActiveSection}
-                    />
-
                     {/* Content Sections */}
                     <div className="mt-8 space-y-10">
-                      {activeSection === 'overview' && <RouteOverview />}
-                      {activeSection === 'cities' && <CitiesSection />}
-                      {activeSection === 'stay-dine' && <StayDineSection />}
-                      {activeSection === 'itinerary' && <ItinerarySection />}
+                      <div id="section-overview">
+                        <SmoothSection>
+                          <RouteOverview />
+                        </SmoothSection>
+                      </div>
+
+                      <div id="section-cities">
+                        <SmoothSection delay={0.1}>
+                          <CitiesSection />
+                        </SmoothSection>
+                      </div>
+
+                      <div id="section-stay-dine">
+                        <SmoothSection delay={0.2}>
+                          <StayDineSection />
+                        </SmoothSection>
+                      </div>
+
+                      <div id="section-itinerary">
+                        <SmoothSection delay={0.3}>
+                          <ItinerarySection />
+                        </SmoothSection>
+                      </div>
                     </div>
                   </div>
                 </motion.aside>
@@ -259,6 +272,9 @@ function SpotlightContent() {
           </Panel>
         </PanelGroup>
       </div>
+
+      {/* Floating Navigation */}
+      <FloatingNav />
 
       {/* Waze City Selector Modal */}
       <WazeCitySelector
