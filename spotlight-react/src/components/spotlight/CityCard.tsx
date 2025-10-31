@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { MapPin, Trash2, GripVertical } from 'lucide-react'
+import { MapPin, Trash2, GripVertical, Eye } from 'lucide-react'
 import type { Waypoint } from '../../types'
 import { cn } from '../../lib/utils'
 import { GlassCard } from '../ui/GlassCard'
@@ -11,13 +11,17 @@ interface CityCardProps {
   onRemove?: (id: string) => void
   onClick?: () => void
   isDragging?: boolean
+  index?: number
 }
 
-export function CityCard({ waypoint, onRemove, onClick, isDragging }: CityCardProps) {
+export function CityCard({ waypoint, onRemove, onClick, isDragging, index }: CityCardProps) {
   const { name, activities, imageUrl, isLandmark } = waypoint
   const { routeData } = useRouteDataStore()
   const agent = routeData?.agent || 'adventure'
   const theme = getTheme(agent)
+
+  const activitiesToShow = activities?.slice(0, 3) || []
+  const remainingCount = (activities?.length || 0) - 3
 
   return (
     <GlassCard
@@ -30,18 +34,119 @@ export function CityCard({ waypoint, onRemove, onClick, isDragging }: CityCardPr
         opacity: { duration: 0.2 }
       }}
       className={cn(
-        'group',
+        'group relative overflow-hidden',
         isDragging && 'shadow-2xl ring-4'
       )}
       style={isDragging ? { borderColor: theme.primary } : undefined}
     >
+      {/* Horizontal Layout Container */}
+      <div className="flex h-44">
+        {/* Left: Image Section (150px wide) */}
+        <div className="relative w-44 flex-shrink-0 overflow-hidden">
+          <div
+            className="h-full w-full"
+            style={{
+              background: imageUrl
+                ? undefined
+                : `linear-gradient(to bottom right, ${theme.primary}, ${theme.secondary})`
+            }}
+          >
+            {imageUrl ? (
+              <motion.img
+                src={imageUrl}
+                alt={name}
+                className="h-full w-full object-cover"
+                whileHover={{ scale: 1.1 }}
+                transition={{ duration: 0.4 }}
+              />
+            ) : (
+              <div className="flex h-full items-center justify-center">
+                <MapPin className="h-12 w-12 text-white/50" />
+              </div>
+            )}
+          </div>
+
+          {/* Order Badge */}
+          {index !== undefined && (
+            <div className="absolute left-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 font-bold text-gray-900 shadow-lg backdrop-blur-sm">
+              {index + 1}
+            </div>
+          )}
+
+          {/* Landmark Badge */}
+          {isLandmark && (
+            <div className="absolute bottom-3 left-3 rounded-full bg-yellow-500 px-2 py-1 text-xs font-semibold text-white shadow-lg">
+              ⭐
+            </div>
+          )}
+        </div>
+
+        {/* Right: Content Section */}
+        <div className="flex flex-1 flex-col p-4">
+          {/* City Name */}
+          <h3
+            className="mb-3 text-xl font-bold text-gray-900 transition-colors cursor-pointer"
+            style={{ color: undefined }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = theme.primary)}
+            onMouseLeave={(e) => (e.currentTarget.style.color = '')}
+            onClick={onClick}
+          >
+            {name}
+          </h3>
+
+          {/* Activities List */}
+          {activitiesToShow.length > 0 && (
+            <ul className="flex-1 space-y-1.5">
+              {activitiesToShow.map((activity, idx) => (
+                <motion.li
+                  key={idx}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: idx * 0.05 }}
+                  className="flex items-start gap-2 text-sm text-gray-600"
+                >
+                  <div
+                    className="mt-1 h-1.5 w-1.5 flex-shrink-0 rounded-full"
+                    style={{ backgroundColor: theme.primary }}
+                  />
+                  <span className="line-clamp-1">{activity}</span>
+                </motion.li>
+              ))}
+            </ul>
+          )}
+
+          {/* Show More + View Details */}
+          <div className="mt-2 flex items-center justify-between">
+            {remainingCount > 0 && (
+              <button
+                onClick={onClick}
+                className="text-xs font-medium transition-colors hover:underline"
+                style={{ color: theme.primary }}
+              >
+                +{remainingCount} more
+              </button>
+            )}
+
+            {onClick && (
+              <button
+                onClick={onClick}
+                className="ml-auto flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-gray-600 transition-all hover:bg-gray-100"
+              >
+                <Eye className="h-3 w-3" />
+                <span>Details</span>
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* Drag Handle */}
       <motion.div
-        className="absolute right-3 top-3 z-10 cursor-grab rounded-lg bg-white/90 p-2 opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100 active:cursor-grabbing"
+        className="absolute right-3 top-3 z-10 cursor-grab rounded-lg bg-white/90 p-1.5 opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100 active:cursor-grabbing"
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.95 }}
       >
-        <GripVertical className="h-5 w-5 text-gray-400" />
+        <GripVertical className="h-4 w-4 text-gray-400" />
       </motion.div>
 
       {/* Remove Button */}
@@ -51,80 +156,13 @@ export function CityCard({ waypoint, onRemove, onClick, isDragging }: CityCardPr
             e.stopPropagation()
             onRemove(waypoint.id)
           }}
-          className="absolute left-3 top-3 z-10 rounded-lg bg-white/90 p-2 opacity-0 backdrop-blur-sm transition-opacity hover:bg-red-50 group-hover:opacity-100"
+          className="absolute right-3 bottom-3 z-10 rounded-lg bg-white/90 p-1.5 opacity-0 backdrop-blur-sm transition-opacity hover:bg-red-50 group-hover:opacity-100"
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.95 }}
         >
-          <Trash2 className="h-5 w-5 text-red-500" />
+          <Trash2 className="h-4 w-4 text-red-500" />
         </motion.button>
       )}
-
-      {/* Image Container */}
-      <div
-        className="relative h-72 w-full overflow-hidden"
-        style={{
-          background: imageUrl
-            ? undefined
-            : `linear-gradient(to bottom right, ${theme.primary}, ${theme.secondary})`
-        }}
-      >
-        {imageUrl ? (
-          <motion.img
-            src={imageUrl}
-            alt={name}
-            className="h-full w-full object-cover"
-            whileHover={{ scale: 1.05 }}
-            transition={{ duration: 0.4 }}
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center">
-            <MapPin className="h-16 w-16 text-white/50" />
-          </div>
-        )}
-
-        {isLandmark && (
-          <div className="absolute bottom-4 left-4 rounded-full bg-yellow-500 px-3 py-1 text-xs font-semibold text-white shadow-lg">
-            ⭐ Landmark
-          </div>
-        )}
-      </div>
-
-      {/* Content */}
-      <div
-        onClick={onClick}
-        className="cursor-pointer p-6"
-      >
-        <h3
-          className="mb-4 text-2xl font-bold text-gray-900 transition-colors"
-          style={{
-            color: undefined
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = theme.primary)}
-          onMouseLeave={(e) => (e.currentTarget.style.color = '')}
-        >
-          {name}
-        </h3>
-
-        {activities && activities.length > 0 && (
-          <ul className="space-y-2">
-            {activities.slice(0, 3).map((activity, idx) => (
-              <motion.li
-                key={idx}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: idx * 0.1 }}
-                className="flex items-start gap-2 text-sm text-gray-600"
-              >
-                <div
-                  className="mt-1.5 h-2 w-2 flex-shrink-0 rounded-full"
-                  style={{ backgroundColor: theme.primary }}
-                />
-                <span>{activity}</span>
-              </motion.li>
-            ))}
-          </ul>
-        )}
-      </div>
     </GlassCard>
   )
 }
