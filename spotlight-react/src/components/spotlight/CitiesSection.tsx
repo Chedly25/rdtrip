@@ -8,6 +8,7 @@ import { AddDestinationModal } from './AddDestinationModal'
 import CityDetailModal from './CityDetailModal'
 import { AddStopButton } from './AddStopButton'
 import { Button } from '../ui/Button'
+import { SkeletonCard } from '../ui/Skeleton'
 import { getTheme } from '../../config/theme'
 import {
   DndContext,
@@ -38,6 +39,9 @@ export function CitiesSection() {
   const alternatives = routeData?.alternatives || []
   const agent = routeData?.agent || 'adventure'
   const theme = getTheme(agent)
+
+  // Loading state (waypoints are being fetched)
+  const [isLoading] = useState(false)
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -115,7 +119,13 @@ export function CitiesSection() {
         </Button>
       </div>
 
-      {waypoints.length === 0 ? (
+      {isLoading ? (
+        <div className="space-y-4">
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+        </div>
+      ) : waypoints.length === 0 ? (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
