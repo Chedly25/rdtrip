@@ -113,6 +113,7 @@ export function CitiesSection() {
           }}
           size="sm"
           className="gap-2"
+          themeColors={{ primary: theme.primary, secondary: theme.secondary }}
         >
           <Plus className="h-4 w-4" />
           Add Destination
