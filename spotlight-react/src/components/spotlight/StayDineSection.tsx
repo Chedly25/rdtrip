@@ -1,12 +1,17 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Hotel, Utensils, Star } from 'lucide-react'
+import { Hotel, Utensils, Star, Sparkles } from 'lucide-react'
 import { Button } from '../ui/Button'
+import { useRouteDataStore } from '../../stores/routeDataStore'
+import { getTheme } from '../../config/theme'
 
 export function StayDineSection() {
   const [budget, setBudget] = useState<'budget' | 'mid' | 'luxury'>('mid')
   const [isLoading, setIsLoading] = useState(false)
   const [hasLoaded, setHasLoaded] = useState(false)
+  const { routeData } = useRouteDataStore()
+  const agent = routeData?.agent || 'adventure'
+  const theme = getTheme(agent)
 
   const budgetOptions = [
     { value: 'budget' as const, label: 'Budget (€-€€)', icon: '💰' },
@@ -97,18 +102,63 @@ export function StayDineSection() {
 
       {!hasLoaded ? (
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 p-12 text-center"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative overflow-hidden rounded-2xl border-2 bg-gradient-to-br from-white to-gray-50 p-12 text-center shadow-lg"
+          style={{ borderColor: theme.primary }}
         >
-          <div className="mb-4 flex gap-3">
-            <Hotel className="h-10 w-10 text-gray-400" />
-            <Utensils className="h-10 w-10 text-gray-400" />
+          {/* Background gradient */}
+          <div
+            className="absolute inset-0 opacity-5"
+            style={{
+              background: `linear-gradient(135deg, ${theme.primary}, ${theme.secondary})`
+            }}
+          />
+
+          {/* Content */}
+          <div className="relative">
+            {/* Icons with gradient background */}
+            <div className="mb-6 flex justify-center gap-4">
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
+                className="rounded-2xl p-4"
+                style={{
+                  background: `linear-gradient(135deg, ${theme.primary}, ${theme.secondary})`
+                }}
+              >
+                <Hotel className="h-8 w-8 text-white" />
+              </motion.div>
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.3, type: 'spring', stiffness: 200 }}
+                className="rounded-2xl p-4"
+                style={{
+                  background: `linear-gradient(135deg, ${theme.primary}, ${theme.secondary})`
+                }}
+              >
+                <Utensils className="h-8 w-8 text-white" />
+              </motion.div>
+            </div>
+
+            {/* Sparkles icon */}
+            <motion.div
+              initial={{ opacity: 0, rotate: -20 }}
+              animate={{ opacity: 1, rotate: 0 }}
+              transition={{ delay: 0.4 }}
+              className="mb-4 flex justify-center"
+            >
+              <Sparkles className="h-6 w-6" style={{ color: theme.primary }} />
+            </motion.div>
+
+            {/* Text */}
+            <h3 className="mb-3 text-xl font-bold text-gray-900">Discover Amazing Places</h3>
+            <p className="mx-auto max-w-md text-sm leading-relaxed text-gray-600">
+              Click <span className="font-semibold" style={{ color: theme.primary }}>"Load Recommendations"</span> to discover hand-picked hotels and restaurants for each city on your route
+            </p>
           </div>
-          <h3 className="mb-2 text-lg font-semibold text-gray-900">Discover Amazing Places</h3>
-          <p className="mb-4 text-sm text-gray-600">
-            Click "Load Recommendations" to discover the best hotels and restaurants for each city on your route
-          </p>
         </motion.div>
       ) : (
         <div className="space-y-8">
