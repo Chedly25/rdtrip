@@ -14,6 +14,7 @@ import { SmoothSection } from '../ui/SmoothSection'
 import { LayoutProvider, useLayout } from '../../contexts/LayoutContext'
 import { LayoutSwitcher } from './LayoutSwitcher'
 import { SidebarToggle } from './SidebarToggle'
+import { StickyTabNav } from './StickyTabNav'
 import { useSpotlightStore } from '../../stores/spotlightStore'
 import { useRouteDataStore } from '../../stores/routeDataStore'
 import { getTheme } from '../../config/theme'
@@ -211,9 +212,12 @@ function SpotlightContent() {
                   exit={{ x: -300, opacity: 0 }}
                   className="spotlight-sidebar h-full overflow-y-auto bg-gradient-to-b from-gray-50 to-white shadow-lg"
                 >
+                  {/* Sticky Tab Navigation */}
+                  <StickyTabNav />
+
                   <div className="px-8 py-6">
                     {/* Content Sections */}
-                    <div className="mt-8 space-y-10">
+                    <div className="space-y-10">
                       <div id="section-overview">
                         <SmoothSection>
                           <RouteOverview />
