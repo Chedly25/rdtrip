@@ -151,7 +151,7 @@ export function CitiesSection() {
             items={waypoints.map(wp => wp.id)}
             strategy={verticalListSortingStrategy}
           >
-            <div className="space-y-2">
+            <div className="space-y-4">
               <AnimatePresence mode="popLayout">
                 {waypoints.map((waypoint, index) => (
                   <div key={waypoint.id}>
@@ -165,7 +165,7 @@ export function CitiesSection() {
 
                     {/* Add Stop Button - appears between cities on hover */}
                     {index < waypoints.length - 1 && (
-                      <div className="py-2">
+                      <div className="py-3">
                         <AddStopButton
                           onAdd={() => {
                             setInsertIndex(index + 1)
