@@ -5767,8 +5767,18 @@ app.get('*', (req, res) => {
     return res.status(404).send('Not found');
   }
 
-  // Serve the React app's index.html for all other routes
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  // Serve the landing page for root route
+  if (req.path === '/') {
+    return res.sendFile(path.join(__dirname, 'public', 'landing-react', 'index.html'));
+  }
+
+  // Serve the spotlight app for spotlight routes
+  if (req.path.startsWith('/spotlight-new')) {
+    return res.sendFile(path.join(__dirname, 'public', 'spotlight-new', 'index.html'));
+  }
+
+  // Serve the React app's index.html for all other routes (fallback)
+  res.sendFile(path.join(__dirname, 'public', 'landing-react', 'index.html'));
 });
 
 // =====================================================
