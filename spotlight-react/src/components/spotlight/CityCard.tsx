@@ -44,9 +44,9 @@ export function CityCard({ waypoint, onRemove, onClick, isDragging, index }: Cit
       style={isDragging ? { borderColor: theme.primary } : undefined}
     >
       {/* Horizontal Layout Container */}
-      <div className="flex h-44">
-        {/* Left: Image Section (176px wide) */}
-        <div className="relative w-44 h-44 flex-shrink-0 overflow-hidden rounded-l-2xl">
+      <div className="flex h-44 -m-px">
+        {/* Left: Image Section (176px + 2px for borders = 178px actual) */}
+        <div className="relative w-44 h-44 flex-shrink-0 overflow-hidden rounded-tl-2xl rounded-bl-2xl">
           {imageUrl ? (
             <>
               {/* Loading Skeleton */}
