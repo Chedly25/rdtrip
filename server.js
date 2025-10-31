@@ -2829,37 +2829,96 @@ async function getRestaurantImage(restaurantName, cuisine = 'restaurant') {
   };
 }
 
+// Helper function to remove accents from strings
+function removeAccents(str) {
+  return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+// Helper function to get English city name variations
+function getCityNameVariations(city) {
+  const variations = [city];
+
+  // Known translations
+  const translations = {
+    'Sevilla': 'Seville',
+    'Seville': 'Sevilla',
+    'München': 'Munich',
+    'Munich': 'München',
+    'Firenze': 'Florence',
+    'Florence': 'Firenze',
+    'Venezia': 'Venice',
+    'Venice': 'Venezia',
+    'Roma': 'Rome',
+    'Rome': 'Roma',
+    'Milano': 'Milan',
+    'Milan': 'Milano',
+    'Lisboa': 'Lisbon',
+    'Lisbon': 'Lisboa',
+    'København': 'Copenhagen',
+    'Copenhagen': 'København'
+  };
+
+  if (translations[city]) {
+    variations.push(translations[city]);
+  }
+
+  // Add version without accents
+  const withoutAccents = removeAccents(city);
+  if (withoutAccents !== city) {
+    variations.push(withoutAccents);
+  }
+
+  return variations;
+}
+
 // Helper function to get city images from Wikimedia with Unsplash fallback
 async function getCityImages(city, country) {
-  // Try Wikipedia first (with error handling)
-  try {
-    const searchTerm = country ? `${city}, ${country}` : city;
-    const searchResponse = await axios.get('https://en.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(searchTerm));
+  console.log(`🔍 [IMAGE FETCH] Starting image search for: "${city}", ${country || 'no country'}`);
 
-    // Get main image from Wikipedia
-    if (searchResponse.data.originalimage && searchResponse.data.originalimage.source) {
-      console.log(`✅ Found Wikipedia image for ${city}`);
-      return searchResponse.data.originalimage.source;
+  const cityVariations = getCityNameVariations(city);
+  console.log(`📋 [IMAGE FETCH] City name variations to try: ${cityVariations.join(', ')}`);
+
+  // Try Wikipedia with all variations
+  for (const cityVariation of cityVariations) {
+    // Try with country first
+    if (country) {
+      try {
+        const searchTerm = `${cityVariation}, ${country}`;
+        console.log(`🌐 [WIKIPEDIA] Attempt 1: Trying "${searchTerm}"`);
+        const searchResponse = await axios.get('https://en.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(searchTerm));
+
+        if (searchResponse.data.originalimage && searchResponse.data.originalimage.source) {
+          console.log(`✅ [WIKIPEDIA] SUCCESS! Found image for "${searchTerm}"`);
+          console.log(`📸 [WIKIPEDIA] Image URL: ${searchResponse.data.originalimage.source}`);
+          return searchResponse.data.originalimage.source;
+        } else {
+          console.log(`⚠️  [WIKIPEDIA] No image in response for "${searchTerm}"`);
+        }
+      } catch (error) {
+        console.log(`❌ [WIKIPEDIA] Error for "${cityVariation}, ${country}": ${error.response?.status} ${error.message}`);
+      }
     }
-  } catch (error) {
-    console.log(`⚠️  Wikipedia error for ${city}: ${error.message}`);
-  }
 
-  // Try without country if we had one
-  if (country) {
+    // Try without country
     try {
-      const fallbackResponse = await axios.get('https://en.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(city));
+      console.log(`🌐 [WIKIPEDIA] Attempt 2: Trying "${cityVariation}" (no country)`);
+      const fallbackResponse = await axios.get('https://en.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(cityVariation));
       if (fallbackResponse.data.originalimage && fallbackResponse.data.originalimage.source) {
-        console.log(`✅ Found Wikipedia image for ${city} (without country)`);
+        console.log(`✅ [WIKIPEDIA] SUCCESS! Found image for "${cityVariation}" (no country)`);
+        console.log(`📸 [WIKIPEDIA] Image URL: ${fallbackResponse.data.originalimage.source}`);
         return fallbackResponse.data.originalimage.source;
+      } else {
+        console.log(`⚠️  [WIKIPEDIA] No image in response for "${cityVariation}"`);
       }
     } catch (error) {
-      console.log(`⚠️  Wikipedia error for ${city} (without country): ${error.message}`);
+      console.log(`❌ [WIKIPEDIA] Error for "${cityVariation}": ${error.response?.status} ${error.message}`);
     }
   }
 
+  console.log(`⚠️  [WIKIPEDIA] All Wikipedia attempts failed for ${city}`);
+
   // If Wikipedia fails, fall back to Unsplash API
-  console.log(`⚠️  No Wikipedia image for ${city}, trying Unsplash API...`);
+  console.log(`🔄 [UNSPLASH] Trying Unsplash API for "${city}"`);
   try {
     const unsplashResponse = await axios.get('https://api.unsplash.com/search/photos', {
       params: {
@@ -2874,16 +2933,21 @@ async function getCityImages(city, country) {
     });
 
     if (unsplashResponse.data.results && unsplashResponse.data.results.length > 0) {
-      console.log(`✅ Found Unsplash API image for ${city}`);
+      console.log(`✅ [UNSPLASH] SUCCESS! Found image for "${city}"`);
+      console.log(`📸 [UNSPLASH] Image URL: ${unsplashResponse.data.results[0].urls.regular}`);
       return unsplashResponse.data.results[0].urls.regular;
+    } else {
+      console.log(`⚠️  [UNSPLASH] No results for "${city}"`);
     }
   } catch (error) {
-    console.error(`❌ Unsplash API error for ${city}:`, error.message);
+    console.error(`❌ [UNSPLASH] API error for ${city}:`, error.response?.status, error.message);
   }
 
-  // Final fallback to a generic image
-  console.warn(`⚠️  No images found for ${city}, using Unsplash source fallback`);
-  return `https://source.unsplash.com/800x600/?${encodeURIComponent(city)},cityscape`;
+  // Final fallback to Unsplash source (dynamic, no API key needed)
+  console.warn(`⚠️  [FALLBACK] Using Unsplash source fallback for "${city}"`);
+  const fallbackUrl = `https://source.unsplash.com/800x600/?${encodeURIComponent(city)},cityscape`;
+  console.log(`📸 [FALLBACK] Fallback URL: ${fallbackUrl}`);
+  return fallbackUrl;
 }
 
 async function queryPerplexityWithMetrics(agent, destination, stops, budget = 'budget') {
