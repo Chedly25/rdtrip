@@ -46,59 +46,57 @@ export function CityCard({ waypoint, onRemove, onClick, isDragging, index }: Cit
       {/* Horizontal Layout Container */}
       <div className="flex h-44">
         {/* Left: Image Section (176px wide) */}
-        <div className="relative w-44 flex-shrink-0 overflow-hidden rounded-l-2xl">
-          <div className="h-full w-full relative">
-            {imageUrl ? (
-              <>
-                {/* Loading Skeleton */}
-                {imageLoading && (
-                  <div className="absolute inset-0 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 animate-pulse">
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" />
-                  </div>
-                )}
+        <div className="relative w-44 h-44 flex-shrink-0 overflow-hidden rounded-l-2xl">
+          {imageUrl ? (
+            <>
+              {/* Loading Skeleton */}
+              {imageLoading && (
+                <div className="absolute inset-0 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 animate-pulse">
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" />
+                </div>
+              )}
 
-                {/* Actual Image */}
-                <motion.img
-                  src={imageUrl}
-                  alt={name}
-                  className={cn(
-                    "h-full w-full object-cover transition-opacity duration-500",
-                    imageLoading ? "opacity-0" : "opacity-100"
-                  )}
-                  onLoad={() => setImageLoading(false)}
-                  onError={() => {
-                    console.error(`Failed to load image for ${name}:`, imageUrl)
-                    setImageError(true)
-                    setImageLoading(false)
-                  }}
-                  whileHover={{ scale: imageError ? 1 : 1.1 }}
-                  transition={{ duration: 0.4 }}
-                />
-
-                {/* Error State - show gradient fallback */}
-                {imageError && (
-                  <div
-                    className="absolute inset-0 flex items-center justify-center"
-                    style={{
-                      background: `linear-gradient(to bottom right, ${theme.primary}, ${theme.secondary})`
-                    }}
-                  >
-                    <MapPin className="h-12 w-12 text-white/50" />
-                  </div>
+              {/* Actual Image */}
+              <motion.img
+                src={imageUrl}
+                alt={name}
+                className={cn(
+                  "absolute inset-0 h-full w-full object-cover transition-opacity duration-500",
+                  imageLoading ? "opacity-0" : "opacity-100"
                 )}
-              </>
-            ) : (
-              // No image URL - show gradient
-              <div
-                className="h-full w-full flex items-center justify-center"
-                style={{
-                  background: `linear-gradient(to bottom right, ${theme.primary}, ${theme.secondary})`
+                onLoad={() => setImageLoading(false)}
+                onError={() => {
+                  console.error(`Failed to load image for ${name}:`, imageUrl)
+                  setImageError(true)
+                  setImageLoading(false)
                 }}
-              >
-                <MapPin className="h-12 w-12 text-white/50" />
-              </div>
-            )}
-          </div>
+                whileHover={{ scale: imageError ? 1 : 1.05 }}
+                transition={{ duration: 0.4 }}
+              />
+
+              {/* Error State - show gradient fallback */}
+              {imageError && (
+                <div
+                  className="absolute inset-0 flex items-center justify-center"
+                  style={{
+                    background: `linear-gradient(to bottom right, ${theme.primary}, ${theme.secondary})`
+                  }}
+                >
+                  <MapPin className="h-12 w-12 text-white/50" />
+                </div>
+              )}
+            </>
+          ) : (
+            // No image URL - show gradient
+            <div
+              className="absolute inset-0 flex items-center justify-center"
+              style={{
+                background: `linear-gradient(to bottom right, ${theme.primary}, ${theme.secondary})`
+              }}
+            >
+              <MapPin className="h-12 w-12 text-white/50" />
+            </div>
+          )}
 
           {/* Order Badge */}
           {index !== undefined && (

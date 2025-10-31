@@ -1,4 +1,4 @@
-import { forwardRef, type ButtonHTMLAttributes } from 'react'
+import { forwardRef, type ButtonHTMLAttributes, type CSSProperties } from 'react'
 import { cn } from '../../lib/utils'
 import { Loader2 } from 'lucide-react'
 
@@ -7,19 +7,34 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   size?: 'default' | 'sm' | 'lg' | 'icon'
   isLoading?: boolean
   asChild?: boolean
+  themeColors?: { primary: string; secondary: string }
 }
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant = 'default', size = 'default', isLoading, children, disabled, ...props }, ref) => {
-    const baseStyles = 'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50'
+  ({ className, variant = 'default', size = 'default', isLoading, children, disabled, themeColors, style, ...props }, ref) => {
+    const baseStyles = 'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50'
 
     const variants = {
-      default: 'bg-gradient-to-r from-primary-500 to-secondary-500 text-white shadow-lg shadow-primary-500/30 hover:shadow-xl hover:shadow-primary-500/40',
+      default: 'text-white shadow-lg hover:shadow-xl hover:scale-105',
       secondary: 'bg-gray-100 text-gray-900 hover:bg-gray-200',
-      outline: 'border-2 border-gray-200 bg-transparent hover:bg-gray-50',
+      outline: 'border-2 bg-transparent hover:bg-gray-50',
       ghost: 'hover:bg-gray-100',
       destructive: 'bg-red-500 text-white hover:bg-red-600 shadow-lg shadow-red-500/30',
     }
+
+    // Build inline style for gradient background
+    const gradientStyle: CSSProperties = variant === 'default' && themeColors
+      ? {
+          background: `linear-gradient(135deg, ${themeColors.primary}, ${themeColors.secondary})`,
+          ...style
+        }
+      : variant === 'outline' && themeColors
+      ? {
+          borderColor: themeColors.primary,
+          color: themeColors.primary,
+          ...style
+        }
+      : style || {}
 
     const sizes = {
       default: 'h-11 px-6 py-2.5 text-sm',
@@ -37,6 +52,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           sizes[size],
           className
         )}
+        style={gradientStyle}
         disabled={disabled || isLoading}
         {...props}
       >
