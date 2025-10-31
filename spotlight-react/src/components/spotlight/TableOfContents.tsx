@@ -23,13 +23,13 @@ export function TableOfContents({ activeSection, onSectionChange }: TableOfConte
 
   return (
     <nav
-      className="rounded-xl border-2 bg-gradient-to-br from-white to-gray-50 p-4 shadow-md"
+      className="rounded-2xl border-2 bg-gradient-to-br from-white to-gray-50 p-6 shadow-lg"
       style={{ borderColor: theme.primary }}
     >
-      <h3 className="mb-3 text-sm font-semibold" style={{ color: theme.primary }}>
+      <h3 className="mb-4 text-base font-semibold" style={{ color: theme.primary }}>
         Navigate Route
       </h3>
-      <ul className="space-y-1">
+      <ul className="space-y-2">
         {sections.map((section) => {
           const Icon = section.icon
           const isActive = activeSection === section.id
@@ -39,16 +39,16 @@ export function TableOfContents({ activeSection, onSectionChange }: TableOfConte
               <button
                 onClick={() => onSectionChange(section.id)}
                 className={cn(
-                  'group relative w-full rounded-lg px-3 py-2.5 text-left transition-all duration-200',
+                  'group relative w-full rounded-xl px-4 py-3 text-left transition-all duration-200',
                   isActive
-                    ? 'text-white shadow-lg'
+                    ? 'text-white shadow-xl'
                     : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                 )}
               >
                 {isActive && (
                   <motion.div
                     layoutId="activeSection"
-                    className="absolute inset-0 rounded-lg"
+                    className="absolute inset-0 rounded-xl"
                     style={{
                       background: `linear-gradient(to right, ${theme.primary}, ${theme.secondary})`
                     }}
@@ -56,9 +56,9 @@ export function TableOfContents({ activeSection, onSectionChange }: TableOfConte
                     transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                   />
                 )}
-                <span className="relative flex items-center gap-2.5">
-                  <Icon className="h-4 w-4 flex-shrink-0" />
-                  <span className="text-sm font-medium">{section.label}</span>
+                <span className="relative flex items-center gap-3">
+                  <Icon className="h-5 w-5 flex-shrink-0" />
+                  <span className="text-base font-medium">{section.label}</span>
                 </span>
               </button>
             </li>

@@ -31,15 +31,15 @@ export function RouteOverview() {
   ]
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900">Route Overview</h2>
-        <p className="mt-2 text-gray-600">
+        <h2 className="text-3xl font-bold text-gray-900">Route Overview</h2>
+        <p className="mt-3 text-base text-gray-600">
           Explore your carefully crafted route through Europe's most captivating destinations.
         </p>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-6">
         {stats.map((stat, index) => {
           const Icon = stat.icon
           return (
@@ -48,7 +48,7 @@ export function RouteOverview() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
-              className="relative overflow-hidden rounded-xl border-2 bg-white p-4 shadow-sm transition-all hover:shadow-lg hover:-translate-y-1"
+              className="relative overflow-hidden rounded-2xl border-2 bg-white p-6 shadow-lg transition-all hover:shadow-xl hover:-translate-y-1"
               style={{ borderColor: theme.primary }}
             >
               <div
@@ -59,15 +59,15 @@ export function RouteOverview() {
               />
               <div className="relative">
                 <div
-                  className="mb-2 inline-flex rounded-lg p-2"
+                  className="mb-3 inline-flex rounded-xl p-3"
                   style={{
                     background: `linear-gradient(to bottom right, ${theme.primary}, ${theme.secondary})`
                   }}
                 >
-                  <Icon className="h-5 w-5 text-white" />
+                  <Icon className="h-6 w-6 text-white" />
                 </div>
-                <div className="text-3xl font-bold text-gray-900">{stat.number}</div>
-                <div className="text-sm font-medium text-gray-600">{stat.label}</div>
+                <div className="text-4xl font-bold text-gray-900">{stat.number}</div>
+                <div className="text-base font-medium text-gray-600">{stat.label}</div>
               </div>
             </motion.div>
           )
