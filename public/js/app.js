@@ -1916,7 +1916,7 @@ class RoadTripPlanner {
             localStorage.setItem('spotlightData', JSON.stringify(spotlightData));
 
             // Open spotlight page in new window/tab
-            window.open('./spotlight.html', '_blank');
+            window.open('./spotlight-new/', '_blank');
         } else {
             alert(`No detailed recommendations available for ${agent} agent.`);
         }
