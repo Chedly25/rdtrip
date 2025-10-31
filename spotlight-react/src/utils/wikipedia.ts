@@ -46,8 +46,12 @@ export async function getWikipediaImage(
 
 async function getWikipediaPageImage(locationName: string, width: number = 800): Promise<string | null> {
   try {
-    // Clean location name for Wikipedia search
-    const cleanName = locationName.replace(/[,()]/g, '').trim()
+    // Try to extract just the city name (before comma)
+    // e.g., "Aix-en-Provence, France" -> "Aix-en-Provence"
+    const cityName = locationName.split(',')[0].trim()
+
+    // Remove parentheses but keep hyphens (important for cities like Aix-en-Provence)
+    const cleanName = cityName.replace(/[()]/g, '').trim()
 
     const response = await fetch(
       `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(cleanName)}`,
@@ -57,11 +61,20 @@ async function getWikipediaPageImage(locationName: string, width: number = 800):
     if (response.ok) {
       const data = await response.json()
 
+      // Prefer original image for best quality, fallback to thumbnail
+      if (data.originalimage && data.originalimage.source) {
+        console.log(`Found original image for ${cleanName}:`, data.originalimage.source)
+        return data.originalimage.source
+      }
+
       if (data.thumbnail && data.thumbnail.source) {
         // Get higher resolution image
         const imageUrl = data.thumbnail.source.replace(/\/\d+px-/, `/${width}px-`)
+        console.log(`Found thumbnail for ${cleanName}, scaled to ${width}px:`, imageUrl)
         return imageUrl
       }
+
+      console.warn(`No image found in Wikipedia response for ${cleanName}`)
     }
   } catch (error) {
     console.warn(`Wikipedia page image search failed for ${locationName}:`, error)
