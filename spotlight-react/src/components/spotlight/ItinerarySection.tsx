@@ -1,12 +1,17 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Calendar, MapPin, Utensils, Hotel, Clock, ChevronDown } from 'lucide-react'
+import { Calendar, MapPin, Utensils, Hotel, Clock, ChevronDown, Route } from 'lucide-react'
 import { Button } from '../ui/Button'
+import { useRouteDataStore } from '../../stores/routeDataStore'
+import { getTheme } from '../../config/theme'
 
 export function ItinerarySection() {
   const [isLoading, setIsLoading] = useState(false)
   const [hasLoaded, setHasLoaded] = useState(false)
   const [expandedDay, setExpandedDay] = useState<number | null>(0)
+  const { routeData } = useRouteDataStore()
+  const agent = routeData?.agent || 'adventure'
+  const theme = getTheme(agent)
 
   const handleGenerate = async () => {
     setIsLoading(true)
@@ -74,15 +79,71 @@ export function ItinerarySection() {
 
       {!hasLoaded ? (
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 p-12 text-center"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative overflow-hidden rounded-2xl border-2 bg-gradient-to-br from-white to-gray-50 p-12 text-center shadow-lg"
+          style={{ borderColor: theme.primary }}
         >
-          <Calendar className="mb-4 h-12 w-12 text-gray-400" />
-          <h3 className="mb-2 text-lg font-semibold text-gray-900">No Itinerary Yet</h3>
-          <p className="mb-4 text-sm text-gray-600">
-            Click "Generate Day-by-Day Plan" to get a detailed itinerary with schedules, activities, and recommendations for each day
-          </p>
+          {/* Background gradient */}
+          <div
+            className="absolute inset-0 opacity-5"
+            style={{
+              background: `linear-gradient(135deg, ${theme.primary}, ${theme.secondary})`
+            }}
+          />
+
+          {/* Content */}
+          <div className="relative">
+            {/* Icons with gradient background */}
+            <div className="mb-6 flex justify-center gap-4">
+              <motion.div
+                initial={{ scale: 0, rotate: -180 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
+                className="rounded-2xl p-4"
+                style={{
+                  background: `linear-gradient(135deg, ${theme.primary}, ${theme.secondary})`
+                }}
+              >
+                <Calendar className="h-8 w-8 text-white" />
+              </motion.div>
+              <motion.div
+                initial={{ scale: 0, rotate: 180 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ delay: 0.3, type: 'spring', stiffness: 200 }}
+                className="rounded-2xl p-4"
+                style={{
+                  background: `linear-gradient(135deg, ${theme.primary}, ${theme.secondary})`
+                }}
+              >
+                <Route className="h-8 w-8 text-white" />
+              </motion.div>
+            </div>
+
+            {/* Icon badges row */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="mb-6 flex justify-center gap-3"
+            >
+              <div className="rounded-lg bg-white p-2 shadow-sm">
+                <MapPin className="h-4 w-4" style={{ color: theme.primary }} />
+              </div>
+              <div className="rounded-lg bg-white p-2 shadow-sm">
+                <Hotel className="h-4 w-4" style={{ color: theme.primary }} />
+              </div>
+              <div className="rounded-lg bg-white p-2 shadow-sm">
+                <Utensils className="h-4 w-4" style={{ color: theme.primary }} />
+              </div>
+            </motion.div>
+
+            {/* Text */}
+            <h3 className="mb-3 text-xl font-bold text-gray-900">Your Day-by-Day Journey Awaits</h3>
+            <p className="mx-auto max-w-md text-sm leading-relaxed text-gray-600">
+              Click <span className="font-semibold" style={{ color: theme.primary }}>"Generate Day-by-Day Plan"</span> to create a detailed itinerary with schedules, activities, and recommendations for each day of your adventure
+            </p>
+          </div>
         </motion.div>
       ) : (
         <div className="space-y-4">

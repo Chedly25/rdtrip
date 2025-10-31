@@ -45,8 +45,8 @@ export function CityCard({ waypoint, onRemove, onClick, isDragging, index }: Cit
     >
       {/* Horizontal Layout Container */}
       <div className="flex h-44">
-        {/* Left: Image Section (150px wide) */}
-        <div className="relative w-44 flex-shrink-0 overflow-hidden">
+        {/* Left: Image Section (176px wide) */}
+        <div className="relative w-44 flex-shrink-0 overflow-hidden rounded-l-2xl">
           <div className="h-full w-full relative">
             {imageUrl ? (
               <>
