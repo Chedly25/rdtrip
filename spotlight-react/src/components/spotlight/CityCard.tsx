@@ -69,35 +69,49 @@ export function CityCard({ waypoint, onRemove, onClick, isDragging, index }: Cit
                 </div>
               )}
 
-              {/* Actual Image */}
-              <motion.img
-                src={imageUrl}
-                alt={name}
-                className={cn(
-                  "absolute inset-0 h-full w-full object-cover transition-opacity duration-500",
-                  imageLoading ? "opacity-0" : "opacity-100"
-                )}
-                style={{ border: '3px solid yellow' }}
-                onLoad={(e) => {
-                  console.log(`🖼️ [DEBUG ${name}] Image loaded:`, {
-                    imageUrl,
-                    naturalWidth: (e.target as HTMLImageElement).naturalWidth,
-                    naturalHeight: (e.target as HTMLImageElement).naturalHeight,
-                    displayWidth: (e.target as HTMLImageElement).width,
-                    displayHeight: (e.target as HTMLImageElement).height,
-                    computedWidth: window.getComputedStyle(e.target as HTMLImageElement).width,
-                    computedHeight: window.getComputedStyle(e.target as HTMLImageElement).height
-                  })
-                  setImageLoading(false)
-                }}
-                onError={() => {
-                  console.error(`❌ [DEBUG ${name}] Failed to load image:`, imageUrl)
-                  setImageError(true)
-                  setImageLoading(false)
-                }}
+              {/* Actual Image - Using div wrapper for motion, img inside for proper object-fit */}
+              <motion.div
+                className="absolute inset-0"
                 whileHover={{ scale: imageError ? 1 : 1.05 }}
                 transition={{ duration: 0.4 }}
-              />
+                style={{ border: '3px solid yellow' }}
+              >
+                <img
+                  src={imageUrl}
+                  alt={name}
+                  className={cn(
+                    "transition-opacity duration-500",
+                    imageLoading ? "opacity-0" : "opacity-100"
+                  )}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    objectPosition: 'center'
+                  }}
+                  onLoad={(e) => {
+                    console.log(`🖼️ [DEBUG ${name}] Image loaded:`, {
+                      imageUrl,
+                      naturalWidth: (e.target as HTMLImageElement).naturalWidth,
+                      naturalHeight: (e.target as HTMLImageElement).naturalHeight,
+                      displayWidth: (e.target as HTMLImageElement).width,
+                      displayHeight: (e.target as HTMLImageElement).height,
+                      computedWidth: window.getComputedStyle(e.target as HTMLImageElement).width,
+                      computedHeight: window.getComputedStyle(e.target as HTMLImageElement).height,
+                      objectFit: window.getComputedStyle(e.target as HTMLImageElement).objectFit
+                    })
+                    setImageLoading(false)
+                  }}
+                  onError={() => {
+                    console.error(`❌ [DEBUG ${name}] Failed to load image:`, imageUrl)
+                    setImageError(true)
+                    setImageLoading(false)
+                  }}
+                />
+              </motion.div>
 
               {/* Error State - show gradient fallback */}
               {imageError && (
