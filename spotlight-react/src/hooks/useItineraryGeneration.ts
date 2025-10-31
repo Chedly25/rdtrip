@@ -19,7 +19,7 @@ interface UseItineraryGenerationReturn {
   itinerary: Itinerary | null;
   error: string | null;
   isGenerating: boolean;
-  generate: (routeId: string, preferences: any) => Promise<void>;
+  generate: (routeData: any, preferences: any) => Promise<void>;
 }
 
 const initialAgents: AgentStatus[] = [
@@ -40,7 +40,7 @@ export function useItineraryGeneration(): UseItineraryGenerationReturn {
   const [error, setError] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
 
-  const generate = useCallback(async (routeId: string, preferences: any) => {
+  const generate = useCallback(async (routeData: any, preferences: any) => {
     try {
       setIsGenerating(true);
       setError(null);
@@ -50,7 +50,7 @@ export function useItineraryGeneration(): UseItineraryGenerationReturn {
       const response = await fetch('/api/itinerary/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ routeId, preferences })
+        body: JSON.stringify({ routeData, preferences })
       });
 
       if (!response.ok) {
