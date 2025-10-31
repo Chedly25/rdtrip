@@ -14,7 +14,6 @@ import { SmoothSection } from '../ui/SmoothSection'
 import { LayoutProvider, useLayout } from '../../contexts/LayoutContext'
 import { LayoutSwitcher } from './LayoutSwitcher'
 import { SidebarToggle } from './SidebarToggle'
-import { FloatingNav } from './FloatingNav'
 import { useSpotlightStore } from '../../stores/spotlightStore'
 import { useRouteDataStore } from '../../stores/routeDataStore'
 import { getTheme } from '../../config/theme'
@@ -272,9 +271,6 @@ function SpotlightContent() {
           </Panel>
         </PanelGroup>
       </div>
-
-      {/* Floating Navigation */}
-      <FloatingNav />
 
       {/* Waze City Selector Modal */}
       <WazeCitySelector
