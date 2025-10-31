@@ -44,9 +44,22 @@ export function CityCard({ waypoint, onRemove, onClick, isDragging, index }: Cit
       style={isDragging ? { borderColor: theme.primary } : undefined}
     >
       {/* Horizontal Layout Container */}
-      <div className="flex h-44 -m-px">
-        {/* Left: Image Section (176px + 2px for borders = 178px actual) */}
-        <div className="relative w-44 h-44 flex-shrink-0 overflow-hidden rounded-tl-2xl rounded-bl-2xl">
+      <div className="flex h-44 -m-px" style={{ border: '2px solid blue' }}>
+        {/* Left: Image Section (176px + 2px for borders = 178px actual) - DEBUG WITH RED BG */}
+        <div
+          className="relative w-44 h-44 flex-shrink-0 overflow-hidden rounded-tl-2xl rounded-bl-2xl"
+          style={{ backgroundColor: 'red' }}
+          ref={(el) => {
+            if (el) {
+              console.log(`🔍 [DEBUG ${name}] Container dimensions:`, {
+                width: el.offsetWidth,
+                height: el.offsetHeight,
+                computedWidth: window.getComputedStyle(el).width,
+                computedHeight: window.getComputedStyle(el).height
+              })
+            }
+          }}
+        >
           {imageUrl ? (
             <>
               {/* Loading Skeleton */}
@@ -64,9 +77,21 @@ export function CityCard({ waypoint, onRemove, onClick, isDragging, index }: Cit
                   "absolute inset-0 h-full w-full object-cover transition-opacity duration-500",
                   imageLoading ? "opacity-0" : "opacity-100"
                 )}
-                onLoad={() => setImageLoading(false)}
+                style={{ border: '3px solid yellow' }}
+                onLoad={(e) => {
+                  console.log(`🖼️ [DEBUG ${name}] Image loaded:`, {
+                    imageUrl,
+                    naturalWidth: (e.target as HTMLImageElement).naturalWidth,
+                    naturalHeight: (e.target as HTMLImageElement).naturalHeight,
+                    displayWidth: (e.target as HTMLImageElement).width,
+                    displayHeight: (e.target as HTMLImageElement).height,
+                    computedWidth: window.getComputedStyle(e.target as HTMLImageElement).width,
+                    computedHeight: window.getComputedStyle(e.target as HTMLImageElement).height
+                  })
+                  setImageLoading(false)
+                }}
                 onError={() => {
-                  console.error(`Failed to load image for ${name}:`, imageUrl)
+                  console.error(`❌ [DEBUG ${name}] Failed to load image:`, imageUrl)
                   setImageError(true)
                   setImageLoading(false)
                 }}
