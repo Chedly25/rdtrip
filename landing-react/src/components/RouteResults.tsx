@@ -419,8 +419,8 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
 
     localStorage.setItem('spotlightData', JSON.stringify(dataToStore))
 
-    // Navigate directly to spotlight.html (don't call onViewMap which would overwrite localStorage)
-    window.location.href = `/spotlight.html?routeId=${routeData.id || Date.now()}&agent=${agent || 'adventure'}`
+    // Navigate directly to spotlight-new (don't call onViewMap which would overwrite localStorage)
+    window.location.href = `/spotlight-new/?routeId=${routeData.id || Date.now()}&agent=${agent || 'adventure'}`
   }
 
   const handleShareClick = async () => {
