@@ -71,7 +71,7 @@ export default function SharedRoute() {
         : route.routeData
 
       localStorage.setItem('spotlightData', JSON.stringify(dataToStore))
-      window.location.href = `/spotlight.html?routeId=${route.id}&agent=${agent || 'adventure'}`
+      window.location.href = `/spotlight-new/?routeId=${route.id}&agent=${agent || 'adventure'}`
     }
   }
 

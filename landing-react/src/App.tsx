@@ -52,7 +52,7 @@ function HomePage() {
         : routeData
 
       localStorage.setItem('spotlightData', JSON.stringify(dataToStore))
-      window.location.href = `/spotlight.html?routeId=${routeData.id || Date.now()}&agent=${agent || 'adventure'}`
+      window.location.href = `/spotlight-new/?routeId=${routeData.id || Date.now()}&agent=${agent || 'adventure'}`
     }
   }
 

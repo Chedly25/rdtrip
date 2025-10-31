@@ -113,7 +113,7 @@ export function RouteForm({ onRouteGenerated }: RouteFormProps) {
           } else {
             // Fallback: redirect directly if no callback provided
             localStorage.setItem('spotlightData', JSON.stringify(statusData.route))
-            window.location.href = `/spotlight.html?routeId=${statusData.route.id}`
+            window.location.href = `/spotlight-new/?routeId=${statusData.route.id}`
           }
           setLoading(false)
           setIsSubmitting(false)
