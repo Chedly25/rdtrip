@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowLeft, Navigation, Map as MapIcon, ArrowRight } from 'lucide-react'
+import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
 import { Button } from '../ui/Button'
 import { TableOfContents } from './TableOfContents'
 import { RouteOverview } from './RouteOverview'
@@ -10,6 +11,9 @@ import { ItinerarySection } from './ItinerarySection'
 import { MapView } from './MapView'
 import { WazeCitySelector } from './WazeCitySelector'
 import { ExportMenu } from '../ExportMenu'
+import { LayoutProvider, useLayout } from '../../contexts/LayoutContext'
+import { LayoutSwitcher } from './LayoutSwitcher'
+import { SidebarToggle } from './SidebarToggle'
 import { useSpotlightStore } from '../../stores/spotlightStore'
 import { useRouteDataStore } from '../../stores/routeDataStore'
 import { getTheme } from '../../config/theme'
@@ -39,9 +43,11 @@ const agentConfig = {
   },
 }
 
-export function SpotlightPageComplete() {
+// Inner component that uses layout context
+function SpotlightContent() {
   const { waypoints } = useSpotlightStore()
   const { routeData } = useRouteDataStore()
+  const { isSidebarCollapsed } = useLayout()
   const [activeSection, setActiveSection] = useState('overview')
   const [showWazeModal, setShowWazeModal] = useState(false)
 
@@ -187,43 +193,71 @@ export function SpotlightPageComplete() {
         </div>
       </header>
 
-      {/* Main Layout */}
+      {/* Main Layout with Resizable Panels */}
       <div className="flex h-[calc(100vh-120px)]">
-        {/* Left Content Panel - Wider for better readability */}
-        <motion.aside
-          initial={{ x: -300, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          className="w-[700px] flex-shrink-0 overflow-y-auto bg-gradient-to-b from-gray-50 to-white shadow-lg"
-          style={{ borderRight: `3px solid ${theme.primary}` }}
-        >
-          <div className="px-8 py-6">
-            {/* Table of Contents */}
-            <TableOfContents
-              activeSection={activeSection}
-              onSectionChange={setActiveSection}
-            />
+        <PanelGroup direction="horizontal">
+          {/* Sidebar Panel */}
+          <AnimatePresence>
+            {!isSidebarCollapsed && (
+              <Panel
+                defaultSize={40}
+                minSize={25}
+                maxSize={70}
+                className="border-r"
+                style={{ borderColor: theme.primary, borderRightWidth: '3px' }}
+              >
+                <motion.aside
+                  initial={{ x: -300, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  exit={{ x: -300, opacity: 0 }}
+                  className="h-full overflow-y-auto bg-gradient-to-b from-gray-50 to-white shadow-lg"
+                >
+                  <div className="px-8 py-6">
+                    {/* Table of Contents */}
+                    <TableOfContents
+                      activeSection={activeSection}
+                      onSectionChange={setActiveSection}
+                    />
 
-            {/* Content Sections */}
-            <div className="mt-8 space-y-10">
-              {activeSection === 'overview' && <RouteOverview />}
-              {activeSection === 'cities' && <CitiesSection />}
-              {activeSection === 'stay-dine' && <StayDineSection />}
-              {activeSection === 'itinerary' && <ItinerarySection />}
-            </div>
-          </div>
-        </motion.aside>
+                    {/* Content Sections */}
+                    <div className="mt-8 space-y-10">
+                      {activeSection === 'overview' && <RouteOverview />}
+                      {activeSection === 'cities' && <CitiesSection />}
+                      {activeSection === 'stay-dine' && <StayDineSection />}
+                      {activeSection === 'itinerary' && <ItinerarySection />}
+                    </div>
+                  </div>
+                </motion.aside>
+              </Panel>
+            )}
+          </AnimatePresence>
 
-        {/* Right Map - Seamlessly integrated */}
-        <div className="flex-1 relative">
-          <MapView />
-          {/* Gradient overlay for better visual integration */}
-          <div
-            className="absolute left-0 top-0 bottom-0 w-12 pointer-events-none"
-            style={{
-              background: `linear-gradient(to right, ${theme.primary}15, transparent)`
-            }}
-          />
-        </div>
+          {/* Resize Handle */}
+          {!isSidebarCollapsed && (
+            <PanelResizeHandle className="w-1 hover:w-2 bg-gray-200 hover:bg-blue-500 transition-all cursor-col-resize" />
+          )}
+
+          {/* Map Panel */}
+          <Panel className="relative flex-1">
+            <MapView />
+
+            {/* Gradient overlay for better visual integration */}
+            {!isSidebarCollapsed && (
+              <div
+                className="absolute left-0 top-0 bottom-0 w-12 pointer-events-none"
+                style={{
+                  background: `linear-gradient(to right, ${theme.primary}15, transparent)`
+                }}
+              />
+            )}
+
+            {/* Layout Switcher */}
+            <LayoutSwitcher />
+
+            {/* Sidebar Toggle */}
+            <SidebarToggle />
+          </Panel>
+        </PanelGroup>
       </div>
 
       {/* Waze City Selector Modal */}
@@ -233,5 +267,14 @@ export function SpotlightPageComplete() {
         onClose={() => setShowWazeModal(false)}
       />
     </div>
+  )
+}
+
+// Main export wrapped with LayoutProvider
+export function SpotlightPageComplete() {
+  return (
+    <LayoutProvider>
+      <SpotlightContent />
+    </LayoutProvider>
   )
 }
