@@ -2,6 +2,7 @@ import { motion } from 'framer-motion'
 import { MapPin, Trash2, GripVertical } from 'lucide-react'
 import type { Waypoint } from '../../types'
 import { cn } from '../../lib/utils'
+import { GlassCard } from '../ui/GlassCard'
 import { useRouteDataStore } from '../../stores/routeDataStore'
 import { getTheme } from '../../config/theme'
 
@@ -19,19 +20,17 @@ export function CityCard({ waypoint, onRemove, onClick, isDragging }: CityCardPr
   const theme = getTheme(agent)
 
   return (
-    <motion.div
+    <GlassCard
       layout
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.9 }}
-      whileHover={{ y: -8 }}
       transition={{
         layout: { type: 'spring', stiffness: 300, damping: 30 },
-        opacity: { duration: 0.2 },
-        y: { duration: 0.3 }
+        opacity: { duration: 0.2 }
       }}
       className={cn(
-        'group relative overflow-hidden rounded-2xl bg-white shadow-lg transition-shadow hover:shadow-2xl',
+        'group',
         isDragging && 'shadow-2xl ring-4'
       )}
       style={isDragging ? { borderColor: theme.primary } : undefined}
@@ -126,6 +125,6 @@ export function CityCard({ waypoint, onRemove, onClick, isDragging }: CityCardPr
           </ul>
         )}
       </div>
-    </motion.div>
+    </GlassCard>
   )
 }
