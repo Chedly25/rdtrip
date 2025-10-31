@@ -6,6 +6,12 @@
 const DayPlannerAgent = require('./DayPlannerAgent');
 const CityActivityAgent = require('./CityActivityAgent');
 const RestaurantAgent = require('./RestaurantAgent');
+const AccommodationAgent = require('./AccommodationAgent');
+const ScenicRouteAgent = require('./ScenicRouteAgent');
+const PracticalInfoAgent = require('./PracticalInfoAgent');
+const WeatherAgent = require('./WeatherAgent');
+const EventsAgent = require('./EventsAgent');
+const BudgetOptimizer = require('./BudgetOptimizer');
 
 class ItineraryAgentOrchestrator {
   constructor(routeData, preferences, db, progressCallback) {
@@ -38,30 +44,41 @@ class ItineraryAgentOrchestrator {
       await this.emitProgress('day_planner', 'completed', this.results.dayStructure);
       await this.saveDayStructure();
 
-      // PHASE 2: Parallel Detail Agents (all can run simultaneously)
-      const detailAgents = [
+      // PHASE 2: Core Content Agents (all can run simultaneously)
+      const coreAgents = [
         this.runCityActivityAgent(),
         this.runRestaurantAgent(),
-        // TODO: Add more agents
-        // this.runAccommodationAgent(),
-        // this.runScenicRouteAgent(),
-        // this.runPracticalInfoAgent(),
+        this.runAccommodationAgent(),
+        this.runScenicRouteAgent(),
+        this.runPracticalInfoAgent(),
       ];
 
-      // Run agents in parallel and track results
-      const results = await Promise.allSettled(detailAgents);
+      // Run core agents in parallel
+      const coreResults = await Promise.allSettled(coreAgents);
 
-      // Handle results
-      results.forEach((result, index) => {
+      // Handle core results
+      coreResults.forEach((result, index) => {
         if (result.status === 'rejected') {
-          console.error(`❌ Agent ${index} failed:`, result.reason);
+          console.error(`❌ Core agent ${index} failed:`, result.reason);
         }
       });
 
-      // PHASE 3: Post-processing
-      // await this.runBudgetOptimizer();
-      // await this.runWeatherAgent();
-      // await this.runEventsAgent();
+      // PHASE 3: Premium Feature Agents (can run in parallel)
+      const premiumAgents = [
+        this.runWeatherAgent(),
+        this.runEventsAgent()
+      ];
+
+      const premiumResults = await Promise.allSettled(premiumAgents);
+
+      premiumResults.forEach((result, index) => {
+        if (result.status === 'rejected') {
+          console.warn(`⚠️  Premium agent ${index} failed (non-critical):`, result.reason);
+        }
+      });
+
+      // PHASE 4: Budget Calculation (needs all other data)
+      await this.runBudgetOptimizer();
 
       // Final save
       await this.finalizeItinerary();
@@ -194,6 +211,210 @@ class ItineraryAgentOrchestrator {
   }
 
   /**
+   * Run Accommodation Agent
+   */
+  async runAccommodationAgent() {
+    if (!this.results.dayStructure) {
+      throw new Error('Day structure must be generated first');
+    }
+
+    const startTime = Date.now();
+
+    try {
+      await this.emitProgress('accommodations', 'started');
+
+      const agent = new AccommodationAgent(
+        this.routeData,
+        this.results.dayStructure,
+        this.preferences.budget || 'mid',
+        (progress) => this.emitProgress('accommodations', 'progress', null, progress)
+      );
+
+      const result = await agent.generate();
+
+      await this.emitProgress('accommodations', 'completed', result);
+      await this.logAgentExecution('accommodations', startTime, 'success', result);
+
+      this.results.accommodations = result;
+      await this.saveAccommodations();
+
+      return result;
+
+    } catch (error) {
+      await this.logAgentExecution('accommodations', startTime, 'failed', null, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Run Scenic Route Agent
+   */
+  async runScenicRouteAgent() {
+    if (!this.results.dayStructure) {
+      throw new Error('Day structure must be generated first');
+    }
+
+    const startTime = Date.now();
+
+    try {
+      await this.emitProgress('scenic_stops', 'started');
+
+      const agent = new ScenicRouteAgent(
+        this.routeData,
+        this.results.dayStructure,
+        (progress) => this.emitProgress('scenic_stops', 'progress', null, progress)
+      );
+
+      const result = await agent.generate();
+
+      await this.emitProgress('scenic_stops', 'completed', result);
+      await this.logAgentExecution('scenic_stops', startTime, 'success', result);
+
+      this.results.scenicStops = result;
+      await this.saveScenicStops();
+
+      return result;
+
+    } catch (error) {
+      await this.logAgentExecution('scenic_stops', startTime, 'failed', null, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Run Practical Info Agent
+   */
+  async runPracticalInfoAgent() {
+    if (!this.results.dayStructure) {
+      throw new Error('Day structure must be generated first');
+    }
+
+    const startTime = Date.now();
+
+    try {
+      await this.emitProgress('practical_info', 'started');
+
+      const agent = new PracticalInfoAgent(
+        this.routeData,
+        this.results.dayStructure,
+        (progress) => this.emitProgress('practical_info', 'progress', null, progress)
+      );
+
+      const result = await agent.generate();
+
+      await this.emitProgress('practical_info', 'completed', result);
+      await this.logAgentExecution('practical_info', startTime, 'success', result);
+
+      this.results.practicalInfo = result;
+      await this.savePracticalInfo();
+
+      return result;
+
+    } catch (error) {
+      await this.logAgentExecution('practical_info', startTime, 'failed', null, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Run Weather Agent
+   */
+  async runWeatherAgent() {
+    if (!this.results.dayStructure) {
+      throw new Error('Day structure must be generated first');
+    }
+
+    const startTime = Date.now();
+
+    try {
+      await this.emitProgress('weather', 'started');
+
+      const agent = new WeatherAgent(
+        this.results.dayStructure,
+        (progress) => this.emitProgress('weather', 'progress', null, progress)
+      );
+
+      const result = await agent.generate();
+
+      await this.emitProgress('weather', 'completed', result);
+      await this.logAgentExecution('weather', startTime, 'success', result);
+
+      this.results.weather = result;
+      await this.saveWeather();
+
+      return result;
+
+    } catch (error) {
+      await this.logAgentExecution('weather', startTime, 'failed', null, error);
+      // Don't throw - weather is optional
+      return [];
+    }
+  }
+
+  /**
+   * Run Events Agent
+   */
+  async runEventsAgent() {
+    if (!this.results.dayStructure) {
+      throw new Error('Day structure must be generated first');
+    }
+
+    const startTime = Date.now();
+
+    try {
+      await this.emitProgress('events', 'started');
+
+      const agent = new EventsAgent(
+        this.routeData,
+        this.results.dayStructure,
+        (progress) => this.emitProgress('events', 'progress', null, progress)
+      );
+
+      const result = await agent.generate();
+
+      await this.emitProgress('events', 'completed', result);
+      await this.logAgentExecution('events', startTime, 'success', result);
+
+      this.results.events = result;
+      await this.saveEvents();
+
+      return result;
+
+    } catch (error) {
+      await this.logAgentExecution('events', startTime, 'failed', null, error);
+      // Don't throw - events are optional
+      return [];
+    }
+  }
+
+  /**
+   * Run Budget Optimizer
+   */
+  async runBudgetOptimizer() {
+    const startTime = Date.now();
+
+    try {
+      await this.emitProgress('budget', 'started');
+
+      const optimizer = new BudgetOptimizer(this.results, this.preferences);
+      const result = optimizer.calculate();
+
+      await this.emitProgress('budget', 'completed', result);
+      await this.logAgentExecution('budget', startTime, 'success', result);
+
+      this.results.budget = result;
+      await this.saveBudget();
+
+      return result;
+
+    } catch (error) {
+      await this.logAgentExecution('budget', startTime, 'failed', null, error);
+      // Don't throw - budget is helpful but not critical
+      return null;
+    }
+  }
+
+  /**
    * Save day structure to database
    */
   async saveDayStructure() {
@@ -220,6 +441,66 @@ class ItineraryAgentOrchestrator {
     await this.db.query(
       'UPDATE itineraries SET restaurants = $1 WHERE id = $2',
       [JSON.stringify(this.results.restaurants), this.itineraryId]
+    );
+  }
+
+  /**
+   * Save accommodations to database
+   */
+  async saveAccommodations() {
+    await this.db.query(
+      'UPDATE itineraries SET accommodations = $1 WHERE id = $2',
+      [JSON.stringify(this.results.accommodations), this.itineraryId]
+    );
+  }
+
+  /**
+   * Save scenic stops to database
+   */
+  async saveScenicStops() {
+    await this.db.query(
+      'UPDATE itineraries SET scenic_stops = $1 WHERE id = $2',
+      [JSON.stringify(this.results.scenicStops), this.itineraryId]
+    );
+  }
+
+  /**
+   * Save practical info to database
+   */
+  async savePracticalInfo() {
+    await this.db.query(
+      'UPDATE itineraries SET practical_info = $1 WHERE id = $2',
+      [JSON.stringify(this.results.practicalInfo), this.itineraryId]
+    );
+  }
+
+  /**
+   * Save weather data to database
+   */
+  async saveWeather() {
+    await this.db.query(
+      'UPDATE itineraries SET weather = $1 WHERE id = $2',
+      [JSON.stringify(this.results.weather), this.itineraryId]
+    );
+  }
+
+  /**
+   * Save events data to database
+   */
+  async saveEvents() {
+    await this.db.query(
+      'UPDATE itineraries SET events = $1 WHERE id = $2',
+      [JSON.stringify(this.results.events), this.itineraryId]
+    );
+  }
+
+  /**
+   * Save budget calculation to database
+   */
+  async saveBudget() {
+    await this.db.query(
+      'UPDATE itineraries SET budget = $1 WHERE id = $2',
+      [JSON.stringify(this.results.budget), this.itineraryId]
     );
   }
 
