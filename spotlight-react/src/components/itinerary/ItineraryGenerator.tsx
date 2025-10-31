@@ -7,14 +7,14 @@ import { useItineraryGeneration } from '../../hooks/useItineraryGeneration';
 import { getTheme } from '../../config/theme';
 
 interface ItineraryGeneratorProps {
-  routeId: string;
+  routeData: any;
   agentType: string;
   preferences: any;
   onBack?: () => void;
 }
 
 export function ItineraryGenerator({
-  routeId,
+  routeData,
   agentType,
   preferences,
   onBack
@@ -24,11 +24,11 @@ export function ItineraryGenerator({
   const [hasStarted, setHasStarted] = useState(false);
 
   useEffect(() => {
-    if (!hasStarted && routeId) {
+    if (!hasStarted && routeData) {
       setHasStarted(true);
-      generate(routeId, { ...preferences, agentType });
+      generate(routeData, { ...preferences, agentType });
     }
-  }, [routeId, preferences, agentType, hasStarted, generate]);
+  }, [routeData, preferences, agentType, hasStarted, generate]);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">

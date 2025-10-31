@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Navigation, Map as MapIcon, ArrowRight } from 'lucide-react'
+import { ArrowLeft, Navigation, Map as MapIcon, ArrowRight, Sparkles } from 'lucide-react'
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
 import { Button } from '../ui/Button'
 import { RouteOverview } from './RouteOverview'
@@ -19,6 +19,7 @@ import { useSpotlightStore } from '../../stores/spotlightStore'
 import { useRouteDataStore } from '../../stores/routeDataStore'
 import { getTheme } from '../../config/theme'
 import { extractCountry, getCountryFromGeocoding, formatCityWithCountry } from '../../utils/countryFlags'
+import { ItineraryGenerator } from '../itinerary/ItineraryGenerator'
 
 // Agent configuration
 const agentConfig = {
@@ -50,6 +51,7 @@ function SpotlightContent() {
   const { routeData } = useRouteDataStore()
   const { isSidebarCollapsed } = useLayout()
   const [showWazeModal, setShowWazeModal] = useState(false)
+  const [showItineraryGenerator, setShowItineraryGenerator] = useState(false)
 
   // Country data state
   const [originData, setOriginData] = useState<{ display: string; flag: string }>({ display: '', flag: '' })
@@ -136,6 +138,19 @@ function SpotlightContent() {
 
           {/* Export Buttons - Absolute positioned on right */}
           <div className="absolute right-6 top-1/2 -translate-y-1/2 flex items-center gap-2">
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setShowItineraryGenerator(true)}
+              className="gap-2"
+              style={{
+                background: `linear-gradient(to right, ${theme.primary}, ${theme.secondary})`,
+                color: 'white'
+              }}
+            >
+              <Sparkles className="h-4 w-4" />
+              Generate Detailed Itinerary
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -282,6 +297,29 @@ function SpotlightContent() {
         isOpen={showWazeModal}
         onClose={() => setShowWazeModal(false)}
       />
+
+      {/* Detailed Itinerary Generator */}
+      {showItineraryGenerator && (
+        <div className="fixed inset-0 z-50 bg-white overflow-y-auto">
+          <ItineraryGenerator
+            routeData={{
+              waypoints: waypoints.map(wp => ({
+                city: wp.name,
+                country: wp.country || 'France',
+                coordinates: wp.coordinates
+              })),
+              startDate: new Date().toISOString().split('T')[0],
+              endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+            }}
+            agentType={agent}
+            preferences={{
+              budget: 'mid',
+              travelers: 2
+            }}
+            onBack={() => setShowItineraryGenerator(false)}
+          />
+        </div>
+      )}
     </div>
   )
 }
