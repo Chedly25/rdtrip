@@ -7,6 +7,9 @@ const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
 const ItineraryAgentOrchestrator = require('../agents/ItineraryAgentOrchestrator');
+const { generateItineraryPDF } = require('../export/generatePDF');
+const { generateItineraryCalendar } = require('../export/generateICS');
+const { generateGoogleMapsUrl, generateDayGoogleMapsUrl } = require('../export/generateGoogleMaps');
 
 // Job storage (passed from main server)
 let itineraryJobs;
@@ -205,6 +208,120 @@ async function generateItineraryAsync(jobId, route_id, routeData, preferences) {
     job.error = error.message;
   }
 }
+
+/**
+ * GET /api/itinerary/:itineraryId/export/pdf
+ * Export itinerary as PDF
+ */
+router.get('/:itineraryId/export/pdf', async (req, res) => {
+  try {
+    const { itineraryId } = req.params;
+    const { agentType = 'best-overall' } = req.query;
+
+    // Fetch itinerary
+    const result = await pool.query(
+      'SELECT * FROM itineraries WHERE id = $1',
+      [itineraryId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Itinerary not found' });
+    }
+
+    const itinerary = result.rows[0];
+
+    // Generate PDF
+    const doc = await generateItineraryPDF(itinerary, agentType);
+
+    // Set response headers
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="itinerary-${itineraryId}.pdf"`);
+
+    // Pipe PDF to response
+    doc.pipe(res);
+
+  } catch (error) {
+    console.error('PDF export error:', error);
+    res.status(500).json({ error: 'Failed to generate PDF' });
+  }
+});
+
+/**
+ * GET /api/itinerary/:itineraryId/export/calendar
+ * Export itinerary as .ics calendar file
+ */
+router.get('/:itineraryId/export/calendar', async (req, res) => {
+  try {
+    const { itineraryId } = req.params;
+
+    // Fetch itinerary
+    const result = await pool.query(
+      'SELECT * FROM itineraries WHERE id = $1',
+      [itineraryId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Itinerary not found' });
+    }
+
+    const itinerary = result.rows[0];
+
+    // Generate calendar
+    const icsContent = generateItineraryCalendar(itinerary);
+
+    if (!icsContent) {
+      return res.status(500).json({ error: 'Failed to generate calendar' });
+    }
+
+    // Set response headers
+    res.setHeader('Content-Type', 'text/calendar');
+    res.setHeader('Content-Disposition', `attachment; filename="itinerary-${itineraryId}.ics"`);
+
+    res.send(icsContent);
+
+  } catch (error) {
+    console.error('Calendar export error:', error);
+    res.status(500).json({ error: 'Failed to generate calendar' });
+  }
+});
+
+/**
+ * GET /api/itinerary/:itineraryId/export/google-maps
+ * Get Google Maps URL for full itinerary
+ */
+router.get('/:itineraryId/export/google-maps', async (req, res) => {
+  try {
+    const { itineraryId } = req.params;
+    const { day } = req.query;
+
+    // Fetch itinerary
+    const result = await pool.query(
+      'SELECT * FROM itineraries WHERE id = $1',
+      [itineraryId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Itinerary not found' });
+    }
+
+    const itinerary = result.rows[0];
+
+    // Generate URL (full route or specific day)
+    const url = day
+      ? generateDayGoogleMapsUrl(itinerary, parseInt(day))
+      : generateGoogleMapsUrl(itinerary);
+
+    if (!url) {
+      return res.status(400).json({ error: 'Could not generate Google Maps URL' });
+    }
+
+    res.json({ url });
+
+  } catch (error) {
+    console.error('Google Maps URL error:', error);
+    res.status(500).json({ error: 'Failed to generate Google Maps URL' });
+  }
+});
 
 /**
  * Map agent status to SSE event types
