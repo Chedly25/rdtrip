@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import { MapPin, Trash2, GripVertical, Eye } from 'lucide-react'
+import { useState } from 'react'
 import type { Waypoint } from '../../types'
 import { cn } from '../../lib/utils'
 import { GlassCard } from '../ui/GlassCard'
@@ -19,6 +20,9 @@ export function CityCard({ waypoint, onRemove, onClick, isDragging, index }: Cit
   const { routeData } = useRouteDataStore()
   const agent = routeData?.agent || 'adventure'
   const theme = getTheme(agent)
+
+  const [imageLoading, setImageLoading] = useState(true)
+  const [imageError, setImageError] = useState(false)
 
   const activitiesToShow = activities?.slice(0, 3) || []
   const remainingCount = (activities?.length || 0) - 3
@@ -43,24 +47,54 @@ export function CityCard({ waypoint, onRemove, onClick, isDragging, index }: Cit
       <div className="flex h-44">
         {/* Left: Image Section (150px wide) */}
         <div className="relative w-44 flex-shrink-0 overflow-hidden">
-          <div
-            className="h-full w-full"
-            style={{
-              background: imageUrl
-                ? undefined
-                : `linear-gradient(to bottom right, ${theme.primary}, ${theme.secondary})`
-            }}
-          >
+          <div className="h-full w-full relative">
             {imageUrl ? (
-              <motion.img
-                src={imageUrl}
-                alt={name}
-                className="h-full w-full object-cover"
-                whileHover={{ scale: 1.1 }}
-                transition={{ duration: 0.4 }}
-              />
+              <>
+                {/* Loading Skeleton */}
+                {imageLoading && (
+                  <div className="absolute inset-0 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 animate-pulse">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" />
+                  </div>
+                )}
+
+                {/* Actual Image */}
+                <motion.img
+                  src={imageUrl}
+                  alt={name}
+                  className={cn(
+                    "h-full w-full object-cover transition-opacity duration-500",
+                    imageLoading ? "opacity-0" : "opacity-100"
+                  )}
+                  onLoad={() => setImageLoading(false)}
+                  onError={() => {
+                    console.error(`Failed to load image for ${name}:`, imageUrl)
+                    setImageError(true)
+                    setImageLoading(false)
+                  }}
+                  whileHover={{ scale: imageError ? 1 : 1.1 }}
+                  transition={{ duration: 0.4 }}
+                />
+
+                {/* Error State - show gradient fallback */}
+                {imageError && (
+                  <div
+                    className="absolute inset-0 flex items-center justify-center"
+                    style={{
+                      background: `linear-gradient(to bottom right, ${theme.primary}, ${theme.secondary})`
+                    }}
+                  >
+                    <MapPin className="h-12 w-12 text-white/50" />
+                  </div>
+                )}
+              </>
             ) : (
-              <div className="flex h-full items-center justify-center">
+              // No image URL - show gradient
+              <div
+                className="h-full w-full flex items-center justify-center"
+                style={{
+                  background: `linear-gradient(to bottom right, ${theme.primary}, ${theme.secondary})`
+                }}
+              >
                 <MapPin className="h-12 w-12 text-white/50" />
               </div>
             )}
