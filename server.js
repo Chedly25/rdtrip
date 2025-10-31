@@ -3,8 +3,10 @@ const cors = require('cors');
 const axios = require('axios');
 const path = require('path');
 require('dotenv').config();
+const { Pool } = require('pg');
 const ZTLService = require('./services/ztl-service');
 const cheerio = require('cheerio');
+const ItineraryAgentOrchestrator = require('./server/agents/ItineraryAgentOrchestrator');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -16,9 +18,16 @@ app.use(express.static('public'));
 
 const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY;
 
+// PostgreSQL connection pool
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.DATABASE_URL?.includes('amazonaws.com') ? { rejectUnauthorized: false } : false
+});
+
 // In-memory job storage (in production, use Redis or a database)
 const routeJobs = new Map();
 const cityDetailsJobs = new Map();
+const itineraryJobs = new Map(); // For itinerary generation jobs
 
 // Job cleanup: Remove jobs older than 5 minutes
 setInterval(() => {
@@ -28,6 +37,13 @@ setInterval(() => {
     if (job.createdAt < fiveMinutesAgo) {
       console.log(`🧹 Cleaning up old city job: ${jobId}`);
       cityDetailsJobs.delete(jobId);
+    }
+  }
+
+  for (const [jobId, job] of itineraryJobs.entries()) {
+    if (job.createdAt < fiveMinutesAgo) {
+      console.log(`🧹 Cleaning up old itinerary job: ${jobId}`);
+      itineraryJobs.delete(jobId);
     }
   }
 }, 60000); // Clean every minute
@@ -6069,6 +6085,10 @@ async function warmCacheForPopularCities() {
 
   console.log(`🔥 Cache warming status: ${alreadyCached} already cached, ${needsGeneration} generating...`);
 }
+
+// ==================== ITINERARY ROUTES ====================
+const itineraryRoutes = require('./server/routes/itinerary');
+app.use('/api/itinerary', itineraryRoutes.initializeRoutes(itineraryJobs, pool));
 
 // Run migrations and then start server
 runDatabaseMigrations().then(() => {
