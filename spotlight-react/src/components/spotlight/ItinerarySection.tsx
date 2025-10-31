@@ -72,6 +72,7 @@ export function ItinerarySection() {
           isLoading={isLoading}
           disabled={isLoading}
           size="sm"
+          themeColors={{ primary: theme.primary, secondary: theme.secondary }}
         >
           {isLoading ? 'Generating...' : 'Generate Day-by-Day Plan'}
         </Button>

@@ -17,12 +17,12 @@ export function AddStopButton({ onAdd, position: _position }: AddStopButtonProps
     <motion.button
       onClick={onAdd}
       initial={{ opacity: 0, height: 0 }}
-      animate={{ opacity: 0, height: 'auto' }}
+      animate={{ opacity: 0.6, height: 'auto' }}
       whileHover={{ opacity: 1, scale: 1.02 }}
-      className="group relative w-full overflow-hidden rounded-xl border-2 border-dashed px-6 py-4 opacity-0 transition-all hover:shadow-lg"
+      className="group relative w-full overflow-hidden rounded-xl border-2 border-dashed px-6 py-4 transition-all hover:shadow-lg"
       style={{
-        borderColor: `${theme.primary}40`,
-        background: `linear-gradient(to right, ${theme.primary}10, ${theme.secondary}10)`,
+        borderColor: `${theme.primary}80`,
+        background: `linear-gradient(to right, ${theme.primary}15, ${theme.secondary}15)`,
         color: theme.primary,
       }}
     >
@@ -40,7 +40,7 @@ export function AddStopButton({ onAdd, position: _position }: AddStopButtonProps
       <motion.div
         className="absolute inset-0 -z-10 rounded-xl opacity-0 blur-xl transition-opacity group-hover:opacity-100"
         style={{
-          background: `linear-gradient(to right, ${theme.primary}20, ${theme.secondary}20)`,
+          background: `linear-gradient(to right, ${theme.primary}30, ${theme.secondary}30)`,
         }}
         initial={false}
       />

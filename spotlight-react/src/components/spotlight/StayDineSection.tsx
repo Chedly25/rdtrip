@@ -14,9 +14,9 @@ export function StayDineSection() {
   const theme = getTheme(agent)
 
   const budgetOptions = [
-    { value: 'budget' as const, label: 'Budget (€-€€)', icon: '💰' },
-    { value: 'mid' as const, label: 'Mid-range (€€-€€€)', icon: '💎' },
-    { value: 'luxury' as const, label: 'Luxury (€€€-€€€€)', icon: '👑' },
+    { value: 'budget' as const, label: 'Budget (€-€€)' },
+    { value: 'mid' as const, label: 'Mid-range (€€-€€€)' },
+    { value: 'luxury' as const, label: 'Luxury (€€€-€€€€)' },
   ]
 
   const handleLoadRecommendations = async () => {
@@ -81,11 +81,14 @@ export function StayDineSection() {
           <select
             value={budget}
             onChange={(e) => setBudget(e.target.value as any)}
-            className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:border-primary-500 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+            className="rounded-xl border-2 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-all hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2"
+            style={{
+              borderColor: theme.primary
+            }}
           >
             {budgetOptions.map((option) => (
               <option key={option.value} value={option.value}>
-                {option.icon} {option.label}
+                {option.label}
               </option>
             ))}
           </select>
@@ -94,6 +97,7 @@ export function StayDineSection() {
             isLoading={isLoading}
             disabled={isLoading}
             size="sm"
+            themeColors={{ primary: theme.primary, secondary: theme.secondary }}
           >
             {isLoading ? 'Loading...' : 'Load Recommendations'}
           </Button>
