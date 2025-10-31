@@ -114,7 +114,7 @@ export function SpotlightPageComplete() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-gray-200 bg-white shadow-sm">
-        <div className="mx-auto max-w-full px-6 py-4 relative">
+        <div className="mx-auto max-w-full px-6 py-6 relative">
           {/* Back Button - Absolute positioned on left */}
           <div className="absolute left-6 top-1/2 -translate-y-1/2">
             <Button
@@ -193,10 +193,10 @@ export function SpotlightPageComplete() {
         <motion.aside
           initial={{ x: -300, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
-          className="w-[600px] flex-shrink-0 overflow-y-auto bg-white shadow-lg"
+          className="w-[700px] flex-shrink-0 overflow-y-auto bg-gradient-to-b from-gray-50 to-white shadow-lg"
           style={{ borderRight: `3px solid ${theme.primary}` }}
         >
-          <div className="p-8">
+          <div className="px-8 py-6">
             {/* Table of Contents */}
             <TableOfContents
               activeSection={activeSection}
@@ -204,7 +204,7 @@ export function SpotlightPageComplete() {
             />
 
             {/* Content Sections */}
-            <div className="mt-8 space-y-8">
+            <div className="mt-8 space-y-10">
               {activeSection === 'overview' && <RouteOverview />}
               {activeSection === 'cities' && <CitiesSection />}
               {activeSection === 'stay-dine' && <StayDineSection />}
