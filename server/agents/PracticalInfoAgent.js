@@ -142,7 +142,7 @@ IMPORTANT:
             'Authorization': `Bearer ${this.apiKey}`,
             'Content-Type': 'application/json'
           },
-          timeout: 25000
+          timeout: 10000  // Reduced from 25s to 10s
         }
       );
 
@@ -150,7 +150,8 @@ IMPORTANT:
 
     } catch (error) {
       console.error('Practical info API error:', error.response?.data || error.message);
-      throw new Error(`Practical info generation failed: ${error.message}`);
+      // Return fallback data instead of throwing
+      return this.getFallbackPracticalInfo();
     }
   }
 
@@ -231,6 +232,42 @@ IMPORTANT:
         }
       };
     }
+  }
+
+  getFallbackPracticalInfo() {
+    console.log('⚠️ Using fallback practical info due to timeout');
+    return JSON.stringify({
+      parking: {
+        zones: "City center usually has paid zones (Blue/Green zones)",
+        payment: "Pay at meters or mobile apps",
+        tips: "Park & Ride options available outside city center",
+        restrictions: "Check for resident-only zones"
+      },
+      transport: {
+        publicTransport: "Trams, buses, and metro available in major cities",
+        tickets: "Buy at stations or mobile apps",
+        dayPass: "Tourist day passes usually available",
+        bikes: "Bike-sharing systems in most European cities"
+      },
+      touristCard: {
+        available: "Most cities offer tourist cards",
+        benefits: "Free public transport and museum discounts",
+        validity: "Usually 24, 48, or 72 hours",
+        purchase: "Tourist offices, online, or major stations"
+      },
+      bestTimeToVisit: {
+        morning: "9-11 AM for popular attractions",
+        afternoon: "2-4 PM usually quieter",
+        evening: "Golden hour for photos",
+        avoid: "Weekends and holidays are busiest"
+      },
+      tips: [
+        "Book restaurants in advance",
+        "Museums often closed Mondays",
+        "Carry cash for small vendors",
+        "Download offline maps"
+      ]
+    });
   }
 }
 
