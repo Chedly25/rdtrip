@@ -32,7 +32,9 @@ class ItineraryAgentOrchestrator {
       console.log('🎯 Starting itinerary generation...', {
         agent: this.routeData.agent,
         cities: this.routeData.waypoints?.length || 0,
-        preferences: this.preferences
+        waypoints: this.routeData.waypoints,
+        preferences: this.preferences,
+        fullRouteData: this.routeData
       });
 
       // Create itinerary record
