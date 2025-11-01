@@ -633,7 +633,7 @@ export default function CityDetailModal({
                                 <p className="text-sm text-gray-600 mb-3 line-clamp-2">{accommodation.description}</p>
 
                                 {/* Best For badge - parse for traveler types */}
-                                {(() => {
+                                {accommodation.bestFor && typeof accommodation.bestFor === 'string' && (() => {
                                   const travelerTypes = parseTravelerType([accommodation.bestFor])
                                   if (travelerTypes.length > 0) {
                                     const type = travelerTypes[0]
