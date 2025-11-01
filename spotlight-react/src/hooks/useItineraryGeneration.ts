@@ -46,11 +46,17 @@ export function useItineraryGeneration(): UseItineraryGenerationReturn {
       setError(null);
       setAgents(initialAgents); // Reset agents
 
+      // Add agent type to routeData if provided in preferences
+      const enrichedRouteData = {
+        ...routeData,
+        agent: preferences?.agentType || preferences?.travelStyle || 'best-overall'
+      };
+
       // Start generation
       const response = await fetch('/api/itinerary/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ routeData, preferences })
+        body: JSON.stringify({ routeData: enrichedRouteData, preferences })
       });
 
       if (!response.ok) {
