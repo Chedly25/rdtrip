@@ -117,13 +117,29 @@ export function ItineraryTimeline({ itinerary, agentType }: ItineraryTimelinePro
           >
             <DayCard
               day={day}
-              activities={activities?.filter((a: any) => a.day === day.day) || []}
-              restaurants={restaurants?.filter((r: any) => r.day === day.day) || []}
+              activities={
+                activities
+                  ?.filter((a: any) => a.day === day.day)
+                  .flatMap((a: any) => a.activities || []) || []
+              }
+              restaurants={
+                restaurants
+                  ?.filter((r: any) => r.day === day.day)
+                  .flatMap((r: any) => r.meals ? Object.values(r.meals) : []) || []
+              }
               accommodation={accommodations?.find((h: any) => h.night === day.day)}
-              scenicStops={scenicStops?.filter((s: any) => s.day === day.day) || []}
+              scenicStops={
+                scenicStops
+                  ?.filter((s: any) => s.day === day.day)
+                  .flatMap((s: any) => s.stops || []) || []
+              }
               practicalInfo={practicalInfo?.find((p: any) => p.city === day.overnight)}
               weather={weather?.find((w: any) => w.day === day.day)}
-              events={events?.filter((e: any) => e.day === day.day) || []}
+              events={
+                events
+                  ?.filter((e: any) => e.day === day.day)
+                  .flatMap((e: any) => e.events || []) || []
+              }
               agentType={agentType}
             />
           </motion.div>
