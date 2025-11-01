@@ -53,7 +53,9 @@ export function ScenicStopCard({ stop, theme }: ScenicStopCardProps) {
 
           {stop.coordinates && (
             <div className="mt-2 text-xs text-gray-500">
-              📍 {stop.coordinates}
+              📍 {typeof stop.coordinates === 'string'
+                ? stop.coordinates
+                : `${stop.coordinates.lat}, ${stop.coordinates.lng}`}
             </div>
           )}
 
