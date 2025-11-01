@@ -1,5 +1,6 @@
 import { Hotel, MapPin, Wifi, ParkingCircle, Coffee } from 'lucide-react';
 import type { ThemeConfig } from '../../config/theme';
+import { URLActionButtons } from './URLActionButtons';
 
 interface HotelCardProps {
   hotel: any;
@@ -78,6 +79,9 @@ export function HotelCard({ hotel, theme }: HotelCardProps) {
               💡 {hotel.bookingTip}
             </div>
           )}
+
+          {/* URL Action Buttons */}
+          <URLActionButtons urls={hotel.urls} compact />
         </div>
       </div>
     </div>

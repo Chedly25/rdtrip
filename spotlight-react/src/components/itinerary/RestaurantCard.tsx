@@ -1,5 +1,6 @@
 import { DollarSign, Star, Wine } from 'lucide-react';
 import type { ThemeConfig } from '../../config/theme';
+import { URLActionButtons } from './URLActionButtons';
 
 interface RestaurantCardProps {
   restaurant: any;
@@ -80,6 +81,9 @@ export function RestaurantCard({ restaurant, theme }: RestaurantCardProps) {
               💡 {restaurant.reservationTip}
             </div>
           )}
+
+          {/* URL Action Buttons */}
+          <URLActionButtons urls={restaurant.urls} compact />
         </div>
       </div>
     </div>

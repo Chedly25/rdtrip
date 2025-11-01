@@ -1,6 +1,9 @@
 import { motion } from 'framer-motion';
+import { useEffect } from 'react';
 import { DayCard } from './DayCard';
 import { BudgetSummary } from './BudgetSummary';
+import { AutoSaveIndicator } from './AutoSaveIndicator';
+import { useItineraryStore } from '../../stores/useItineraryStore';
 import { Download, Calendar, Share2, MapPin } from 'lucide-react';
 
 interface ItineraryTimelineProps {
@@ -9,9 +12,20 @@ interface ItineraryTimelineProps {
 }
 
 export function ItineraryTimeline({ itinerary, agentType }: ItineraryTimelineProps) {
+  const { setItinerary, getEffectiveItinerary } = useItineraryStore();
+
+  // Initialize the store with itinerary data
+  useEffect(() => {
+    if (itinerary?.id) {
+      setItinerary(itinerary.id, itinerary, itinerary.customizations || {});
+    }
+  }, [itinerary?.id, setItinerary]);
+
   if (!itinerary) return null;
 
-  const { id, dayStructure, activities, restaurants, accommodations, scenicStops, practicalInfo, weather, events, budget } = itinerary;
+  // Get the effective itinerary (original + customizations)
+  const effectiveItinerary = getEffectiveItinerary() || itinerary;
+  const { id, dayStructure, activities, restaurants, accommodations, scenicStops, practicalInfo, weather, events, budget } = effectiveItinerary;
 
   const handleExportPDF = () => {
     window.open(`/api/itinerary/${id}/export/pdf?agentType=${agentType}`, '_blank');
@@ -59,9 +73,12 @@ export function ItineraryTimeline({ itinerary, agentType }: ItineraryTimelinePro
       <div className="flex items-center justify-between border-b border-gray-200 pb-4">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Your Itinerary</h2>
-          <p className="mt-1 text-sm text-gray-500">
-            {dayStructure?.days?.length || 0} days • Tailored for {agentType}
-          </p>
+          <div className="mt-1 flex items-center gap-3">
+            <p className="text-sm text-gray-500">
+              {dayStructure?.days?.length || 0} days • Tailored for {agentType}
+            </p>
+            <AutoSaveIndicator />
+          </div>
         </div>
         <div className="flex gap-2">
           <button
