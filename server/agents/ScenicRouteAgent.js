@@ -138,7 +138,7 @@ IMPORTANT:
             'Authorization': `Bearer ${this.apiKey}`,
             'Content-Type': 'application/json'
           },
-          timeout: 10000  // Reduced from 25s to 10s
+          timeout: 30000  // Generous timeout for quality results
         }
       );
 
