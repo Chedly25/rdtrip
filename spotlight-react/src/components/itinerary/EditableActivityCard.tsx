@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { useItineraryStore } from '../../stores/useItineraryStore';
 import { URLActionButtons } from './URLActionButtons';
-import { Trash2, RefreshCw, Star, StarOff, Clock, DollarSign, StickyNote, GripVertical } from 'lucide-react';
+import { Trash2, RefreshCw, Star, StarOff, Clock, DollarSign, StickyNote } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface EditableActivityCardProps {
   activity: any;
-  dayId: string;
+  dayId?: string;
   isDragging?: boolean;
 }
 

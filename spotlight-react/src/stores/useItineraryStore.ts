@@ -344,7 +344,7 @@ export const useItineraryStore = create<ItineraryState>()(
         // Apply reordering
         if (customizations.reordered) {
           Object.entries(customizations.reordered).forEach(([key, itemIds]) => {
-            const [dayId, itemType] = key.split('-');
+            const [, itemType] = key.split('-');
             const dataKey = itemType === 'activities' ? 'activities' : itemType;
 
             if (effective[dataKey]) {
