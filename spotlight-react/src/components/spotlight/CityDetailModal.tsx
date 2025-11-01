@@ -703,15 +703,17 @@ export default function CityDetailModal({
                           <div className="flex-1">
                             <div className="flex items-center justify-between mb-2">
                               <h5 className="font-bold text-blue-900">Parking Information</h5>
-                              <span className={`text-xs font-semibold px-2 py-1 rounded-full ${
-                                cityDetails.parking.difficulty === 'Easy' ? 'bg-green-100 text-green-700' :
-                                cityDetails.parking.difficulty === 'Moderate' ? 'bg-yellow-100 text-yellow-700' :
-                                'bg-red-100 text-red-700'
-                              }`}>
-                                {cityDetails.parking.difficulty}
-                              </span>
+                              {typeof cityDetails.parking.difficulty === 'string' && (
+                                <span className={`text-xs font-semibold px-2 py-1 rounded-full ${
+                                  cityDetails.parking.difficulty === 'Easy' || cityDetails.parking.difficulty === 'easy' ? 'bg-green-100 text-green-700' :
+                                  cityDetails.parking.difficulty === 'Moderate' || cityDetails.parking.difficulty === 'moderate' ? 'bg-yellow-100 text-yellow-700' :
+                                  'bg-red-100 text-red-700'
+                                }`}>
+                                  {cityDetails.parking.difficulty}
+                                </span>
+                              )}
                             </div>
-                            <p className="text-sm text-blue-800">{cityDetails.parking.info}</p>
+                            <p className="text-sm text-blue-800">{cityDetails.parking.info || (cityDetails.parking as any).recommendation}</p>
                           </div>
                         </div>
                       </div>
