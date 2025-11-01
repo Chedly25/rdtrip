@@ -1,5 +1,6 @@
 import { Navigation, Clock, Camera, Mountain } from 'lucide-react';
 import type { ThemeConfig } from '../../config/theme';
+import { URLActionButtons } from './URLActionButtons';
 
 interface ScenicStopCardProps {
   stop: any;
@@ -65,6 +66,9 @@ export function ScenicStopCard({ stop, theme }: ScenicStopCardProps) {
               <span>{stop.tip}</span>
             </div>
           )}
+
+          {/* URL Action Buttons */}
+          <URLActionButtons urls={stop.urls} compact />
         </div>
       </div>
     </div>

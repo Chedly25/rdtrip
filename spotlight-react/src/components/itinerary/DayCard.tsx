@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronUp, MapPin, Clock, Car } from 'lucide-react';
-import { ActivityCard } from './ActivityCard';
+import { SortableActivityList } from './SortableActivityList';
+import { AddCustomItemButton } from './AddCustomItemButton';
 import { RestaurantCard } from './RestaurantCard';
 import { HotelCard } from './HotelCard';
 import { ScenicStopCard } from './ScenicStopCard';
@@ -128,28 +129,24 @@ export function DayCard({
             })}
 
             {/* Activities */}
-            {activities && activities.length > 0 && (
-              <div className="space-y-3">
-                <h4 className="font-semibold text-gray-900">Activities</h4>
-                <div className="space-y-3">
-                  {activities.map((activity: any, index: number) => (
-                    <ActivityCard key={index} activity={activity} theme={theme} />
-                  ))}
-                </div>
-              </div>
-            )}
+            <div className="space-y-3">
+              <h4 className="font-semibold text-gray-900">Activities</h4>
+              <SortableActivityList activities={activities || []} dayId={`day-${day.day}`} />
+              <AddCustomItemButton itemType="activities" dayId={`day-${day.day}`} />
+            </div>
 
             {/* Restaurants */}
-            {restaurants && restaurants.length > 0 && (
-              <div className="space-y-3">
-                <h4 className="font-semibold text-gray-900">Dining</h4>
+            <div className="space-y-3">
+              <h4 className="font-semibold text-gray-900">Dining</h4>
+              {restaurants && restaurants.length > 0 && (
                 <div className="space-y-3">
                   {restaurants.map((restaurant: any, index: number) => (
                     <RestaurantCard key={index} restaurant={restaurant} theme={theme} />
                   ))}
                 </div>
-              </div>
-            )}
+              )}
+              <AddCustomItemButton itemType="restaurants" dayId={`day-${day.day}`} />
+            </div>
 
             {/* Local Events */}
             {events && events.length > 0 && (
