@@ -260,6 +260,161 @@ router.get('/:itineraryId', async (req, res) => {
 });
 
 /**
+ * PATCH /api/itinerary/:itineraryId/customize
+ * Apply user customizations to itinerary (optimistic updates)
+ */
+router.patch('/:itineraryId/customize', async (req, res) => {
+  try {
+    const { itineraryId } = req.params;
+    const { customizations, userId } = req.body;
+
+    console.log(`📝 Applying customizations to ${itineraryId}:`, customizations);
+
+    // Merge with existing customizations
+    const result = await pool.query(`
+      UPDATE itineraries
+      SET customizations = COALESCE(customizations, '{}'::jsonb) || $1::jsonb,
+          modification_count = COALESCE(modification_count, 0) + 1,
+          last_modified_at = CURRENT_TIMESTAMP,
+          last_modified_by = $2,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $3
+      RETURNING customizations, modification_count
+    `, [JSON.stringify(customizations), userId || null, itineraryId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Itinerary not found' });
+    }
+
+    res.json({
+      success: true,
+      customizations: result.rows[0].customizations,
+      modificationCount: result.rows[0].modification_count
+    });
+
+  } catch (error) {
+    console.error('Customization error:', error);
+    res.status(500).json({ error: 'Failed to apply customizations' });
+  }
+});
+
+/**
+ * POST /api/itinerary/:itineraryId/regenerate-item
+ * Regenerate a single item (activity, restaurant, etc.)
+ */
+router.post('/:itineraryId/regenerate-item', async (req, res) => {
+  try {
+    const { itineraryId } = req.params;
+    const { itemType, itemId, context, constraints } = req.body;
+
+    console.log(`🔄 Regenerating ${itemType} ${itemId} for itinerary ${itineraryId}`);
+
+    // Fetch current itinerary for context
+    const itinResult = await pool.query(
+      'SELECT * FROM itineraries WHERE id = $1',
+      [itineraryId]
+    );
+
+    if (itinResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Itinerary not found' });
+    }
+
+    const itinerary = itinResult.rows[0];
+
+    // TODO: Implement item-specific regeneration logic
+    // For now, return a placeholder response
+    res.json({
+      success: true,
+      message: 'Item regeneration queued',
+      itemId,
+      itemType
+    });
+
+  } catch (error) {
+    console.error('Item regeneration error:', error);
+    res.status(500).json({ error: 'Failed to regenerate item' });
+  }
+});
+
+/**
+ * DELETE /api/itinerary/:itineraryId/items/:itemType/:itemId
+ * Remove an item from the itinerary
+ */
+router.delete('/:itineraryId/items/:itemType/:itemId', async (req, res) => {
+  try {
+    const { itineraryId, itemType, itemId } = req.params;
+    const { userId } = req.body;
+
+    console.log(`🗑️ Removing ${itemType} ${itemId} from ${itineraryId}`);
+
+    // Add to removed items in customizations
+    const result = await pool.query(`
+      UPDATE itineraries
+      SET customizations = jsonb_set(
+        COALESCE(customizations, '{}'::jsonb),
+        '{removed,${itemType}}',
+        COALESCE(customizations->'removed'->'${itemType}', '[]'::jsonb) || $1::jsonb
+      ),
+      modification_count = COALESCE(modification_count, 0) + 1,
+      last_modified_at = CURRENT_TIMESTAMP,
+      last_modified_by = $2,
+      updated_at = CURRENT_TIMESTAMP
+      WHERE id = $3
+      RETURNING customizations
+    `, [JSON.stringify([itemId]), userId || null, itineraryId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Itinerary not found' });
+    }
+
+    res.json({ success: true, removed: itemId });
+
+  } catch (error) {
+    console.error('Item removal error:', error);
+    res.status(500).json({ error: 'Failed to remove item' });
+  }
+});
+
+/**
+ * POST /api/itinerary/:itineraryId/items
+ * Add a custom item to the itinerary
+ */
+router.post('/:itineraryId/items', async (req, res) => {
+  try {
+    const { itineraryId } = req.params;
+    const { itemType, dayId, item, userId } = req.body;
+
+    console.log(`➕ Adding custom ${itemType} to day ${dayId} of ${itineraryId}`);
+
+    // Add to custom items in customizations
+    const result = await pool.query(`
+      UPDATE itineraries
+      SET customizations = jsonb_set(
+        COALESCE(customizations, '{}'::jsonb),
+        '{added,${itemType}}',
+        COALESCE(customizations->'added'->'${itemType}', '[]'::jsonb) || $1::jsonb
+      ),
+      modification_count = COALESCE(modification_count, 0) + 1,
+      last_modified_at = CURRENT_TIMESTAMP,
+      last_modified_by = $2,
+      updated_at = CURRENT_TIMESTAMP
+      WHERE id = $3
+      RETURNING customizations
+    `, [JSON.stringify([{ ...item, dayId, customId: `custom-${Date.now()}` }]), userId || null, itineraryId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Itinerary not found' });
+    }
+
+    res.json({ success: true, item: result.rows[0].customizations.added[itemType].slice(-1)[0] });
+
+  } catch (error) {
+    console.error('Add item error:', error);
+    res.status(500).json({ error: 'Failed to add item' });
+  }
+});
+
+/**
  * Background async itinerary generation
  */
 async function generateItineraryAsync(jobId, route_id, routeData, preferences) {
