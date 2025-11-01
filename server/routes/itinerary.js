@@ -29,6 +29,14 @@ router.post('/generate', async (req, res) => {
   try {
     const { route_id, routeData, preferences } = req.body;
 
+    console.log('📥 /api/itinerary/generate received:', {
+      hasRouteData: !!routeData,
+      hasWaypoints: !!routeData?.waypoints,
+      waypointCount: routeData?.waypoints?.length || 0,
+      waypoints: routeData?.waypoints,
+      preferences: preferences
+    });
+
     // Validate input
     if (!routeData || !routeData.waypoints) {
       return res.status(400).json({ error: 'Route data with waypoints required' });

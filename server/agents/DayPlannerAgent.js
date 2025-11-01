@@ -14,6 +14,8 @@ class DayPlannerAgent {
 
   async generate() {
     console.log('📅 Day Planner Agent: Generating trip structure...');
+    console.log('📅 Day Planner received routeData:', JSON.stringify(this.routeData));
+    console.log('📅 Day Planner received preferences:', JSON.stringify(this.preferences));
 
     const prompt = this.buildPrompt();
     const response = await this.callPerplexity(prompt);
@@ -30,8 +32,8 @@ class DayPlannerAgent {
     // Calculate total distance
     const totalDistance = this.calculateTotalDistance(waypoints);
 
-    // Build city list
-    const cities = waypoints?.map(w => w.name || w.location).filter(Boolean) || [];
+    // Build city list - handle both formats (name/location for old, city for new)
+    const cities = waypoints?.map(w => w.city || w.name || w.location).filter(Boolean) || [];
 
     return `You are an expert ${agent} travel planner creating a road trip itinerary.
 
