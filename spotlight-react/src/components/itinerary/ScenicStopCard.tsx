@@ -1,5 +1,5 @@
 import { Navigation, Clock, Camera, Mountain } from 'lucide-react';
-import { ThemeConfig } from '../../config/theme';
+import type { ThemeConfig } from '../../config/theme';
 
 interface ScenicStopCardProps {
   stop: any;

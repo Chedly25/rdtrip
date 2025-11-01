@@ -139,7 +139,7 @@ function SpotlightContent() {
           {/* Export Buttons - Absolute positioned on right */}
           <div className="absolute right-6 top-1/2 -translate-y-1/2 flex items-center gap-2">
             <Button
-              variant="primary"
+              variant="default"
               size="sm"
               onClick={() => setShowItineraryGenerator(true)}
               className="gap-2"

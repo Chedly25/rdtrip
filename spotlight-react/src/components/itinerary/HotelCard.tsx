@@ -1,5 +1,5 @@
-import { Hotel, MapPin, DollarSign, Star, Wifi, ParkingCircle, Coffee } from 'lucide-react';
-import { ThemeConfig } from '../../config/theme';
+import { Hotel, MapPin, Wifi, ParkingCircle, Coffee } from 'lucide-react';
+import type { ThemeConfig } from '../../config/theme';
 
 interface HotelCardProps {
   hotel: any;

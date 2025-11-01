@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { AgentStatus } from '../components/itinerary/GenerationProgress';
+import type { AgentStatus } from '../components/itinerary/GenerationProgress';
 
 interface Itinerary {
   id: string;

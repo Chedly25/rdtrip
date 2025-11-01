@@ -18,6 +18,7 @@ export interface Waypoint extends City {
   themes?: string[]
   themesDisplay?: string
   currentEvents?: string
+  country?: string
 }
 
 export interface Route {

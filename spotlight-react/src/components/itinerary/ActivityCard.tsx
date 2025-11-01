@@ -1,5 +1,5 @@
 import { MapPin, Clock, DollarSign, Star } from 'lucide-react';
-import { ThemeConfig } from '../../config/theme';
+import type { ThemeConfig } from '../../config/theme';
 
 interface ActivityCardProps {
   activity: any;
