@@ -52,6 +52,12 @@ export function useItineraryGeneration(): UseItineraryGenerationReturn {
         agent: preferences?.agentType || preferences?.travelStyle || 'best-overall'
       };
 
+      console.log('🚀 Sending to /api/itinerary/generate:', {
+        routeData: enrichedRouteData,
+        preferences: preferences,
+        waypoints: enrichedRouteData.waypoints
+      });
+
       // Start generation
       const response = await fetch('/api/itinerary/generate', {
         method: 'POST',
