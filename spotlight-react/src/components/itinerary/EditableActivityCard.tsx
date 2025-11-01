@@ -10,7 +10,7 @@ interface EditableActivityCardProps {
   isDragging?: boolean;
 }
 
-export function EditableActivityCard({ activity, dayId, isDragging = false }: EditableActivityCardProps) {
+export function EditableActivityCard({ activity, isDragging = false }: EditableActivityCardProps) {
   const { removeItem, editItem, addNote, setFlag, regenerateItem } = useItineraryStore();
   const [isEditingTime, setIsEditingTime] = useState(false);
   const [isEditingPrice, setIsEditingPrice] = useState(false);
