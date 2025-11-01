@@ -607,35 +607,56 @@ class ItineraryAgentOrchestrator {
    * Used for async job tracking
    */
   async updateProcessingStatus(status, progress = {}, error = null) {
-    const query = `
-      UPDATE itineraries
-      SET processing_status = $1,
-          progress = $2,
-          error_log = CASE
-            WHEN $3 IS NOT NULL THEN
-              COALESCE(error_log, '[]'::jsonb) || $3::jsonb
-            ELSE error_log
-          END,
-          completed_at = CASE
-            WHEN $1 IN ('completed', 'failed', 'partial') THEN CURRENT_TIMESTAMP
-            ELSE completed_at
-          END,
-          updated_at = CURRENT_TIMESTAMP
-      WHERE id = $4
-    `;
-
-    const errorLog = error ? JSON.stringify([{
+    // Build error log entry if error exists
+    const errorLogEntry = error ? [{
       timestamp: new Date().toISOString(),
       message: error.message,
       stack: error.stack
-    }]) : null;
+    }] : null;
 
-    await this.db.query(query, [
-      status,
-      JSON.stringify(progress),
-      errorLog,
-      this.itineraryId
-    ]);
+    let query, params;
+
+    if (errorLogEntry) {
+      // Query with error log update
+      query = `
+        UPDATE itineraries
+        SET processing_status = $1,
+            progress = $2::jsonb,
+            error_log = COALESCE(error_log, '[]'::jsonb) || $3::jsonb,
+            completed_at = CASE
+              WHEN $1 IN ('completed', 'failed', 'partial') THEN CURRENT_TIMESTAMP
+              ELSE completed_at
+            END,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = $4
+      `;
+      params = [
+        status,
+        JSON.stringify(progress),
+        JSON.stringify(errorLogEntry),
+        this.itineraryId
+      ];
+    } else {
+      // Query without error log update
+      query = `
+        UPDATE itineraries
+        SET processing_status = $1,
+            progress = $2::jsonb,
+            completed_at = CASE
+              WHEN $1 IN ('completed', 'failed', 'partial') THEN CURRENT_TIMESTAMP
+              ELSE completed_at
+            END,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = $3
+      `;
+      params = [
+        status,
+        JSON.stringify(progress),
+        this.itineraryId
+      ];
+    }
+
+    await this.db.query(query, params);
   }
 
   /**
