@@ -86,11 +86,37 @@ class ItineraryAgentOrchestrator {
       const totalDuration = Date.now() - this.startTime;
       console.log(`✅ Itinerary generation complete in ${totalDuration}ms`);
 
-      return {
+      const finalResult = {
         itineraryId: this.itineraryId,
         ...this.results,
         generationTime: totalDuration
       };
+
+      console.log('🔍 FINAL RESULT STRUCTURE:', {
+        itineraryId: finalResult.itineraryId,
+        hasDayStructure: !!finalResult.dayStructure,
+        dayStructureLength: finalResult.dayStructure?.length || 0,
+        hasActivities: !!finalResult.activities,
+        activitiesLength: finalResult.activities?.length || 0,
+        hasRestaurants: !!finalResult.restaurants,
+        restaurantsLength: finalResult.restaurants?.length || 0,
+        hasAccommodations: !!finalResult.accommodations,
+        accommodationsLength: finalResult.accommodations?.length || 0,
+        hasScenicStops: !!finalResult.scenicStops,
+        scenicStopsLength: finalResult.scenicStops?.length || 0
+      });
+
+      if (finalResult.dayStructure) {
+        console.log('🔍 Day Structure sample:', JSON.stringify(finalResult.dayStructure).substring(0, 500));
+      }
+      if (finalResult.activities) {
+        console.log('🔍 Activities sample:', JSON.stringify(finalResult.activities).substring(0, 500));
+      }
+      if (finalResult.restaurants) {
+        console.log('🔍 Restaurants sample:', JSON.stringify(finalResult.restaurants).substring(0, 500));
+      }
+
+      return finalResult;
 
     } catch (error) {
       console.error('❌ Orchestration failed:', error);

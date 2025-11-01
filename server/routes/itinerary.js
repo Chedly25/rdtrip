@@ -111,7 +111,21 @@ router.get('/generate/:jobId/stream', (req, res) => {
 
     // Check if complete
     if (currentJob.status === 'completed') {
-      res.write(`event: generation_complete\ndata: ${JSON.stringify({ itinerary: currentJob.result })}\n\n`);
+      console.log('📡 SSE sending generation_complete event for job', jobId);
+      console.log('📡 SSE result structure:', {
+        hasResult: !!currentJob.result,
+        resultKeys: currentJob.result ? Object.keys(currentJob.result) : [],
+        hasDayStructure: !!currentJob.result?.dayStructure,
+        hasActivities: !!currentJob.result?.activities,
+        hasRestaurants: !!currentJob.result?.restaurants
+      });
+
+      const payload = { itinerary: currentJob.result };
+      const payloadStr = JSON.stringify(payload);
+      console.log('📡 SSE payload size:', payloadStr.length, 'characters');
+      console.log('📡 SSE payload sample (first 500 chars):', payloadStr.substring(0, 500));
+
+      res.write(`event: generation_complete\ndata: ${payloadStr}\n\n`);
       clearInterval(interval);
       res.end();
     }
