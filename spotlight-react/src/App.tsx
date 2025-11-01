@@ -252,8 +252,13 @@ function AppContent() {
         // Add origin and destination if they exist
         const finalWaypoints: Waypoint[] = [];
 
-        // Add origin as first waypoint
-        if (routeData.origin) {
+        // Check if origin is already in waypoints (to avoid duplication)
+        const hasOrigin = waypointsToSet.some(wp =>
+          wp.name === routeData.origin || wp.id === 'origin'
+        );
+
+        // Add origin as first waypoint only if not already present
+        if (routeData.origin && !hasOrigin) {
           console.log('Adding origin:', routeData.origin);
 
           // CRITICAL FIX: Use coordinates from backend if available (already swap-corrected)
@@ -301,8 +306,13 @@ function AppContent() {
           });
         });
 
-        // Add destination as last waypoint
-        if (routeData.destination) {
+        // Check if destination is already in waypoints (to avoid duplication)
+        const hasDestination = waypointsToSet.some(wp =>
+          wp.name === routeData.destination || wp.id === 'destination'
+        );
+
+        // Add destination as last waypoint only if not already present
+        if (routeData.destination && !hasDestination) {
           console.log('Adding destination:', routeData.destination);
 
           // CRITICAL FIX: Use coordinates from backend if available (already swap-corrected)
