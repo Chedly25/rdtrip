@@ -106,6 +106,12 @@ export function useItineraryGeneration(): UseItineraryGenerationReturn {
 
       eventSource.addEventListener('generation_complete', (e) => {
         const data = JSON.parse(e.data);
+        console.log('🎉 GENERATION COMPLETE - Raw SSE data:', e.data);
+        console.log('🎉 GENERATION COMPLETE - Parsed data:', data);
+        console.log('🎉 GENERATION COMPLETE - Itinerary object:', data.itinerary);
+        console.log('🎉 GENERATION COMPLETE - Day Structure:', data.itinerary?.dayStructure);
+        console.log('🎉 GENERATION COMPLETE - Activities:', data.itinerary?.activities);
+        console.log('🎉 GENERATION COMPLETE - Restaurants:', data.itinerary?.restaurants);
         setItinerary(data.itinerary);
         setIsGenerating(false);
         eventSource.close();
