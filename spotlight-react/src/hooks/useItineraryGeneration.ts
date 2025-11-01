@@ -69,72 +69,99 @@ export function useItineraryGeneration(): UseItineraryGenerationReturn {
         throw new Error('Failed to start itinerary generation');
       }
 
-      const { jobId } = await response.json();
+      const { itineraryId } = await response.json();
+      console.log(`✅ Itinerary job started: ${itineraryId}`);
 
-      // Connect to SSE stream
-      const eventSource = new EventSource(`/api/itinerary/generate/${jobId}/stream`);
+      // Poll for status updates
+      const pollInterval = setInterval(async () => {
+        try {
+          const statusRes = await fetch(`/api/itinerary/${itineraryId}/status`);
 
-      eventSource.addEventListener('agent_started', (e) => {
-        const data = JSON.parse(e.data);
-        setAgents(prev => prev.map(a =>
-          a.name === data.agent
-            ? { ...a, status: 'running' as const }
-            : a
-        ));
-      });
+          if (!statusRes.ok) {
+            throw new Error('Failed to fetch status');
+          }
 
-      eventSource.addEventListener('agent_progress', (e) => {
-        const data = JSON.parse(e.data);
-        setAgents(prev => prev.map(a =>
-          a.name === data.agent
-            ? { ...a, progress: { current: data.current, total: data.total } }
-            : a
-        ));
-      });
+          const statusData = await statusRes.json();
+          console.log('📊 Status update:', statusData);
 
-      eventSource.addEventListener('agent_completed', (e) => {
-        const data = JSON.parse(e.data);
-        setAgents(prev => prev.map(a =>
-          a.name === data.agent
-            ? { ...a, status: 'completed' as const, duration: data.duration }
-            : a
-        ));
-      });
+          // Update agent statuses based on progress
+          if (statusData.progress) {
+            const progressMap: Record<string, string> = {
+              dayPlanner: 'day_planner',
+              activities: 'activities',
+              restaurants: 'restaurants',
+              accommodations: 'accommodations',
+              scenicRoutes: 'scenic_stops',
+              practicalInfo: 'practical_info',
+              weather: 'weather',
+              events: 'events',
+              budget: 'budget'
+            };
 
-      eventSource.addEventListener('agent_error', (e) => {
-        const data = JSON.parse(e.data);
-        setAgents(prev => prev.map(a =>
-          a.name === data.agent
-            ? { ...a, status: 'error' as const, error: data.message }
-            : a
-        ));
-      });
+            setAgents(prev => prev.map(agent => {
+              const backendKey = Object.keys(progressMap).find(
+                key => progressMap[key] === agent.name
+              );
 
-      eventSource.addEventListener('generation_complete', (e) => {
-        const data = JSON.parse(e.data);
-        console.log('🎉 GENERATION COMPLETE - Raw SSE data:', e.data);
-        console.log('🎉 GENERATION COMPLETE - Parsed data:', data);
-        console.log('🎉 GENERATION COMPLETE - Itinerary object:', data.itinerary);
-        console.log('🎉 GENERATION COMPLETE - Day Structure:', data.itinerary?.dayStructure);
-        console.log('🎉 GENERATION COMPLETE - Activities:', data.itinerary?.activities);
-        console.log('🎉 GENERATION COMPLETE - Restaurants:', data.itinerary?.restaurants);
-        setItinerary(data.itinerary);
+              if (backendKey && statusData.progress[backendKey]) {
+                const backendStatus = statusData.progress[backendKey];
+                return {
+                  ...agent,
+                  status: backendStatus === 'completed' ? 'completed' :
+                         backendStatus === 'running' ? 'running' :
+                         backendStatus === 'failed' ? 'error' :
+                         'waiting'
+                };
+              }
+              return agent;
+            }));
+          }
+
+          // Check if generation is complete
+          if (statusData.status === 'completed' || statusData.status === 'partial') {
+            clearInterval(pollInterval);
+            clearTimeout(safetyTimeout);
+
+            // Fetch the full itinerary
+            const itineraryRes = await fetch(`/api/itinerary/${itineraryId}`);
+            if (itineraryRes.ok) {
+              const fullItinerary = await itineraryRes.json();
+              console.log('🎉 GENERATION COMPLETE:', fullItinerary);
+
+              setItinerary({
+                id: fullItinerary.id,
+                dayStructure: fullItinerary.day_structure,
+                activities: fullItinerary.activities,
+                restaurants: fullItinerary.restaurants,
+                accommodations: fullItinerary.accommodations,
+                scenicStops: fullItinerary.scenic_stops,
+                practicalInfo: fullItinerary.practical_info,
+                weather: fullItinerary.weather_data,
+                events: fullItinerary.local_events,
+                budget: fullItinerary.budget_breakdown
+              });
+            }
+
+            setIsGenerating(false);
+          } else if (statusData.status === 'failed') {
+            clearInterval(pollInterval);
+            clearTimeout(safetyTimeout);
+            setError('Generation failed. Please try again.');
+            setIsGenerating(false);
+          }
+
+        } catch (pollError) {
+          console.error('Poll error:', pollError);
+          // Don't stop polling on transient errors
+        }
+      }, 2000); // Poll every 2 seconds
+
+      // Safety timeout: stop polling after 3 minutes
+      const safetyTimeout = setTimeout(() => {
+        clearInterval(pollInterval);
+        setError('Generation timed out. The itinerary may still be processing.');
         setIsGenerating(false);
-        eventSource.close();
-      });
-
-      eventSource.addEventListener('generation_error', (e) => {
-        const data = JSON.parse(e.data);
-        setError(data.message);
-        setIsGenerating(false);
-        eventSource.close();
-      });
-
-      eventSource.onerror = () => {
-        setError('Connection lost to generation stream');
-        setIsGenerating(false);
-        eventSource.close();
-      };
+      }, 180000);
 
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');

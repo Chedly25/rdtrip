@@ -510,7 +510,7 @@ class ItineraryAgentOrchestrator {
    */
   async saveWeather() {
     await this.db.query(
-      'UPDATE itineraries SET weather = $1 WHERE id = $2',
+      'UPDATE itineraries SET weather_data = $1 WHERE id = $2',
       [JSON.stringify(this.results.weather), this.itineraryId]
     );
   }
@@ -520,7 +520,7 @@ class ItineraryAgentOrchestrator {
    */
   async saveEvents() {
     await this.db.query(
-      'UPDATE itineraries SET events = $1 WHERE id = $2',
+      'UPDATE itineraries SET local_events = $1 WHERE id = $2',
       [JSON.stringify(this.results.events), this.itineraryId]
     );
   }
@@ -530,7 +530,7 @@ class ItineraryAgentOrchestrator {
    */
   async saveBudget() {
     await this.db.query(
-      'UPDATE itineraries SET budget = $1 WHERE id = $2',
+      'UPDATE itineraries SET budget_breakdown = $1 WHERE id = $2',
       [JSON.stringify(this.results.budget), this.itineraryId]
     );
   }
@@ -599,6 +599,204 @@ class ItineraryAgentOrchestrator {
         'UPDATE itineraries SET status = $1 WHERE id = $2',
         ['error', this.itineraryId]
       );
+    }
+  }
+
+  /**
+   * Update processing status in database
+   * Used for async job tracking
+   */
+  async updateProcessingStatus(status, progress = {}, error = null) {
+    const query = `
+      UPDATE itineraries
+      SET processing_status = $1,
+          progress = $2,
+          error_log = CASE
+            WHEN $3 IS NOT NULL THEN
+              COALESCE(error_log, '[]'::jsonb) || $3::jsonb
+            ELSE error_log
+          END,
+          completed_at = CASE
+            WHEN $1 IN ('completed', 'failed', 'partial') THEN CURRENT_TIMESTAMP
+            ELSE completed_at
+          END,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $4
+    `;
+
+    const errorLog = error ? JSON.stringify([{
+      timestamp: new Date().toISOString(),
+      message: error.message,
+      stack: error.stack
+    }]) : null;
+
+    await this.db.query(query, [
+      status,
+      JSON.stringify(progress),
+      errorLog,
+      this.itineraryId
+    ]);
+  }
+
+  /**
+   * Mark job as started
+   */
+  async markJobStarted() {
+    await this.db.query(`
+      UPDATE itineraries
+      SET processing_status = 'processing',
+          started_at = CURRENT_TIMESTAMP,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1
+    `, [this.itineraryId]);
+  }
+
+  /**
+   * Generate complete itinerary asynchronously with database progress tracking
+   * This version updates the database as each agent completes
+   */
+  async generateCompleteAsync() {
+    try {
+      console.log('🎯 Starting ASYNC itinerary generation...', {
+        agent: this.routeData.agent,
+        cities: this.routeData.waypoints?.length || 0,
+        itineraryId: this.itineraryId
+      });
+
+      // Mark as started
+      await this.markJobStarted();
+
+      // Initialize progress tracking
+      const progress = {
+        dayPlanner: 'pending',
+        activities: 'pending',
+        restaurants: 'pending',
+        accommodations: 'pending',
+        scenicRoutes: 'pending',
+        practicalInfo: 'pending',
+        weather: 'pending',
+        events: 'pending',
+        budget: 'pending'
+      };
+
+      // PHASE 1: Day Structure
+      try {
+        progress.dayPlanner = 'running';
+        await this.updateProcessingStatus('processing', progress);
+
+        this.results.dayStructure = await this.runDayPlannerAgent();
+
+        progress.dayPlanner = 'completed';
+        await this.updateProcessingStatus('processing', progress);
+        await this.saveDayStructure();
+
+      } catch (error) {
+        progress.dayPlanner = 'failed';
+        await this.updateProcessingStatus('failed', progress, error);
+        throw error; // Critical failure
+      }
+
+      // PHASE 2: Core Content Agents (parallel)
+      const coreAgentNames = ['activities', 'restaurants', 'accommodations', 'scenicRoutes', 'practicalInfo'];
+      const coreAgents = [
+        { name: 'activities', fn: () => this.runCityActivityAgent() },
+        { name: 'restaurants', fn: () => this.runRestaurantAgent() },
+        { name: 'accommodations', fn: () => this.runAccommodationAgent() },
+        { name: 'scenicRoutes', fn: () => this.runScenicRouteAgent() },
+        { name: 'practicalInfo', fn: () => this.runPracticalInfoAgent() }
+      ];
+
+      // Run in parallel with individual error handling
+      await Promise.allSettled(
+        coreAgents.map(async (agent) => {
+          try {
+            progress[agent.name] = 'running';
+            await this.updateProcessingStatus('processing', progress);
+
+            await agent.fn();
+
+            progress[agent.name] = 'completed';
+            await this.updateProcessingStatus('processing', progress);
+
+          } catch (error) {
+            console.error(`❌ ${agent.name} failed:`, error.message);
+            progress[agent.name] = 'failed';
+            await this.updateProcessingStatus('processing', progress, error);
+            // Don't throw - allow other agents to continue
+          }
+        })
+      );
+
+      // PHASE 3: Premium Agents (parallel, non-critical)
+      const premiumAgents = [
+        { name: 'weather', fn: () => this.runWeatherAgent() },
+        { name: 'events', fn: () => this.runEventsAgent() }
+      ];
+
+      await Promise.allSettled(
+        premiumAgents.map(async (agent) => {
+          try {
+            progress[agent.name] = 'running';
+            await this.updateProcessingStatus('processing', progress);
+
+            await agent.fn();
+
+            progress[agent.name] = 'completed';
+            await this.updateProcessingStatus('processing', progress);
+
+          } catch (error) {
+            console.warn(`⚠️ ${agent.name} failed (non-critical):`, error.message);
+            progress[agent.name] = 'failed';
+            await this.updateProcessingStatus('processing', progress);
+          }
+        })
+      );
+
+      // PHASE 4: Budget Calculation
+      try {
+        progress.budget = 'running';
+        await this.updateProcessingStatus('processing', progress);
+
+        await this.runBudgetOptimizer();
+
+        progress.budget = 'completed';
+        await this.updateProcessingStatus('processing', progress);
+
+      } catch (error) {
+        console.warn('⚠️ Budget calculation failed:', error.message);
+        progress.budget = 'failed';
+        await this.updateProcessingStatus('processing', progress);
+      }
+
+      // Determine final status
+      const criticalAgents = ['dayPlanner', 'activities', 'restaurants', 'accommodations'];
+      const allCriticalCompleted = criticalAgents.every(a => progress[a] === 'completed');
+      const someFailed = Object.values(progress).some(status => status === 'failed');
+
+      const finalStatus = allCriticalCompleted
+        ? (someFailed ? 'partial' : 'completed')
+        : 'failed';
+
+      await this.updateProcessingStatus(finalStatus, progress);
+
+      // Also update legacy status field
+      await this.finalizeItinerary();
+
+      const totalDuration = Date.now() - this.startTime;
+      console.log(`✅ Async itinerary generation ${finalStatus} in ${totalDuration}ms`);
+
+      return {
+        itineraryId: this.itineraryId,
+        status: finalStatus,
+        progress,
+        generationTime: totalDuration
+      };
+
+    } catch (error) {
+      console.error('❌ Async orchestration failed:', error);
+      await this.handleError(error);
+      await this.updateProcessingStatus('failed', {}, error);
+      throw error;
     }
   }
 }

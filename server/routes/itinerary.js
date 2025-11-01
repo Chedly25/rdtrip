@@ -7,11 +7,12 @@ const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
 const ItineraryAgentOrchestrator = require('../agents/ItineraryAgentOrchestrator');
+const jobQueue = require('../services/JobQueue');
 const { generateItineraryPDF } = require('../export/generatePDF');
 const { generateItineraryCalendar } = require('../export/generateICS');
 const { generateGoogleMapsUrl, generateDayGoogleMapsUrl } = require('../export/generateGoogleMaps');
 
-// Job storage (passed from main server)
+// Job storage (passed from main server) - kept for backwards compatibility
 let itineraryJobs;
 let pool;
 
@@ -23,7 +24,7 @@ function initializeRoutes(jobStorage, dbPool) {
 
 /**
  * POST /api/itinerary/generate
- * Start itinerary generation and return job ID
+ * Start itinerary generation and return itinerary ID immediately
  */
 router.post('/generate', async (req, res) => {
   try {
@@ -42,27 +43,54 @@ router.post('/generate', async (req, res) => {
       return res.status(400).json({ error: 'Route data with waypoints required' });
     }
 
-    // Create job
-    const jobId = crypto.randomUUID();
-    const job = {
-      id: jobId,
-      status: 'pending',
-      progress: [],
-      result: null,
-      error: null,
-      createdAt: Date.now()
+    // Create itinerary record immediately
+    const agentType = routeData.agent || preferences?.travelStyle || 'best-overall';
+
+    const insertQuery = `
+      INSERT INTO itineraries (
+        route_id, user_id, agent_type, preferences, processing_status
+      ) VALUES ($1, $2, $3, $4, 'pending')
+      RETURNING id
+    `;
+
+    const result = await pool.query(insertQuery, [
+      route_id,
+      routeData.user_id || null,
+      agentType,
+      JSON.stringify(preferences)
+    ]);
+
+    const itineraryId = result.rows[0].id;
+
+    console.log(`✅ Created itinerary record: ${itineraryId}`);
+
+    // Add job to queue
+    const enrichedRouteData = {
+      ...routeData,
+      id: route_id,
+      user_id: routeData.user_id || null
     };
 
-    itineraryJobs.set(jobId, job);
+    jobQueue.addJob(
+      itineraryId,
+      async () => {
+        const orchestrator = new ItineraryAgentOrchestrator(
+          enrichedRouteData,
+          preferences,
+          pool,
+          () => {} // No SSE callback needed - using database updates
+        );
+        orchestrator.itineraryId = itineraryId; // Set the pre-created ID
+        return await orchestrator.generateCompleteAsync();
+      },
+      { route_id, agent: agentType }
+    );
 
-    console.log(`🎯 Created itinerary job: ${jobId}`);
-
-    // Start generation in background
-    generateItineraryAsync(jobId, route_id, routeData, preferences);
-
+    // Return itinerary ID immediately
     res.json({
-      jobId,
-      estimatedDuration: 60 // seconds (rough estimate)
+      itineraryId,
+      status: 'pending',
+      estimatedDuration: 90 // seconds (generous estimate for quality)
     });
 
   } catch (error) {
@@ -72,8 +100,60 @@ router.post('/generate', async (req, res) => {
 });
 
 /**
+ * GET /api/itinerary/:itineraryId/status
+ * Get current generation status and progress
+ */
+router.get('/:itineraryId/status', async (req, res) => {
+  try {
+    const { itineraryId } = req.params;
+
+    const result = await pool.query(
+      `SELECT
+        processing_status,
+        progress,
+        error_log,
+        started_at,
+        completed_at,
+        created_at
+      FROM itineraries
+      WHERE id = $1`,
+      [itineraryId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Itinerary not found' });
+    }
+
+    const row = result.rows[0];
+
+    // Also check job queue for additional metadata
+    const jobStatus = jobQueue.getJobStatus(itineraryId);
+
+    res.json({
+      itineraryId,
+      status: row.processing_status,
+      progress: row.progress || {},
+      errors: row.error_log || [],
+      startedAt: row.started_at,
+      completedAt: row.completed_at,
+      createdAt: row.created_at,
+      duration: row.completed_at && row.started_at
+        ? new Date(row.completed_at) - new Date(row.started_at)
+        : row.started_at
+          ? Date.now() - new Date(row.started_at)
+          : null,
+      jobQueue: jobStatus // Additional queue metadata if available
+    });
+
+  } catch (error) {
+    console.error('Get status error:', error);
+    res.status(500).json({ error: 'Failed to get status' });
+  }
+});
+
+/**
  * GET /api/itinerary/generate/:jobId/stream
- * SSE endpoint for real-time progress updates
+ * SSE endpoint for real-time progress updates (DEPRECATED - use polling instead)
  */
 router.get('/generate/:jobId/stream', (req, res) => {
   const { jobId } = req.params;
