@@ -4,6 +4,7 @@
  */
 
 const axios = require('axios');
+const { generateRestaurantUrls } = require('../utils/urlGenerator');
 
 class RestaurantAgent {
   constructor(routeData, dayStructure, budget, progressCallback) {
@@ -51,7 +52,7 @@ class RestaurantAgent {
   async generateMeal(city, dayInfo, mealType) {
     const prompt = this.buildPrompt(city, dayInfo, mealType);
     const response = await this.callPerplexity(prompt);
-    return this.parseResponse(response, mealType);
+    return this.parseResponse(response, mealType, city);
   }
 
   buildPrompt(city, dayInfo, mealType) {
@@ -185,7 +186,7 @@ IMPORTANT: Return ONLY the JSON object, no other text.`;
     }
   }
 
-  parseResponse(responseText, mealType) {
+  parseResponse(responseText, mealType, city) {
     try {
       let jsonText = responseText.trim();
 
@@ -212,13 +213,16 @@ IMPORTANT: Return ONLY the JSON object, no other text.`;
         throw new Error('Missing required restaurant fields');
       }
 
+      // Add URLs for booking, reviews, maps, directions
+      parsed.urls = generateRestaurantUrls(parsed, city);
+
       return parsed;
 
     } catch (error) {
       console.error(`Failed to parse ${mealType} restaurant:`, responseText.substring(0, 200));
 
-      // Return fallback
-      return {
+      // Return fallback with URLs
+      const fallback = {
         meal: mealType,
         suggestedTime: mealType === 'breakfast' ? '08:30' : mealType === 'lunch' ? '13:00' : '20:00',
         name: 'Local Restaurant',
@@ -234,6 +238,9 @@ IMPORTANT: Return ONLY the JSON object, no other text.`;
         openingHours: '08:00-22:00',
         practicalTips: 'Ask locals for current favorites'
       };
+
+      fallback.urls = generateRestaurantUrls(fallback, city);
+      return fallback;
     }
   }
 

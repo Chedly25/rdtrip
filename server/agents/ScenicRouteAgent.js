@@ -4,7 +4,7 @@
  */
 
 const axios = require('axios');
-
+const { generateScenicStopUrls } = require('../utils/urlGenerator');
 class ScenicRouteAgent {
   constructor(routeData, dayStructure, progressCallback) {
     this.routeData = routeData;
@@ -178,13 +178,18 @@ IMPORTANT:
         throw new Error('Invalid stops format');
       }
 
+      // Add URLs to each stop
+      parsed.stops.forEach(stop => {
+        stop.urls = generateScenicStopUrls(stop);
+      });
+
       return parsed.stops;
 
     } catch (error) {
       console.error(`Failed to parse scenic stops for ${segment.from} → ${segment.to}:`, responseText.substring(0, 200));
 
-      // Return minimal fallback
-      return [{
+      // Return minimal fallback with URLs
+      const fallback = {
         name: `Scenic viewpoint between ${segment.from} and ${segment.to}`,
         type: 'viewpoint',
         coordinates: null,
@@ -198,7 +203,10 @@ IMPORTANT:
         skipIf: 'In a hurry',
         detourTime: 'None - along route',
         parkingEase: 'moderate'
-      }];
+      };
+
+      fallback.urls = generateScenicStopUrls(fallback);
+      return [fallback];
     }
   }
 
