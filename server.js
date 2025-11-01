@@ -5836,6 +5836,10 @@ app.get('/api/cache/stats', async (req, res) => {
   }
 });
 
+// ==================== ITINERARY ROUTES ====================
+const itineraryRoutes = require('./server/routes/itinerary');
+app.use('/api/itinerary', itineraryRoutes.initializeRoutes(itineraryJobs, pool));
+
 // =====================================================
 // CATCH-ALL ROUTE - Serve React app for client-side routing
 // =====================================================
@@ -6085,10 +6089,6 @@ async function warmCacheForPopularCities() {
 
   console.log(`🔥 Cache warming status: ${alreadyCached} already cached, ${needsGeneration} generating...`);
 }
-
-// ==================== ITINERARY ROUTES ====================
-const itineraryRoutes = require('./server/routes/itinerary');
-app.use('/api/itinerary', itineraryRoutes.initializeRoutes(itineraryJobs, pool));
 
 // Run migrations and then start server
 runDatabaseMigrations().then(() => {
