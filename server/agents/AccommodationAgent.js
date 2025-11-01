@@ -4,6 +4,7 @@
  */
 
 const axios = require('axios');
+const { generateAccommodationUrls } = require('../utils/urlGenerator');
 
 class AccommodationAgent {
   constructor(routeData, dayStructure, budget, progressCallback) {
@@ -171,13 +172,16 @@ IMPORTANT: Return ONLY the JSON object, no other text.`;
         throw new Error('Missing required hotel fields');
       }
 
+      // Add URLs for booking sites, maps, reviews
+      parsed.urls = generateAccommodationUrls(parsed, city);
+
       return parsed;
 
     } catch (error) {
       console.error(`Failed to parse accommodation for ${city}:`, responseText.substring(0, 200));
 
-      // Return fallback
-      return {
+      // Return fallback with URLs
+      const fallback = {
         name: `Hotel in ${city}`,
         type: 'hotel',
         address: `${city} city center`,
@@ -194,6 +198,9 @@ IMPORTANT: Return ONLY the JSON object, no other text.`;
         parking: 'Available nearby',
         nearbyHighlights: ['City center attractions']
       };
+
+      fallback.urls = generateAccommodationUrls(fallback, city);
+      return fallback;
     }
   }
 

@@ -4,7 +4,7 @@
  */
 
 const axios = require('axios');
-
+const { generateActivityUrls } = require('../utils/urlGenerator');
 class CityActivityAgent {
   constructor(routeData, dayStructure, progressCallback) {
     this.routeData = routeData;
@@ -198,13 +198,18 @@ IMPORTANT: Return ONLY the JSON object, no other text.`;
         throw new Error('Invalid activities format');
       }
 
+      // Add URLs to each activity
+      parsed.activities.forEach(activity => {
+        activity.urls = generateActivityUrls(activity, city);
+      });
+
       return parsed.activities;
 
     } catch (error) {
       console.error(`Failed to parse activities for ${city}:`, responseText.substring(0, 200));
 
-      // Return fallback activity
-      return [{
+      // Return fallback activity with URLs
+      const fallback = {
         time: { start: "10:00", end: "12:00" },
         name: `Explore ${city} City Center`,
         type: "sightseeing",
@@ -216,7 +221,10 @@ IMPORTANT: Return ONLY the JSON object, no other text.`;
         whyThisAgent: "General exploration",
         practicalTips: "Start early to avoid crowds",
         travelTimeFromPrevious: null
-      }];
+      };
+
+      fallback.urls = generateActivityUrls(fallback, city);
+      return [fallback];
     }
   }
 
