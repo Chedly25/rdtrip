@@ -1,5 +1,5 @@
-import { Utensils, Clock, DollarSign, Star, Wine } from 'lucide-react';
-import { ThemeConfig } from '../../config/theme';
+import { DollarSign, Star, Wine } from 'lucide-react';
+import type { ThemeConfig } from '../../config/theme';
 
 interface RestaurantCardProps {
   restaurant: any;

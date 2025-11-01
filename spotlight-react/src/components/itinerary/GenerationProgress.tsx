@@ -15,7 +15,7 @@ interface GenerationProgressProps {
   onComplete?: () => void;
 }
 
-export function GenerationProgress({ agents, onComplete }: GenerationProgressProps) {
+export function GenerationProgress({ agents }: GenerationProgressProps) {
   const completedCount = agents.filter(a => a.status === 'completed').length;
   const totalCount = agents.length;
   const progressPercentage = (completedCount / totalCount) * 100;

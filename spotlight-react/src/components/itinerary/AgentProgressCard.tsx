@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
-import { Loader, Check, AlertCircle, LucideIcon } from 'lucide-react';
-import { AgentStatus } from './GenerationProgress';
+import { Loader, Check, AlertCircle, type LucideIcon } from 'lucide-react';
+import type { AgentStatus } from './GenerationProgress';
 
 interface AgentProgressCardProps {
   icon: LucideIcon;
