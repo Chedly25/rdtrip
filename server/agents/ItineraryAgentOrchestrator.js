@@ -110,10 +110,13 @@ class ItineraryAgentOrchestrator {
       RETURNING id
     `;
 
+    // Use agent from routeData, preferences, or default to 'best-overall'
+    const agentType = this.routeData.agent || this.preferences?.travelStyle || 'best-overall';
+
     const result = await this.db.query(query, [
       this.routeData.id,
       this.routeData.user_id,
-      this.routeData.agent,
+      agentType,
       JSON.stringify(this.preferences)
     ]);
 
