@@ -1,9 +1,11 @@
+import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { MapPin, Calendar, Route } from 'lucide-react'
+import { MapPin, Calendar, Route, Sparkles } from 'lucide-react'
 import { useSpotlightStore } from '../../stores/spotlightStore'
 import { useRouteDataStore } from '../../stores/routeDataStore'
 import { getTheme } from '../../config/theme'
 import { calculateDistance } from '../../utils/routeOptimization'
+import { ItineraryGenerator } from '../itinerary/ItineraryGenerator'
 
 // Calculate total distance from waypoints
 function calculateTotalDistance(waypoints: any[]): number {
@@ -43,6 +45,7 @@ function estimateTripDays(waypoints: any[], totalKm: number): number {
 export function RouteOverview() {
   const { waypoints } = useSpotlightStore()
   const { routeData } = useRouteDataStore()
+  const [showItineraryGenerator, setShowItineraryGenerator] = useState(false)
 
   // Get theme colors based on agent type
   const agent = routeData?.agent || 'adventure'
@@ -113,6 +116,50 @@ export function RouteOverview() {
           )
         })}
       </div>
+
+      {/* Generate Detailed Itinerary Button */}
+      <motion.button
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+        onClick={() => setShowItineraryGenerator(true)}
+        className="w-full rounded-xl border-2 p-6 text-center font-semibold text-white shadow-lg transition-all hover:shadow-xl hover:scale-105 active:scale-100"
+        style={{
+          backgroundColor: theme.primary,
+          borderColor: theme.primary
+        }}
+      >
+        <div className="flex items-center justify-center gap-3">
+          <Sparkles className="h-6 w-6" />
+          <span className="text-lg">Generate Detailed Itinerary</span>
+        </div>
+        <p className="mt-2 text-sm opacity-90">
+          AI-powered day-by-day plan with activities, restaurants, accommodations & more
+        </p>
+      </motion.button>
+
+      {/* Itinerary Generator Modal */}
+      {showItineraryGenerator && (
+        <div className="fixed inset-0 z-50 bg-white overflow-y-auto">
+          <ItineraryGenerator
+            routeData={{
+              waypoints: waypoints.map(wp => ({
+                city: wp.name,
+                country: wp.country || 'France',
+                coordinates: wp.coordinates
+              })),
+              startDate: new Date().toISOString().split('T')[0],
+              endDate: new Date(Date.now() + estimatedDays * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+            }}
+            agentType={agent}
+            preferences={{
+              budget: 'mid',
+              travelers: 2
+            }}
+            onBack={() => setShowItineraryGenerator(false)}
+          />
+        </div>
+      )}
     </div>
   )
 }
