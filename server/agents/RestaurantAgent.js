@@ -1,18 +1,38 @@
 /**
  * Restaurant Agent
  * Finds specific restaurants for breakfast, lunch, and dinner each day
+ * Now with Google Places validation and enrichment!
  */
 
 const axios = require('axios');
 const { generateRestaurantUrls } = require('../utils/urlGenerator');
+const ValidationOrchestrator = require('./validation/ValidationOrchestrator');
 
 class RestaurantAgent {
-  constructor(routeData, dayStructure, budget, progressCallback) {
+  constructor(routeData, dayStructure, budget, progressCallback, db, itineraryId) {
     this.routeData = routeData;
     this.dayStructure = dayStructure;
     this.budget = budget;
     this.onProgress = progressCallback || (() => {});
     this.apiKey = process.env.PERPLEXITY_API_KEY;
+
+    // Validation components (optional - gracefully degrades if API key not available)
+    this.db = db;
+    this.itineraryId = itineraryId;
+    this.validator = null;
+
+    // Initialize validator if Google Places API key is available
+    const googleApiKey = process.env.GOOGLE_PLACES_API_KEY;
+    if (googleApiKey && db) {
+      try {
+        this.validator = new ValidationOrchestrator(db, googleApiKey);
+        console.log('✓ Google Places validation enabled for restaurants');
+      } catch (error) {
+        console.warn('⚠️  Google Places validation unavailable:', error.message);
+      }
+    } else {
+      console.log('ℹ️  Running without Google Places validation (API key not configured)');
+    }
   }
 
   async generate() {
@@ -46,6 +66,28 @@ class RestaurantAgent {
     }
 
     console.log(`✓ Restaurants: Found ${allMeals.length * 3} dining recommendations`);
+
+    // PHASE 2: Validate and enrich with Google Places (if validator available)
+    if (this.validator) {
+      try {
+        console.log('🔍 Validating restaurants with Google Places...');
+        const validatedRestaurants = await this.validator.validateRestaurants(
+          allMeals,
+          this.itineraryId,
+          {
+            minConfidence: 0.5
+          }
+        );
+
+        console.log('✓ Restaurant validation complete');
+        return validatedRestaurants;
+
+      } catch (error) {
+        console.error('⚠️  Restaurant validation failed, returning unvalidated restaurants:', error.message);
+        return allMeals; // Graceful degradation
+      }
+    }
+
     return allMeals;
   }
 
