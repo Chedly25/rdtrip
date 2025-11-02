@@ -136,39 +136,55 @@ Return ONLY valid JSON (no markdown, no code blocks):
 IMPORTANT: Return ONLY the JSON object, no other text.`;
   }
 
-  async callPerplexity(prompt) {
-    try {
-      const response = await axios.post(
-        'https://api.perplexity.ai/chat/completions',
-        {
-          model: 'sonar',
-          messages: [
-            {
-              role: 'system',
-              content: 'You are a local travel expert with deep knowledge of specific places. Return ONLY valid JSON with no markdown, no code blocks, no explanations.'
-            },
-            {
-              role: 'user',
-              content: prompt
-            }
-          ],
-          max_tokens: 2500,
-          temperature: 0.4
-        },
-        {
-          headers: {
-            'Authorization': `Bearer ${this.apiKey}`,
-            'Content-Type': 'application/json'
+  async callPerplexity(prompt, retries = 2) {
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        console.log(`🎯 CityActivityAgent Perplexity call (attempt ${attempt}/${retries})`);
+
+        const response = await axios.post(
+          'https://api.perplexity.ai/chat/completions',
+          {
+            model: 'sonar',
+            messages: [
+              {
+                role: 'system',
+                content: 'You are a local travel expert with deep knowledge of specific places. Return ONLY valid JSON with no markdown, no code blocks, no explanations.'
+              },
+              {
+                role: 'user',
+                content: prompt
+              }
+            ],
+            max_tokens: 2500,
+            temperature: 0.4
           },
-          timeout: 25000
+          {
+            headers: {
+              'Authorization': `Bearer ${this.apiKey}`,
+              'Content-Type': 'application/json'
+            },
+            timeout: 45000 // Increased from 25s to 45s
+          }
+        );
+
+        console.log(`✅ CityActivityAgent Perplexity call succeeded on attempt ${attempt}`);
+        return response.data.choices[0].message.content;
+
+      } catch (error) {
+        const isTimeout = error.code === 'ECONNABORTED' || error.message.includes('timeout');
+        const isLastAttempt = attempt === retries;
+
+        console.error(`❌ CityActivityAgent attempt ${attempt}/${retries} failed:`, error.message);
+
+        if (isLastAttempt || !isTimeout) {
+          throw new Error(`Activity generation failed after ${attempt} attempts: ${error.message}`);
         }
-      );
 
-      return response.data.choices[0].message.content;
-
-    } catch (error) {
-      console.error('City Activity API error:', error.response?.data || error.message);
-      throw new Error(`Activity generation failed: ${error.message}`);
+        // Wait before retry (exponential backoff)
+        const waitTime = attempt * 2000;
+        console.log(`⏳ Retrying in ${waitTime}ms...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      }
     }
   }
 
