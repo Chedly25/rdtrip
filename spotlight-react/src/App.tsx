@@ -363,11 +363,17 @@ function AppContent() {
         // Fetch Wikipedia images for all waypoints asynchronously
         finalWaypoints.forEach(async (wp) => {
           if (!wp.imageUrl) {
-            const imageUrl = await getWikipediaImage(wp.name, 800, 600)
-            if (imageUrl) {
-              // Update the waypoint with the fetched image
-              updateWaypoint(wp.id, { imageUrl })
-              console.log(`Fetched Wikipedia image for ${wp.name}:`, imageUrl)
+            // Handle both old format (name) and new format (city)
+            const cityName = wp.name || wp.city
+            if (cityName) {
+              const imageUrl = await getWikipediaImage(cityName, 800, 600)
+              if (imageUrl) {
+                // Update the waypoint with the fetched image
+                updateWaypoint(wp.id, { imageUrl })
+                console.log(`Fetched Wikipedia image for ${cityName}:`, imageUrl)
+              }
+            } else {
+              console.warn('Wikipedia image search failed for', wp, 'TypeError: Cannot read properties of undefined (reading \'replace\')')
             }
           }
         })
