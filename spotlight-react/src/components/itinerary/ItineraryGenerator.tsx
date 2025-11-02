@@ -19,16 +19,26 @@ export function ItineraryGenerator({
   preferences,
   onBack
 }: ItineraryGeneratorProps) {
-  const { agents, itinerary, error, isGenerating, generate } = useItineraryGeneration();
+  const { agents, itinerary, error, isGenerating, generate, loadFromId } = useItineraryGeneration();
   const theme = getTheme(agentType as any);
   const [hasStarted, setHasStarted] = useState(false);
 
   useEffect(() => {
-    if (!hasStarted && routeData) {
+    // Check if there's an itinerary ID in URL params
+    const urlParams = new URLSearchParams(window.location.search);
+    const itineraryId = urlParams.get('itinerary');
+
+    if (itineraryId && !hasStarted) {
+      // Load existing itinerary from ID
+      console.log(`📌 Loading itinerary from URL: ${itineraryId}`);
+      setHasStarted(true);
+      loadFromId(itineraryId);
+    } else if (!hasStarted && routeData && !itineraryId) {
+      // Generate new itinerary
       setHasStarted(true);
       generate(routeData, { ...preferences, agentType });
     }
-  }, [routeData, preferences, agentType, hasStarted, generate]);
+  }, [routeData, preferences, agentType, hasStarted, generate, loadFromId]);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8">

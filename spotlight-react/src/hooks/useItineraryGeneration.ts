@@ -20,6 +20,7 @@ interface UseItineraryGenerationReturn {
   error: string | null;
   isGenerating: boolean;
   generate: (routeData: any, preferences: any) => Promise<void>;
+  loadFromId: (itineraryId: string) => Promise<void>;
 }
 
 const initialAgents: AgentStatus[] = [
@@ -140,6 +141,11 @@ export function useItineraryGeneration(): UseItineraryGenerationReturn {
                 events: fullItinerary.events,
                 budget: fullItinerary.budget
               });
+
+              // Update URL to include itinerary ID for persistence
+              const newUrl = `${window.location.pathname}?itinerary=${itineraryId}`;
+              window.history.pushState({ itineraryId }, '', newUrl);
+              console.log(`📌 URL updated to persist itinerary: ${newUrl}`);
             }
 
             setIsGenerating(false);
@@ -169,5 +175,41 @@ export function useItineraryGeneration(): UseItineraryGenerationReturn {
     }
   }, []);
 
-  return { agents, itinerary, error, isGenerating, generate };
+  const loadFromId = useCallback(async (itineraryId: string) => {
+    try {
+      setError(null);
+      console.log(`📥 Loading itinerary from ID: ${itineraryId}`);
+
+      const response = await fetch(`/api/itinerary/${itineraryId}`);
+
+      if (!response.ok) {
+        throw new Error('Failed to load itinerary');
+      }
+
+      const fullItinerary = await response.json();
+      console.log('✅ Itinerary loaded from ID:', fullItinerary);
+
+      setItinerary({
+        id: fullItinerary.id,
+        dayStructure: fullItinerary.dayStructure,
+        activities: fullItinerary.activities,
+        restaurants: fullItinerary.restaurants,
+        accommodations: fullItinerary.accommodations,
+        scenicStops: fullItinerary.scenicStops,
+        practicalInfo: fullItinerary.practicalInfo,
+        weather: fullItinerary.weather,
+        events: fullItinerary.events,
+        budget: fullItinerary.budget
+      });
+
+      // Mark all agents as completed since itinerary is already generated
+      setAgents(prev => prev.map(agent => ({ ...agent, status: 'completed' })));
+
+    } catch (err) {
+      console.error('Failed to load itinerary:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load itinerary');
+    }
+  }, []);
+
+  return { agents, itinerary, error, isGenerating, generate, loadFromId };
 }

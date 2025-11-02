@@ -263,6 +263,70 @@ router.get('/generate/:jobId/stream', (req, res) => {
 });
 
 /**
+ * Helper function to format itinerary row for API response
+ */
+function formatItineraryResponse(row) {
+  return {
+    id: row.id,
+    routeId: row.route_id,
+    userId: row.user_id,
+    agentType: row.agent_type,
+    generatedAt: row.generated_at,
+    generationTimeMs: row.generation_time_ms,
+    preferences: row.preferences,
+    dayStructure: row.day_structure,
+    activities: row.activities,
+    restaurants: row.restaurants,
+    accommodations: row.accommodations,
+    scenicStops: row.scenic_stops,
+    practicalInfo: row.practical_info,
+    weather: row.weather_data,
+    events: row.local_events,
+    budget: row.budget_breakdown,
+    processingStatus: row.processing_status,
+    progress: row.progress,
+    errorLog: row.error_log,
+    customizations: row.customizations,
+    modificationCount: row.modification_count,
+    lastModifiedAt: row.last_modified_at,
+    lastModifiedBy: row.last_modified_by,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    startedAt: row.started_at,
+    completedAt: row.completed_at
+  };
+}
+
+/**
+ * GET /api/itinerary/route/:routeId/latest
+ * Get the latest completed itinerary for a specific route
+ */
+router.get('/route/:routeId/latest', async (req, res) => {
+  try {
+    const { routeId } = req.params;
+
+    const result = await pool.query(
+      `SELECT * FROM itineraries
+       WHERE route_id = $1
+       AND processing_status IN ('completed', 'partial')
+       ORDER BY completed_at DESC
+       LIMIT 1`,
+      [routeId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'No completed itinerary found for this route' });
+    }
+
+    res.json(formatItineraryResponse(result.rows[0]));
+
+  } catch (error) {
+    console.error('Get route itinerary error:', error);
+    res.status(500).json({ error: 'Failed to get route itinerary' });
+  }
+});
+
+/**
  * GET /api/itinerary/:itineraryId
  * Get completed itinerary by ID
  */
@@ -279,42 +343,7 @@ router.get('/:itineraryId', async (req, res) => {
       return res.status(404).json({ error: 'Itinerary not found' });
     }
 
-    const row = result.rows[0];
-
-    // Transform snake_case database fields to camelCase for frontend
-    const formattedResponse = {
-      id: row.id,
-      routeId: row.route_id,
-      userId: row.user_id,
-      agentType: row.agent_type,
-      generatedAt: row.generated_at,
-      generationTimeMs: row.generation_time_ms,
-      preferences: row.preferences,
-      // Main itinerary data - convert snake_case to camelCase
-      dayStructure: row.day_structure,
-      activities: row.activities,
-      restaurants: row.restaurants,
-      accommodations: row.accommodations,
-      scenicStops: row.scenic_stops,
-      practicalInfo: row.practical_info,
-      weather: row.weather_data,        // Fixed: database column is weather_data
-      events: row.local_events,         // Fixed: database column is local_events
-      budget: row.budget_breakdown,     // Fixed: database column is budget_breakdown
-      // Status and metadata
-      processingStatus: row.processing_status,
-      progress: row.progress,
-      errorLog: row.error_log,
-      customizations: row.customizations,
-      modificationCount: row.modification_count,
-      lastModifiedAt: row.last_modified_at,
-      lastModifiedBy: row.last_modified_by,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
-      startedAt: row.started_at,
-      completedAt: row.completed_at
-    };
-
-    res.json(formattedResponse);
+    res.json(formatItineraryResponse(result.rows[0]));
 
   } catch (error) {
     console.error('Get itinerary error:', error);
