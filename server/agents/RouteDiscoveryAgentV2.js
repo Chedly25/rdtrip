@@ -40,39 +40,45 @@ class RouteDiscoveryAgentV2 {
     // STEP 1: Strategic Discovery
     console.log('\n📍 Step 1: Strategic Discovery');
     const candidates = await this.strategicDiscovery(destination, stops, travelStyle, budget);
-    console.log(`   Found ${candidates.waypoints.length} candidate cities`);
+
+    // Check for discovery errors
+    if (candidates.error) {
+      console.error(`   ⚠️  Discovery had errors: ${candidates.error}`);
+    }
+    console.log(`   Found ${candidates.waypoints?.length || 0} candidate cities`);
 
     // STEP 2: Validation & Enrichment
     console.log('\n🔍 Step 2: Validation & Enrichment');
     const validated = await this.validateAndEnrichCities(candidates);
-    console.log(`   Validated ${validated.waypoints.length}/${candidates.waypoints.length} cities`);
+    console.log(`   Validated ${validated.waypoints?.length || 0}/${candidates.waypoints?.length || 0} cities`);
 
     // STEP 3: Intelligent Optimization
     console.log('\n🗺️  Step 3: Route Optimization');
     const optimized = this.optimizeRoute(validated, stops);
-    console.log(`   Selected ${optimized.selected.length} optimal waypoints`);
+    console.log(`   Selected ${optimized.selected?.length || 0} optimal waypoints`);
 
     // STEP 4: Quality Check & Retry if needed
-    if (optimized.selected.length < stops && optimized.selected.length < candidates.waypoints.length) {
+    if ((optimized.selected?.length || 0) < stops && (optimized.selected?.length || 0) < (candidates.waypoints?.length || 0)) {
       console.log('\n🔄 Quality check failed, retrying with broader search...');
       // Could implement retry logic here
     }
 
     console.log(`\n✅ Route discovery complete`);
-    console.log(`   Origin: ${optimized.origin.city}`);
-    console.log(`   Destination: ${optimized.destination.city}`);
-    console.log(`   Waypoints: ${optimized.selected.map(w => w.city).join(' → ')}`);
+    console.log(`   Origin: ${optimized.origin?.city || optimized.origin?.name || 'Unknown'}`);
+    console.log(`   Destination: ${optimized.destination?.city || optimized.destination?.name || 'Unknown'}`);
+    console.log(`   Waypoints: ${optimized.selected?.map(w => w.city || w.name).join(' → ') || 'None'}`);
 
     return {
       origin: optimized.origin,
       destination: optimized.destination,
-      waypoints: optimized.selected,
-      alternatives: optimized.alternatives,
+      waypoints: optimized.selected || [],
+      alternatives: optimized.alternatives || [],
       metadata: {
         style: travelStyle,
         validated: true,
-        totalCandidates: candidates.waypoints.length,
-        validatedCount: validated.waypoints.length
+        totalCandidates: candidates.waypoints?.length || 0,
+        validatedCount: validated.waypoints?.length || 0,
+        error: candidates.error || validated.error
       }
     };
   }
@@ -115,11 +121,17 @@ class RouteDiscoveryAgentV2 {
 
     } catch (error) {
       console.error('❌ Discovery failed:', error.message);
-      // Return minimal fallback
+      console.error('   Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      // Return minimal fallback with error info
       return {
-        origin: { city: destination, country: 'Unknown' },
-        destination: { city: destination, country: 'Unknown' },
-        waypoints: []
+        origin: { city: destination, country: 'Unknown', why: 'Fallback - Discovery failed' },
+        destination: { city: destination, country: 'Unknown', why: 'Fallback - Discovery failed' },
+        waypoints: [],
+        error: error.message
       };
     }
   }
@@ -222,12 +234,14 @@ IMPORTANT:
       return JSON.parse(jsonText);
 
     } catch (error) {
-      console.error('Failed to parse discovery response:', responseText.substring(0, 200));
+      console.error('Failed to parse discovery response:', error.message);
+      console.error('   Response preview:', responseText.substring(0, 300));
       // Return minimal valid structure
       return {
-        origin: { city: destination, country: 'Unknown', why: 'Starting point' },
-        destination: { city: destination, country: 'Unknown', why: 'Final destination' },
-        waypoints: []
+        origin: { city: destination, country: 'Unknown', why: 'Fallback - Parse failed' },
+        destination: { city: destination, country: 'Unknown', why: 'Fallback - Parse failed' },
+        waypoints: [],
+        error: `Parse failed: ${error.message}`
       };
     }
   }
