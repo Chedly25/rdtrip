@@ -5,6 +5,7 @@
 
 const DayPlannerAgent = require('./DayPlannerAgent');
 const CityActivityAgent = require('./CityActivityAgent');
+const CityActivityAgentV2 = require('./CityActivityAgentV2'); // NEW: Agentic version
 const RestaurantAgent = require('./RestaurantAgent');
 const AccommodationAgent = require('./AccommodationAgent');
 const ScenicRouteAgent = require('./ScenicRouteAgent');
@@ -13,6 +14,7 @@ const WeatherAgent = require('./WeatherAgent');
 const EventsAgent = require('./EventsAgent');
 const BudgetOptimizer = require('./BudgetOptimizer');
 const WikipediaImageService = require('../services/wikipediaImageService');
+const SharedContext = require('./core/SharedContext'); // NEW: Shared memory for agents
 
 class ItineraryAgentOrchestrator {
   constructor(routeData, preferences, db, progressCallback) {
@@ -24,6 +26,19 @@ class ItineraryAgentOrchestrator {
     this.startTime = Date.now();
     this.itineraryId = null;
     this.imageService = new WikipediaImageService(db);
+
+    // NEW: Feature flag for agentic system (V2)
+    // Set to true to enable agentic coordination with feedback loops
+    this.useAgenticSystem = process.env.USE_AGENTIC_SYSTEM === 'true' || false;
+
+    // NEW: SharedContext will be created after itinerary record is created
+    this.sharedContext = null;
+
+    if (this.useAgenticSystem) {
+      console.log('🧠 Agentic coordination enabled (V2)');
+    } else {
+      console.log('📊 Using standard pipeline (V1)');
+    }
   }
 
   /**
@@ -185,13 +200,31 @@ class ItineraryAgentOrchestrator {
     try {
       await this.emitProgress('activities', 'started');
 
-      const agent = new CityActivityAgent(
-        this.routeData,
-        this.results.dayStructure,
-        (progress) => this.emitProgress('activities', 'progress', null, progress),
-        this.db,  // Pass database connection for validation
-        this.itineraryId  // Pass itinerary ID for validation tracking
-      );
+      let agent;
+
+      // Use V2 (agentic) or V1 (standard) based on feature flag
+      if (this.useAgenticSystem && this.sharedContext) {
+        console.log('🧠 Using CityActivityAgentV2 (agentic coordination)');
+
+        agent = new CityActivityAgentV2(
+          this.routeData,
+          this.results.dayStructure,
+          (progress) => this.emitProgress('activities', 'progress', null, progress),
+          this.db,
+          this.itineraryId,
+          this.sharedContext  // Pass SharedContext for agentic coordination
+        );
+      } else {
+        console.log('📊 Using CityActivityAgent (standard pipeline)');
+
+        agent = new CityActivityAgent(
+          this.routeData,
+          this.results.dayStructure,
+          (progress) => this.emitProgress('activities', 'progress', null, progress),
+          this.db,
+          this.itineraryId
+        );
+      }
 
       const result = await agent.generate();
 
@@ -723,6 +756,20 @@ class ItineraryAgentOrchestrator {
         throw error; // Critical failure
       }
 
+      // NEW: Initialize SharedContext for agentic coordination
+      if (this.useAgenticSystem) {
+        console.log('🧠 Initializing SharedContext for agentic coordination...');
+
+        this.sharedContext = new SharedContext(
+          this.itineraryId,
+          this.routeData,
+          this.preferences,
+          this.db
+        );
+
+        console.log('✓ SharedContext initialized');
+      }
+
       // PHASE 2: Core Content Agents (parallel)
       const coreAgentNames = ['activities', 'restaurants', 'accommodations', 'scenicRoutes', 'practicalInfo'];
       const coreAgents = [
@@ -810,6 +857,39 @@ class ItineraryAgentOrchestrator {
         console.log('✓ Image enrichment complete');
       } catch (error) {
         console.warn('⚠️ Image enrichment failed (non-critical):', error.message);
+      }
+
+      // NEW: PHASE 6: Persist agentic decisions and generate summary
+      if (this.useAgenticSystem && this.sharedContext) {
+        try {
+          console.log('📝 Persisting agent decisions to database...');
+          await this.sharedContext.persistDecisions();
+
+          console.log('📊 Generating agentic system summary...');
+          const summary = this.sharedContext.generateSummary();
+
+          console.log('\n' + '='.repeat(60));
+          console.log('🧠 AGENTIC SYSTEM SUMMARY');
+          console.log('='.repeat(60));
+          console.log(`Decisions made: ${summary.decisions.total}`);
+          console.log(`  - Discovery: ${summary.decisions.byPhase.discovery || 0}`);
+          console.log(`  - Validation: ${summary.decisions.byPhase.validation || 0}`);
+          console.log(`  - Selection: ${summary.decisions.byPhase.selection || 0}`);
+          console.log(`  - Feedback: ${summary.decisions.byPhase.feedback || 0}`);
+          console.log(`\nSchedule: ${summary.schedule.activities} activities, ${summary.schedule.restaurants} restaurants`);
+          console.log(`Budget: €${summary.budget.spent || 0} / €${summary.budget.total || '∞'}`);
+          console.log(`Validated places: ${summary.validatedPlaces}`);
+          console.log(`Invalid places (learned): ${summary.invalidPlaces}`);
+          console.log(`Agent communications: ${summary.communications}`);
+          console.log(`Total time: ${Math.round(summary.elapsedTime / 1000)}s`);
+          console.log('='.repeat(60) + '\n');
+
+          // Store summary in results for API response
+          this.results.agenticSummary = summary;
+
+        } catch (error) {
+          console.warn('⚠️ Failed to persist decisions (non-critical):', error.message);
+        }
       }
 
       // Determine final status
