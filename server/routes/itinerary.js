@@ -86,6 +86,34 @@ router.post('/generate', async (req, res) => {
       { route_id, agent: agentType }
     );
 
+    // Listen for job errors and update database
+    const errorHandler = async (job, error) => {
+      if (job.id === itineraryId) {
+        try {
+          await pool.query(
+            `UPDATE itineraries
+             SET processing_status = 'failed',
+                 error_log = COALESCE(error_log, '[]'::jsonb) || $1::jsonb,
+                 completed_at = CURRENT_TIMESTAMP,
+                 updated_at = CURRENT_TIMESTAMP
+             WHERE id = $2`,
+            [JSON.stringify([{
+              timestamp: new Date().toISOString(),
+              message: error.message,
+              stack: error.stack
+            }]), itineraryId]
+          );
+          console.error(`💾 Updated database for failed job ${itineraryId}`);
+        } catch (dbError) {
+          console.error(`Failed to update database for failed job ${itineraryId}:`, dbError);
+        }
+        // Remove listener after handling
+        jobQueue.off('job:error', errorHandler);
+      }
+    };
+
+    jobQueue.on('job:error', errorHandler);
+
     // Return itinerary ID immediately
     res.json({
       itineraryId,
