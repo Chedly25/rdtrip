@@ -23,7 +23,7 @@ export function RestaurantCard({ restaurant }: RestaurantCardProps) {
           <img
             src={restaurant.imageUrl}
             alt={restaurant.name}
-            className="h-full w-full object-contain"
+            className="h-full w-full object-cover object-center"
             onError={(e) => {
               const target = e.currentTarget;
               target.style.display = 'none';

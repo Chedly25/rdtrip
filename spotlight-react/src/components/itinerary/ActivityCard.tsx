@@ -22,7 +22,7 @@ export function ActivityCard({ activity }: ActivityCardProps) {
           <img
             src={activity.imageUrl}
             alt={activity.name}
-            className="h-full w-full object-contain"
+            className="h-full w-full object-cover object-center"
             onError={(e) => {
               // Fallback to gradient if image fails to load
               const target = e.currentTarget;
