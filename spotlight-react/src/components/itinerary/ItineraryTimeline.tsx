@@ -146,9 +146,7 @@ export function ItineraryTimeline({ itinerary, agentType }: ItineraryTimelinePro
               }
               accommodation={accommodations?.find((h: any) => h.night === day.day)}
               scenicStops={
-                scenicStops
-                  ?.filter((s: any) => s.day === day.day)
-                  .flatMap((s: any) => s.stops || []) || []
+                scenicStops?.filter((s: any) => s.day === day.day) || []
               }
               practicalInfo={practicalInfo?.find((p: any) => p.city === day.overnight)}
               weather={weather?.find((w: any) => w.day === day.day)}
