@@ -19,6 +19,14 @@ class GooglePlacesService {
     this.db = db;
     this.baseUrl = 'https://maps.googleapis.com/maps/api/place';
     this.cache = new Map(); // In-memory cache
+
+    if (!this.apiKey) {
+      console.error('❌ GooglePlacesService: NO API KEY PROVIDED!');
+      console.error('   apiKey parameter:', apiKey);
+      console.error('   process.env.GOOGLE_PLACES_API_KEY:', process.env.GOOGLE_PLACES_API_KEY ? 'SET' : 'NOT SET');
+    } else {
+      console.log(`✓ GooglePlacesService initialized with API key: ${this.apiKey.substring(0, 10)}...`);
+    }
   }
 
   /**
@@ -48,7 +56,8 @@ class GooglePlacesService {
         params.radius = 5000; // 5km radius
       }
 
-      console.log(`🌍 Calling Google Places API: ${this.baseUrl}/textsearch/json?query=${encodeURIComponent(query)}&key=${this.apiKey.substring(0, 10)}...`);
+      const maskedKey = this.apiKey ? this.apiKey.substring(0, 10) + '...' : 'UNDEFINED';
+      console.log(`🌍 Calling Google Places API: ${this.baseUrl}/textsearch/json?query=${encodeURIComponent(query)}&key=${maskedKey}`);
 
       const response = await axios.get(`${this.baseUrl}/textsearch/json`, {
         params,
