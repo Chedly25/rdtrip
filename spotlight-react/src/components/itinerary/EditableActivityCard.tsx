@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useItineraryStore } from '../../stores/useItineraryStore';
 import { URLActionButtons } from './URLActionButtons';
-import { Trash2, RefreshCw, Star, StarOff, Clock, DollarSign, StickyNote } from 'lucide-react';
+import { Trash2, RefreshCw, Star, StarOff, Clock, DollarSign, StickyNote, MapPin } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { getEntityGradient } from '../../utils/gradients';
 
 interface EditableActivityCardProps {
   activity: any;
@@ -21,6 +22,8 @@ export function EditableActivityCard({ activity, isDragging = false }: EditableA
   const activityId = activity.id || activity.customId || activity.name;
   const userFlag = activity.userFlag;
   const userNote = activity.userNote || '';
+  const hasImage = activity.imageUrl;
+  const gradient = getEntityGradient('activity', activity.name);
 
   const handleSaveTime = () => {
     editItem(activityId, { time: localTime });
@@ -61,31 +64,65 @@ export function EditableActivityCard({ activity, isDragging = false }: EditableA
   return (
     <motion.div
       layout
-      className={`relative bg-white rounded-lg border ${
+      className={`relative bg-white rounded-lg border overflow-hidden ${
         userFlag === 'must-see'
           ? 'border-yellow-400 shadow-lg'
           : userFlag === 'optional'
           ? 'border-gray-300'
           : 'border-gray-200'
-      } p-4 ${isDragging ? 'opacity-50' : 'opacity-100'} transition-all hover:shadow-md group`}
+      } ${isDragging ? 'opacity-50' : 'opacity-100'} transition-all hover:shadow-md group`}
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => setShowActions(false)}
     >
-      {/* Flag Badge */}
-      {userFlag && (
-        <div className={`absolute top-2 left-2 px-2 py-1 rounded-full text-xs font-medium ${
-          userFlag === 'must-see'
-            ? 'bg-yellow-100 text-yellow-800'
-            : 'bg-gray-100 text-gray-600'
-        }`}>
-          {userFlag === 'must-see' ? '⭐ Must See' : '○ Optional'}
+      {/* Image Header */}
+      {hasImage ? (
+        <div className="relative w-full bg-gray-100" style={{ background: gradient }}>
+          <img
+            src={activity.imageUrl}
+            alt={activity.name}
+            className="w-full h-48 object-contain"
+            onError={(e) => {
+              // Fallback to gradient if image fails to load
+              const target = e.currentTarget.parentElement;
+              if (target) {
+                target.innerHTML = `
+                  <div class="h-48 flex items-center justify-center" style="background: ${gradient}">
+                    <svg class="h-10 w-10 text-white opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                  </div>
+                `;
+              }
+            }}
+          />
+        </div>
+      ) : (
+        <div
+          className="relative h-48 w-full flex items-center justify-center"
+          style={{ background: gradient }}
+        >
+          <MapPin className="h-10 w-10 text-white opacity-40" />
         </div>
       )}
 
-      {/* Quick Actions */}
-      <div className={`absolute top-2 right-2 flex gap-1 transition-opacity ${
-        showActions ? 'opacity-100' : 'opacity-0'
-      }`}>
+      {/* Content Container */}
+      <div className="p-4">
+        {/* Flag Badge */}
+        {userFlag && (
+          <div className={`absolute top-56 left-2 px-2 py-1 rounded-full text-xs font-medium ${
+            userFlag === 'must-see'
+              ? 'bg-yellow-100 text-yellow-800'
+              : 'bg-gray-100 text-gray-600'
+          }`}>
+            {userFlag === 'must-see' ? '⭐ Must See' : '○ Optional'}
+          </div>
+        )}
+
+        {/* Quick Actions */}
+        <div className={`absolute top-56 right-2 flex gap-1 transition-opacity ${
+          showActions ? 'opacity-100' : 'opacity-0'
+        }`}>
         <button
           onClick={toggleFlag}
           className="p-1.5 bg-white rounded-md border border-gray-200 hover:bg-yellow-50 transition-colors"
@@ -115,9 +152,8 @@ export function EditableActivityCard({ activity, isDragging = false }: EditableA
         </button>
       </div>
 
-      {/* Content */}
-      <div className={userFlag ? 'mt-8' : 'mt-0'}>
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+        {/* Activity Name */}
+        <h3 className={`text-lg font-semibold text-gray-900 mb-2 ${userFlag ? 'mt-8' : 'mt-0'}`}>
           {activity.name}
         </h3>
 
