@@ -1304,12 +1304,25 @@ app.get('/api/route-status/:jobId', (req, res) => {
     }
   }
 
+  // Extract origin from first successful agent result
+  let actualOrigin = "Aix-en-Provence, France"; // Fallback
+  if (job.status === 'completed' && job.agentResults && job.agentResults.length > 0) {
+    try {
+      const firstResult = JSON.parse(job.agentResults[0].recommendations);
+      if (firstResult.origin) {
+        actualOrigin = firstResult.origin.name || firstResult.origin.city || actualOrigin;
+      }
+    } catch (e) {
+      console.error('Failed to extract origin from agent results:', e.message);
+    }
+  }
+
   res.json({
     jobId: job.id,
     status: job.status,
     progress: job.progress,
     route: job.status === 'completed' ? {
-      origin: "Aix-en-Provence, France",
+      origin: actualOrigin,
       destination: job.destination,
       totalStops: job.stops,
       budget: job.budget,
@@ -1954,8 +1967,11 @@ function buildBudgetPrompt(route, tripDetails, totalDistance) {
   const { duration, travelers, budgetLevel, preferences } = tripDetails;
 
   const waypoints = route.waypoints || [];
-  const originCountry = getCountryFromCity(route.origin.name);
-  const destCountry = getCountryFromCity(route.destination.name);
+  // Handle both old format (name) and new RouteDiscoveryAgentV2 format (city)
+  const originName = route.origin.name || route.origin.city;
+  const destName = route.destination.name || route.destination.city;
+  const originCountry = getCountryFromCity(originName);
+  const destCountry = getCountryFromCity(destName);
 
   const budgetGuidance = {
     'budget': 'Focus on hostels/budget hotels (€30-60/night), street food and casual dining (€8-20/meal), free attractions and parks. Minimize toll roads where possible.',
@@ -1969,9 +1985,9 @@ function buildBudgetPrompt(route, tripDetails, totalDistance) {
   return `You are a European road trip budget calculator with access to current ${currentYear} prices. Calculate realistic cost estimates for this specific route.
 
 **Route Details:**
-- Origin: ${route.origin.name}, ${originCountry}
-- Destination: ${route.destination.name}, ${destCountry}
-- Waypoints: ${waypoints.map(w => w.name).join(', ') || 'Direct route (no stops)'}
+- Origin: ${originName}, ${originCountry}
+- Destination: ${destName}, ${destCountry}
+- Waypoints: ${waypoints.map(w => w.name || w.city).join(', ') || 'Direct route (no stops)'}
 - Total Driving Distance: ${totalDistance}km
 - Trip Duration: ${duration} days
 - Number of Travelers: ${travelers} people
