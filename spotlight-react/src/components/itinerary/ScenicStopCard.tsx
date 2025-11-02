@@ -1,4 +1,4 @@
-import { Navigation, Clock, Camera, Mountain } from 'lucide-react';
+import { Clock, Mountain } from 'lucide-react';
 import type { ThemeConfig } from '../../config/theme';
 import { URLActionButtons } from './URLActionButtons';
 import { getEntityGradient } from '../../utils/gradients';
