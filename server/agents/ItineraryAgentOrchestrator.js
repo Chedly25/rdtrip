@@ -621,7 +621,7 @@ class ItineraryAgentOrchestrator {
       query = `
         UPDATE itineraries
         SET processing_status = $1,
-            progress = $2::jsonb,
+            progress = $2,
             error_log = COALESCE(error_log, '[]'::jsonb) || $3::jsonb,
             completed_at = CASE
               WHEN $1 IN ('completed', 'failed', 'partial') THEN CURRENT_TIMESTAMP
@@ -641,7 +641,7 @@ class ItineraryAgentOrchestrator {
       query = `
         UPDATE itineraries
         SET processing_status = $1,
-            progress = $2::jsonb,
+            progress = $2,
             completed_at = CASE
               WHEN $1 IN ('completed', 'failed', 'partial') THEN CURRENT_TIMESTAMP
               ELSE completed_at
