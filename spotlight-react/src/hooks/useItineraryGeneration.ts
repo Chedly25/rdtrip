@@ -130,15 +130,15 @@ export function useItineraryGeneration(): UseItineraryGenerationReturn {
 
               setItinerary({
                 id: fullItinerary.id,
-                dayStructure: fullItinerary.day_structure,
+                dayStructure: fullItinerary.dayStructure,
                 activities: fullItinerary.activities,
                 restaurants: fullItinerary.restaurants,
                 accommodations: fullItinerary.accommodations,
-                scenicStops: fullItinerary.scenic_stops,
-                practicalInfo: fullItinerary.practical_info,
-                weather: fullItinerary.weather_data,
-                events: fullItinerary.local_events,
-                budget: fullItinerary.budget_breakdown
+                scenicStops: fullItinerary.scenicStops,
+                practicalInfo: fullItinerary.practicalInfo,
+                weather: fullItinerary.weather,
+                events: fullItinerary.events,
+                budget: fullItinerary.budget
               });
             }
 
