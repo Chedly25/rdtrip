@@ -258,7 +258,7 @@ class WikipediaImageService {
 
     const tasks = [];
 
-    // Enrich activities
+    // Enrich activities (landmarks, museums, monuments - have Wikipedia pages)
     if (itinerary.activities) {
       for (const activitySet of itinerary.activities) {
         const city = activitySet.city;
@@ -271,34 +271,10 @@ class WikipediaImageService {
       }
     }
 
-    // Enrich restaurants
-    if (itinerary.restaurants) {
-      for (const dayRestaurants of itinerary.restaurants) {
-        const city = dayRestaurants.city;
-        const meals = dayRestaurants.meals || {};
-        for (const restaurant of Object.values(meals)) {
-          if (restaurant && restaurant.name) {
-            tasks.push(
-              this.getEntityImage(restaurant, city, 'restaurant')
-                .then(url => { restaurant.imageUrl = url; })
-            );
-          }
-        }
-      }
-    }
+    // Skip restaurants - specific businesses don't have Wikipedia pages
+    // Skip accommodations - specific hotels don't have Wikipedia pages
 
-    // Enrich accommodations
-    if (itinerary.accommodations) {
-      for (const accommodation of itinerary.accommodations) {
-        const city = accommodation.city;
-        tasks.push(
-          this.getEntityImage(accommodation, city, 'hotel')
-            .then(url => { accommodation.imageUrl = url; })
-        );
-      }
-    }
-
-    // Enrich scenic stops
+    // Enrich scenic stops (natural landmarks, viewpoints - may have Wikipedia pages)
     if (itinerary.scenicStops) {
       for (const segment of itinerary.scenicStops) {
         for (const stop of segment.stops || []) {
@@ -316,7 +292,7 @@ class WikipediaImageService {
     // Run all enrichment tasks in parallel (limit concurrency)
     await this.runInBatches(tasks, 10);
 
-    console.log(`✓ Enriched ${tasks.length} entities with images`);
+    console.log(`✓ Enriched ${tasks.length} entities with images (activities & scenic stops only)`);
     return itinerary;
   }
 
