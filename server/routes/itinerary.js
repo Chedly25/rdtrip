@@ -352,6 +352,78 @@ router.get('/:itineraryId', async (req, res) => {
 });
 
 /**
+ * POST /api/itinerary/:itineraryId/refresh-images
+ * Re-fetch images for all entities in an existing itinerary
+ */
+router.post('/:itineraryId/refresh-images', async (req, res) => {
+  try {
+    const { itineraryId } = req.params;
+
+    console.log(`🔄 Refreshing images for itinerary ${itineraryId}`);
+
+    // Fetch current itinerary
+    const result = await pool.query(
+      'SELECT * FROM itineraries WHERE id = $1',
+      [itineraryId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Itinerary not found' });
+    }
+
+    const itinerary = result.rows[0];
+
+    // Re-enrich with images using the WikipediaImageService
+    const WikipediaImageService = require('../services/wikipediaImageService');
+    const imageService = new WikipediaImageService(pool);
+
+    const enrichedResults = {
+      activities: itinerary.activities,
+      restaurants: itinerary.restaurants,
+      accommodations: itinerary.accommodations,
+      scenicStops: itinerary.scenic_stops
+    };
+
+    await imageService.enrichEntitiesWithImages(enrichedResults);
+
+    // Update database with new images
+    await pool.query(
+      `UPDATE itineraries
+       SET activities = $1,
+           restaurants = $2,
+           accommodations = $3,
+           scenic_stops = $4,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $5`,
+      [
+        JSON.stringify(enrichedResults.activities),
+        JSON.stringify(enrichedResults.restaurants),
+        JSON.stringify(enrichedResults.accommodations),
+        JSON.stringify(enrichedResults.scenicStops),
+        itineraryId
+      ]
+    );
+
+    console.log(`✅ Images refreshed for itinerary ${itineraryId}`);
+
+    res.json({
+      success: true,
+      message: 'Images refreshed successfully',
+      counts: {
+        activities: enrichedResults.activities?.length || 0,
+        restaurants: enrichedResults.restaurants?.length || 0,
+        accommodations: enrichedResults.accommodations?.length || 0,
+        scenicStops: enrichedResults.scenicStops?.length || 0
+      }
+    });
+
+  } catch (error) {
+    console.error('Image refresh error:', error);
+    res.status(500).json({ error: 'Failed to refresh images' });
+  }
+});
+
+/**
  * PATCH /api/itinerary/:itineraryId/customize
  * Apply user customizations to itinerary (optimistic updates)
  */
