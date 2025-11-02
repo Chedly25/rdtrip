@@ -48,6 +48,8 @@ class GooglePlacesService {
         params.radius = 5000; // 5km radius
       }
 
+      console.log(`🌍 Calling Google Places API: ${this.baseUrl}/textsearch/json?query=${encodeURIComponent(query)}&key=${this.apiKey.substring(0, 10)}...`);
+
       const response = await axios.get(`${this.baseUrl}/textsearch/json`, {
         params,
         timeout: 10000
@@ -66,6 +68,7 @@ class GooglePlacesService {
 
     } catch (error) {
       console.error(`Google Places text search failed for "${query}":`, error.message);
+      console.error(`Full error:`, error.response?.data || error.stack);
       return [];
     }
   }
