@@ -16,15 +16,11 @@ export function ScenicStopCard({ stop, theme }: ScenicStopCardProps) {
     <div className="rounded-lg border-l-4 overflow-hidden" style={{ borderLeftColor: theme.secondary }}>
       {/* Image or Gradient Header */}
       {hasImage ? (
-        <div className="relative w-full" style={{ background: gradient }}>
+        <div className="relative w-full bg-gray-100" style={{ background: gradient }}>
           <img
             src={stop.imageUrl}
             alt={stop.name}
-            className="w-full h-auto max-h-80 object-cover"
-            style={{
-              minHeight: '180px',
-              maxHeight: '320px'
-            }}
+            className="w-full h-56 object-contain"
             onError={(e) => {
               const target = e.currentTarget.parentElement;
               if (target) {

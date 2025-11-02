@@ -15,15 +15,11 @@ export function ActivityCard({ activity }: ActivityCardProps) {
     <div className="rounded-lg border border-gray-200 bg-white overflow-hidden transition-shadow hover:shadow-md">
       {/* Image or Gradient Header */}
       {hasImage ? (
-        <div className="relative w-full" style={{ background: gradient }}>
+        <div className="relative w-full bg-gray-100" style={{ background: gradient }}>
           <img
             src={activity.imageUrl}
             alt={activity.name}
-            className="w-full h-auto max-h-96 object-cover"
-            style={{
-              minHeight: '200px',
-              maxHeight: '384px'
-            }}
+            className="w-full h-64 object-contain"
             onError={(e) => {
               // Fallback to gradient if image fails to load
               const target = e.currentTarget.parentElement;
