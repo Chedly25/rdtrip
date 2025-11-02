@@ -791,11 +791,11 @@ class ItineraryAgentOrchestrator {
       }
 
       // Determine final status
-      const criticalAgents = ['dayPlanner', 'activities', 'restaurants', 'accommodations'];
-      const allCriticalCompleted = criticalAgents.every(a => progress[a] === 'completed');
+      // Only day planner is truly critical - everything else is nice-to-have
+      const dayPlannerCompleted = progress.dayPlanner === 'completed';
       const someFailed = Object.values(progress).some(status => status === 'failed');
 
-      const finalStatus = allCriticalCompleted
+      const finalStatus = dayPlannerCompleted
         ? (someFailed ? 'partial' : 'completed')
         : 'failed';
 
