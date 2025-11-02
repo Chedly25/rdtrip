@@ -38,8 +38,9 @@ class GooglePlacesService {
     try {
       const params = {
         query,
-        key: this.apiKey,
-        fields: 'place_id,name,formatted_address,geometry,rating,user_ratings_total,price_level,opening_hours,photos,types,business_status'
+        key: this.apiKey
+        // NOTE: textsearch endpoint does NOT support 'fields' parameter
+        // It returns all basic fields by default
       };
 
       if (location) {
