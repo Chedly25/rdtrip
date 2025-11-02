@@ -156,12 +156,12 @@ export function useItineraryGeneration(): UseItineraryGenerationReturn {
         }
       }, 2000); // Poll every 2 seconds
 
-      // Safety timeout: stop polling after 3 minutes
+      // Safety timeout: stop polling after 5 minutes (increased for batch processing)
       const safetyTimeout = setTimeout(() => {
         clearInterval(pollInterval);
         setError('Generation timed out. The itinerary may still be processing.');
         setIsGenerating(false);
-      }, 180000);
+      }, 300000);
 
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
