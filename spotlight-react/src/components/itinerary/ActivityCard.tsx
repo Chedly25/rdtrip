@@ -1,5 +1,6 @@
 import { MapPin, Clock, DollarSign, Star } from 'lucide-react';
 import type { ThemeConfig } from '../../config/theme';
+import { getEntityGradient } from '../../utils/gradients';
 
 interface ActivityCardProps {
   activity: any;
@@ -7,16 +8,43 @@ interface ActivityCardProps {
 }
 
 export function ActivityCard({ activity, theme }: ActivityCardProps) {
+  const hasImage = activity.imageUrl;
+  const gradient = getEntityGradient('activity', activity.name);
+
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-4 transition-shadow hover:shadow-md">
-      <div className="flex items-start gap-3">
+    <div className="rounded-lg border border-gray-200 bg-white overflow-hidden transition-shadow hover:shadow-md">
+      {/* Image or Gradient Header */}
+      <div className="relative h-32 w-full overflow-hidden">
+        {hasImage ? (
+          <img
+            src={activity.imageUrl}
+            alt={activity.name}
+            className="h-full w-full object-cover"
+            onError={(e) => {
+              // Fallback to gradient if image fails to load
+              const target = e.currentTarget;
+              target.style.display = 'none';
+              if (target.nextElementSibling) {
+                (target.nextElementSibling as HTMLElement).style.display = 'flex';
+              }
+            }}
+          />
+        ) : null}
         <div
-          className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg"
-          style={{ backgroundColor: `${theme.primary}15` }}
+          className="absolute inset-0 flex items-center justify-center"
+          style={{
+            background: gradient,
+            display: hasImage ? 'none' : 'flex',
+          }}
         >
-          <MapPin className="h-5 w-5" style={{ color: theme.primary }} />
+          <MapPin className="h-12 w-12 text-white opacity-40" />
         </div>
-        <div className="flex-1">
+      </div>
+
+      {/* Content */}
+      <div className="p-4">
+        <div className="flex items-start gap-3">
+          <div className="flex-1">
           <h5 className="font-semibold text-gray-900">{activity.name}</h5>
           <p className="mt-1 text-sm text-gray-600">{activity.description}</p>
 
@@ -58,6 +86,7 @@ export function ActivityCard({ activity, theme }: ActivityCardProps) {
               💡 {activity.tips}
             </div>
           )}
+          </div>
         </div>
       </div>
     </div>

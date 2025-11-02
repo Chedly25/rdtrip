@@ -1,6 +1,7 @@
 import { Navigation, Clock, Camera, Mountain } from 'lucide-react';
 import type { ThemeConfig } from '../../config/theme';
 import { URLActionButtons } from './URLActionButtons';
+import { getEntityGradient } from '../../utils/gradients';
 
 interface ScenicStopCardProps {
   stop: any;
@@ -20,18 +21,40 @@ export function ScenicStopCard({ stop, theme }: ScenicStopCardProps) {
     }
   };
 
+  const hasImage = stop.imageUrl;
+  const gradient = getEntityGradient('scenic', stop.name);
+
   return (
-    <div
-      className="rounded-lg border-l-4 bg-gradient-to-r from-amber-50 to-orange-50 p-3"
-      style={{ borderLeftColor: theme.secondary }}
-    >
-      <div className="flex items-start gap-3">
+    <div className="rounded-lg border-l-4 overflow-hidden" style={{ borderLeftColor: theme.secondary }}>
+      {/* Image or Gradient Header */}
+      <div className="relative h-24 w-full overflow-hidden">
+        {hasImage ? (
+          <img
+            src={stop.imageUrl}
+            alt={stop.name}
+            className="h-full w-full object-cover"
+            onError={(e) => {
+              const target = e.currentTarget;
+              target.style.display = 'none';
+              if (target.nextElementSibling) {
+                (target.nextElementSibling as HTMLElement).style.display = 'flex';
+              }
+            }}
+          />
+        ) : null}
         <div
-          className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-white"
-          style={{ color: theme.primary }}
+          className="absolute inset-0 flex items-center justify-center"
+          style={{
+            background: gradient,
+            display: hasImage ? 'none' : 'flex',
+          }}
         >
-          {getTypeIcon(stop.type)}
+          <Mountain className="h-10 w-10 text-white opacity-40" />
         </div>
+      </div>
+
+      {/* Content */}
+      <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-3">
         <div className="flex-1">
           <div className="flex items-start justify-between">
             <div>
