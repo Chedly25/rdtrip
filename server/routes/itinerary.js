@@ -384,6 +384,26 @@ router.post('/:itineraryId/refresh-images', async (req, res) => {
       scenicStops: itinerary.scenic_stops
     };
 
+    // Clean up imageUrl from restaurants and accommodations (they shouldn't have Wikipedia images)
+    if (enrichedResults.restaurants) {
+      for (const dayRestaurants of enrichedResults.restaurants) {
+        const meals = dayRestaurants.meals || {};
+        for (const restaurant of Object.values(meals)) {
+          if (restaurant && restaurant.imageUrl) {
+            delete restaurant.imageUrl;
+          }
+        }
+      }
+    }
+
+    if (enrichedResults.accommodations) {
+      for (const accommodation of enrichedResults.accommodations) {
+        if (accommodation && accommodation.imageUrl) {
+          delete accommodation.imageUrl;
+        }
+      }
+    }
+
     await imageService.enrichEntitiesWithImages(enrichedResults);
 
     // Update database with new images
