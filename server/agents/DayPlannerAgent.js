@@ -18,11 +18,28 @@ class DayPlannerAgent {
     console.log('📅 Day Planner received preferences:', JSON.stringify(this.preferences));
 
     const prompt = this.buildPrompt();
-    const response = await this.callPerplexity(prompt);
-    const parsed = this.parseResponse(response);
 
-    console.log(`✓ Day Planner: Created ${parsed.totalDays}-day structure`);
-    return parsed;
+    // Retry logic for API timeouts
+    let lastError;
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        console.log(`📅 Day Planner: Attempt ${attempt}/2`);
+        const response = await this.callPerplexity(prompt);
+        const parsed = this.parseResponse(response);
+        console.log(`✓ Day Planner: Created ${parsed.totalDays}-day structure`);
+        return parsed;
+      } catch (error) {
+        lastError = error;
+        if (attempt < 2 && error.message.includes('timeout')) {
+          console.log(`⚠️  Day Planner: Timeout on attempt ${attempt}, retrying...`);
+          await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2s before retry
+        } else {
+          throw error;
+        }
+      }
+    }
+
+    throw lastError;
   }
 
   buildPrompt() {
@@ -155,7 +172,7 @@ IMPORTANT: Return ONLY the JSON object, no other text.`;
             'Authorization': `Bearer ${this.apiKey}`,
             'Content-Type': 'application/json'
           },
-          timeout: 30000 // 30 second timeout
+          timeout: 60000 // 60 second timeout (increased for multi-city itineraries)
         }
       );
 
