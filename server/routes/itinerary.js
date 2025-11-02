@@ -279,7 +279,42 @@ router.get('/:itineraryId', async (req, res) => {
       return res.status(404).json({ error: 'Itinerary not found' });
     }
 
-    res.json(result.rows[0]);
+    const row = result.rows[0];
+
+    // Transform snake_case database fields to camelCase for frontend
+    const formattedResponse = {
+      id: row.id,
+      routeId: row.route_id,
+      userId: row.user_id,
+      agentType: row.agent_type,
+      generatedAt: row.generated_at,
+      generationTimeMs: row.generation_time_ms,
+      preferences: row.preferences,
+      // Main itinerary data - convert snake_case to camelCase
+      dayStructure: row.day_structure,
+      activities: row.activities,
+      restaurants: row.restaurants,
+      accommodations: row.accommodations,
+      scenicStops: row.scenic_stops,
+      practicalInfo: row.practical_info,
+      weather: row.weather,
+      events: row.events,
+      budget: row.budget,
+      // Status and metadata
+      processingStatus: row.processing_status,
+      progress: row.progress,
+      errorLog: row.error_log,
+      customizations: row.customizations,
+      modificationCount: row.modification_count,
+      lastModifiedAt: row.last_modified_at,
+      lastModifiedBy: row.last_modified_by,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      startedAt: row.started_at,
+      completedAt: row.completed_at
+    };
+
+    res.json(formattedResponse);
 
   } catch (error) {
     console.error('Get itinerary error:', error);
