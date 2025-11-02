@@ -188,7 +188,9 @@ class ItineraryAgentOrchestrator {
       const agent = new CityActivityAgent(
         this.routeData,
         this.results.dayStructure,
-        (progress) => this.emitProgress('activities', 'progress', null, progress)
+        (progress) => this.emitProgress('activities', 'progress', null, progress),
+        this.db,  // Pass database connection for validation
+        this.itineraryId  // Pass itinerary ID for validation tracking
       );
 
       const result = await agent.generate();
@@ -224,7 +226,9 @@ class ItineraryAgentOrchestrator {
         this.routeData,
         this.results.dayStructure,
         this.preferences.budget || 'mid',
-        (progress) => this.emitProgress('restaurants', 'progress', null, progress)
+        (progress) => this.emitProgress('restaurants', 'progress', null, progress),
+        this.db,  // Pass database connection for validation
+        this.itineraryId  // Pass itinerary ID for validation tracking
       );
 
       const result = await agent.generate();
