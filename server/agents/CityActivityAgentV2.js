@@ -32,6 +32,7 @@ class CityActivityAgentV2 {
 
     // Initialize orchestrator (the brain)
     const googleApiKey = process.env.GOOGLE_PLACES_API_KEY;
+    console.log(`🔑 CityActivityAgentV2: Google API Key = ${googleApiKey ? googleApiKey.substring(0, 10) + '...' : 'UNDEFINED'}`);
     this.orchestrator = new OrchestratorAgent(sharedContext, db, googleApiKey);
 
     console.log('🎯 CityActivityAgentV2: Agentic coordination enabled');

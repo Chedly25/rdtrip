@@ -23,6 +23,8 @@ class OrchestratorAgent {
     this.context = sharedContext;
     this.db = db;
 
+    console.log(`🔑 OrchestratorAgent: Received API Key = ${googleApiKey ? googleApiKey.substring(0, 10) + '...' : 'UNDEFINED'}`);
+
     // Initialize sub-agents
     this.discoveryAgent = new StrategicDiscoveryAgent(sharedContext);
 
@@ -33,6 +35,8 @@ class OrchestratorAgent {
 
     if (!this.validationOrchestrator) {
       console.warn('⚠️  OrchestratorAgent: No Google API key - validation disabled');
+    } else {
+      console.log('✓ OrchestratorAgent: ValidationOrchestrator initialized');
     }
   }
 
