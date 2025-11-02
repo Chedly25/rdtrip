@@ -7,7 +7,7 @@ interface ActivityCardProps {
   theme: ThemeConfig;
 }
 
-export function ActivityCard({ activity, theme }: ActivityCardProps) {
+export function ActivityCard({ activity }: ActivityCardProps) {
   const hasImage = activity.imageUrl;
   const gradient = getEntityGradient('activity', activity.name);
 

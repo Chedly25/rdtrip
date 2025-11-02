@@ -9,18 +9,6 @@ interface ScenicStopCardProps {
 }
 
 export function ScenicStopCard({ stop, theme }: ScenicStopCardProps) {
-  const getTypeIcon = (type: string) => {
-    switch (type?.toLowerCase()) {
-      case 'viewpoint':
-        return <Camera className="h-4 w-4" />;
-      case 'natural wonder':
-      case 'nature':
-        return <Mountain className="h-4 w-4" />;
-      default:
-        return <Navigation className="h-4 w-4" />;
-    }
-  };
-
   const hasImage = stop.imageUrl;
   const gradient = getEntityGradient('scenic', stop.name);
 
