@@ -16,7 +16,7 @@ export function RestaurantCard({ restaurant }: RestaurantCardProps) {
     <div className="rounded-lg border border-gray-200 bg-white overflow-hidden transition-shadow hover:shadow-md">
       {/* Image or Gradient Header */}
       <div
-        className="relative h-32 w-full overflow-hidden"
+        className="relative h-48 w-full overflow-hidden"
         style={{ background: gradient }}
       >
         {hasImage ? (

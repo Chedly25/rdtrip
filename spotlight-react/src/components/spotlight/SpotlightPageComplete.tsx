@@ -57,6 +57,16 @@ function SpotlightContent() {
   const [originData, setOriginData] = useState<{ display: string; flag: string }>({ display: '', flag: '' })
   const [destinationData, setDestinationData] = useState<{ display: string; flag: string }>({ display: '', flag: '' })
 
+  // Check URL params on mount - auto-show itinerary if present
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    const itineraryId = urlParams.get('itinerary')
+    if (itineraryId) {
+      console.log(`📌 Detected itinerary ID in URL: ${itineraryId}, auto-showing generator`)
+      setShowItineraryGenerator(true)
+    }
+  }, [])
+
   // Get agent details and theme
   const agent = routeData?.agent || 'adventure'
   const config = agentConfig[agent]
