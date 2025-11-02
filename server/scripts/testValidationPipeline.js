@@ -11,6 +11,7 @@
 const { Pool } = require('pg');
 const PlacesValidationAgent = require('../agents/validation/PlacesValidationAgent');
 const AvailabilityValidationAgent = require('../agents/validation/AvailabilityValidationAgent');
+const GooglePlacesService = require('../services/googlePlacesService');
 
 const GOOGLE_API_KEY = 'AIzaSyD_kyLhT7Jp42-PAf2nG5Sck1taaWhVIwU';
 const TEST_ITINERARY_ID = 'bdeef8b6-888a-4066-b72a-977b0541938c';
@@ -29,7 +30,8 @@ async function testValidationPipeline() {
     console.log('');
 
     // Initialize agents
-    const validationAgent = new PlacesValidationAgent(GOOGLE_API_KEY, pool);
+    const placesService = new GooglePlacesService(GOOGLE_API_KEY, pool);
+    const validationAgent = new PlacesValidationAgent(placesService, pool);
     const availabilityAgent = new AvailabilityValidationAgent();
 
     // Fetch itinerary
