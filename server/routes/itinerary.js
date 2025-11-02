@@ -297,9 +297,9 @@ router.get('/:itineraryId', async (req, res) => {
       accommodations: row.accommodations,
       scenicStops: row.scenic_stops,
       practicalInfo: row.practical_info,
-      weather: row.weather,
-      events: row.events,
-      budget: row.budget,
+      weather: row.weather_data,        // Fixed: database column is weather_data
+      events: row.local_events,         // Fixed: database column is local_events
+      budget: row.budget_breakdown,     // Fixed: database column is budget_breakdown
       // Status and metadata
       processingStatus: row.processing_status,
       progress: row.progress,
