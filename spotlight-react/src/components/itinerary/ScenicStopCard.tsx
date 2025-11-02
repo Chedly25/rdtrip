@@ -16,7 +16,7 @@ export function ScenicStopCard({ stop, theme }: ScenicStopCardProps) {
     <div className="rounded-lg border-l-4 overflow-hidden" style={{ borderLeftColor: theme.secondary }}>
       {/* Image or Gradient Header */}
       <div
-        className="relative h-40 w-full overflow-hidden"
+        className="relative h-56 w-full overflow-hidden"
         style={{ background: gradient }}
       >
         {hasImage ? (
