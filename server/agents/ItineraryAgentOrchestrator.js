@@ -12,6 +12,7 @@ const PracticalInfoAgent = require('./PracticalInfoAgent');
 const WeatherAgent = require('./WeatherAgent');
 const EventsAgent = require('./EventsAgent');
 const BudgetOptimizer = require('./BudgetOptimizer');
+const WikipediaImageService = require('../services/wikipediaImageService');
 
 class ItineraryAgentOrchestrator {
   constructor(routeData, preferences, db, progressCallback) {
@@ -22,6 +23,7 @@ class ItineraryAgentOrchestrator {
     this.results = {};
     this.startTime = Date.now();
     this.itineraryId = null;
+    this.imageService = new WikipediaImageService(db);
   }
 
   /**
@@ -788,6 +790,22 @@ class ItineraryAgentOrchestrator {
         console.warn('⚠️ Budget calculation failed:', error.message);
         progress.budget = 'failed';
         await this.updateProcessingStatus('processing', progress);
+      }
+
+      // PHASE 5: Enrich with Wikipedia images (non-blocking)
+      try {
+        console.log('🖼️  Enriching itinerary with images...');
+        await this.imageService.enrichEntitiesWithImages(this.results);
+
+        // Save enriched data back to database
+        await this.saveActivities();
+        await this.saveRestaurants();
+        await this.saveAccommodations();
+        await this.saveScenicStops();
+
+        console.log('✓ Image enrichment complete');
+      } catch (error) {
+        console.warn('⚠️ Image enrichment failed (non-critical):', error.message);
       }
 
       // Determine final status
