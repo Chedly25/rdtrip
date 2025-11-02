@@ -14,8 +14,9 @@
 const GooglePlacesService = require('../../services/googlePlacesService');
 
 class PlacesValidationAgent {
-  constructor(googleApiKey, db) {
-    this.placesService = new GooglePlacesService(googleApiKey, db);
+  constructor(placesService, db) {
+    // Accept GooglePlacesService instance directly (already initialized by ValidationOrchestrator)
+    this.placesService = placesService;
     this.db = db;
     this.validationStats = {
       attempted: 0,
