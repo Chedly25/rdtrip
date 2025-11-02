@@ -8,7 +8,7 @@ interface HotelCardProps {
   theme: ThemeConfig;
 }
 
-export function HotelCard({ hotel, theme }: HotelCardProps) {
+export function HotelCard({ hotel }: HotelCardProps) {
   const hasImage = hotel.imageUrl;
   const gradient = getEntityGradient('accommodation', hotel.name);
 

@@ -8,20 +8,7 @@ interface RestaurantCardProps {
   theme: ThemeConfig;
 }
 
-export function RestaurantCard({ restaurant, theme }: RestaurantCardProps) {
-  const getMealIcon = (mealType: string) => {
-    switch (mealType?.toLowerCase()) {
-      case 'breakfast':
-        return '🥐';
-      case 'lunch':
-        return '🍽️';
-      case 'dinner':
-        return '🍷';
-      default:
-        return '🍴';
-    }
-  };
-
+export function RestaurantCard({ restaurant }: RestaurantCardProps) {
   const hasImage = restaurant.imageUrl;
   const gradient = getEntityGradient('restaurant', restaurant.name);
 
