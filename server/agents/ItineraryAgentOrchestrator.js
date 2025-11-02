@@ -620,15 +620,15 @@ class ItineraryAgentOrchestrator {
       // Query with error log update
       query = `
         UPDATE itineraries
-        SET processing_status = $1,
-            progress = $2,
+        SET processing_status = $1::text,
+            progress = $2::jsonb,
             error_log = COALESCE(error_log, '[]'::jsonb) || $3::jsonb,
             completed_at = CASE
-              WHEN $1 IN ('completed', 'failed', 'partial') THEN CURRENT_TIMESTAMP
+              WHEN $1::text = ANY(ARRAY['completed', 'failed', 'partial']) THEN CURRENT_TIMESTAMP
               ELSE completed_at
             END,
             updated_at = CURRENT_TIMESTAMP
-        WHERE id = $4
+        WHERE id = $4::uuid
       `;
       params = [
         status,
@@ -640,14 +640,14 @@ class ItineraryAgentOrchestrator {
       // Query without error log update
       query = `
         UPDATE itineraries
-        SET processing_status = $1,
-            progress = $2,
+        SET processing_status = $1::text,
+            progress = $2::jsonb,
             completed_at = CASE
-              WHEN $1 IN ('completed', 'failed', 'partial') THEN CURRENT_TIMESTAMP
+              WHEN $1::text = ANY(ARRAY['completed', 'failed', 'partial']) THEN CURRENT_TIMESTAMP
               ELSE completed_at
             END,
             updated_at = CURRENT_TIMESTAMP
-        WHERE id = $3
+        WHERE id = $3::uuid
       `;
       params = [
         status,
