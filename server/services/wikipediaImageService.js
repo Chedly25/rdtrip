@@ -58,22 +58,68 @@ class WikipediaImageService {
       if (landmark) {
         imageUrl = await this.fetchWikipediaImage(landmark);
         if (imageUrl) return imageUrl;
+
+        // Also try landmark + city
+        imageUrl = await this.fetchWikipediaImage(`${landmark} ${city}`);
+        if (imageUrl) return imageUrl;
       }
     }
 
-    // Strategy 4: Try city panorama
+    // Strategy 4: For restaurants, try cuisine type + city
+    if (entity.cuisine) {
+      imageUrl = await this.fetchWikipediaImage(`${entity.cuisine} cuisine`);
+      if (imageUrl) return imageUrl;
+    }
+
+    // Strategy 5: For activities/museums, try category
+    if (entity.category) {
+      imageUrl = await this.fetchWikipediaImage(`${entity.category} ${city}`);
+      if (imageUrl) return imageUrl;
+    }
+
+    // Strategy 6: Try description keywords
+    if (entity.description) {
+      const keywords = this.extractKeywords(entity.description);
+      if (keywords) {
+        imageUrl = await this.fetchWikipediaImage(`${keywords} ${city}`);
+        if (imageUrl) return imageUrl;
+      }
+    }
+
+    // Strategy 7: Try city panorama
     imageUrl = await this.fetchWikipediaImage(`${city} panorama`);
     if (imageUrl) return imageUrl;
 
-    // Strategy 5: Try city view
-    imageUrl = await this.fetchWikipediaImage(`${city} view`);
+    // Strategy 8: Try city tourism/attractions
+    imageUrl = await this.fetchWikipediaImage(`${city} tourism`);
     if (imageUrl) return imageUrl;
 
-    // Strategy 6: Try just city
+    // Strategy 9: Try just city
     imageUrl = await this.fetchWikipediaImage(city);
     if (imageUrl) return imageUrl;
 
     return null; // Will use gradient on frontend
+  }
+
+  /**
+   * Extract key visual keywords from description
+   */
+  extractKeywords(description) {
+    if (!description) return null;
+
+    const visualKeywords = [
+      'cathedral', 'church', 'basilica', 'museum', 'palace', 'castle',
+      'monument', 'fountain', 'square', 'plaza', 'park', 'garden',
+      'theater', 'opera', 'market', 'tower', 'bridge', 'gate'
+    ];
+
+    const lowerDesc = description.toLowerCase();
+    for (const keyword of visualKeywords) {
+      if (lowerDesc.includes(keyword)) {
+        return keyword;
+      }
+    }
+    return null;
   }
 
   /**

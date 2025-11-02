@@ -23,7 +23,7 @@ export function ScenicStopCard({ stop, theme }: ScenicStopCardProps) {
           <img
             src={stop.imageUrl}
             alt={stop.name}
-            className="h-full w-full object-contain"
+            className="h-full w-full object-cover object-center"
             onError={(e) => {
               const target = e.currentTarget;
               target.style.display = 'none';
