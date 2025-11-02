@@ -944,6 +944,7 @@ class ItineraryAgentOrchestrator {
         accommodations: 'pending',
         scenicRoutes: 'pending',
         practicalInfo: 'pending',
+        optimization: 'pending',  // NEW: Phase 3 optimization
         weather: 'pending',
         events: 'pending',
         budget: 'pending'
@@ -980,6 +981,26 @@ class ItineraryAgentOrchestrator {
         console.log('✓ SharedContext initialized');
       }
 
+      // NEW: Initialize Optimization Agents (Phase 3)
+      if (this.useOptimization) {
+        console.log('🎯 Initializing Optimization Agents...');
+
+        const googleApiKey = process.env.GOOGLE_PLACES_API_KEY;
+        this.googlePlacesService = new GooglePlacesService(googleApiKey, this.db);
+
+        this.conflictDetector = new ConflictDetector(
+          this.googlePlacesService,
+          this.sharedContext
+        );
+
+        this.geographicOptimizer = new GeographicOptimizationAgent(
+          this.googlePlacesService,
+          this.sharedContext
+        );
+
+        console.log('✓ Optimization agents initialized');
+      }
+
       // PHASE 2: Core Content Agents (parallel)
       const coreAgentNames = ['activities', 'restaurants', 'accommodations', 'scenicRoutes', 'practicalInfo'];
       const coreAgents = [
@@ -1012,7 +1033,149 @@ class ItineraryAgentOrchestrator {
         })
       );
 
-      // PHASE 3: Premium Agents (parallel, non-critical)
+      // NEW: PHASE 3: Optimization (Conflict Detection + Geographic Optimization + Conflict Resolution)
+      if (this.useOptimization && this.results.activities) {
+        try {
+          console.log('\n🎯 PHASE 3: OPTIMIZATION & CONFLICT RESOLUTION');
+          console.log('═'.repeat(60));
+
+          progress.optimization = 'running';
+          await this.updateProcessingStatus('processing', progress);
+
+          const startTime = Date.now();
+          const activities = this.results.activities;
+          const userBudget = this.preferences?.budget || null;
+
+          let optimizedActivities = [];
+          const optimizationResults = {
+            conflictsDetected: 0,
+            conflictsResolved: 0,
+            geographicOptimizations: 0,
+            timeSaved: 0,
+            details: []
+          };
+
+          // Process each day
+          for (const dayActivities of activities) {
+            console.log(`\n📅 Optimizing Day ${dayActivities.day}: ${dayActivities.city}`);
+
+            let currentDayActivities = { ...dayActivities };
+
+            // STEP 1: DETECT CONFLICTS
+            console.log('\n🔍 Step 1: Conflict Detection');
+            const conflicts = await this.conflictDetector.detectAllConflicts(
+              currentDayActivities,
+              userBudget
+            );
+
+            optimizationResults.conflictsDetected += conflicts.length;
+
+            // STEP 2: GEOGRAPHIC OPTIMIZATION
+            console.log('\n🗺️  Step 2: Geographic Optimization');
+            const geoResult = await this.geographicOptimizer.optimizeRoute(
+              currentDayActivities
+            );
+
+            if (geoResult.optimized) {
+              currentDayActivities.activities = geoResult.activities;
+              optimizationResults.geographicOptimizations++;
+              optimizationResults.timeSaved += geoResult.improvements.timeSaved;
+
+              console.log(`   ✅ Route optimized: ${geoResult.improvements.timeSaved}min saved`);
+            }
+
+            // STEP 3: CONFLICT RESOLUTION
+            if (conflicts.length > 0) {
+              console.log('\n🔧 Step 3: Conflict Resolution');
+
+              // Initialize ConflictResolver with OrchestratorAgent if needed
+              if (!this.conflictResolver && this.useAgenticSystem && this.sharedContext) {
+                const OrchestratorAgent = require('./core/OrchestratorAgent');
+                const orchestrator = new OrchestratorAgent(
+                  this.sharedContext,
+                  this.db,
+                  process.env.GOOGLE_PLACES_API_KEY
+                );
+                this.conflictResolver = new ConflictResolver(orchestrator, this.sharedContext);
+                console.log('   🔧 ConflictResolver initialized');
+              }
+
+              if (this.conflictResolver) {
+                // Build original request context for regeneration
+                const originalRequest = {
+                  dayOfWeek: new Date(dayActivities.date).toLocaleDateString('en-US', { weekday: 'long' }),
+                  dayTheme: 'exploration',
+                  travelStyle: this.routeData.agent || 'best-overall'
+                };
+
+                const resolutionResult = await this.conflictResolver.resolveConflicts(
+                  currentDayActivities,
+                  conflicts,
+                  originalRequest
+                );
+
+                if (resolutionResult.resolved) {
+                  currentDayActivities.activities = resolutionResult.activities;
+                  optimizationResults.conflictsResolved += resolutionResult.resolutions.filter(r => r.success).length;
+                  console.log(`   ✅ ${resolutionResult.resolutions.filter(r => r.success).length} conflicts resolved`);
+                } else {
+                  console.log(`   ⚠️  Some conflicts could not be resolved`);
+                }
+              } else {
+                console.log('   ℹ️  ConflictResolver not available (requires agentic system)');
+              }
+            }
+
+            // Add optimized day to results
+            optimizedActivities.push(currentDayActivities);
+
+            optimizationResults.details.push({
+              day: dayActivities.day,
+              city: dayActivities.city,
+              conflicts: conflicts.length,
+              geographicOptimization: geoResult.optimized,
+              timeSaved: geoResult.optimized ? geoResult.improvements.timeSaved : 0
+            });
+          }
+
+          // Update results with optimized activities
+          this.results.activities = optimizedActivities;
+          await this.saveActivities(); // Re-save with optimizations
+
+          // Summary
+          const duration = Date.now() - startTime;
+          console.log('\n✅ OPTIMIZATION COMPLETE');
+          console.log('═'.repeat(60));
+          console.log(`   Duration: ${duration}ms`);
+          console.log(`   Conflicts detected: ${optimizationResults.conflictsDetected}`);
+          console.log(`   Conflicts resolved: ${optimizationResults.conflictsResolved}`);
+          console.log(`   Routes optimized: ${optimizationResults.geographicOptimizations}`);
+          console.log(`   Total time saved: ${optimizationResults.timeSaved}min`);
+          console.log('═'.repeat(60));
+
+          this.results.optimizationResults = optimizationResults;
+
+          progress.optimization = 'completed';
+          await this.updateProcessingStatus('processing', progress);
+
+        } catch (error) {
+          console.error('❌ Optimization phase failed:', error);
+          console.error('Stack:', error.stack);
+          progress.optimization = 'failed';
+          await this.updateProcessingStatus('processing', progress);
+          // Don't throw - optimization is enhancement, not critical
+        }
+      } else if (!this.useOptimization) {
+        console.log('\n⏭️  Skipping optimization (USE_OPTIMIZATION=false)');
+        progress.optimization = 'skipped';
+        await this.updateProcessingStatus('processing', progress);
+      } else if (!this.results.activities) {
+        console.log('\n⏭️  Skipping optimization (no activities generated)');
+        progress.optimization = 'skipped';
+        await this.updateProcessingStatus('processing', progress);
+      }
+
+      // PHASE 4: Premium Agents (parallel, non-critical)
       const premiumAgents = [
         { name: 'weather', fn: () => this.runWeatherAgent() },
         { name: 'events', fn: () => this.runEventsAgent() }
