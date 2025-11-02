@@ -14,12 +14,15 @@ export function ActivityCard({ activity }: ActivityCardProps) {
   return (
     <div className="rounded-lg border border-gray-200 bg-white overflow-hidden transition-shadow hover:shadow-md">
       {/* Image or Gradient Header */}
-      <div className="relative h-32 w-full overflow-hidden">
+      <div
+        className="relative h-32 w-full overflow-hidden"
+        style={{ background: gradient }}
+      >
         {hasImage ? (
           <img
             src={activity.imageUrl}
             alt={activity.name}
-            className="h-full w-full object-cover"
+            className="h-full w-full object-contain"
             onError={(e) => {
               // Fallback to gradient if image fails to load
               const target = e.currentTarget;
@@ -30,15 +33,11 @@ export function ActivityCard({ activity }: ActivityCardProps) {
             }}
           />
         ) : null}
-        <div
-          className="absolute inset-0 flex items-center justify-center"
-          style={{
-            background: gradient,
-            display: hasImage ? 'none' : 'flex',
-          }}
-        >
-          <MapPin className="h-12 w-12 text-white opacity-40" />
-        </div>
+        {!hasImage && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <MapPin className="h-12 w-12 text-white opacity-40" />
+          </div>
+        )}
       </div>
 
       {/* Content */}

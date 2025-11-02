@@ -15,12 +15,15 @@ export function HotelCard({ hotel }: HotelCardProps) {
   return (
     <div className="rounded-lg border border-gray-200 bg-white overflow-hidden transition-shadow hover:shadow-md">
       {/* Image or Gradient Header */}
-      <div className="relative h-32 w-full overflow-hidden">
+      <div
+        className="relative h-32 w-full overflow-hidden"
+        style={{ background: gradient }}
+      >
         {hasImage ? (
           <img
             src={hotel.imageUrl}
             alt={hotel.name}
-            className="h-full w-full object-cover"
+            className="h-full w-full object-contain"
             onError={(e) => {
               const target = e.currentTarget;
               target.style.display = 'none';
@@ -30,15 +33,11 @@ export function HotelCard({ hotel }: HotelCardProps) {
             }}
           />
         ) : null}
-        <div
-          className="absolute inset-0 flex items-center justify-center"
-          style={{
-            background: gradient,
-            display: hasImage ? 'none' : 'flex',
-          }}
-        >
-          <Hotel className="h-12 w-12 text-white opacity-40" />
-        </div>
+        {!hasImage && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <Hotel className="h-12 w-12 text-white opacity-40" />
+          </div>
+        )}
       </div>
 
       {/* Content */}

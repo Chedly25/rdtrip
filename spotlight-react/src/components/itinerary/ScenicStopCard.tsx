@@ -15,12 +15,15 @@ export function ScenicStopCard({ stop, theme }: ScenicStopCardProps) {
   return (
     <div className="rounded-lg border-l-4 overflow-hidden" style={{ borderLeftColor: theme.secondary }}>
       {/* Image or Gradient Header */}
-      <div className="relative h-24 w-full overflow-hidden">
+      <div
+        className="relative h-24 w-full overflow-hidden"
+        style={{ background: gradient }}
+      >
         {hasImage ? (
           <img
             src={stop.imageUrl}
             alt={stop.name}
-            className="h-full w-full object-cover"
+            className="h-full w-full object-contain"
             onError={(e) => {
               const target = e.currentTarget;
               target.style.display = 'none';
@@ -30,15 +33,11 @@ export function ScenicStopCard({ stop, theme }: ScenicStopCardProps) {
             }}
           />
         ) : null}
-        <div
-          className="absolute inset-0 flex items-center justify-center"
-          style={{
-            background: gradient,
-            display: hasImage ? 'none' : 'flex',
-          }}
-        >
-          <Mountain className="h-10 w-10 text-white opacity-40" />
-        </div>
+        {!hasImage && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <Mountain className="h-10 w-10 text-white opacity-40" />
+          </div>
+        )}
       </div>
 
       {/* Content */}
