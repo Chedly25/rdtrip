@@ -1660,18 +1660,44 @@ function createBestOverallRoute(agentResults, requestedStops) {
 
       // Extract origin and destination from first result that has them
       if (!origin && parsed.origin) {
-        origin = parsed.origin;
-        destination = parsed.destination;
+        // Normalize origin and destination to handle both formats
+        origin = {
+          ...parsed.origin,
+          name: parsed.origin.name || parsed.origin.city,
+          latitude: parsed.origin.latitude || parsed.origin.coordinates?.lat,
+          longitude: parsed.origin.longitude || parsed.origin.coordinates?.lng
+        };
+        destination = {
+          ...parsed.destination,
+          name: parsed.destination.name || parsed.destination.city,
+          latitude: parsed.destination.latitude || parsed.destination.coordinates?.lat,
+          longitude: parsed.destination.longitude || parsed.destination.coordinates?.lng
+        };
       }
 
       // Pool selected waypoints
       if (parsed.waypoints && Array.isArray(parsed.waypoints)) {
         parsed.waypoints.forEach(city => {
-          const cityKey = city.name.toLowerCase().trim();
+          // Handle both old format (name) and new RouteDiscoveryAgentV2 format (city)
+          const cityName = city.name || city.city;
+          if (!cityName) return; // Skip if no city name
+
+          const cityKey = cityName.toLowerCase().trim();
+
+          // Normalize city data to common format
+          const normalizedCity = {
+            ...city,
+            name: cityName,
+            // Handle both formats for coordinates
+            latitude: city.latitude || city.coordinates?.lat,
+            longitude: city.longitude || city.coordinates?.lng,
+            country: city.country,
+            verified: city.verified || false
+          };
 
           if (!cityPool.has(cityKey)) {
             cityPool.set(cityKey, {
-              ...city,
+              ...normalizedCity,
               themes: [agent],
               themeCount: 1
             });
@@ -1694,6 +1720,12 @@ function createBestOverallRoute(agentResults, requestedStops) {
             if (city.currentEvents && city.currentEvents !== 'None') {
               existing.currentEvents = city.currentEvents;
             }
+
+            // Update coordinates if new data has them
+            if (!existing.latitude && normalizedCity.latitude) {
+              existing.latitude = normalizedCity.latitude;
+              existing.longitude = normalizedCity.longitude;
+            }
           }
         });
       }
@@ -1701,11 +1733,25 @@ function createBestOverallRoute(agentResults, requestedStops) {
       // Pool alternatives
       if (parsed.alternatives && Array.isArray(parsed.alternatives)) {
         parsed.alternatives.forEach(city => {
-          const cityKey = city.name.toLowerCase().trim();
+          // Handle both old format (name) and new RouteDiscoveryAgentV2 format (city)
+          const cityName = city.name || city.city;
+          if (!cityName) return; // Skip if no city name
+
+          const cityKey = cityName.toLowerCase().trim();
+
+          // Normalize city data to common format
+          const normalizedCity = {
+            ...city,
+            name: cityName,
+            latitude: city.latitude || city.coordinates?.lat,
+            longitude: city.longitude || city.coordinates?.lng,
+            country: city.country,
+            verified: city.verified || false
+          };
 
           if (!cityPool.has(cityKey)) {
             cityPool.set(cityKey, {
-              ...city,
+              ...normalizedCity,
               themes: [agent],
               themeCount: 1
             });
@@ -1715,6 +1761,12 @@ function createBestOverallRoute(agentResults, requestedStops) {
             if (!existing.themes.includes(agent)) {
               existing.themes.push(agent);
               existing.themeCount = existing.themes.length;
+            }
+
+            // Update coordinates if new data has them
+            if (!existing.latitude && normalizedCity.latitude) {
+              existing.latitude = normalizedCity.latitude;
+              existing.longitude = normalizedCity.longitude;
             }
           }
         });
@@ -1726,6 +1778,22 @@ function createBestOverallRoute(agentResults, requestedStops) {
 
   const pooledCities = Array.from(cityPool.values());
   console.log(`Pooled ${pooledCities.length} unique cities from all agents`);
+
+  if (pooledCities.length > 0) {
+    console.log(`Sample city structure:`, {
+      name: pooledCities[0].name,
+      hasLatitude: !!pooledCities[0].latitude,
+      hasLongitude: !!pooledCities[0].longitude,
+      themes: pooledCities[0].themes
+    });
+  }
+
+  if (origin) {
+    console.log(`Origin/Destination:`, {
+      origin: { name: origin.name, hasLatLng: !!(origin.latitude && origin.longitude) },
+      destination: { name: destination.name, hasLatLng: !!(destination.latitude && destination.longitude) }
+    });
+  }
 
   // Step 2: If we have origin/destination, run geographic optimization
   if (origin && destination && origin.latitude && destination.latitude) {
