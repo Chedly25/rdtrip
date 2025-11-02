@@ -741,6 +741,7 @@ class ItineraryAgentOrchestrator {
 
           } catch (error) {
             console.error(`❌ ${agent.name} failed:`, error.message);
+            console.error(`Stack:`, error.stack);
             progress[agent.name] = 'failed';
             await this.updateProcessingStatus('processing', progress, error);
             // Don't throw - allow other agents to continue
