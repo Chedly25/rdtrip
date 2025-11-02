@@ -16,23 +16,37 @@ class CityActivityAgent {
   async generate() {
     console.log('🗺️  City Activity Agent: Generating activities...');
 
-    const allActivities = [];
-    const totalWindows = this.dayStructure.days.reduce(
-      (sum, day) => sum + (day.activityWindows?.length || 0),
-      0
-    );
-
-    let completed = 0;
+    // Group windows by city for batch processing
+    const citiesMap = new Map();
 
     for (const day of this.dayStructure.days) {
       const city = this.extractMainCity(day.location);
+      if (!citiesMap.has(city)) {
+        citiesMap.set(city, []);
+      }
 
       for (const window of day.activityWindows || []) {
-        this.onProgress({ current: completed + 1, total: totalWindows });
+        citiesMap.get(city).push({ day, window });
+      }
+    }
 
-        const activities = await this.generateActivitiesForWindow(city, day, window);
+    const allActivities = [];
+    const cities = Array.from(citiesMap.entries());
 
-        allActivities.push({
+    // Process each city in parallel (max 4 concurrent)
+    const promises = cities.map(async ([city, dayWindows]) => {
+      this.onProgress({ current: 1, total: cities.length });
+
+      try {
+        const prompt = this.buildBatchPrompt(city, dayWindows);
+        const response = await this.callPerplexity(prompt);
+        const parsed = this.parseBatchResponse(response, city, dayWindows);
+
+        return parsed;
+      } catch (error) {
+        console.error(`Failed to generate activities for ${city}:`, error.message);
+        // Return empty activities for failed city
+        return dayWindows.map(({ day, window }) => ({
           day: day.day,
           date: day.date,
           city,
@@ -41,14 +55,15 @@ class CityActivityAgent {
             end: window.end,
             purpose: window.purpose
           },
-          activities
-        });
-
-        completed++;
+          activities: []
+        }));
       }
-    }
+    });
 
-    console.log(`✓ City Activities: Generated ${allActivities.length} activity sets`);
+    const results = await Promise.all(promises);
+    results.forEach(cityActivities => allActivities.push(...cityActivities));
+
+    console.log(`✓ City Activities: Generated ${allActivities.length} activity sets for ${cities.length} cities`);
     return allActivities;
   }
 
@@ -261,6 +276,116 @@ IMPORTANT: Return ONLY the JSON object, no other text.`;
       'best-overall': 'Balanced mix of top attractions and local favorites'
     };
     return descriptions[agent] || descriptions['best-overall'];
+  }
+
+  // New batch processing methods for parallel execution
+  buildBatchPrompt(city, dayWindows) {
+    const { agent } = this.routeData;
+
+    const windowsDescription = dayWindows.map(({ day, window }, idx) =>
+      `Window ${idx + 1}: Day ${day.day} (${day.date}), ${window.start}-${window.end}, ${window.purpose}, Energy: ${window.energyLevel || 'moderate'}`
+    ).join('\n');
+
+    return `You are a ${agent} travel expert creating activities for ${city}.
+
+TRIP OVERVIEW:
+${windowsDescription}
+
+AGENT FOCUS: ${this.getAgentDescription(agent)}
+
+TASK: Create 3-4 specific activities for EACH time window above. Generate activities for ALL ${dayWindows.length} windows in a single response.
+
+REQUIREMENTS:
+1. Use REAL place names (e.g., "Musée Granet" not "art museum")
+2. Include exact timing per window
+3. Match ${agent} personality
+4. Vary energy levels
+5. Include practical info
+
+OUTPUT FORMAT (JSON array with one entry per window):
+{
+  "windows": [
+    {
+      "windowIndex": 0,
+      "activities": [
+        {
+          "time": {"start": "14:00", "end": "16:00"},
+          "name": "Musée Granet",
+          "type": "cultural",
+          "description": "Explore modern art collection...",
+          "address": "Place Saint-Jean de Malte",
+          "admission": "€8",
+          "bookingNeeded": false,
+          "energyLevel": "relaxed",
+          "whyThisAgent": "Perfect for ${agent} because...",
+          "practicalTips": "Arrive at 2pm to avoid crowds"
+        }
+      ]
+    }
+  ]
+}
+
+Return ONLY valid JSON, no markdown.`;
+  }
+
+  parseBatchResponse(responseText, city, dayWindows) {
+    try {
+      let jsonText = responseText.trim();
+
+      // Remove markdown
+      if (jsonText.includes('```json')) {
+        const match = jsonText.match(/```json\s*([\s\S]*?)\s*```/);
+        if (match) jsonText = match[1];
+      } else if (jsonText.includes('```')) {
+        const match = jsonText.match(/```\s*([\s\S]*?)\s*```/);
+        if (match) jsonText = match[1];
+      }
+
+      // Extract JSON
+      const jsonStart = jsonText.indexOf('{');
+      const jsonEnd = jsonText.lastIndexOf('}');
+      if (jsonStart !== -1 && jsonEnd !== -1) {
+        jsonText = jsonText.substring(jsonStart, jsonEnd + 1);
+      }
+
+      const parsed = JSON.parse(jsonText);
+
+      // Map windows back to day structure
+      return dayWindows.map(({ day, window }, idx) => {
+        const windowData = parsed.windows?.[idx] || { activities: [] };
+        const activities = (windowData.activities || []).map(act => ({
+          ...act,
+          urls: generateActivityUrls(act, city)
+        }));
+
+        return {
+          day: day.day,
+          date: day.date,
+          city,
+          window: {
+            start: window.start,
+            end: window.end,
+            purpose: window.purpose
+          },
+          activities
+        };
+      });
+
+    } catch (error) {
+      console.error(`Failed to parse batch response for ${city}:`, error.message);
+      // Return empty activities
+      return dayWindows.map(({ day, window }) => ({
+        day: day.day,
+        date: day.date,
+        city,
+        window: {
+          start: window.start,
+          end: window.end,
+          purpose: window.purpose
+        },
+        activities: []
+      }));
+    }
   }
 }
 
