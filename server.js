@@ -7,6 +7,7 @@ const { Pool } = require('pg');
 const ZTLService = require('./services/ztl-service');
 const cheerio = require('cheerio');
 const ItineraryAgentOrchestrator = require('./server/agents/ItineraryAgentOrchestrator');
+const RouteDiscoveryAgentV2 = require('./server/agents/RouteDiscoveryAgentV2');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -1266,7 +1267,11 @@ app.post('/api/generate-route', async (req, res) => {
     });
 
     // Start processing in background (don't await)
-    processRouteJob(jobId, destination, stops, selectedAgents, budget).catch(error => {
+    // Use agentic route discovery if flag is enabled
+    const useAgenticRoute = process.env.USE_AGENTIC_ROUTES === 'true';
+    const processFunction = useAgenticRoute ? processRouteJobAgentic : processRouteJob;
+
+    processFunction(jobId, destination, stops, selectedAgents, budget).catch(error => {
       console.error(`Job ${jobId} failed:`, error);
       const failedJob = routeJobs.get(jobId);
       if (failedJob) {
@@ -1314,7 +1319,165 @@ app.get('/api/route-status/:jobId', (req, res) => {
   });
 });
 
-// Background job processor
+// AGENTIC Background Job Processor - Uses RouteDiscoveryAgentV2
+async function processRouteJobAgentic(jobId, destination, stops, selectedAgents, budget) {
+  const job = routeJobs.get(jobId);
+  if (!job) return;
+
+  console.log(`\n🎯 === Starting AGENTIC route job ${jobId} ===`);
+  console.log(`Destination: ${destination}`);
+  console.log(`Stops: ${stops}`);
+  console.log(`Agents: ${selectedAgents.join(', ')}`);
+  console.log(`Budget: ${budget}`);
+
+  try {
+    // Initialize RouteDiscoveryAgentV2
+    const googleApiKey = process.env.GOOGLE_PLACES_API_KEY;
+    const routeAgent = new RouteDiscoveryAgentV2(pool, googleApiKey);
+
+    const agentResults = [];
+
+    // Process each agent style
+    for (let i = 0; i < selectedAgents.length; i++) {
+      const agentType = selectedAgents[i];
+      const agentConfig = agents[agentType];
+
+      try {
+        // Update progress
+        const agentStartTime = Date.now();
+        job.progress.currentAgent = agentConfig.name;
+        job.progress.currentAgentStartTime = agentStartTime;
+        job.progress.percentComplete = Math.round((i / selectedAgents.length) * 100);
+
+        const elapsed = agentStartTime - job.progress.startTime;
+        const avgTimePerAgent = i > 0 ? elapsed / i : 15000; // 15s estimate (faster than old method)
+        job.progress.estimatedTimeRemaining = Math.round(avgTimePerAgent * (selectedAgents.length - i));
+
+        job.updatedAt = new Date();
+
+        console.log(`\n--- Processing ${agentConfig.name} with agentic discovery (${i + 1}/${selectedAgents.length}) ---`);
+
+        // Use agentic discovery with validation
+        const result = await routeAgent.discoverRoute(
+          destination,
+          stops,
+          agentType,
+          budget
+        );
+
+        // Format result to match expected structure
+        const formattedResult = {
+          origin: result.origin,
+          destination: result.destination,
+          waypoints: result.waypoints,
+          alternatives: result.alternatives
+        };
+
+        agentResults.push({
+          agent: agentType,
+          agentConfig: {
+            name: agentConfig.name,
+            color: agentConfig.color,
+            icon: agentConfig.icon
+          },
+          recommendations: JSON.stringify(formattedResult),
+          metrics: {
+            validated: result.metadata.validated,
+            validationRate: result.metadata.validatedCount / result.metadata.totalCandidates,
+            method: 'agentic-v2'
+          }
+        });
+
+        // Update progress
+        job.progress.completed = i + 1;
+        job.progress.percentComplete = Math.round(((i + 1) / selectedAgents.length) * 100);
+
+        const completedTime = Date.now();
+        const totalElapsed = completedTime - job.progress.startTime;
+        const actualAvgTimePerAgent = totalElapsed / (i + 1);
+        job.progress.estimatedTimeRemaining = Math.round(actualAvgTimePerAgent * (selectedAgents.length - (i + 1)));
+
+        job.agentResults = agentResults;
+        job.updatedAt = new Date();
+
+        console.log(`✓ ${agentConfig.name} completed with ${result.waypoints.length} validated cities`);
+        console.log(`   Progress: ${job.progress.percentComplete}% | Est. remaining: ${Math.round(job.progress.estimatedTimeRemaining / 1000)}s`);
+
+      } catch (error) {
+        console.error(`✗ ${agentConfig.name} failed:`, error.message);
+
+        // Add error result but continue
+        agentResults.push({
+          agent: agentType,
+          agentConfig: {
+            name: agentConfig.name,
+            color: agentConfig.color,
+            icon: agentConfig.icon
+          },
+          recommendations: JSON.stringify({
+            origin: { city: destination, country: 'Unknown' },
+            destination: { city: destination, country: 'Unknown' },
+            waypoints: [],
+            error: `Failed to generate route`
+          }),
+          metrics: { error: true }
+        });
+
+        // Update progress even on error
+        job.progress.completed = i + 1;
+        job.progress.percentComplete = Math.round(((i + 1) / selectedAgents.length) * 100);
+
+        const completedTime = Date.now();
+        const totalElapsed = completedTime - job.progress.startTime;
+        const avgTimePerAgent = totalElapsed / (i + 1);
+        job.progress.estimatedTimeRemaining = Math.round(avgTimePerAgent * (selectedAgents.length - (i + 1)));
+
+        job.agentResults = agentResults;
+        job.updatedAt = new Date();
+      }
+    }
+
+    // Create "Best Overall" if multiple agents (use same logic as old version)
+    if (selectedAgents.length > 1 && !selectedAgents.includes('best-overall')) {
+      try {
+        console.log('\n--- Creating Best Overall merged route ---');
+        const mergedResult = createBestOverallRoute(agentResults, stops);
+
+        agentResults.unshift({
+          agent: 'best-overall',
+          agentConfig: {
+            name: agents['best-overall'].name,
+            color: agents['best-overall'].color,
+            icon: agents['best-overall'].icon
+          },
+          recommendations: JSON.stringify(mergedResult),
+          metrics: { method: 'merged-agentic' }
+        });
+
+        job.agentResults = agentResults;
+        console.log('✓ Best Overall route created from validated cities');
+      } catch (error) {
+        console.error('✗ Failed to create Best Overall:', error.message);
+      }
+    }
+
+    // Mark job as completed
+    job.status = 'completed';
+    job.progress.currentAgent = null;
+    job.updatedAt = new Date();
+
+    console.log(`\n🎉 === Agentic route job ${jobId} completed ===\n`);
+
+  } catch (error) {
+    console.error(`❌ Agentic route job ${jobId} failed:`, error);
+    job.status = 'failed';
+    job.error = error.message;
+    job.updatedAt = new Date();
+    throw error;
+  }
+}
+
+// Background job processor (OLD METHOD - KEPT FOR COMPATIBILITY)
 async function processRouteJob(jobId, destination, stops, selectedAgents, budget) {
   const job = routeJobs.get(jobId);
   if (!job) return;
