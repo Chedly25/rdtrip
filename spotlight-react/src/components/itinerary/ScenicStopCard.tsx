@@ -15,30 +15,38 @@ export function ScenicStopCard({ stop, theme }: ScenicStopCardProps) {
   return (
     <div className="rounded-lg border-l-4 overflow-hidden" style={{ borderLeftColor: theme.secondary }}>
       {/* Image or Gradient Header */}
-      <div
-        className="relative h-56 w-full overflow-hidden"
-        style={{ background: gradient }}
-      >
-        {hasImage ? (
+      {hasImage ? (
+        <div className="relative w-full" style={{ background: gradient }}>
           <img
             src={stop.imageUrl}
             alt={stop.name}
-            className="h-full w-full object-cover object-center"
+            className="w-full h-auto max-h-80 object-cover"
+            style={{
+              minHeight: '180px',
+              maxHeight: '320px'
+            }}
             onError={(e) => {
-              const target = e.currentTarget;
-              target.style.display = 'none';
-              if (target.nextElementSibling) {
-                (target.nextElementSibling as HTMLElement).style.display = 'flex';
+              const target = e.currentTarget.parentElement;
+              if (target) {
+                target.innerHTML = `
+                  <div class="h-56 flex items-center justify-center" style="background: ${gradient}">
+                    <svg class="h-10 w-10 text-white opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
+                    </svg>
+                  </div>
+                `;
               }
             }}
           />
-        ) : null}
-        {!hasImage && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Mountain className="h-10 w-10 text-white opacity-40" />
-          </div>
-        )}
-      </div>
+        </div>
+      ) : (
+        <div
+          className="relative h-56 w-full flex items-center justify-center"
+          style={{ background: gradient }}
+        >
+          <Mountain className="h-10 w-10 text-white opacity-40" />
+        </div>
+      )}
 
       {/* Content */}
       <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-3">

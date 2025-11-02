@@ -14,31 +14,40 @@ export function ActivityCard({ activity }: ActivityCardProps) {
   return (
     <div className="rounded-lg border border-gray-200 bg-white overflow-hidden transition-shadow hover:shadow-md">
       {/* Image or Gradient Header */}
-      <div
-        className="relative h-64 w-full overflow-hidden"
-        style={{ background: gradient }}
-      >
-        {hasImage ? (
+      {hasImage ? (
+        <div className="relative w-full" style={{ background: gradient }}>
           <img
             src={activity.imageUrl}
             alt={activity.name}
-            className="h-full w-full object-cover object-center"
+            className="w-full h-auto max-h-96 object-cover"
+            style={{
+              minHeight: '200px',
+              maxHeight: '384px'
+            }}
             onError={(e) => {
               // Fallback to gradient if image fails to load
-              const target = e.currentTarget;
-              target.style.display = 'none';
-              if (target.nextElementSibling) {
-                (target.nextElementSibling as HTMLElement).style.display = 'flex';
+              const target = e.currentTarget.parentElement;
+              if (target) {
+                target.innerHTML = `
+                  <div class="h-64 flex items-center justify-center" style="background: ${gradient}">
+                    <svg class="h-12 w-12 text-white opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                  </div>
+                `;
               }
             }}
           />
-        ) : null}
-        {!hasImage && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <MapPin className="h-12 w-12 text-white opacity-40" />
-          </div>
-        )}
-      </div>
+        </div>
+      ) : (
+        <div
+          className="relative h-64 w-full flex items-center justify-center"
+          style={{ background: gradient }}
+        >
+          <MapPin className="h-12 w-12 text-white opacity-40" />
+        </div>
+      )}
 
       {/* Content */}
       <div className="p-4">
