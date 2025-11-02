@@ -19,6 +19,8 @@ export interface Waypoint extends City {
   themesDisplay?: string
   currentEvents?: string
   country?: string
+  // New format from RouteDiscoveryAgentV2 uses 'city' instead of 'name'
+  city?: string
 }
 
 export interface Route {
