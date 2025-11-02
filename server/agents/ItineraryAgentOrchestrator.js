@@ -399,11 +399,27 @@ class ItineraryAgentOrchestrator {
     try {
       await this.emitProgress('scenic_stops', 'started');
 
-      const agent = new ScenicRouteAgent(
-        this.routeData,
-        this.results.dayStructure,
-        (progress) => this.emitProgress('scenic_stops', 'progress', null, progress)
-      );
+      // Use V2 with agentic coordination if enabled
+      let agent;
+      if (this.useAgenticSystem && this.sharedContext) {
+        console.log('🧠 Using ScenicRouteAgentV2 (agentic coordination)');
+        const ScenicRouteAgentV2 = require('./ScenicRouteAgentV2');
+        agent = new ScenicRouteAgentV2(
+          this.routeData,
+          this.results.dayStructure,
+          (progress) => this.emitProgress('scenic_stops', 'progress', null, progress),
+          this.db,
+          this.itineraryId,
+          this.sharedContext
+        );
+      } else {
+        console.log('🛣️  Using ScenicRouteAgent (standard)');
+        agent = new ScenicRouteAgent(
+          this.routeData,
+          this.results.dayStructure,
+          (progress) => this.emitProgress('scenic_stops', 'progress', null, progress)
+        );
+      }
 
       const result = await agent.generate();
 
