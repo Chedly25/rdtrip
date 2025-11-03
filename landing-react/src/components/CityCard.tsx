@@ -53,6 +53,21 @@ export function CityCard({ city, index, themeColor, showThemeBadges = false, the
   const cityActivities: (string | Activity)[] = city.activities || (city as any).highlights || []
   const cityDescription: string = city.description || (city as any).why || ''
 
+  // DEBUG: Log city data to diagnose highlights issue
+  console.log(`🔍 CityCard DEBUG - ${cityName}:`, {
+    hasActivities: !!city.activities,
+    activitiesType: Array.isArray(city.activities) ? 'array' : typeof city.activities,
+    activitiesLength: Array.isArray(city.activities) ? city.activities.length : 0,
+    hasHighlights: !!(city as any).highlights,
+    highlightsType: Array.isArray((city as any).highlights) ? 'array' : typeof (city as any).highlights,
+    highlightsLength: Array.isArray((city as any).highlights) ? (city as any).highlights.length : 0,
+    hasDescription: !!city.description,
+    hasWhy: !!(city as any).why,
+    computedActivitiesLength: cityActivities.length,
+    computedDescription: cityDescription.substring(0, 50) + '...',
+    rawCity: city
+  })
+
   useEffect(() => {
     // If we don't have an image, fetch from Wikipedia
     if (!city.image && !city.imageUrl && cityName && cityName !== 'Unknown') {

@@ -654,12 +654,38 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
             const theme = agentThemes[agentResult.agent] || agentThemes.adventure
 
             // Transform RouteDiscoveryAgentV2 format to CityCard format
-            const transformCity = (city: any) => ({
-              ...city,
-              name: city.name || city.city,  // Normalize name
-              description: city.description || city.why,  // Map 'why' to 'description'
-              activities: city.activities || city.highlights || [],  // Map 'highlights' to 'activities'
-            })
+            const transformCity = (city: any) => {
+              const transformed = {
+                ...city,
+                name: city.name || city.city,  // Normalize name
+                description: city.description || city.why,  // Map 'why' to 'description'
+                activities: city.activities || city.highlights || [],  // Map 'highlights' to 'activities'
+              }
+
+              // DEBUG: Log transformation
+              console.log(`🔄 RouteResults transformCity - ${transformed.name}:`, {
+                beforeTransform: {
+                  hasName: !!city.name,
+                  hasCity: !!city.city,
+                  hasDescription: !!city.description,
+                  hasWhy: !!city.why,
+                  hasActivities: !!city.activities,
+                  hasHighlights: !!city.highlights,
+                  highlightsLength: Array.isArray(city.highlights) ? city.highlights.length : 0,
+                  activitiesLength: Array.isArray(city.activities) ? city.activities.length : 0
+                },
+                afterTransform: {
+                  name: transformed.name,
+                  hasDescription: !!transformed.description,
+                  descriptionPreview: transformed.description?.substring(0, 50),
+                  hasActivities: !!transformed.activities,
+                  activitiesLength: Array.isArray(transformed.activities) ? transformed.activities.length : 0,
+                  activitiesPreview: Array.isArray(transformed.activities) ? transformed.activities.slice(0, 2) : []
+                }
+              })
+
+              return transformed
+            }
 
             // Use modified waypoints if available, otherwise use original (and transform)
             const rawCities = modifiedWaypoints[index] || parsedRecs.waypoints || []
