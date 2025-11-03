@@ -9,6 +9,12 @@ export async function getWikipediaImage(
   locationName: string,
   width: number = 800
 ): Promise<string | null> {
+  // Validate input
+  if (!locationName || typeof locationName !== 'string') {
+    console.warn('Wikipedia image search: invalid location name', locationName)
+    return null
+  }
+
   // Check cache first
   const cacheKey = `${locationName}_${width}`
   if (imageCache.has(cacheKey)) {

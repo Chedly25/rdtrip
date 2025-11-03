@@ -11,6 +11,7 @@ interface Activity {
 
 interface City {
   name: string
+  city?: string  // New format from RouteDiscoveryAgentV2
   activities?: (string | Activity)[]
   image?: string
   imageUrl?: string
@@ -45,12 +46,15 @@ export function CityCard({ city, index, themeColor, showThemeBadges = false, the
   const [loading, setLoading] = useState(!city.image && !city.imageUrl)
   const [showFallback, setShowFallback] = useState(false)
 
+  // Handle both old format (name) and new format (city)
+  const cityName = city.name || city.city || 'Unknown'
+
   useEffect(() => {
     // If we don't have an image, fetch from Wikipedia
-    if (!city.image && !city.imageUrl) {
+    if (!city.image && !city.imageUrl && cityName && cityName !== 'Unknown') {
       let mounted = true
 
-      getWikipediaImage(city.name, 800).then((url) => {
+      getWikipediaImage(cityName, 800).then((url) => {
         if (mounted) {
           if (url) {
             setImageUrl(url)
@@ -65,7 +69,7 @@ export function CityCard({ city, index, themeColor, showThemeBadges = false, the
         mounted = false
       }
     }
-  }, [city.name, city.image, city.imageUrl])
+  }, [cityName, city.image, city.imageUrl])
 
   return (
     <motion.div
@@ -89,7 +93,7 @@ export function CityCard({ city, index, themeColor, showThemeBadges = false, the
         ) : imageUrl && !showFallback ? (
           <img
             src={imageUrl}
-            alt={city.name}
+            alt={cityName}
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
             onError={() => setShowFallback(true)}
           />
@@ -111,7 +115,7 @@ export function CityCard({ city, index, themeColor, showThemeBadges = false, the
           className="mb-3 text-2xl font-bold transition-colors"
           style={{ color: themeColor }}
         >
-          {city.name}
+          {cityName}
         </h4>
 
         {/* Theme Badges for Best Overall */}
