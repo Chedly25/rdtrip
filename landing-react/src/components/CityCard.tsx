@@ -49,6 +49,10 @@ export function CityCard({ city, index, themeColor, showThemeBadges = false, the
   // Handle both old format (name) and new format (city)
   const cityName = city.name || city.city || 'Unknown'
 
+  // Handle both activities and highlights fields
+  const cityActivities: (string | Activity)[] = city.activities || (city as any).highlights || []
+  const cityDescription: string = city.description || (city as any).why || ''
+
   useEffect(() => {
     // If we don't have an image, fetch from Wikipedia
     if (!city.image && !city.imageUrl && cityName && cityName !== 'Unknown') {
@@ -133,19 +137,19 @@ export function CityCard({ city, index, themeColor, showThemeBadges = false, the
           </div>
         )}
 
-        {city.description && (
+        {cityDescription && (
           <p className="mb-4 text-sm text-gray-600 line-clamp-2">
-            {city.description}
+            {cityDescription}
           </p>
         )}
 
-        {city.activities && city.activities.length > 0 && (
+        {cityActivities && cityActivities.length > 0 && (
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
               Highlights
             </p>
             <ul className="space-y-2">
-              {city.activities.slice(0, 3).map((activity, actIndex) => {
+              {cityActivities.slice(0, 3).map((activity, actIndex) => {
                 const activityText = typeof activity === 'string'
                   ? activity
                   : (activity as Activity).name || (activity as Activity).activity || 'Activity'
