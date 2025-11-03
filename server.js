@@ -1845,20 +1845,24 @@ function createBestOverallRoute(agentResults, requestedStops) {
       themesDisplay: city.themes.map(t => agents[t]?.name || t).join(', ')
     }));
 
-    // Step 4: Add theme metadata to alternatives
-    const alternativesWithThemes = optimized.alternatives.map(city => ({
-      ...city,
-      themesDisplay: city.themes.map(t => agents[t]?.name || t).join(', ')
-    }));
+    // Step 4: For Best Overall, ALL cities not selected should be alternatives
+    // This gives users maximum flexibility to customize their route
+    const selectedNames = new Set(selectedWithThemes.map(c => c.name.toLowerCase().trim()));
+    const allAlternatives = pooledCities
+      .filter(city => !selectedNames.has(city.name.toLowerCase().trim()))
+      .map(city => ({
+        ...city,
+        themesDisplay: city.themes.map(t => agents[t]?.name || t).join(', ')
+      }));
 
-    console.log(`Selected ${selectedWithThemes.length} cities, ${alternativesWithThemes.length} alternatives`);
+    console.log(`Selected ${selectedWithThemes.length} cities, ${allAlternatives.length} alternatives (ALL non-selected cities)`);
     console.log(`Theme distribution: ${selectedWithThemes.map(c => `${c.name} (${c.themes.length})`).join(', ')}`);
 
     return {
       origin,
       destination,
       waypoints: selectedWithThemes,
-      alternatives: alternativesWithThemes,
+      alternatives: allAlternatives,
       description: `A perfectly balanced route combining the best of ${Array.from(new Set(selectedWithThemes.flatMap(c => c.themes))).map(t => agents[t]?.name || t).join(', ')}. Each city has been selected for its unique mix of experiences and optimal positioning along your route.`
     };
   } else {
