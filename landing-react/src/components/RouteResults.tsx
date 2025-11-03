@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { MapPin, DollarSign, ArrowRight, Map, Save, RefreshCw, Share2, Plus, Sparkles, Undo, RotateCcw } from 'lucide-react'
+import { MapPin, DollarSign, ArrowRight, Map, Save, RefreshCw, Share2, Plus, Sparkles, Undo, RotateCcw, Mountain, Landmark, UtensilsCrossed, Compass, Star, Calendar, TrendingUp, Award, Globe, Info } from 'lucide-react'
 import { CityCard } from './CityCard'
 import { BudgetDisplay } from './BudgetDisplay'
 import { useAuth } from '../contexts/AuthContext'
@@ -684,31 +684,49 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
 
                 {/* Theme Insights */}
                 {agentResult.metrics && Object.keys(agentResult.metrics).length > 0 && (
-                  <div className="rounded-xl bg-white p-8 shadow-lg">
-                    <h3 className="mb-6 text-xl font-bold" style={{ color: theme.color }}>
-                      {theme.icon} Theme Insights
-                    </h3>
-                    <div className="space-y-4">
+                  <div className="rounded-xl bg-white p-6 shadow-lg">
+                    <div className="mb-4 flex items-center gap-2">
+                      <Info className="h-5 w-5" style={{ color: theme.color }} />
+                      <h3 className="text-lg font-bold text-gray-900">
+                        Why This Route?
+                      </h3>
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-2">
                       {Object.entries(agentResult.metrics).map(([key, value]) => {
                         const displayValue = String(value)
                         const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
 
+                        // Get icon based on key name
+                        const getIcon = () => {
+                          const keyLower = key.toLowerCase()
+                          if (keyLower.includes('terrain') || keyLower.includes('activities') || keyLower.includes('difficulty')) return Mountain
+                          if (keyLower.includes('heritage') || keyLower.includes('architecture') || keyLower.includes('historical')) return Landmark
+                          if (keyLower.includes('culinary') || keyLower.includes('dish') || keyLower.includes('dining') || keyLower.includes('budget')) return UtensilsCrossed
+                          if (keyLower.includes('discover') || keyLower.includes('authentic') || keyLower.includes('secret')) return Compass
+                          if (keyLower.includes('highlight')) return Star
+                          if (keyLower.includes('season') || keyLower.includes('time')) return Calendar
+                          if (keyLower.includes('balance') || keyLower.includes('diversity') || keyLower.includes('route')) return TrendingUp
+                          if (keyLower.includes('experience')) return Award
+                          return Globe
+                        }
+                        const IconComponent = getIcon()
+
                         return (
                           <div
                             key={key}
-                            className="rounded-lg border-l-4 bg-gradient-to-r from-gray-50 to-white p-4"
-                            style={{ borderColor: theme.color }}
+                            className="group relative overflow-hidden rounded-lg border p-3 transition-all hover:shadow-md"
+                            style={{ borderColor: theme.color + '30' }}
                           >
-                            <div className="flex items-start gap-3">
-                              <div
-                                className="mt-1 h-2 w-2 flex-shrink-0 rounded-full"
-                                style={{ backgroundColor: theme.color }}
+                            <div className="flex items-start gap-2">
+                              <IconComponent
+                                className="mt-0.5 h-4 w-4 flex-shrink-0"
+                                style={{ color: theme.color }}
                               />
-                              <div className="flex-1">
-                                <p className="mb-1 text-sm font-semibold text-gray-700">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: theme.color }}>
                                   {label}
                                 </p>
-                                <p className="text-base leading-relaxed text-gray-900">
+                                <p className="mt-1 text-sm leading-snug text-gray-700">
                                   {displayValue}
                                 </p>
                               </div>
