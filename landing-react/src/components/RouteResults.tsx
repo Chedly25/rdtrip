@@ -19,6 +19,7 @@ interface Activity {
 
 interface City {
   name: string
+  city?: string  // New format from RouteDiscoveryAgentV2
   activities?: (string | Activity)[]
   image?: string
   imageUrl?: string
@@ -735,9 +736,14 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
                   </h3>
                   <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                     {cities.map((city, cityIndex) => {
+                      // Handle both old format (name) and new format (city)
+                      const cityName = city.name || city.city || 'Unknown'
+
                       // Check if this city was added by user (not in original waypoints)
                       const isUserAdded = modifiedWaypoints[index] && parsedRecs?.waypoints &&
-                        !parsedRecs.waypoints.some((origCity: City) => origCity.name === city.name)
+                        !parsedRecs.waypoints.some((origCity: City) =>
+                          (origCity.name || origCity.city) === cityName
+                        )
 
                       return (
                         <div key={cityIndex} className="relative">
@@ -747,7 +753,7 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
                             themeColor={theme.color}
                             showThemeBadges={agentResult.agent === 'best-overall'}
                             themes={city.themes || []}
-                            onClick={() => handleOpenCityDetails(city.name)}
+                            onClick={() => handleOpenCityDetails(cityName)}
                           />
                           {isUserAdded && (
                             <motion.div
