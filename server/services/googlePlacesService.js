@@ -23,7 +23,12 @@ class GooglePlacesService {
     if (!this.apiKey) {
       console.error('❌ GooglePlacesService: NO API KEY PROVIDED!');
       console.error('   apiKey parameter:', apiKey);
+      console.error('   apiKey type:', typeof apiKey);
       console.error('   process.env.GOOGLE_PLACES_API_KEY:', process.env.GOOGLE_PLACES_API_KEY ? 'SET' : 'NOT SET');
+    } else if (typeof this.apiKey !== 'string') {
+      console.error('❌ GooglePlacesService: API KEY IS NOT A STRING!');
+      console.error('   apiKey type:', typeof this.apiKey);
+      console.error('   apiKey value:', this.apiKey);
     } else {
       console.log(`✓ GooglePlacesService initialized with API key: ${this.apiKey.substring(0, 10)}...`);
     }
@@ -56,7 +61,7 @@ class GooglePlacesService {
         params.radius = 5000; // 5km radius
       }
 
-      const maskedKey = this.apiKey ? this.apiKey.substring(0, 10) + '...' : 'UNDEFINED';
+      const maskedKey = (this.apiKey && typeof this.apiKey === 'string') ? this.apiKey.substring(0, 10) + '...' : `UNDEFINED (type: ${typeof this.apiKey})`;
       console.log(`🌍 Calling Google Places API: ${this.baseUrl}/textsearch/json?query=${encodeURIComponent(query)}&key=${maskedKey}`);
 
       const response = await axios.get(`${this.baseUrl}/textsearch/json`, {
