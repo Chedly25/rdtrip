@@ -24,6 +24,8 @@ interface City {
   image?: string
   imageUrl?: string
   description?: string
+  why?: string  // RouteDiscoveryAgentV2 uses 'why' instead of 'description'
+  highlights?: string[]  // RouteDiscoveryAgentV2 uses 'highlights' instead of 'activities'
   themes?: string[]
   themesDisplay?: string
   coordinates?: [number, number] // [lng, lat]
@@ -650,9 +652,19 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
             if (!parsedRecs) return null
 
             const theme = agentThemes[agentResult.agent] || agentThemes.adventure
-            // Use modified waypoints if available, otherwise use original
-            const cities = modifiedWaypoints[index] || parsedRecs.waypoints || []
-            const alternatives = parsedRecs.alternatives || []
+
+            // Transform RouteDiscoveryAgentV2 format to CityCard format
+            const transformCity = (city: any) => ({
+              ...city,
+              name: city.name || city.city,  // Normalize name
+              description: city.description || city.why,  // Map 'why' to 'description'
+              activities: city.activities || city.highlights || [],  // Map 'highlights' to 'activities'
+            })
+
+            // Use modified waypoints if available, otherwise use original (and transform)
+            const rawCities = modifiedWaypoints[index] || parsedRecs.waypoints || []
+            const cities = rawCities.map(transformCity)
+            const alternatives = (parsedRecs.alternatives || []).map(transformCity)
 
             return (
               <motion.div
