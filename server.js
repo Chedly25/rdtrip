@@ -1225,10 +1225,14 @@ app.get('/api/routes/:id/stats', authenticate, async (req, res) => {
 // Start route generation job (returns immediately with job ID)
 app.post('/api/generate-route', async (req, res) => {
   try {
-    const { destination, stops = 3, agents: selectedAgents = ['adventure', 'culture', 'food'], budget = 'budget' } = req.body;
+    const { origin, destination, stops = 3, agents: selectedAgents = ['adventure', 'culture', 'food'], budget = 'budget' } = req.body;
 
     if (!destination) {
       return res.status(400).json({ error: 'Destination is required' });
+    }
+
+    if (!origin) {
+      return res.status(400).json({ error: 'Origin is required' });
     }
 
     // Create unique job ID
@@ -1238,6 +1242,7 @@ app.post('/api/generate-route', async (req, res) => {
     const job = {
       id: jobId,
       status: 'processing',
+      origin,
       destination,
       stops,
       budget,
@@ -1271,7 +1276,7 @@ app.post('/api/generate-route', async (req, res) => {
     const useAgenticRoute = process.env.USE_AGENTIC_ROUTES === 'true';
     const processFunction = useAgenticRoute ? processRouteJobAgentic : processRouteJob;
 
-    processFunction(jobId, destination, stops, selectedAgents, budget).catch(error => {
+    processFunction(jobId, origin, destination, stops, selectedAgents, budget).catch(error => {
       console.error(`Job ${jobId} failed:`, error);
       const failedJob = routeJobs.get(jobId);
       if (failedJob) {
@@ -1333,11 +1338,12 @@ app.get('/api/route-status/:jobId', (req, res) => {
 });
 
 // AGENTIC Background Job Processor - Uses RouteDiscoveryAgentV2
-async function processRouteJobAgentic(jobId, destination, stops, selectedAgents, budget) {
+async function processRouteJobAgentic(jobId, origin, destination, stops, selectedAgents, budget) {
   const job = routeJobs.get(jobId);
   if (!job) return;
 
   console.log(`\n🎯 === Starting AGENTIC route job ${jobId} ===`);
+  console.log(`Origin: ${origin}`);
   console.log(`Destination: ${destination}`);
   console.log(`Stops: ${stops}`);
   console.log(`Agents: ${selectedAgents.join(', ')}`);
@@ -1372,6 +1378,7 @@ async function processRouteJobAgentic(jobId, destination, stops, selectedAgents,
 
         // Use agentic discovery with validation
         const result = await routeAgent.discoverRoute(
+          origin,
           destination,
           stops,
           agentType,

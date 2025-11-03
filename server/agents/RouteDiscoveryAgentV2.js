@@ -33,13 +33,13 @@ class RouteDiscoveryAgentV2 {
   /**
    * Main entry point: Discover and validate a complete route
    */
-  async discoverRoute(destination, stops, travelStyle, budget) {
-    console.log(`\n🎯 RouteDiscoveryAgentV2: Discovering route to ${destination}`);
+  async discoverRoute(origin, destination, stops, travelStyle, budget) {
+    console.log(`\n🎯 RouteDiscoveryAgentV2: Discovering route from ${origin} to ${destination}`);
     console.log(`   Style: ${travelStyle} | Stops: ${stops} | Budget: ${budget}`);
 
     // STEP 1: Strategic Discovery
     console.log('\n📍 Step 1: Strategic Discovery');
-    const candidates = await this.strategicDiscovery(destination, stops, travelStyle, budget);
+    const candidates = await this.strategicDiscovery(origin, destination, stops, travelStyle, budget);
 
     // Check for discovery errors
     if (candidates.error) {
@@ -86,8 +86,8 @@ class RouteDiscoveryAgentV2 {
   /**
    * Strategic Discovery: Use Perplexity to find candidate cities
    */
-  async strategicDiscovery(destination, stops, travelStyle, budget) {
-    const prompt = this.buildDiscoveryPrompt(destination, stops, travelStyle, budget);
+  async strategicDiscovery(origin, destination, stops, travelStyle, budget) {
+    const prompt = this.buildDiscoveryPrompt(origin, destination, stops, travelStyle, budget);
 
     try {
       const response = await axios.post(
@@ -139,7 +139,7 @@ class RouteDiscoveryAgentV2 {
   /**
    * Build strategic discovery prompt
    */
-  buildDiscoveryPrompt(destination, stops, travelStyle, budget) {
+  buildDiscoveryPrompt(origin, destination, stops, travelStyle, budget) {
     const styleDescriptions = {
       adventure: 'outdoor activities, hiking, nature, scenic landscapes',
       culture: 'historical sites, museums, architecture, cultural heritage',
@@ -154,9 +154,9 @@ class RouteDiscoveryAgentV2 {
       luxury: 'premium destinations with high-end offerings'
     };
 
-    return `You are a ${travelStyle} travel expert planning a road trip to ${destination}.
+    return `You are a ${travelStyle} travel expert planning a road trip from ${origin} to ${destination}.
 
-TASK: Find ${stops + 2} cities (origin + ${stops} waypoints + destination) for an amazing road trip.
+TASK: Find ${stops} waypoint cities between ${origin} and ${destination} for an amazing road trip.
 
 TRAVEL STYLE: ${travelStyle}
 Focus on: ${styleDescriptions[travelStyle] || styleDescriptions['best-overall']}
@@ -165,47 +165,51 @@ BUDGET: ${budget}
 Target: ${budgetDescriptions[budget] || budgetDescriptions['mid']}
 
 REQUIREMENTS:
-1. Start from a logical origin city (gateway/major city near the region)
-2. End at ${destination} (the main destination)
-3. Include ${stops} waypoint cities in between
+1. MUST start from ${origin} (this is the user's starting location - DO NOT CHANGE THIS)
+2. MUST end at ${destination} (the main destination - DO NOT CHANGE THIS)
+3. Find EXACTLY ${stops} waypoint cities in between ${origin} and ${destination}
 4. Cities should be 80-250km apart (1-3 hours driving)
 5. Create a logical geographic flow (no excessive backtracking)
 6. Match ${travelStyle} preferences at each stop
 7. Ensure all cities are real, accessible, and worth visiting
+8. Waypoints should form a natural route between ${origin} and ${destination}
 
 OUTPUT FORMAT (return ONLY this JSON, no markdown):
 {
   "origin": {
-    "city": "Nice",
+    "city": "${origin}",
     "country": "France",
-    "why": "Gateway to French Riviera, international airport"
+    "why": "User's starting location"
   },
   "destination": {
     "city": "${destination}",
     "country": "France",
-    "why": "Final destination with rich history"
+    "why": "Final destination"
   },
   "waypoints": [
     {
-      "city": "Aix-en-Provence",
+      "city": "Example City 1",
       "country": "France",
-      "why": "Charming historic center, Cézanne heritage, perfect ${travelStyle} stop",
-      "highlights": ["historic center", "Cézanne trail", "local markets"]
+      "why": "Brief explanation why this city fits ${travelStyle} style and makes sense on the route",
+      "highlights": ["attraction 1", "attraction 2", "attraction 3"]
     },
     {
-      "city": "Avignon",
+      "city": "Example City 2",
       "country": "France",
-      "why": "Medieval walled city, Papal Palace, ${travelStyle} appeal",
-      "highlights": ["Papal Palace", "Pont d'Avignon", "medieval streets"]
+      "why": "Brief explanation why this city fits ${travelStyle} style and makes sense on the route",
+      "highlights": ["attraction 1", "attraction 2", "attraction 3"]
     }
   ]
 }
 
-IMPORTANT:
-- Return EXACTLY ${stops} waypoints
+CRITICAL RULES:
+- Return EXACTLY ${stops} waypoints (not origin, not destination, just the stops in between)
+- DO NOT change the origin from ${origin}
+- DO NOT change the destination from ${destination}
 - Ensure geographic logic (no wild zigzags)
 - All cities must be real and accessible by car
-- Match ${travelStyle} theme throughout`;
+- Match ${travelStyle} theme throughout
+- Create diversity: Each waypoint should offer something unique`;
   }
 
   /**
