@@ -73,6 +73,7 @@ class RouteDiscoveryAgentV2 {
       destination: optimized.destination,
       waypoints: optimized.selected || [],
       alternatives: optimized.alternatives || [],
+      themeInsights: candidates.themeInsights || {},
       metadata: {
         style: travelStyle,
         validated: true,
@@ -154,6 +155,47 @@ class RouteDiscoveryAgentV2 {
       luxury: 'premium destinations with high-end offerings'
     };
 
+    // Theme-specific insight templates
+    const insightTemplates = {
+      adventure: {
+        terrain: 'Describe the terrain diversity (e.g., "Coastal cliffs → Mountain passes → River valleys")',
+        activities: 'Count outdoor activities (e.g., "8 hiking trails, 3 water sports, 2 cycling routes")',
+        difficulty: 'Overall difficulty level (e.g., "Moderate - suitable for active travelers")',
+        highlight: 'Most spectacular outdoor experience on this route',
+        season: 'Best time for outdoor activities (e.g., "April-June, September-October")'
+      },
+      culture: {
+        historical_span: 'Historical periods covered (e.g., "Roman → Medieval → Renaissance")',
+        heritage_sites: 'Number of UNESCO or major heritage sites',
+        architecture: 'Architectural styles featured (e.g., "Gothic cathedrals, Moorish palaces")',
+        highlight: 'Most significant cultural landmark on this route',
+        experiences: 'Cultural activities available (e.g., "Museums, festivals, artisan workshops")'
+      },
+      food: {
+        culinary_regions: 'Distinct food cultures (e.g., "Provençal, Catalan, Andalusian")',
+        signature_dishes: 'Must-try dishes per stop (e.g., "Bouillabaisse in Marseille, Paella in Valencia")',
+        dining_variety: 'Types of food experiences (e.g., "Street markets, Michelin restaurants, wineries")',
+        highlight: 'Best culinary experience on this route',
+        budget_range: 'Daily food budget estimate (e.g., "€40-80 for excellent meals")'
+      },
+      'hidden-gems': {
+        authenticity: 'Level of tourist crowds (e.g., "Low density - authentic local life")',
+        discoveries: 'Types of hidden finds (e.g., "Secret viewpoints, family taverns, artisan workshops")',
+        local_secrets: 'What makes these places special vs tourist hotspots',
+        highlight: 'Most unique hidden gem on this route',
+        insider_tip: 'Best way to explore these places'
+      },
+      'best-overall': {
+        balance: 'Distribution of experiences (e.g., "40% culture, 30% nature, 20% food, 10% relaxation")',
+        diversity: 'Range of experiences (e.g., "Medieval towns, coastal drives, mountain scenery")',
+        route_quality: 'Overall route characteristics (e.g., "Scenic roads, optimal distances, easy navigation")',
+        highlight: 'Standout feature of this route',
+        flexibility: 'How easy to customize (e.g., "Easy to add beach days or extend city stays")'
+      }
+    };
+
+    const currentTemplate = insightTemplates[travelStyle] || insightTemplates['best-overall'];
+
     return `You are a ${travelStyle} travel expert planning a road trip from ${origin} to ${destination}.
 
 TASK: Find ${stops} waypoint cities between ${origin} and ${destination} for an amazing road trip.
@@ -178,29 +220,39 @@ OUTPUT FORMAT (return ONLY this JSON, no markdown):
 {
   "origin": {
     "city": "${origin}",
-    "country": "France",
+    "country": "Spain",
     "why": "User's starting location"
   },
   "destination": {
     "city": "${destination}",
-    "country": "France",
+    "country": "Spain",
     "why": "Final destination"
   },
   "waypoints": [
     {
       "city": "Example City 1",
-      "country": "France",
+      "country": "Spain",
       "why": "Brief explanation why this city fits ${travelStyle} style and makes sense on the route",
       "highlights": ["attraction 1", "attraction 2", "attraction 3"]
     },
     {
       "city": "Example City 2",
-      "country": "France",
+      "country": "Spain",
       "why": "Brief explanation why this city fits ${travelStyle} style and makes sense on the route",
       "highlights": ["attraction 1", "attraction 2", "attraction 3"]
     }
-  ]
+  ],
+  "themeInsights": {
+    ${Object.entries(currentTemplate).map(([key, description]) => `"${key}": "${description}"`).join(',\n    ')}
+  }
 }
+
+THEME INSIGHTS INSTRUCTIONS:
+You MUST provide the "themeInsights" object with ALL ${Object.keys(currentTemplate).length} fields specified above.
+- Be specific and factual based on the actual route you're creating
+- Use real city names and actual features from your selected waypoints
+- Keep each insight concise (1-2 sentences max)
+- Make insights compelling and useful for decision-making
 
 CRITICAL RULES:
 - Return EXACTLY ${stops} waypoints (not origin, not destination, just the stops in between)
@@ -209,7 +261,8 @@ CRITICAL RULES:
 - Ensure geographic logic (no wild zigzags)
 - All cities must be real and accessible by car
 - Match ${travelStyle} theme throughout
-- Create diversity: Each waypoint should offer something unique`;
+- Create diversity: Each waypoint should offer something unique
+- MUST include complete themeInsights object with all required fields`;
   }
 
   /**
@@ -245,6 +298,7 @@ CRITICAL RULES:
         origin: { city: destination, country: 'Unknown', why: 'Fallback - Parse failed' },
         destination: { city: destination, country: 'Unknown', why: 'Fallback - Parse failed' },
         waypoints: [],
+        themeInsights: {},
         error: `Parse failed: ${error.message}`
       };
     }
@@ -276,7 +330,8 @@ CRITICAL RULES:
     return {
       origin: validatedOrigin || route.origin, // Fallback if validation fails
       destination: validatedDestination || route.destination,
-      waypoints: validatedWaypoints
+      waypoints: validatedWaypoints,
+      themeInsights: route.themeInsights || {}
     };
   }
 

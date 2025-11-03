@@ -682,51 +682,37 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
                   </div>
                 )}
 
-                {/* Metrics */}
+                {/* Theme Insights */}
                 {agentResult.metrics && Object.keys(agentResult.metrics).length > 0 && (
                   <div className="rounded-xl bg-white p-8 shadow-lg">
                     <h3 className="mb-6 text-xl font-bold" style={{ color: theme.color }}>
-                      Theme Insights
+                      {theme.icon} Theme Insights
                     </h3>
-                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                    <div className="space-y-4">
                       {Object.entries(agentResult.metrics).map(([key, value]) => {
-                        let displayValue: string
-                        if (typeof value === 'number') {
-                          displayValue = value.toFixed(1)
-                        } else if (typeof value === 'object' && value !== null) {
-                          if (Array.isArray(value)) {
-                            // Handle array of objects (like restaurants)
-                            if (value.length > 0 && typeof value[0] === 'object') {
-                              displayValue = value.map((item: any) => item.name || JSON.stringify(item)).join(', ')
-                            } else {
-                              displayValue = (value as any[]).join(', ')
-                            }
-                          } else {
-                            // Handle nested objects
-                            const entries = Object.entries(value as Record<string, any>)
-                            if (entries.some(([, v]) => typeof v === 'number' && v < 100)) {
-                              // Looks like percentages
-                              displayValue = entries.map(([k, v]) => `${k}: ${v}%`).join(', ')
-                            } else {
-                              displayValue = entries.map(([k, v]) => `${k}: ${v}`).join(', ')
-                            }
-                          }
-                        } else {
-                          displayValue = String(value)
-                        }
+                        const displayValue = String(value)
+                        const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
 
                         return (
                           <div
                             key={key}
-                            className="rounded-lg border-2 p-4"
-                            style={{ borderColor: theme.color + '20', backgroundColor: theme.color + '05' }}
+                            className="rounded-lg border-l-4 bg-gradient-to-r from-gray-50 to-white p-4"
+                            style={{ borderColor: theme.color }}
                           >
-                            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                              {key.replace(/_/g, ' ')}
-                            </p>
-                            <p className="text-base font-bold text-gray-900">
-                              {displayValue}
-                            </p>
+                            <div className="flex items-start gap-3">
+                              <div
+                                className="mt-1 h-2 w-2 flex-shrink-0 rounded-full"
+                                style={{ backgroundColor: theme.color }}
+                              />
+                              <div className="flex-1">
+                                <p className="mb-1 text-sm font-semibold text-gray-700">
+                                  {label}
+                                </p>
+                                <p className="text-base leading-relaxed text-gray-900">
+                                  {displayValue}
+                                </p>
+                              </div>
+                            </div>
                           </div>
                         )
                       })}
