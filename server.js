@@ -1401,11 +1401,7 @@ async function processRouteJobAgentic(jobId, origin, destination, stops, selecte
             icon: agentConfig.icon
           },
           recommendations: JSON.stringify(formattedResult),
-          metrics: {
-            validated: result.metadata.validated,
-            validationRate: result.metadata.validatedCount / result.metadata.totalCandidates,
-            method: 'agentic-v2'
-          }
+          metrics: result.themeInsights || {}
         });
 
         // Update progress
