@@ -198,7 +198,7 @@ class RouteDiscoveryAgentV2 {
 
     return `You are a ${travelStyle} travel expert planning a road trip from ${origin} to ${destination}.
 
-TASK: Find ${stops} waypoint cities between ${origin} and ${destination} for an amazing road trip.
+TASK: Find ${stops} waypoint cities + 3 alternative cities between ${origin} and ${destination} for an amazing road trip.
 
 TRAVEL STYLE: ${travelStyle}
 Focus on: ${styleDescriptions[travelStyle] || styleDescriptions['best-overall']}
@@ -210,11 +210,13 @@ REQUIREMENTS:
 1. MUST start from ${origin} (this is the user's starting location - DO NOT CHANGE THIS)
 2. MUST end at ${destination} (the main destination - DO NOT CHANGE THIS)
 3. Find EXACTLY ${stops} waypoint cities in between ${origin} and ${destination}
-4. Cities should be 80-250km apart (1-3 hours driving)
-5. Create a logical geographic flow (no excessive backtracking)
-6. Match ${travelStyle} preferences at each stop
-7. Ensure all cities are real, accessible, and worth visiting
-8. Waypoints should form a natural route between ${origin} and ${destination}
+4. Find EXACTLY 3 additional alternative cities that match ${travelStyle} theme
+5. Cities should be 80-250km apart (1-3 hours driving)
+6. Create a logical geographic flow (no excessive backtracking)
+7. Match ${travelStyle} preferences at each stop
+8. Ensure all cities are real, accessible, and worth visiting
+9. Waypoints should form a natural route between ${origin} and ${destination}
+10. Alternatives should also fit geographically but offer different experiences
 
 OUTPUT FORMAT (return ONLY this JSON, no markdown):
 {
@@ -242,6 +244,26 @@ OUTPUT FORMAT (return ONLY this JSON, no markdown):
       "highlights": ["attraction 1", "attraction 2", "attraction 3"]
     }
   ],
+  "alternatives": [
+    {
+      "city": "Alternative City 1",
+      "country": "Spain",
+      "why": "Great ${travelStyle} option that could replace or complement the main route",
+      "highlights": ["highlight 1", "highlight 2", "highlight 3"]
+    },
+    {
+      "city": "Alternative City 2",
+      "country": "Spain",
+      "why": "Another excellent ${travelStyle} choice for route customization",
+      "highlights": ["highlight 1", "highlight 2", "highlight 3"]
+    },
+    {
+      "city": "Alternative City 3",
+      "country": "Spain",
+      "why": "Strong ${travelStyle} alternative for travelers wanting different experiences",
+      "highlights": ["highlight 1", "highlight 2", "highlight 3"]
+    }
+  ],
   "themeInsights": {
     ${Object.entries(currentTemplate).map(([key, description]) => `"${key}": "${description}"`).join(',\n    ')}
   }
@@ -256,12 +278,14 @@ You MUST provide the "themeInsights" object with ALL ${Object.keys(currentTempla
 
 CRITICAL RULES:
 - Return EXACTLY ${stops} waypoints (not origin, not destination, just the stops in between)
+- Return EXACTLY 3 alternatives (additional cities matching the theme)
 - DO NOT change the origin from ${origin}
 - DO NOT change the destination from ${destination}
 - Ensure geographic logic (no wild zigzags)
 - All cities must be real and accessible by car
 - Match ${travelStyle} theme throughout
 - Create diversity: Each waypoint should offer something unique
+- Alternatives should be different from waypoints but equally good
 - MUST include complete themeInsights object with all required fields`;
   }
 
@@ -306,6 +330,7 @@ CRITICAL RULES:
 
   /**
    * Validate and enrich cities with Google Places API
+   * NOTE: Alternatives are NOT validated here - lazy validation when user adds them
    */
   async validateAndEnrichCities(route) {
     console.log('   Validating cities with Google Places...');
@@ -316,7 +341,7 @@ CRITICAL RULES:
     // Validate destination
     const validatedDestination = await this.validateCity(route.destination);
 
-    // Validate all waypoints
+    // Validate all waypoints (NOT alternatives - lazy validation)
     const validatedWaypoints = [];
     for (const waypoint of route.waypoints) {
       const validated = await this.validateCity(waypoint);
@@ -327,10 +352,13 @@ CRITICAL RULES:
       }
     }
 
+    console.log(`   📍 Keeping ${route.alternatives?.length || 0} alternatives unvalidated (lazy validation)`);
+
     return {
       origin: validatedOrigin || route.origin, // Fallback if validation fails
       destination: validatedDestination || route.destination,
       waypoints: validatedWaypoints,
+      alternatives: route.alternatives || [], // Pass through without validation
       themeInsights: route.themeInsights || {}
     };
   }
@@ -377,20 +405,22 @@ CRITICAL RULES:
 
   /**
    * Optimize route based on geography and theme
+   * NOTE: Alternatives now come from Perplexity, not from overflow waypoints
    */
   optimizeRoute(validated, requestedStops) {
-    const { origin, destination, waypoints } = validated;
+    const { origin, destination, waypoints, alternatives } = validated;
 
     if (waypoints.length === 0) {
       return {
         origin,
         destination,
         selected: [],
-        alternatives: []
+        alternatives: alternatives || []
       };
     }
 
     // If we have more waypoints than requested, select the best ones
+    // Old overflow waypoints are discarded in favor of explicit alternatives from Perplexity
     if (waypoints.length > requestedStops) {
       const optimized = this.selectOptimalWaypoints(
         waypoints,
@@ -403,7 +433,7 @@ CRITICAL RULES:
         origin,
         destination,
         selected: optimized.selected,
-        alternatives: optimized.alternatives
+        alternatives: alternatives || [] // Use Perplexity alternatives, not overflow
       };
     }
 
@@ -412,7 +442,7 @@ CRITICAL RULES:
       origin,
       destination,
       selected: waypoints,
-      alternatives: []
+      alternatives: alternatives || []
     };
   }
 

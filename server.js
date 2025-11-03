@@ -1459,6 +1459,28 @@ async function processRouteJobAgentic(jobId, origin, destination, stops, selecte
         console.log('\n--- Creating Best Overall merged route ---');
         const mergedResult = createBestOverallRoute(agentResults, stops);
 
+        // Generate Best Overall theme insights
+        const selectedCities = mergedResult.waypoints || [];
+        const themeCounts = {};
+        selectedCities.forEach(city => {
+          city.themes?.forEach(theme => {
+            themeCounts[theme] = (themeCounts[theme] || 0) + 1;
+          });
+        });
+
+        const totalThemes = Object.keys(themeCounts).length;
+        const themePercentages = Object.entries(themeCounts)
+          .map(([theme, count]) => `${Math.round((count / selectedCities.length) * 100)}% ${agents[theme]?.name || theme}`)
+          .join(', ');
+
+        const bestOverallInsights = {
+          balance: themePercentages || 'Balanced across all themes',
+          diversity: `${selectedCities.length} cities spanning ${totalThemes} different travel themes`,
+          route_quality: `Optimal ${Math.round(selectedCities.reduce((sum, city) => sum + (city.themeCount || 1), 0) / selectedCities.length * 10) / 10}x multi-theme coverage per city`,
+          highlight: `Best combination: ${selectedCities.filter(c => c.themeCount >= 2).map(c => c.name).slice(0, 3).join(', ') || selectedCities[0]?.name || 'Multiple cities'}`,
+          flexibility: `${mergedResult.alternatives?.length || 0} alternatives available for complete route customization`
+        };
+
         agentResults.unshift({
           agent: 'best-overall',
           agentConfig: {
@@ -1467,7 +1489,7 @@ async function processRouteJobAgentic(jobId, origin, destination, stops, selecte
             icon: agents['best-overall'].icon
           },
           recommendations: JSON.stringify(mergedResult),
-          metrics: { method: 'merged-agentic' }
+          metrics: bestOverallInsights
         });
 
         job.agentResults = agentResults;
