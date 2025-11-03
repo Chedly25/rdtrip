@@ -16,7 +16,8 @@ const GooglePlacesService = require('../../services/googlePlacesService');
 class ValidationOrchestrator {
   constructor(db, apiKey) {
     this.db = db;
-    console.log(`🔑 ValidationOrchestrator: Received API Key = ${apiKey ? apiKey.substring(0, 10) + '...' : 'UNDEFINED'}`);
+    console.log(`🔑 ValidationOrchestrator: Received API Key = ${(apiKey && typeof apiKey === 'string') ? apiKey.substring(0, 10) + '...' : `UNDEFINED (type: ${typeof apiKey})`}`);
+    console.log(`🔑 ValidationOrchestrator: API Key type = ${typeof apiKey}`);
     this.placesService = new GooglePlacesService(apiKey, db);
     this.placesValidator = new PlacesValidationAgent(this.placesService, db);
     this.availabilityValidator = new AvailabilityValidationAgent(this.placesService);
