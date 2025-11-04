@@ -16,22 +16,23 @@ const queryClient = new QueryClient({
   },
 })
 
-// Geocode a city name to coordinates using Mapbox Geocoding API
+// Geocode a city name to coordinates using Google Places API via backend
 async function geocodeCity(cityName: string): Promise<{ lat: number; lng: number }> {
-  const MAPBOX_TOKEN = 'pk.eyJ1IjoiY2hlZGx5MjUiLCJhIjoiY21lbW1qeHRoMHB5azJsc2VuMWJld2tlYSJ9.0jfOiOXCh0VN5ZjJ5ab7MQ'
-
   try {
-    const response = await fetch(
-      `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(cityName)}.json?access_token=${MAPBOX_TOKEN}&types=place&limit=1`
-    )
-    const data = await response.json()
+    const response = await fetch('/api/geocode', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ cityName }),
+    })
 
-    if (data.features && data.features.length > 0) {
-      const [lng, lat] = data.features[0].center
-      return { lat, lng }
+    if (response.ok) {
+      const data = await response.json()
+      return data.coordinates
     }
 
-    throw new Error(`No coordinates found for ${cityName}`)
+    throw new Error(`Geocoding request failed: ${response.status}`)
   } catch (error) {
     console.error(`Geocoding failed for ${cityName}:`, error)
     // Return a fallback coordinate (center of France)
