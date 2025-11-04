@@ -7,7 +7,7 @@
     "start": "node server.js",
     "dev": "node server.js",
     "db:migrate": "node db/migrate.js",
-    "heroku-postbuild": "cd spotlight-react && npm install --include=dev && npm run build && cd .. && rm -rf public/spotlight-new && cp -r spotlight-react/dist public/spotlight-new"
+    "heroku-postbuild": "cd landing-react && npm install --include=dev && npm run build && cd .. && rm -rf public/landing-react && cp -r landing-react/dist public/landing-react && cd spotlight-react && npm install --include=dev && npm run build && cd .. && rm -rf public/spotlight-new && cp -r spotlight-react/dist public/spotlight-new"
   },
   "engines": {
     "node": "18.x"
