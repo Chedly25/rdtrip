@@ -55,22 +55,29 @@ export const useSpotlightStore = create<SpotlightState>()(
 
       addWaypoint: async (city, afterIndex) => {
         // Geocode the city to get coordinates
-        const MAPBOX_TOKEN = 'pk.eyJ1IjoiY2hlZGx5MjUiLCJhIjoiY21lbW1qeHRoMHB5azJsc2VuMWJld2tlYSJ9.0jfOiOXCh0VN5ZjJ5ab7MQ'
         let coordinates = city.coordinates
 
         if (!coordinates) {
           try {
-            const response = await fetch(
-              `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(city.name)}.json?access_token=${MAPBOX_TOKEN}&types=place&limit=1`
-            )
-            const data = await response.json()
+            console.log(`Fetching coordinates for ${city.name}...`)
+            const response = await fetch('/api/geocode', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ cityName: city.name }),
+            })
 
-            if (data.features && data.features.length > 0) {
-              const [lng, lat] = data.features[0].center
-              coordinates = { lat, lng }
+            if (response.ok) {
+              const data = await response.json()
+              coordinates = data.coordinates
+              console.log(`✅ Got coordinates for ${city.name}:`, coordinates)
+            } else {
+              console.error(`Failed to geocode ${city.name}: ${response.status}`)
+              coordinates = { lat: 48.8566, lng: 2.3522 }
             }
           } catch (error) {
-            console.error(`Failed to geocode ${city.name}:`, error)
+            console.error(`Geocoding failed for ${city.name}:`, error)
             // Fallback coordinates (center of Europe)
             coordinates = { lat: 48.8566, lng: 2.3522 }
           }

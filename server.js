@@ -8,6 +8,7 @@ const ZTLService = require('./services/ztl-service');
 const cheerio = require('cheerio');
 const ItineraryAgentOrchestrator = require('./server/agents/ItineraryAgentOrchestrator');
 const RouteDiscoveryAgentV2 = require('./server/agents/RouteDiscoveryAgentV2');
+const GooglePlacesService = require('./server/services/googlePlacesService');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -1289,6 +1290,42 @@ app.post('/api/generate-route', async (req, res) => {
   } catch (error) {
     console.error('Error starting route generation:', error);
     res.status(500).json({ error: 'Failed to start route generation', details: error.message });
+  }
+});
+
+// Geocode a city name to coordinates using Google Places API
+app.post('/api/geocode', async (req, res) => {
+  try {
+    const { cityName } = req.body;
+
+    if (!cityName) {
+      return res.status(400).json({ error: 'City name is required' });
+    }
+
+    console.log(`🌍 Geocoding request for: ${cityName}`);
+
+    // Use Google Places API for geocoding
+    const googlePlacesService = new GooglePlacesService(process.env.GOOGLE_PLACES_API_KEY);
+    const result = await googlePlacesService.textSearch(cityName);
+
+    if (result && result.length > 0) {
+      const place = result[0];
+      const coordinates = {
+        lat: place.geometry.location.lat,
+        lng: place.geometry.location.lng
+      };
+
+      console.log(`✅ Geocoded ${cityName} to:`, coordinates);
+      return res.json({ coordinates });
+    }
+
+    // Fallback coordinates (center of Europe)
+    console.warn(`⚠️ Could not geocode ${cityName}, using fallback`);
+    res.json({ coordinates: { lat: 48.8566, lng: 2.3522 } });
+  } catch (error) {
+    console.error('Geocoding error:', error);
+    // Return fallback coordinates on error
+    res.json({ coordinates: { lat: 48.8566, lng: 2.3522 } });
   }
 });
 
