@@ -81,7 +81,7 @@ export const useSpotlightStore = create<SpotlightState>()(
           id: city.id || `waypoint-${Date.now()}`,
           order: afterIndex + 1,
           coordinates,
-          activities: city.activities || ['Explore the city', 'Try local cuisine', 'Visit landmarks'],
+          activities: Array.isArray(city.activities) ? city.activities : ['Explore the city', 'Try local cuisine', 'Visit landmarks'],
           imageUrl: city.imageUrl,
         }
 
@@ -118,7 +118,7 @@ export const useSpotlightStore = create<SpotlightState>()(
               wp.id === newWaypoint.id
                 ? {
                     ...wp,
-                    activities: activities.length > 0 ? activities : wp.activities,
+                    activities: (Array.isArray(activities) && activities.length > 0) ? activities : wp.activities,
                     imageUrl: imageUrl || wp.imageUrl,
                   }
                 : wp
@@ -131,7 +131,7 @@ export const useSpotlightStore = create<SpotlightState>()(
             return { waypoints: updatedWaypoints }
           }, false, 'enrichWaypoint')
 
-          console.log(`✅ Successfully enriched ${city.name} with ${activities.length} activities`)
+          console.log(`✅ Successfully enriched ${city.name} with ${Array.isArray(activities) ? activities.length : 0} activities`)
         } catch (error) {
           console.error(`❌ Failed to enrich city data for ${city.name}:`, error)
         }

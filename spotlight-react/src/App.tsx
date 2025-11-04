@@ -388,7 +388,7 @@ function AppContent() {
               const updates: Partial<Waypoint> = {}
 
               // Update activities if we got good ones back
-              if (activities.length > 0 && needsEnrichment) {
+              if (Array.isArray(activities) && activities.length > 0 && needsEnrichment) {
                 updates.activities = activities
                 console.log(`✅ Updated activities for ${cityName}:`, activities)
               }
