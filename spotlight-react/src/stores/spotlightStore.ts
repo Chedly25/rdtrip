@@ -1,3 +1,7 @@
+/**
+ * Spotlight Store - Manages waypoints and route state
+ * v1430: Updated geocoding to use Google Places API
+ */
 import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
 import type { Waypoint, City } from '../types'
