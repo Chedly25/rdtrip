@@ -1,6 +1,6 @@
 /**
  * Geocoding utilities for fetching city coordinates
- * Uses Nominatim (OpenStreetMap) API - free, no API key needed
+ * Uses Google Places API via backend for reliable, accurate geocoding
  */
 
 export interface Coordinates {
@@ -9,31 +9,28 @@ export interface Coordinates {
 }
 
 /**
- * Fetch coordinates for a city using Nominatim API (OpenStreetMap)
+ * Fetch coordinates for a city using Google Places API via backend
  * @param cityName - Name of the city to geocode
  * @param countryHint - Optional country hint to improve accuracy (e.g., "France", "Spain")
- * @returns Promise resolving to [lng, lat] coordinates or null if not found
+ * @returns Promise resolving to [lat, lng] coordinates or null if not found
  */
 export async function fetchCityCoordinates(
   cityName: string,
   countryHint?: string
 ): Promise<[number, number] | null> {
   try {
-    // Build search query
+    // Build search query with country hint if provided
     const searchQuery = countryHint ? `${cityName}, ${countryHint}` : cityName
 
-    // Use Nominatim API (OpenStreetMap) - free, no key required
-    const url = `https://nominatim.openstreetmap.org/search?` + new URLSearchParams({
-      q: searchQuery,
-      format: 'json',
-      limit: '1',
-      addressdetails: '1'
-    })
+    console.log(`🌍 Fetching coordinates for ${searchQuery}...`)
 
-    const response = await fetch(url, {
+    // Use our backend geocoding endpoint with Google Places API
+    const response = await fetch('/api/geocode', {
+      method: 'POST',
       headers: {
-        'User-Agent': 'RDTrip-RouteOptimization/1.0' // Required by Nominatim
-      }
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ cityName: searchQuery }),
     })
 
     if (!response.ok) {
@@ -43,13 +40,11 @@ export async function fetchCityCoordinates(
 
     const data = await response.json()
 
-    if (data && data.length > 0) {
-      const result = data[0]
-      const lat = parseFloat(result.lat)
-      const lng = parseFloat(result.lon)
+    if (data && data.coordinates) {
+      const { lat, lng } = data.coordinates
 
-      console.log(`✓ Geocoded ${cityName}: [${lng}, ${lat}]`)
-      return [lng, lat] // Return as [lng, lat] to match our coordinate format
+      console.log(`✅ Got coordinates for ${cityName}: lat=${lat}, lng=${lng}`)
+      return [lat, lng] // Return as [lat, lng] in CORRECT order
     }
 
     console.warn(`No coordinates found for ${cityName}`)
