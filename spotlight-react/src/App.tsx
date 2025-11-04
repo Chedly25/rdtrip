@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { SpotlightPageComplete } from './components/spotlight/SpotlightPageComplete'
 import { useSpotlightStore } from './stores/spotlightStore'
 import { useRouteDataStore } from './stores/routeDataStore'
-import { getWikipediaImage } from './utils/wikipedia'
+import { enrichCityData } from './services/cityEnrichment'
 import type { Waypoint } from './types'
 
 // Create a client
@@ -360,20 +360,51 @@ function AppContent() {
         setOriginalCities(cities)
         console.log('Stored original cities for optimization:', cities.length)
 
-        // Fetch Wikipedia images for all waypoints asynchronously
+        // Fetch Wikipedia images and enrich activities for all waypoints asynchronously
         finalWaypoints.forEach(async (wp) => {
-          if (!wp.imageUrl) {
-            // Handle both old format (name) and new format (city)
-            const cityName = wp.name || wp.city
-            if (cityName) {
-              const imageUrl = await getWikipediaImage(cityName, 800, 600)
-              if (imageUrl) {
-                // Update the waypoint with the fetched image
-                updateWaypoint(wp.id, { imageUrl })
-                console.log(`Fetched Wikipedia image for ${cityName}:`, imageUrl)
+          const cityName = wp.name || wp.city
+          if (!cityName) {
+            console.warn('Cannot enrich waypoint without name:', wp)
+            return
+          }
+
+          // Check if waypoint needs enrichment (has generic/placeholder activities)
+          const needsEnrichment = !wp.activities ||
+            wp.activities.length === 0 ||
+            wp.activities.some((activity: string) =>
+              activity === 'Starting point' ||
+              activity === 'Final destination' ||
+              activity === 'Explore the city' ||
+              activity === 'Try local cuisine' ||
+              activity === 'Visit landmarks'
+            )
+
+          // Enrich city data (activities + image) if needed
+          if (needsEnrichment || !wp.imageUrl) {
+            console.log(`🔄 Enriching ${cityName}...`)
+            try {
+              const { activities, imageUrl } = await enrichCityData(cityName)
+
+              const updates: Partial<Waypoint> = {}
+
+              // Update activities if we got good ones back
+              if (activities.length > 0 && needsEnrichment) {
+                updates.activities = activities
+                console.log(`✅ Updated activities for ${cityName}:`, activities)
               }
-            } else {
-              console.warn('Wikipedia image search failed for', wp, 'TypeError: Cannot read properties of undefined (reading \'replace\')')
+
+              // Update image if we got one back
+              if (imageUrl && !wp.imageUrl) {
+                updates.imageUrl = imageUrl
+                console.log(`✅ Updated image for ${cityName}`)
+              }
+
+              // Apply updates if we have any
+              if (Object.keys(updates).length > 0) {
+                updateWaypoint(wp.id, updates)
+              }
+            } catch (error) {
+              console.error(`❌ Failed to enrich ${cityName}:`, error)
             }
           }
         })
