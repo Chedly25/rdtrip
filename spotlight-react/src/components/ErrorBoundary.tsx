@@ -1,4 +1,4 @@
-import React, { Component, ReactNode } from 'react';
+import React, { Component, type ReactNode } from 'react';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 
 interface Props {
@@ -65,7 +65,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 We encountered an error while loading this component. Please try refreshing the page.
               </p>
 
-              {process.env.NODE_ENV === 'development' && this.state.error && (
+              {import.meta.env.DEV && this.state.error && (
                 <details className="mb-6 text-left">
                   <summary className="cursor-pointer font-medium text-sm text-gray-700 hover:text-gray-900">
                     Error Details
