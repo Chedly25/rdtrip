@@ -39,6 +39,10 @@ class AgentOrchestratorV3 extends EventEmitter {
     this.googlePlacesService = new GooglePlacesService(googleApiKey, db);
     this.photoService = new GooglePlacesPhotoService(googleApiKey);
 
+    // Build city-to-coordinates map from waypoints
+    this.cityCoordinates = this.buildCityCoordinatesMap(routeData.waypoints || []);
+    console.log('📍 Built coordinates map for', Object.keys(this.cityCoordinates).length, 'cities');
+
     // Initialize discovery agents (Google-first!)
     this.agents = {
       dayPlanner: new DayPlannerAgent(routeData, preferences, this.progressCallback.bind(this)),
@@ -322,8 +326,9 @@ class AgentOrchestratorV3 extends EventEmitter {
       if (day.activityWindows && day.activityWindows.length > 0) {
         const windowPromises = day.activityWindows.map(async (window) => {
           try {
+            const coordinates = this.getCityCoordinates(city);
             const request = {
-              city: { name: city, coordinates: day.coordinates || { lat: 0, lng: 0 } },
+              city: { name: city, coordinates },
               category: window.purpose || 'general',
               timeWindow: { start: window.start, end: window.end },
               preferences: this.preferences,
@@ -382,8 +387,9 @@ class AgentOrchestratorV3 extends EventEmitter {
         mealPromises.push(
           (async () => {
             try {
+              const coordinates = this.getCityCoordinates(city);
               const request = {
-                city: { name: city, coordinates: day.coordinates || { lat: 0, lng: 0 } },
+                city: { name: city, coordinates },
                 mealType: meal,
                 preferences: this.preferences,
                 date: day.date
@@ -454,8 +460,9 @@ class AgentOrchestratorV3 extends EventEmitter {
     const accommodationPromises = overnightDays.map(async (day) => {
       try {
         const city = day.overnight;
+        const coordinates = this.getCityCoordinates(city);
         const request = {
-          city: { name: city, coordinates: day.coordinates || { lat: 0, lng: 0 } },
+          city: { name: city, coordinates },
           date: day.date,
           preferences: this.preferences
         };
@@ -495,6 +502,56 @@ class AgentOrchestratorV3 extends EventEmitter {
       return location.split('→').pop().trim();
     }
     return location;
+  }
+
+  /**
+   * Build a map of city names to coordinates from route waypoints
+   */
+  buildCityCoordinatesMap(waypoints) {
+    const coordMap = {};
+
+    for (const waypoint of waypoints) {
+      const cityName = waypoint.city || waypoint.name || waypoint.location;
+      if (cityName && waypoint.lat && waypoint.lng) {
+        // Normalize city name (lowercase, trim)
+        const normalizedName = cityName.toLowerCase().trim();
+        coordMap[normalizedName] = {
+          lat: waypoint.lat,
+          lng: waypoint.lng
+        };
+
+        console.log(`   📍 Mapped: ${cityName} → (${waypoint.lat}, ${waypoint.lng})`);
+      }
+    }
+
+    return coordMap;
+  }
+
+  /**
+   * Get coordinates for a city by name (fuzzy matching)
+   */
+  getCityCoordinates(cityName) {
+    if (!cityName) {
+      return { lat: 0, lng: 0 };
+    }
+
+    const normalizedQuery = cityName.toLowerCase().trim();
+
+    // Exact match
+    if (this.cityCoordinates[normalizedQuery]) {
+      return this.cityCoordinates[normalizedQuery];
+    }
+
+    // Partial match (city contains query or query contains city)
+    for (const [mapCity, coords] of Object.entries(this.cityCoordinates)) {
+      if (mapCity.includes(normalizedQuery) || normalizedQuery.includes(mapCity)) {
+        console.log(`   🎯 Fuzzy matched "${cityName}" to "${mapCity}"`);
+        return coords;
+      }
+    }
+
+    console.warn(`   ⚠️  No coordinates found for city: "${cityName}"`);
+    return { lat: 0, lng: 0 };
   }
 
   progressCallback(data) {
