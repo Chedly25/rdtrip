@@ -6,8 +6,7 @@ const shimmer = {
     backgroundPosition: '200% 0',
     transition: {
       repeat: Infinity,
-      duration: 2,
-      ease: 'linear'
+      duration: 2
     }
   }
 };
