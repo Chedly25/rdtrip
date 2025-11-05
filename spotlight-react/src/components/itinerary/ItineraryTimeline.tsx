@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
-import { useEffect } from 'react';
-import { DayCard } from './DayCard';
+import { useEffect, useState } from 'react';
+import { DayCardV2 } from './DayCardV2';
+import { DayNavigator } from './DayNavigator';
 import { BudgetSummary } from './BudgetSummary';
 import { AutoSaveIndicator } from './AutoSaveIndicator';
 import { useItineraryStore } from '../../stores/useItineraryStore';
@@ -13,6 +14,7 @@ interface ItineraryTimelineProps {
 
 export function ItineraryTimeline({ itinerary, agentType }: ItineraryTimelineProps) {
   const { setItinerary, getEffectiveItinerary } = useItineraryStore();
+  const [activeDay, setActiveDay] = useState(1);
 
   // Initialize the store with itinerary data
   useEffect(() => {
@@ -20,6 +22,30 @@ export function ItineraryTimeline({ itinerary, agentType }: ItineraryTimelinePro
       setItinerary(itinerary.id, itinerary, itinerary.customizations || {});
     }
   }, [itinerary?.id, setItinerary]);
+
+  // Track scroll position to update active day
+  useEffect(() => {
+    const handleScroll = () => {
+      const dayElements = dayStructure?.days?.map((day: any) =>
+        document.getElementById(`day-${day.day}`)
+      );
+
+      if (!dayElements) return;
+
+      const scrollPos = window.scrollY + 200;
+
+      for (let i = dayElements.length - 1; i >= 0; i--) {
+        const element = dayElements[i];
+        if (element && element.offsetTop <= scrollPos) {
+          setActiveDay(i + 1);
+          break;
+        }
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [itinerary?.dayStructure]);
 
   if (!itinerary) return null;
 
@@ -69,6 +95,15 @@ export function ItineraryTimeline({ itinerary, agentType }: ItineraryTimelinePro
 
   return (
     <div className="space-y-8">
+      {/* Day Navigator - Sticky */}
+      {dayStructure?.days && dayStructure.days.length > 0 && (
+        <DayNavigator
+          days={dayStructure.days}
+          activeDay={activeDay}
+          onDayClick={setActiveDay}
+        />
+      )}
+
       {/* Header Actions */}
       <div className="flex items-center justify-between border-b border-gray-200 pb-4">
         <div>
@@ -125,25 +160,30 @@ export function ItineraryTimeline({ itinerary, agentType }: ItineraryTimelinePro
 
       {/* Days Timeline */}
       <div className="space-y-6">
-        {dayStructure?.days?.map((day: any, index: number) => (
-          <motion.div
-            key={day.day}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 + index * 0.1 }}
-          >
-            <DayCard
+        {dayStructure?.days?.map((day: any, index: number) => {
+          // Process restaurants to add meal type
+          const dayRestaurants = restaurants
+            ?.filter((r: any) => r.day === day.day)
+            .flatMap((r: any) => {
+              if (r.meals) {
+                return Object.entries(r.meals).map(([mealType, restaurant]: [string, any]) => ({
+                  ...restaurant,
+                  meal: mealType
+                }));
+              }
+              return [];
+            }) || [];
+
+          return (
+            <DayCardV2
+              key={day.day}
               day={day}
               activities={
                 activities
                   ?.filter((a: any) => a.day === day.day)
                   .flatMap((a: any) => a.activities || []) || []
               }
-              restaurants={
-                restaurants
-                  ?.filter((r: any) => r.day === day.day)
-                  .flatMap((r: any) => r.meals ? Object.values(r.meals) : []) || []
-              }
+              restaurants={dayRestaurants}
               accommodation={accommodations?.find((h: any) => h.night === day.day)}
               scenicStops={
                 scenicStops?.filter((s: any) => s.day === day.day) || []
@@ -157,8 +197,8 @@ export function ItineraryTimeline({ itinerary, agentType }: ItineraryTimelinePro
               }
               agentType={agentType}
             />
-          </motion.div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
