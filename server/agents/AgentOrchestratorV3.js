@@ -512,15 +512,23 @@ class AgentOrchestratorV3 extends EventEmitter {
 
     for (const waypoint of waypoints) {
       const cityName = waypoint.city || waypoint.name || waypoint.location;
-      if (cityName && waypoint.lat && waypoint.lng) {
+
+      // Handle both formats: waypoint.lat or waypoint.coordinates.lat
+      let lat, lng;
+      if (waypoint.coordinates && waypoint.coordinates.lat && waypoint.coordinates.lng) {
+        lat = waypoint.coordinates.lat;
+        lng = waypoint.coordinates.lng;
+      } else if (waypoint.lat && waypoint.lng) {
+        lat = waypoint.lat;
+        lng = waypoint.lng;
+      }
+
+      if (cityName && lat && lng) {
         // Normalize city name (lowercase, trim)
         const normalizedName = cityName.toLowerCase().trim();
-        coordMap[normalizedName] = {
-          lat: waypoint.lat,
-          lng: waypoint.lng
-        };
+        coordMap[normalizedName] = { lat, lng };
 
-        console.log(`   📍 Mapped: ${cityName} → (${waypoint.lat}, ${waypoint.lng})`);
+        console.log(`   📍 Mapped: ${cityName} → (${lat}, ${lng})`);
       }
     }
 
