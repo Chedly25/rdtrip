@@ -322,9 +322,12 @@ class AgentOrchestratorV3 extends EventEmitter {
         activities: []
       };
 
-      // Process activity windows IN PARALLEL
+      // Track used place IDs to avoid duplicates within the same day
+      const usedPlaceIds = new Set();
+
+      // Process activity windows SEQUENTIALLY to avoid duplicates
       if (day.activityWindows && day.activityWindows.length > 0) {
-        const windowPromises = day.activityWindows.map(async (window) => {
+        for (const window of day.activityWindows) {
           try {
             const coordinates = this.getCityCoordinates(city);
             const request = {
@@ -332,26 +335,27 @@ class AgentOrchestratorV3 extends EventEmitter {
               category: window.purpose || 'general',
               timeWindow: { start: window.start, end: window.end },
               preferences: this.preferences,
-              date: day.date
+              date: day.date,
+              excludePlaceIds: Array.from(usedPlaceIds) // Exclude already-selected places
             };
 
             const result = await this.agents.googleActivities.discoverActivities(request);
 
             if (result.success && result.candidates && result.candidates.length > 0) {
-              // Return best candidate
-              return result.candidates[0];
-            }
+              // Find first candidate that hasn't been used
+              const candidate = result.candidates.find(c => !usedPlaceIds.has(c.place_id));
 
-            return null;
+              if (candidate) {
+                usedPlaceIds.add(candidate.place_id);
+                dayActivities.activities.push(candidate);
+                console.log(`      ✓ Selected: ${candidate.name} (avoiding ${usedPlaceIds.size - 1} duplicates)`);
+              }
+            }
 
           } catch (error) {
             console.warn(`      ⚠️  Activity window failed:`, error.message);
-            return null;
           }
-        });
-
-        const activities = await Promise.all(windowPromises);
-        dayActivities.activities = activities.filter(a => a !== null);
+        }
       }
 
       return dayActivities;
@@ -366,7 +370,7 @@ class AgentOrchestratorV3 extends EventEmitter {
   }
 
   /**
-   * Run Google Places restaurant discovery (PARALLEL per meal)
+   * Run Google Places restaurant discovery (PARALLEL per day, SEQUENTIAL per meal)
    */
   async runRestaurantDiscovery() {
     const dayStructure = this.results.dayPlanner;
@@ -376,68 +380,58 @@ class AgentOrchestratorV3 extends EventEmitter {
 
     const allRestaurants = [];
 
-    // Process all meals IN PARALLEL
-    const mealPromises = [];
-
-    for (const day of dayStructure.days) {
+    // Process each day IN PARALLEL
+    const dayPromises = dayStructure.days.map(async (day) => {
       const city = this.extractMainCity(day.location);
+      const dayRestaurants = {
+        day: day.day,
+        date: day.date,
+        city,
+        meals: {}
+      };
 
+      // Track used restaurant place IDs to avoid duplicates within the same day
+      const usedPlaceIds = new Set();
+
+      // Process meals SEQUENTIALLY to avoid getting same restaurant 3 times
       const meals = ['breakfast', 'lunch', 'dinner'];
       for (const meal of meals) {
-        mealPromises.push(
-          (async () => {
-            try {
-              const coordinates = this.getCityCoordinates(city);
-              const request = {
-                city: { name: city, coordinates },
-                mealType: meal,
-                preferences: this.preferences,
-                date: day.date
-              };
+        try {
+          const coordinates = this.getCityCoordinates(city);
+          const request = {
+            city: { name: city, coordinates },
+            mealType: meal,
+            preferences: this.preferences,
+            date: day.date,
+            excludePlaceIds: Array.from(usedPlaceIds) // Exclude already-selected restaurants
+          };
 
-              const result = await this.agents.googleRestaurants.discoverRestaurants(request);
+          const result = await this.agents.googleRestaurants.discoverRestaurants(request);
 
-              if (result.success && result.restaurants && result.restaurants.length > 0) {
-                return {
-                  day: day.day,
-                  date: day.date,
-                  city,
-                  meal,
-                  restaurant: result.restaurants[0] // Best restaurant
-                };
-              }
+          if (result.success && result.restaurants && result.restaurants.length > 0) {
+            // Find first restaurant that hasn't been used
+            const restaurant = result.restaurants.find(r => !usedPlaceIds.has(r.place_id));
 
-              return null;
-
-            } catch (error) {
-              console.warn(`      ⚠️  ${meal} discovery failed:`, error.message);
-              return null;
+            if (restaurant) {
+              usedPlaceIds.add(restaurant.place_id);
+              dayRestaurants.meals[meal] = restaurant;
+              console.log(`      ✓ Selected: ${restaurant.name} for ${meal} (avoiding ${usedPlaceIds.size - 1} duplicates)`);
             }
-          })()
-        );
+          }
+
+        } catch (error) {
+          console.warn(`      ⚠️  ${meal} discovery failed:`, error.message);
+        }
       }
-    }
 
-    const results = await Promise.all(mealPromises);
-    const validResults = results.filter(r => r !== null);
+      return dayRestaurants;
+    });
 
-    // Group by day
-    const groupedByDay = {};
-    for (const result of validResults) {
-      if (!groupedByDay[result.day]) {
-        groupedByDay[result.day] = {
-          day: result.day,
-          date: result.date,
-          city: result.city,
-          meals: {}
-        };
-      }
-      groupedByDay[result.day].meals[result.meal] = result.restaurant;
-    }
+    const results = await Promise.all(dayPromises);
+    allRestaurants.push(...results);
 
-    allRestaurants.push(...Object.values(groupedByDay));
-
-    console.log(`   🍽️  Discovered ${validResults.length} restaurants`);
+    const totalMeals = results.reduce((sum, d) => sum + Object.keys(d.meals).length, 0);
+    console.log(`   🍽️  Discovered ${totalMeals} restaurants`);
 
     return allRestaurants;
   }

@@ -22,9 +22,12 @@ class GooglePlacesRestaurantAgent {
    * @returns {Object} Discovery result with restaurant candidates
    */
   async discoverRestaurants(request) {
-    const { city, mealType, preferences, date } = request;
+    const { city, mealType, preferences, date, excludePlaceIds = [] } = request;
 
     console.log(`\n🍽️  GooglePlacesRestaurantAgent: Finding ${mealType} in ${city.name}`);
+    if (excludePlaceIds.length > 0) {
+      console.log(`   Excluding ${excludePlaceIds.length} already-used restaurants`);
+    }
 
     try {
       // 1. Get time window for meal
@@ -43,10 +46,15 @@ class GooglePlacesRestaurantAgent {
         preferences
       });
 
-      // 4. Enrich with details and photos
-      const enriched = await this.enrichRestaurants(restaurants, mealType);
+      // 4. Filter out excluded places EARLY
+      const excludeSet = new Set(excludePlaceIds);
+      const filtered = restaurants.filter(r => !excludeSet.has(r.place_id));
+      console.log(`   After exclusion filter: ${filtered.length}/${restaurants.length} restaurants`);
 
-      // 5. Rank and filter
+      // 5. Enrich with details and photos
+      const enriched = await this.enrichRestaurants(filtered, mealType);
+
+      // 6. Rank and filter
       const ranked = this.rankRestaurants(enriched, preferences, mealType);
 
       console.log(`   ✅ Found ${ranked.length} restaurants`);
