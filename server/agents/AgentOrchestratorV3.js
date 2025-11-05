@@ -583,7 +583,7 @@ class AgentOrchestratorV3 extends EventEmitter {
 
       await this.db.query(
         `UPDATE itineraries
-         SET status = $1,
+         SET processing_status = $1,
              generation_time_ms = $2,
              metrics = $3,
              completed_at = NOW(),
