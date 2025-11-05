@@ -160,7 +160,7 @@ export function ItineraryTimeline({ itinerary, agentType }: ItineraryTimelinePro
 
       {/* Days Timeline */}
       <div className="space-y-6">
-        {dayStructure?.days?.map((day: any, index: number) => {
+        {dayStructure?.days?.map((day: any) => {
           // Process restaurants to add meal type
           const dayRestaurants = restaurants
             ?.filter((r: any) => r.day === day.day)
