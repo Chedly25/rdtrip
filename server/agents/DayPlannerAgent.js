@@ -68,17 +68,22 @@ ${this.getAgentDescription(agent)}
 
 TASK: Create a realistic day-by-day structure for this road trip.
 
+CRITICAL RULES:
+1. ONLY USE THE EXACT CITIES LISTED ABOVE - DO NOT ADD ANY OTHER CITIES
+2. NEVER create days for intermediate cities not in the list
+3. Each "location" field MUST be one of: ${cities.join(', ')}
+4. Plan days to cover ONLY these ${cities.length} cities
+
 REQUIREMENTS:
 1. Calculate realistic daily driving times (max 3-4 hours per day)
 2. Include rest breaks every 2 hours of driving
 3. Account for arrival/departure days (shorter activity windows)
-4. Group cities logically - don't backtrack
-5. Match the ${pace} pace:
+4. Match the ${pace} pace:
    - Relaxed: 2-3 activities per day, lots of free time
    - Moderate: 3-4 activities per day, balanced
    - Packed: 4-5 activities per day, full days
-6. Theme each day based on ${agent} focus
-7. Leave time windows for: breakfast, lunch, dinner, check-in/out
+5. Theme each day based on ${agent} focus
+6. Leave time windows for: breakfast, lunch, dinner, check-in/out
 
 OUTPUT FORMAT:
 Return ONLY valid JSON (no markdown, no code blocks):
