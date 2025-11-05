@@ -205,6 +205,13 @@ class GooglePlacesService {
   }
 
   /**
+   * Alias for getPlaceDetails() - for compatibility with discovery agents
+   */
+  async getDetails(placeId) {
+    return this.getPlaceDetails(placeId);
+  }
+
+  /**
    * Get photo URL from photo reference
    */
   getPhotoUrl(photoReference, maxWidth = 800, maxHeight = 600) {
