@@ -509,16 +509,96 @@ class AgentOrchestratorV3 extends EventEmitter {
   }
 
   async createItineraryRecord() {
-    // TODO: Implement database record creation
-    return `itinerary-${Date.now()}`;
+    try {
+      const result = await this.db.query(
+        `INSERT INTO itineraries
+         (route_data, preferences, status, created_at, updated_at)
+         VALUES ($1, $2, $3, NOW(), NOW())
+         RETURNING id`,
+        [
+          JSON.stringify(this.routeData),
+          JSON.stringify(this.preferences),
+          'generating'
+        ]
+      );
+
+      const itineraryId = result.rows[0].id;
+      console.log(`✓ Created itinerary record: ${itineraryId}`);
+      return itineraryId;
+
+    } catch (error) {
+      console.error('Failed to create itinerary record:', error);
+      throw error;
+    }
   }
 
   async updateItineraryInDatabase() {
-    // TODO: Implement database update
+    if (!this.itineraryId) return;
+
+    try {
+      await this.db.query(
+        `UPDATE itineraries
+         SET day_structure = $1,
+             activities = $2,
+             restaurants = $3,
+             accommodations = $4,
+             scenic_stops = $5,
+             practical_info = $6,
+             weather = $7,
+             events = $8,
+             budget = $9,
+             updated_at = NOW()
+         WHERE id = $10`,
+        [
+          JSON.stringify(this.results.dayPlanner || null),
+          JSON.stringify(this.results.activities || null),
+          JSON.stringify(this.results.restaurants || null),
+          JSON.stringify(this.results.accommodations || null),
+          JSON.stringify(this.results.scenicStops || null),
+          JSON.stringify(this.results.practicalInfo || null),
+          JSON.stringify(this.results.weather || null),
+          JSON.stringify(this.results.events || null),
+          JSON.stringify(this.results.budget || null),
+          this.itineraryId
+        ]
+      );
+
+      console.log(`✓ Updated itinerary ${this.itineraryId} in database`);
+
+    } catch (error) {
+      console.warn('Failed to update itinerary:', error.message);
+      // Don't throw - this is just streaming, generation can continue
+    }
   }
 
   async finalizeItinerary() {
-    // TODO: Implement final database save
+    if (!this.itineraryId) return;
+
+    try {
+      const totalTime = Date.now() - this.startTime;
+
+      await this.db.query(
+        `UPDATE itineraries
+         SET status = $1,
+             generation_time_ms = $2,
+             metrics = $3,
+             completed_at = NOW(),
+             updated_at = NOW()
+         WHERE id = $4`,
+        [
+          'completed',
+          totalTime,
+          JSON.stringify(this.metrics),
+          this.itineraryId
+        ]
+      );
+
+      console.log(`✓ Finalized itinerary ${this.itineraryId}`);
+
+    } catch (error) {
+      console.error('Failed to finalize itinerary:', error);
+      throw error;
+    }
   }
 }
 
