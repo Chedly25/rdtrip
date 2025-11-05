@@ -24,7 +24,7 @@ const EventsAgent = require('./EventsAgent');
 const BudgetOptimizer = require('./BudgetOptimizer');
 
 class AgentOrchestratorV3 extends EventEmitter {
-  constructor(routeData, preferences, db) {
+  constructor(routeData, preferences, db, existingItineraryId = null) {
     super();
 
     this.routeData = routeData;
@@ -32,7 +32,7 @@ class AgentOrchestratorV3 extends EventEmitter {
     this.db = db;
     this.results = {};
     this.startTime = Date.now();
-    this.itineraryId = null;
+    this.itineraryId = existingItineraryId; // Use existing ID if provided
 
     // Initialize Google Places services
     const googleApiKey = process.env.GOOGLE_PLACES_API_KEY;
@@ -119,8 +119,12 @@ class AgentOrchestratorV3 extends EventEmitter {
     console.log(`   Cities: ${this.routeData.waypoints?.length || 0}`);
 
     try {
-      // Create itinerary record
-      this.itineraryId = await this.createItineraryRecord();
+      // Create or use existing itinerary record
+      if (!this.itineraryId) {
+        this.itineraryId = await this.createItineraryRecord();
+      } else {
+        console.log(`✓ Using existing itinerary ID: ${this.itineraryId}`);
+      }
       this.emit('orchestrator:started', { itineraryId: this.itineraryId });
 
       // Execute each phase

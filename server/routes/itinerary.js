@@ -80,7 +80,7 @@ router.post('/generate', async (req, res) => {
       async () => {
         if (useV3) {
           console.log('🚀 Using AgentOrchestratorV3 (Google-first parallel execution)');
-          const orchestrator = new AgentOrchestratorV3(enrichedRouteData, preferences, pool);
+          const orchestrator = new AgentOrchestratorV3(enrichedRouteData, preferences, pool, itineraryId);
 
           // Listen to orchestrator events and update database
           orchestrator.on('agent:complete', async (data) => {
