@@ -6,6 +6,9 @@ import { RestaurantCard } from './RestaurantCard';
 import { HotelCard } from './HotelCard';
 import { ScenicStopCard } from './ScenicStopCard';
 import { WeatherWidget } from './WeatherWidget';
+import { EnhancedActivityCard } from './EnhancedActivityCard';
+import { EnhancedRestaurantCard } from './EnhancedRestaurantCard';
+import { EnhancedAccommodationCard } from './EnhancedAccommodationCard';
 import { getTheme } from '../../config/theme';
 
 interface DayCardProps {
@@ -33,6 +36,9 @@ export function DayCard({
 }: DayCardProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const theme = getTheme(agentType as any);
+
+  // Feature flag for enhanced UI (enable once photos are flowing from backend)
+  const useEnhancedCards = true;
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -139,10 +145,16 @@ export function DayCard({
             <div className="space-y-3">
               <h4 className="font-semibold text-gray-900">Dining</h4>
               {restaurants && restaurants.length > 0 && (
-                <div className="space-y-3">
-                  {restaurants.map((restaurant: any, index: number) => (
-                    <RestaurantCard key={index} restaurant={restaurant} theme={theme} />
-                  ))}
+                <div className="space-y-4">
+                  {useEnhancedCards ? (
+                    restaurants.map((restaurant: any, index: number) => (
+                      <EnhancedRestaurantCard key={index} restaurant={restaurant} showPhotos={true} />
+                    ))
+                  ) : (
+                    restaurants.map((restaurant: any, index: number) => (
+                      <RestaurantCard key={index} restaurant={restaurant} theme={theme} />
+                    ))
+                  )}
                 </div>
               )}
               <AddCustomItemButton itemType="restaurants" dayId={`day-${day.day}`} />
@@ -175,7 +187,11 @@ export function DayCard({
             {accommodation && (
               <div className="space-y-3">
                 <h4 className="font-semibold text-gray-900">Accommodation</h4>
-                <HotelCard hotel={accommodation} theme={theme} />
+                {useEnhancedCards ? (
+                  <EnhancedAccommodationCard accommodation={accommodation} showPhotos={true} />
+                ) : (
+                  <HotelCard hotel={accommodation} theme={theme} />
+                )}
               </div>
             )}
 
