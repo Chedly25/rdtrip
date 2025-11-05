@@ -200,8 +200,8 @@ function AppContent() {
                     // Backend format: latitude/longitude fields
                     coords = { lat: wp.latitude, lng: wp.longitude };
                   } else if (Array.isArray(wp.coordinates)) {
-                    // Array format: [lng, lat]
-                    coords = { lng: wp.coordinates[0], lat: wp.coordinates[1] };
+                    // Array format: [lat, lng] - our geocoding returns this
+                    coords = { lat: wp.coordinates[0], lng: wp.coordinates[1] };
                   } else if (wp.coordinates && typeof wp.coordinates === 'object') {
                     // Object format: {lat, lng}
                     coords = wp.coordinates;
@@ -237,7 +237,7 @@ function AppContent() {
             order: index,
             activities: wp.activities || [],
             coordinates: Array.isArray(wp.coordinates)
-              ? { lng: wp.coordinates[0], lat: wp.coordinates[1] }
+              ? { lat: wp.coordinates[0], lng: wp.coordinates[1] }
               : wp.coordinates,
           }));
         }
