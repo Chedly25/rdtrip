@@ -545,12 +545,12 @@ class AgentOrchestratorV3 extends EventEmitter {
 
     const normalizedQuery = cityName.toLowerCase().trim();
 
-    // Exact match
+    // Exact match in waypoint map
     if (this.cityCoordinates[normalizedQuery]) {
       return this.cityCoordinates[normalizedQuery];
     }
 
-    // Partial match (city contains query or query contains city)
+    // Partial match in waypoint map (city contains query or query contains city)
     for (const [mapCity, coords] of Object.entries(this.cityCoordinates)) {
       if (mapCity.includes(normalizedQuery) || normalizedQuery.includes(mapCity)) {
         console.log(`   🎯 Fuzzy matched "${cityName}" to "${mapCity}"`);
@@ -558,7 +558,105 @@ class AgentOrchestratorV3 extends EventEmitter {
       }
     }
 
-    console.warn(`   ⚠️  No coordinates found for city: "${cityName}"`);
+    // Fallback: Major European cities database
+    const europeanCities = {
+      'paris': { lat: 48.8566, lng: 2.3522 },
+      'london': { lat: 51.5074, lng: -0.1278 },
+      'berlin': { lat: 52.5200, lng: 13.4050 },
+      'madrid': { lat: 40.4168, lng: -3.7038 },
+      'rome': { lat: 41.9028, lng: 12.4964 },
+      'barcelona': { lat: 41.3851, lng: 2.1734 },
+      'munich': { lat: 48.1351, lng: 11.5820 },
+      'milan': { lat: 45.4642, lng: 9.1900 },
+      'prague': { lat: 50.0755, lng: 14.4378 },
+      'vienna': { lat: 48.2082, lng: 16.3738 },
+      'amsterdam': { lat: 52.3676, lng: 4.9041 },
+      'brussels': { lat: 50.8503, lng: 4.3517 },
+      'copenhagen': { lat: 55.6761, lng: 12.5683 },
+      'stockholm': { lat: 59.3293, lng: 18.0686 },
+      'dublin': { lat: 53.3498, lng: -6.2603 },
+      'lisbon': { lat: 38.7223, lng: -9.1393 },
+      'athens': { lat: 37.9838, lng: 23.7275 },
+      'warsaw': { lat: 52.2297, lng: 21.0122 },
+      'budapest': { lat: 47.4979, lng: 19.0402 },
+      'zurich': { lat: 47.3769, lng: 8.5417 },
+      'geneva': { lat: 46.2044, lng: 6.1432 },
+      'lyon': { lat: 45.7640, lng: 4.8357 },
+      'marseille': { lat: 43.2965, lng: 5.3698 },
+      'toulouse': { lat: 43.6047, lng: 1.4442 },
+      'nice': { lat: 43.7102, lng: 7.2620 },
+      'florence': { lat: 43.7696, lng: 11.2558 },
+      'venice': { lat: 45.4408, lng: 12.3155 },
+      'naples': { lat: 40.8518, lng: 14.2681 },
+      'seville': { lat: 37.3891, lng: -5.9845 },
+      'valencia': { lat: 39.4699, lng: -0.3763 },
+      'porto': { lat: 41.1579, lng: -8.6291 },
+      'cologne': { lat: 50.9375, lng: 6.9603 },
+      'frankfurt': { lat: 50.1109, lng: 8.6821 },
+      'hamburg': { lat: 53.5511, lng: 9.9937 },
+      'edinburgh': { lat: 55.9533, lng: -3.1883 },
+      'glasgow': { lat: 55.8642, lng: -4.2518 },
+      'manchester': { lat: 53.4808, lng: -2.2426 },
+      'liverpool': { lat: 53.4084, lng: -2.9916 },
+      'krakow': { lat: 50.0647, lng: 19.9450 },
+      'riga': { lat: 56.9496, lng: 24.1052 },
+      'tallinn': { lat: 59.4370, lng: 24.7536 },
+      'vilnius': { lat: 54.6872, lng: 25.2797 },
+      'helsinki': { lat: 60.1695, lng: 24.9354 },
+      'oslo': { lat: 59.9139, lng: 10.7522 },
+      'reykjavik': { lat: 64.1466, lng: -21.9426 },
+      'bratislava': { lat: 48.1486, lng: 17.1077 },
+      'ljubljana': { lat: 46.0569, lng: 14.5058 },
+      'zagreb': { lat: 45.8150, lng: 15.9819 },
+      'belgrade': { lat: 44.7866, lng: 20.4489 },
+      'bucharest': { lat: 44.4268, lng: 26.1025 },
+      'sofia': { lat: 42.6977, lng: 23.3219 },
+      'strasbourg': { lat: 48.5734, lng: 7.7521 },
+      'nuremberg': { lat: 49.4521, lng: 11.0767 },
+      'dresden': { lat: 51.0504, lng: 13.7373 },
+      'leipzig': { lat: 51.3397, lng: 12.3731 },
+      'stuttgart': { lat: 48.7758, lng: 9.1829 },
+      'dusseldorf': { lat: 51.2277, lng: 6.7735 },
+      'antwerp': { lat: 51.2194, lng: 4.4025 },
+      'ghent': { lat: 51.0543, lng: 3.7174 },
+      'bruges': { lat: 51.2093, lng: 3.2247 },
+      'luxembourg': { lat: 49.6116, lng: 6.1319 },
+      'salzburg': { lat: 47.8095, lng: 13.0550 },
+      'innsbruck': { lat: 47.2692, lng: 11.4041 },
+      'bergen': { lat: 60.3913, lng: 5.3221 },
+      'gothenburg': { lat: 57.7089, lng: 11.9746 },
+      'malmo': { lat: 55.6050, lng: 13.0038 },
+      'aarhus': { lat: 56.1629, lng: 10.2039 },
+      'odense': { lat: 55.4038, lng: 10.4024 },
+      'bilbao': { lat: 43.2630, lng: -2.9350 },
+      'granada': { lat: 37.1773, lng: -3.5986 },
+      'cordoba': { lat: 37.8882, lng: -4.7794 },
+      'palma': { lat: 39.5696, lng: 2.6502 },
+      'bordeaux': { lat: 44.8378, lng: -0.5792 },
+      'nantes': { lat: 47.2184, lng: -1.5536 },
+      'montpellier': { lat: 43.6108, lng: 3.8767 },
+      'aix-en-provence': { lat: 43.5297, lng: 5.4474 },
+      'avignon': { lat: 43.9493, lng: 4.8055 },
+      'moustiers-sainte-marie': { lat: 43.8447, lng: 6.2206 },
+      'cannes': { lat: 43.5528, lng: 7.0174 },
+      'monaco': { lat: 43.7384, lng: 7.4246 }
+    };
+
+    // Try exact match in fallback
+    if (europeanCities[normalizedQuery]) {
+      console.log(`   🗺️  Using fallback coordinates for "${cityName}"`);
+      return europeanCities[normalizedQuery];
+    }
+
+    // Try partial match in fallback
+    for (const [city, coords] of Object.entries(europeanCities)) {
+      if (city.includes(normalizedQuery) || normalizedQuery.includes(city)) {
+        console.log(`   🗺️  Fallback fuzzy matched "${cityName}" to "${city}"`);
+        return coords;
+      }
+    }
+
+    console.warn(`   ⚠️  No coordinates found for city: "${cityName}" - searches will fail!`);
     return { lat: 0, lng: 0 };
   }
 
