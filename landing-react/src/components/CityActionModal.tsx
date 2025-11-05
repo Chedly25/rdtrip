@@ -17,7 +17,7 @@ interface City {
   imageUrl?: string
   description?: string
   themes?: string[]
-  coordinates?: [number, number] // [lng, lat]
+  coordinates?: [number, number] // [lat, lng]
 }
 
 interface CityActionModalProps {
@@ -26,6 +26,7 @@ interface CityActionModalProps {
   selectedCity: City
   currentRoute: City[]
   agentTheme: { color: string; name: string }
+  originCoords?: [number, number] // [lat, lng] coordinates of the route origin
   onAddCity: (position: number, cityWithCoordinates: City) => void
   onReplaceCity: (cityIndexToReplace: number) => void
 }
@@ -38,6 +39,7 @@ export default function CityActionModal({
   selectedCity,
   currentRoute,
   agentTheme,
+  originCoords,
   onAddCity,
   onReplaceCity
 }: CityActionModalProps) {
@@ -86,7 +88,7 @@ export default function CityActionModal({
     await new Promise(resolve => setTimeout(resolve, 300)) // Brief UI delay
 
     // Calculate optimal position automatically (with or without coordinates)
-    const optimalPosition = calculateOptimalInsertPosition(currentRoute, cityToAdd)
+    const optimalPosition = calculateOptimalInsertPosition(currentRoute, cityToAdd, originCoords)
 
     // Pass both position and city with coordinates
     onAddCity(optimalPosition, cityToAdd)
