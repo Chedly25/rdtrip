@@ -12,7 +12,7 @@ interface Activity {
 
 export interface City {
   name: string
-  coordinates?: [number, number] // [lng, lat]
+  coordinates?: [number, number] // [lat, lng]
   description?: string
   themes?: string[]
   themesDisplay?: string
@@ -69,13 +69,13 @@ export function haversineDistance(
  *
  * @param currentRoute - Array of existing cities in the route
  * @param newCity - The city to be inserted
- * @param originCoords - Starting point coordinates [lng, lat] (default: Aix-en-Provence)
+ * @param originCoords - Starting point coordinates [lat, lng] (default: Aix-en-Provence)
  * @returns The optimal index position to insert the new city
  */
 export function calculateOptimalInsertPosition(
   currentRoute: City[],
   newCity: City,
-  originCoords: [number, number] = [5.4474, 43.5297] // Aix-en-Provence
+  originCoords: [number, number] = [43.5297, 5.4474] // Aix-en-Provence [lat, lng]
 ): number {
   // Edge case: Empty route
   if (currentRoute.length === 0) {
@@ -88,8 +88,8 @@ export function calculateOptimalInsertPosition(
     return currentRoute.length // Add at end as fallback
   }
 
-  const [newLng, newLat] = newCity.coordinates
-  const [originLng, originLat] = originCoords
+  const [newLat, newLng] = newCity.coordinates
+  const [originLat, originLng] = originCoords
 
   let bestPosition = 0
   let minAdditionalDistance = Infinity
@@ -107,8 +107,8 @@ export function calculateOptimalInsertPosition(
           ? haversineDistance(
               newLat,
               newLng,
-              currentRoute[0].coordinates[1],
-              currentRoute[0].coordinates[0]
+              currentRoute[0].coordinates[0],
+              currentRoute[0].coordinates[1]
             )
           : 0
 
@@ -117,8 +117,8 @@ export function calculateOptimalInsertPosition(
           ? haversineDistance(
               originLat,
               originLng,
-              currentRoute[0].coordinates[1],
-              currentRoute[0].coordinates[0]
+              currentRoute[0].coordinates[0],
+              currentRoute[0].coordinates[1]
             )
           : 0
 
@@ -128,8 +128,8 @@ export function calculateOptimalInsertPosition(
       const prevCity = currentRoute[i - 1]
       if (prevCity?.coordinates) {
         additionalDistance = haversineDistance(
-          prevCity.coordinates[1],
           prevCity.coordinates[0],
+          prevCity.coordinates[1],
           newLat,
           newLng
         )
@@ -140,8 +140,8 @@ export function calculateOptimalInsertPosition(
       const nextCity = currentRoute[i]
       if (prevCity?.coordinates && nextCity?.coordinates) {
         const distanceFromPrev = haversineDistance(
-          prevCity.coordinates[1],
           prevCity.coordinates[0],
+          prevCity.coordinates[1],
           newLat,
           newLng
         )
@@ -149,15 +149,15 @@ export function calculateOptimalInsertPosition(
         const distanceToNext = haversineDistance(
           newLat,
           newLng,
-          nextCity.coordinates[1],
-          nextCity.coordinates[0]
+          nextCity.coordinates[0],
+          nextCity.coordinates[1]
         )
 
         const originalDistance = haversineDistance(
-          prevCity.coordinates[1],
           prevCity.coordinates[0],
-          nextCity.coordinates[1],
-          nextCity.coordinates[0]
+          prevCity.coordinates[1],
+          nextCity.coordinates[0],
+          nextCity.coordinates[1]
         )
 
         additionalDistance = distanceFromPrev + distanceToNext - originalDistance
@@ -181,25 +181,25 @@ export function calculateOptimalInsertPosition(
 /**
  * Calculate total route distance given an array of cities
  * @param route - Array of cities in the route
- * @param originCoords - Starting point coordinates [lng, lat]
+ * @param originCoords - Starting point coordinates [lat, lng]
  * @returns Total distance in kilometers
  */
 export function calculateTotalDistance(
   route: City[],
-  originCoords: [number, number] = [5.4474, 43.5297]
+  originCoords: [number, number] = [43.5297, 5.4474]
 ): number {
   if (route.length === 0) return 0
 
   let totalDistance = 0
-  const [originLng, originLat] = originCoords
+  const [originLat, originLng] = originCoords
 
   // Distance from origin to first city
   if (route[0]?.coordinates) {
     totalDistance += haversineDistance(
       originLat,
       originLng,
-      route[0].coordinates[1],
-      route[0].coordinates[0]
+      route[0].coordinates[0],
+      route[0].coordinates[1]
     )
   }
 
@@ -209,10 +209,10 @@ export function calculateTotalDistance(
     const nextCity = route[i + 1]
     if (currentCity?.coordinates && nextCity?.coordinates) {
       totalDistance += haversineDistance(
-        currentCity.coordinates[1],
         currentCity.coordinates[0],
-        nextCity.coordinates[1],
-        nextCity.coordinates[0]
+        currentCity.coordinates[1],
+        nextCity.coordinates[0],
+        nextCity.coordinates[1]
       )
     }
   }
