@@ -104,7 +104,7 @@ class BudgetOptimizer {
     const totalDays = this.itineraryData.dayStructure?.totalDays || 1;
     budget.perDay = Math.round(budget.total / totalDays);
 
-    const travelers = this.preferences.travelers || 2;
+    const travelers = this.preferences?.travelers || 2;
     budget.perPerson = Math.round(budget.total / travelers);
 
     // Add summary
