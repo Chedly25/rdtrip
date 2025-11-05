@@ -57,8 +57,6 @@ function AnimatedGrid() {
 
 // Animated connection line between agents
 function AnimatedConnection({
-  from,
-  to,
   active,
   fromPos,
   toPos,
@@ -318,7 +316,7 @@ function calculatePositions(agents: AgentNode[]): Map<string, Position> {
 
   Array.from(phases.entries())
     .sort(([a], [b]) => a - b)
-    .forEach(([phase, phaseAgents]) => {
+    .forEach(([, phaseAgents]) => {
       const totalWidth = (phaseAgents.length - 1) * nodeSpacing;
       const startX = (800 - totalWidth) / 2; // Center horizontally (assuming 800px width)
 
