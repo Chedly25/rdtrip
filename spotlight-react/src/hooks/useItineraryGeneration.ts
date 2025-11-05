@@ -73,7 +73,75 @@ export function useItineraryGeneration(): UseItineraryGenerationReturn {
       const { itineraryId } = await response.json();
       console.log(`✅ Itinerary job started: ${itineraryId}`);
 
-      // Poll for status updates
+      // Try to use SSE streaming if available, fallback to polling
+      const useSSE = false; // TODO: Enable when V3 is stable
+
+      if (useSSE) {
+        // Use SSE for real-time updates
+        console.log('📡 Connecting to SSE stream...');
+        const eventSource = new EventSource(`/api/itinerary/${itineraryId}/stream`);
+
+        eventSource.addEventListener('agent_progress', (event) => {
+          const data = JSON.parse(event.data);
+          console.log('📊 Agent progress:', data);
+
+          setAgents(prev => prev.map(agent => {
+            if (agent.name === data.agent) {
+              return { ...agent, status: data.status === 'completed' ? 'completed' : 'running' };
+            }
+            return agent;
+          }));
+        });
+
+        eventSource.addEventListener('generation_complete', (event) => {
+          const data = JSON.parse(event.data);
+          console.log('🎉 Generation complete via SSE');
+
+          eventSource.close();
+
+          // Fetch the full itinerary
+          fetch(`/api/itinerary/${itineraryId}`)
+            .then(res => res.json())
+            .then(fullItinerary => {
+              setItinerary({
+                id: fullItinerary.id,
+                dayStructure: fullItinerary.dayStructure,
+                activities: fullItinerary.activities,
+                restaurants: fullItinerary.restaurants,
+                accommodations: fullItinerary.accommodations,
+                scenicStops: fullItinerary.scenicStops,
+                practicalInfo: fullItinerary.practicalInfo,
+                weather: fullItinerary.weather,
+                events: fullItinerary.events,
+                budget: fullItinerary.budget
+              });
+
+              const newUrl = `${window.location.pathname}?itinerary=${itineraryId}`;
+              window.history.pushState({ itineraryId }, '', newUrl);
+
+              setIsGenerating(false);
+            });
+        });
+
+        eventSource.addEventListener('generation_error', (event) => {
+          const data = JSON.parse(event.data);
+          console.error('❌ Generation error via SSE:', data.error);
+          eventSource.close();
+          setError('Generation failed. Please try again.');
+          setIsGenerating(false);
+        });
+
+        eventSource.onerror = (error) => {
+          console.error('SSE connection error:', error);
+          eventSource.close();
+          // Fall back to polling
+          setError('Real-time updates failed, but generation may still complete.');
+        };
+
+        return; // Skip polling
+      }
+
+      // Poll for status updates (fallback method)
       const pollInterval = setInterval(async () => {
         try {
           const statusRes = await fetch(`/api/itinerary/${itineraryId}/status`);

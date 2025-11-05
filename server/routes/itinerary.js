@@ -7,6 +7,7 @@ const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
 const ItineraryAgentOrchestrator = require('../agents/ItineraryAgentOrchestrator');
+const AgentOrchestratorV3 = require('../agents/AgentOrchestratorV3');
 const jobQueue = require('../services/JobQueue');
 const { generateItineraryPDF } = require('../export/generatePDF');
 const { generateItineraryCalendar } = require('../export/generateICS');
@@ -71,17 +72,45 @@ router.post('/generate', async (req, res) => {
       user_id: routeData.user_id || null
     };
 
+    // Choose orchestrator version (V3 = Google-first parallel, V2 = Legacy)
+    const useV3 = process.env.USE_ORCHESTRATOR_V3 === 'true';
+
     jobQueue.addJob(
       itineraryId,
       async () => {
-        const orchestrator = new ItineraryAgentOrchestrator(
-          enrichedRouteData,
-          preferences,
-          pool,
-          () => {} // No SSE callback needed - using database updates
-        );
-        orchestrator.itineraryId = itineraryId; // Set the pre-created ID
-        return await orchestrator.generateCompleteAsync();
+        if (useV3) {
+          console.log('🚀 Using AgentOrchestratorV3 (Google-first parallel execution)');
+          const orchestrator = new AgentOrchestratorV3(enrichedRouteData, preferences, pool);
+
+          // Listen to orchestrator events and update database
+          orchestrator.on('agent:complete', async (data) => {
+            try {
+              await pool.query(
+                `UPDATE itineraries
+                 SET progress = COALESCE(progress, '{}'::jsonb) || jsonb_build_object($1, 'completed'),
+                     updated_at = NOW()
+                 WHERE id = $2`,
+                [data.agent, itineraryId]
+              );
+            } catch (err) {
+              console.warn('Failed to update progress:', err.message);
+            }
+          });
+
+          const result = await orchestrator.execute();
+          return result;
+
+        } else {
+          console.log('🔄 Using ItineraryAgentOrchestrator (V2 legacy)');
+          const orchestrator = new ItineraryAgentOrchestrator(
+            enrichedRouteData,
+            preferences,
+            pool,
+            () => {} // No SSE callback needed - using database updates
+          );
+          orchestrator.itineraryId = itineraryId; // Set the pre-created ID
+          return await orchestrator.generateCompleteAsync();
+        }
       },
       { route_id, agent: agentType }
     );
@@ -176,6 +205,115 @@ router.get('/:itineraryId/status', async (req, res) => {
   } catch (error) {
     console.error('Get status error:', error);
     res.status(500).json({ error: 'Failed to get status' });
+  }
+});
+
+/**
+ * GET /api/itinerary/:itineraryId/stream
+ * SSE endpoint for real-time V3 orchestrator progress updates
+ * Streams agent:start, agent:complete, phase:start, phase:complete events
+ */
+router.get('/:itineraryId/stream', async (req, res) => {
+  const { itineraryId } = req.params;
+
+  try {
+    // Verify itinerary exists
+    const result = await pool.query(
+      'SELECT id FROM itineraries WHERE id = $1',
+      [itineraryId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Itinerary not found' });
+    }
+
+    // Set up SSE
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no'); // Disable nginx buffering
+    res.flushHeaders();
+
+    console.log(`📡 V3 SSE client connected for itinerary ${itineraryId}`);
+
+    // Send heartbeat to keep connection alive
+    const heartbeat = setInterval(() => {
+      res.write(`:heartbeat\n\n`);
+    }, 15000);
+
+    // Poll database for progress updates
+    let lastProgress = {};
+    const progressInterval = setInterval(async () => {
+      try {
+        const statusResult = await pool.query(
+          'SELECT processing_status, progress FROM itineraries WHERE id = $1',
+          [itineraryId]
+        );
+
+        if (statusResult.rows.length === 0) {
+          clearInterval(progressInterval);
+          clearInterval(heartbeat);
+          res.end();
+          return;
+        }
+
+        const { processing_status, progress } = statusResult.rows[0];
+
+        // Send progress updates for changed agents
+        if (progress) {
+          for (const [agent, status] of Object.entries(progress)) {
+            if (lastProgress[agent] !== status) {
+              const event = {
+                agent,
+                status,
+                timestamp: Date.now()
+              };
+              res.write(`event: agent_progress\ndata: ${JSON.stringify(event)}\n\n`);
+              lastProgress[agent] = status;
+            }
+          }
+        }
+
+        // Check if completed
+        if (processing_status === 'completed' || processing_status === 'partial') {
+          const finalResult = await pool.query(
+            `SELECT * FROM itineraries WHERE id = $1`,
+            [itineraryId]
+          );
+
+          res.write(`event: generation_complete\ndata: ${JSON.stringify({
+            itineraryId,
+            status: processing_status
+          })}\n\n`);
+
+          clearInterval(progressInterval);
+          clearInterval(heartbeat);
+          res.end();
+        } else if (processing_status === 'failed') {
+          res.write(`event: generation_error\ndata: ${JSON.stringify({
+            error: 'Generation failed'
+          })}\n\n`);
+
+          clearInterval(progressInterval);
+          clearInterval(heartbeat);
+          res.end();
+        }
+
+      } catch (error) {
+        console.error('SSE progress poll error:', error);
+      }
+    }, 2000);
+
+    // Clean up on client disconnect
+    req.on('close', () => {
+      console.log(`📡 V3 SSE client disconnected for itinerary ${itineraryId}`);
+      clearInterval(progressInterval);
+      clearInterval(heartbeat);
+    });
+
+  } catch (error) {
+    console.error('SSE setup error:', error);
+    res.status(500).json({ error: 'Failed to set up event stream' });
   }
 });
 
