@@ -33,10 +33,13 @@ class GooglePlacesDiscoveryAgent {
    * @returns {Object} Discovery result with candidates
    */
   async discoverActivities(request) {
-    const { city, category, timeWindow, preferences, date } = request;
+    const { city, category, timeWindow, preferences, date, excludePlaceIds = [] } = request;
 
     console.log(`\n🔍 GooglePlacesDiscoveryAgent: Discovering ${category} in ${city.name}`);
     console.log(`   Time window: ${timeWindow.start} - ${timeWindow.end}`);
+    if (excludePlaceIds.length > 0) {
+      console.log(`   Excluding ${excludePlaceIds.length} already-used places`);
+    }
 
     try {
       // 1. Map category to Google Places types
@@ -46,17 +49,22 @@ class GooglePlacesDiscoveryAgent {
       // 2. Search for places
       const candidates = await this.searchPlaces(city, googleTypes, preferences);
 
-      // 3. Enrich with details and photos
-      const enriched = await this.enrichCandidates(candidates, city, timeWindow, date);
+      // 3. Filter out excluded places EARLY
+      const excludeSet = new Set(excludePlaceIds);
+      const filtered = candidates.filter(c => !excludeSet.has(c.place_id));
+      console.log(`   After exclusion filter: ${filtered.length}/${candidates.length} places`);
 
-      // 4. Filter by time window and preferences
-      const filtered = this.filterAndRank(enriched, timeWindow, preferences);
+      // 4. Enrich with details and photos
+      const enriched = await this.enrichCandidates(filtered, city, timeWindow, date);
 
-      console.log(`   ✅ Found ${filtered.length} candidates`);
+      // 5. Filter by time window and preferences
+      const ranked = this.filterAndRank(enriched, timeWindow, preferences);
+
+      console.log(`   ✅ Found ${ranked.length} candidates`);
 
       return {
         success: true,
-        candidates: filtered,
+        candidates: ranked,
         source: 'google_places',
         timestamp: new Date().toISOString()
       };
