@@ -85,12 +85,13 @@ router.post('/generate', async (req, res) => {
           // Listen to orchestrator events and update database
           orchestrator.on('agent:complete', async (data) => {
             try {
+              const agentName = typeof data.agent === 'string' ? data.agent : (data.agent?.name || String(data.agent));
               await pool.query(
                 `UPDATE itineraries
-                 SET progress = COALESCE(progress, '{}'::jsonb) || jsonb_build_object($1, 'completed'),
+                 SET progress = COALESCE(progress, '{}'::jsonb) || jsonb_build_object($1::text, 'completed'),
                      updated_at = NOW()
                  WHERE id = $2`,
-                [data.agent, itineraryId]
+                [agentName, itineraryId]
               );
             } catch (err) {
               console.warn('Failed to update progress:', err.message);
