@@ -95,7 +95,7 @@ export function useItineraryGeneration(): UseItineraryGenerationReturn {
 
         eventSource.addEventListener('generation_complete', (event) => {
           const data = JSON.parse(event.data);
-          console.log('🎉 Generation complete via SSE');
+          console.log('🎉 Generation complete via SSE:', data);
 
           eventSource.close();
 
