@@ -1,0 +1,305 @@
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  ChevronDown,
+  Star,
+  Clock,
+  MapPin,
+  Globe,
+  Phone,
+  DollarSign,
+  Utensils,
+  Hotel,
+  Landmark
+} from 'lucide-react';
+
+interface TimelineItemCardProps {
+  type: 'activity' | 'restaurant' | 'accommodation' | 'drive';
+  time?: string;
+  item: any;
+  color?: string;
+}
+
+export function TimelineItemCard({ type, time, item, color = '#3B82F6' }: TimelineItemCardProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  // Get icon based on type
+  const getIcon = () => {
+    switch (type) {
+      case 'activity':
+        return <Landmark className="h-5 w-5" />;
+      case 'restaurant':
+        return <Utensils className="h-5 w-5" />;
+      case 'accommodation':
+        return <Hotel className="h-5 w-5" />;
+      case 'drive':
+        return <MapPin className="h-5 w-5" />;
+      default:
+        return <MapPin className="h-5 w-5" />;
+    }
+  };
+
+  // Get price display
+  const getPriceDisplay = () => {
+    if (item.priceLevel) {
+      return '€'.repeat(item.priceLevel);
+    }
+    if (item.priceRange) {
+      return item.priceRange;
+    }
+    if (item.estimatedCost) {
+      return `€${item.estimatedCost}`;
+    }
+    if (item.cost) {
+      return item.cost;
+    }
+    return null;
+  };
+
+  // Get duration display
+  const getDuration = () => {
+    if (item.estimatedDuration) return item.estimatedDuration;
+    if (item.duration) return item.duration;
+    return null;
+  };
+
+  // Get status badge
+  const getStatusBadge = () => {
+    if (item.isOpenNow === true) {
+      return <span className="text-xs text-green-600 font-medium">Open now</span>;
+    }
+    if (item.isOpenNow === false) {
+      return <span className="text-xs text-red-600 font-medium">Closed</span>;
+    }
+    return null;
+  };
+
+  // Get thumbnail
+  const getThumbnail = () => {
+    if (item.photos && item.photos.length > 0) {
+      return item.photos[0];
+    }
+    if (item.primaryPhoto) {
+      return item.primaryPhoto;
+    }
+    if (item.imageUrl) {
+      return item.imageUrl;
+    }
+    return null;
+  };
+
+  const thumbnail = getThumbnail();
+  const price = getPriceDisplay();
+  const duration = getDuration();
+  const rating = item.rating;
+  const ratingCount = item.ratingCount || item.user_ratings_total;
+
+  return (
+    <motion.div
+      layout
+      className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
+    >
+      {/* Collapsed State - 80px */}
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full p-4 flex items-center gap-4 text-left hover:bg-gray-50 transition-colors"
+      >
+        {/* Time Marker */}
+        {time && (
+          <div className="flex-shrink-0 w-16 text-sm font-medium text-gray-600">
+            {time}
+          </div>
+        )}
+
+        {/* Icon with color */}
+        <div
+          className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center text-white"
+          style={{ backgroundColor: color }}
+        >
+          {getIcon()}
+        </div>
+
+        {/* Thumbnail (optional) */}
+        {thumbnail && (
+          <div className="flex-shrink-0 w-16 h-16 rounded-md overflow-hidden bg-gray-100">
+            <img
+              src={thumbnail}
+              alt={item.name}
+              className="w-full h-full object-cover"
+            />
+          </div>
+        )}
+
+        {/* Content */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex-1 min-w-0">
+              <h4 className="font-semibold text-gray-900 truncate">{item.name}</h4>
+              <div className="mt-1 flex items-center gap-3 text-xs text-gray-600">
+                {duration && (
+                  <span className="flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    {duration}
+                  </span>
+                )}
+                {item.cuisine && (
+                  <span>{item.cuisine}</span>
+                )}
+                {item.type && (
+                  <span className="capitalize">{item.type}</span>
+                )}
+                {getStatusBadge()}
+              </div>
+            </div>
+
+            {/* Rating & Price */}
+            <div className="flex-shrink-0 flex items-center gap-3 text-sm">
+              {rating && (
+                <div className="flex items-center gap-1">
+                  <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                  <span className="font-medium">{rating}</span>
+                  {ratingCount && (
+                    <span className="text-gray-400 text-xs">({ratingCount})</span>
+                  )}
+                </div>
+              )}
+              {price && (
+                <span className="font-medium text-gray-700">{price}</span>
+              )}
+              <ChevronDown
+                className={`h-5 w-5 text-gray-400 transition-transform ${
+                  isExpanded ? 'transform rotate-180' : ''
+                }`}
+              />
+            </div>
+          </div>
+        </div>
+      </button>
+
+      {/* Expanded State */}
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="border-t border-gray-100"
+          >
+            <div className="p-4 space-y-4">
+              {/* Photo Gallery */}
+              {item.photos && item.photos.length > 0 && (
+                <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+                  {item.photos.slice(0, 5).map((photo: string, index: number) => (
+                    <img
+                      key={index}
+                      src={photo}
+                      alt={`${item.name} ${index + 1}`}
+                      className="h-32 w-48 object-cover rounded-lg flex-shrink-0"
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* Details Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                {item.address && (
+                  <div className="flex items-start gap-2">
+                    <MapPin className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                    <span className="text-gray-600">{item.address}</span>
+                  </div>
+                )}
+
+                {item.openingHours && (
+                  <div className="flex items-start gap-2">
+                    <Clock className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                    <span className="text-gray-600">
+                      {item.openingHours.weekday_text?.[0] || 'See website for hours'}
+                    </span>
+                  </div>
+                )}
+
+                {item.website && (
+                  <div className="flex items-start gap-2">
+                    <Globe className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                    <a
+                      href={item.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline truncate"
+                    >
+                      Visit website
+                    </a>
+                  </div>
+                )}
+
+                {item.phone && (
+                  <div className="flex items-start gap-2">
+                    <Phone className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                    <span className="text-gray-600">{item.phone}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Top Review or Highlight */}
+              {(item.topReview || item.reviewHighlight || item.whyVisit) && (
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <p className="text-sm text-gray-700 italic">
+                    "{item.topReview || item.reviewHighlight || item.whyVisit}"
+                  </p>
+                </div>
+              )}
+
+              {/* Tips */}
+              {item.tips && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-sm text-gray-700">
+                    💡 <span className="font-medium">Tip:</span> {item.tips}
+                  </p>
+                </div>
+              )}
+
+              {/* Amenities (for accommodations) */}
+              {item.amenities && item.amenities.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {item.amenities.map((amenity: string, index: number) => (
+                    <span
+                      key={index}
+                      className="px-2 py-1 bg-gray-100 rounded text-xs text-gray-600"
+                    >
+                      {amenity}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 pt-2">
+                {item.website && (
+                  <a
+                    href={item.website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors text-center"
+                  >
+                    Visit Website
+                  </a>
+                )}
+                {item.place_id && (
+                  <a
+                    href={`https://www.google.com/maps/place/?q=place_id:${item.place_id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors text-center"
+                  >
+                    View on Map
+                  </a>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
