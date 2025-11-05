@@ -103,7 +103,7 @@ export function DayCardV2({
     }
 
     // Activities
-    activities.forEach((activity: any, index: number) => {
+    activities.forEach((activity: any) => {
       items.push({
         type: 'activity',
         time: currentTime,

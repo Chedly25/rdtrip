@@ -7,7 +7,6 @@ import {
   MapPin,
   Globe,
   Phone,
-  DollarSign,
   Utensils,
   Hotel,
   Landmark
