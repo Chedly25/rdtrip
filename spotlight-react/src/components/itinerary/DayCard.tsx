@@ -6,7 +6,6 @@ import { RestaurantCard } from './RestaurantCard';
 import { HotelCard } from './HotelCard';
 import { ScenicStopCard } from './ScenicStopCard';
 import { WeatherWidget } from './WeatherWidget';
-import { EnhancedActivityCard } from './EnhancedActivityCard';
 import { EnhancedRestaurantCard } from './EnhancedRestaurantCard';
 import { EnhancedAccommodationCard } from './EnhancedAccommodationCard';
 import { getTheme } from '../../config/theme';
