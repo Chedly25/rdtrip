@@ -23,13 +23,17 @@ class OrchestratorAgent {
     this.context = sharedContext;
     this.db = db;
 
-    console.log(`🔑 OrchestratorAgent: Received API Key = ${googleApiKey ? googleApiKey.substring(0, 10) + '...' : 'UNDEFINED'}`);
+    // Defensive API key logging
+    const keyInfo = (googleApiKey && typeof googleApiKey === 'string')
+      ? googleApiKey.substring(0, 10) + '...'
+      : `UNDEFINED (type: ${typeof googleApiKey})`;
+    console.log(`🔑 OrchestratorAgent: Received API Key = ${keyInfo}`);
 
     // Initialize sub-agents
     this.discoveryAgent = new StrategicDiscoveryAgent(sharedContext);
 
-    // Validation orchestrator (if Google API key available)
-    this.validationOrchestrator = googleApiKey
+    // Validation orchestrator (if Google API key available and is string)
+    this.validationOrchestrator = (googleApiKey && typeof googleApiKey === 'string')
       ? new ValidationOrchestrator(db, googleApiKey)
       : null;
 
@@ -240,13 +244,18 @@ class OrchestratorAgent {
    */
   async validateCandidates(candidates, request) {
     if (!this.validationOrchestrator) {
-      // No validation available - mark all as valid
+      // No validation available - mark all as valid with caveat
       console.log(`   ⚠️  Validation skipped (no Google API key)`);
 
       return candidates.map(candidate => ({
         valid: true,
         candidate: candidate,
-        place: candidate,
+        place: {
+          ...candidate,
+          validated: false,
+          validationSource: 'none',
+          caveats: ['This place has not been validated with Google Places']
+        },
         confidence: 0.5,
         status: 'unvalidated'
       }));
@@ -310,12 +319,19 @@ class OrchestratorAgent {
       } catch (error) {
         console.error(`   ❌ Validation error for "${candidate.name}":`, error.message);
 
+        // GRACEFUL DEGRADATION: Accept with caveat on validation error
         validationResults.push({
-          valid: false,
+          valid: true, // Accept it anyway
           candidate: candidate,
-          status: 'error',
+          place: {
+            ...candidate,
+            validated: false,
+            validationSource: 'error_fallback',
+            caveats: [`Could not validate: ${error.message}`]
+          },
+          status: 'validation_error_accepted',
           reason: error.message,
-          confidence: 0
+          confidence: 0.3 // Lower confidence
         });
       }
     }
