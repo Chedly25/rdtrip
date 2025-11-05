@@ -28,7 +28,7 @@ interface City {
   highlights?: string[]  // RouteDiscoveryAgentV2 uses 'highlights' instead of 'activities'
   themes?: string[]
   themesDisplay?: string
-  coordinates?: [number, number] // [lng, lat]
+  coordinates?: [number, number] // [lat, lng]
 }
 
 interface ParsedRecommendations {
@@ -1032,6 +1032,20 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
                 } catch {
                   return []
                 }
+              })()
+            }
+            originCoords={
+              (() => {
+                const agentResult = routeData.agentResults[currentAgentIndex]
+                try {
+                  const parsedRecs: ParsedRecommendations = JSON.parse(agentResult.recommendations)
+                  if (parsedRecs.origin?.latitude && parsedRecs.origin?.longitude) {
+                    return [parsedRecs.origin.latitude, parsedRecs.origin.longitude] as [number, number]
+                  }
+                } catch {
+                  // Fall through to undefined
+                }
+                return undefined
               })()
             }
             agentTheme={{
