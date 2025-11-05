@@ -88,6 +88,84 @@ class GooglePlacesService {
   }
 
   /**
+   * Search for places nearby a location
+   * @param {Object} options - Search options
+   * @param {Object} options.location - {lat, lng}
+   * @param {number} options.radius - Search radius in meters
+   * @param {string} options.type - Place type (e.g., 'restaurant', 'hotel')
+   * @param {string} options.keyword - Search keyword
+   * @returns {Promise<Array>} Array of places
+   */
+  async nearbySearch(options) {
+    const { location, radius = 1000, type, keyword } = options;
+
+    if (!location || !location.lat || !location.lng) {
+      console.error('❌ nearbySearch: Invalid location', location);
+      return [];
+    }
+
+    const cacheKey = `nearby_${location.lat}_${location.lng}_${radius}_${type}_${keyword}`;
+
+    // Check cache first
+    const cached = await this.getFromCache(cacheKey);
+    if (cached) {
+      console.log(`✓ Cache hit: nearby search ${type || keyword}`);
+      return cached;
+    }
+
+    try {
+      const params = {
+        location: `${location.lat},${location.lng}`,
+        radius,
+        key: this.apiKey
+      };
+
+      if (type) params.type = type;
+      if (keyword) params.keyword = keyword;
+
+      const response = await axios.get(`${this.baseUrl}/nearbysearch/json`, {
+        params,
+        timeout: 10000
+      });
+
+      if (response.data.status === 'OK' && response.data.results) {
+        const results = response.data.results.slice(0, 20).map(place => ({
+          place_id: place.place_id,
+          name: place.name,
+          address: place.vicinity || place.formatted_address,
+          location: place.geometry?.location,
+          rating: place.rating,
+          user_ratings_total: place.user_ratings_total,
+          price_level: place.price_level,
+          types: place.types,
+          opening_hours: place.opening_hours,
+          photos: place.photos?.slice(0, 5).map(photo => ({
+            photo_reference: photo.photo_reference,
+            width: photo.width,
+            height: photo.height
+          }))
+        }));
+
+        // Cache results
+        await this.saveToCache(cacheKey, results);
+        console.log(`✓ Found ${results.length} places nearby for ${type || keyword}`);
+        return results;
+      } else if (response.data.status === 'ZERO_RESULTS') {
+        console.log(`ℹ️  No places found nearby for ${type || keyword}`);
+        return [];
+      } else {
+        console.error(`Google Places nearbySearch error: ${response.data.status} - ${response.data.error_message || 'Unknown error'}`);
+        return [];
+      }
+
+    } catch (error) {
+      console.error(`Google Places nearbySearch failed for "${type || keyword}":`, error.message);
+      console.error(`Full error:`, error.response?.data || error.stack);
+      return [];
+    }
+  }
+
+  /**
    * Get detailed information about a specific place
    */
   async getPlaceDetails(placeId) {
