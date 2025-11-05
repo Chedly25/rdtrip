@@ -1,5 +1,7 @@
 import { useState, useCallback } from 'react';
 import type { AgentStatus } from '../components/itinerary/GenerationProgress';
+import type { AgentNode } from '../components/itinerary/AgentOrchestrationVisualizer';
+import type { PartialItinerary } from '../components/itinerary/ProgressiveItineraryPreview';
 
 interface Itinerary {
   id: string;
@@ -16,6 +18,8 @@ interface Itinerary {
 
 interface UseItineraryGenerationReturn {
   agents: AgentStatus[];
+  agentNodes: AgentNode[];
+  partialResults: PartialItinerary;
   itinerary: Itinerary | null;
   error: string | null;
   isGenerating: boolean;
@@ -35,8 +39,29 @@ const initialAgents: AgentStatus[] = [
   { name: 'budget', status: 'waiting' },
 ];
 
+const initialAgentNodes: AgentNode[] = [
+  // Phase 1: Day Planning
+  { id: 'dayPlanner', name: 'dayPlanner', label: 'Day Planner', status: 'waiting', progress: 0, dependencies: [], phase: 1 },
+
+  // Phase 2: Content Discovery (parallel)
+  { id: 'activities', name: 'googleActivities', label: 'Activities', status: 'waiting', progress: 0, dependencies: ['dayPlanner'], phase: 2 },
+  { id: 'restaurants', name: 'googleRestaurants', label: 'Restaurants', status: 'waiting', progress: 0, dependencies: ['dayPlanner'], phase: 2 },
+  { id: 'accommodations', name: 'googleAccommodations', label: 'Hotels', status: 'waiting', progress: 0, dependencies: ['dayPlanner'], phase: 2 },
+  { id: 'scenicStops', name: 'scenicStops', label: 'Scenic Stops', status: 'waiting', progress: 0, dependencies: ['dayPlanner'], phase: 2 },
+
+  // Phase 3: Context & Info (parallel)
+  { id: 'weather', name: 'weather', label: 'Weather', status: 'waiting', progress: 0, dependencies: ['dayPlanner'], phase: 3 },
+  { id: 'events', name: 'events', label: 'Events', status: 'waiting', progress: 0, dependencies: ['dayPlanner'], phase: 3 },
+  { id: 'practicalInfo', name: 'practicalInfo', label: 'Practical Info', status: 'waiting', progress: 0, dependencies: ['dayPlanner'], phase: 3 },
+
+  // Phase 4: Budget
+  { id: 'budget', name: 'budget', label: 'Budget', status: 'waiting', progress: 0, dependencies: ['activities', 'restaurants', 'accommodations'], phase: 4 },
+];
+
 export function useItineraryGeneration(): UseItineraryGenerationReturn {
   const [agents, setAgents] = useState<AgentStatus[]>(initialAgents);
+  const [agentNodes, setAgentNodes] = useState<AgentNode[]>(initialAgentNodes);
+  const [partialResults, setPartialResults] = useState<PartialItinerary>({});
   const [itinerary, setItinerary] = useState<Itinerary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -46,6 +71,8 @@ export function useItineraryGeneration(): UseItineraryGenerationReturn {
       setIsGenerating(true);
       setError(null);
       setAgents(initialAgents); // Reset agents
+      setAgentNodes(initialAgentNodes); // Reset agent nodes
+      setPartialResults({}); // Reset partial results
 
       // Add agent type to routeData if provided in preferences
       const enrichedRouteData = {
@@ -85,11 +112,26 @@ export function useItineraryGeneration(): UseItineraryGenerationReturn {
           const data = JSON.parse(event.data);
           console.log('📊 Agent progress:', data);
 
+          // Update old agents format
           setAgents(prev => prev.map(agent => {
             if (agent.name === data.agent) {
               return { ...agent, status: data.status === 'completed' ? 'completed' : 'running' };
             }
             return agent;
+          }));
+
+          // Update agent nodes
+          setAgentNodes(prev => prev.map(node => {
+            if (node.name === data.agent || node.id === data.agent) {
+              return {
+                ...node,
+                status: data.status === 'completed' ? 'completed' : 'running',
+                progress: data.status === 'completed' ? 100 : 50,
+                startTime: node.startTime || Date.now(),
+                endTime: data.status === 'completed' ? Date.now() : undefined
+              };
+            }
+            return node;
           }));
         });
 
@@ -167,6 +209,7 @@ export function useItineraryGeneration(): UseItineraryGenerationReturn {
               budget: 'budget'
             };
 
+            // Update old agent format
             setAgents(prev => prev.map(agent => {
               const backendKey = Object.keys(progressMap).find(
                 key => progressMap[key] === agent.name
@@ -183,6 +226,27 @@ export function useItineraryGeneration(): UseItineraryGenerationReturn {
                 };
               }
               return agent;
+            }));
+
+            // Update agent nodes
+            setAgentNodes(prev => prev.map(node => {
+              const backendStatus = statusData.progress[node.name] || statusData.progress[node.id];
+
+              if (backendStatus) {
+                const newStatus = backendStatus === 'completed' ? 'completed' :
+                                  backendStatus === 'running' ? 'running' :
+                                  backendStatus === 'failed' ? 'error' :
+                                  'waiting';
+
+                return {
+                  ...node,
+                  status: newStatus as any,
+                  progress: newStatus === 'completed' ? 100 : newStatus === 'running' ? 50 : 0,
+                  startTime: node.startTime || (newStatus === 'running' || newStatus === 'completed' ? Date.now() : undefined),
+                  endTime: newStatus === 'completed' ? Date.now() : undefined
+                };
+              }
+              return node;
             }));
           }
 
@@ -208,6 +272,17 @@ export function useItineraryGeneration(): UseItineraryGenerationReturn {
                 weather: fullItinerary.weather,
                 events: fullItinerary.events,
                 budget: fullItinerary.budget
+              });
+
+              // Update partial results for preview
+              setPartialResults({
+                activities: fullItinerary.activities,
+                restaurants: fullItinerary.restaurants,
+                accommodations: fullItinerary.accommodations,
+                scenicStops: fullItinerary.scenicStops,
+                weather: fullItinerary.weather,
+                events: fullItinerary.events,
+                practicalInfo: fullItinerary.practicalInfo
               });
 
               // Update URL to include itinerary ID for persistence
@@ -279,5 +354,5 @@ export function useItineraryGeneration(): UseItineraryGenerationReturn {
     }
   }, []);
 
-  return { agents, itinerary, error, isGenerating, generate, loadFromId };
+  return { agents, agentNodes, partialResults, itinerary, error, isGenerating, generate, loadFromId };
 }

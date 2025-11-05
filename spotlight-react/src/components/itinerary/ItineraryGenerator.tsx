@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, AlertCircle, ArrowLeft } from 'lucide-react';
 import { GenerationProgress } from './GenerationProgress';
 import { ItineraryTimeline } from './ItineraryTimeline';
+import { AgentOrchestrationVisualizer } from './AgentOrchestrationVisualizer';
+import { ProgressiveItineraryPreview } from './ProgressiveItineraryPreview';
 import { useItineraryGeneration } from '../../hooks/useItineraryGeneration';
 import { getTheme } from '../../config/theme';
 
@@ -19,7 +21,7 @@ export function ItineraryGenerator({
   preferences,
   onBack
 }: ItineraryGeneratorProps) {
-  const { agents, itinerary, error, isGenerating, generate, loadFromId } = useItineraryGeneration();
+  const { agents, agentNodes, partialResults, itinerary, error, isGenerating, generate, loadFromId } = useItineraryGeneration();
   const theme = getTheme(agentType as any);
   const [hasStarted, setHasStarted] = useState(false);
 
@@ -85,8 +87,10 @@ export function ItineraryGenerator({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            className="space-y-8"
           >
-            <div className="mb-8 text-center">
+            {/* Header */}
+            <div className="text-center">
               <motion.div
                 animate={{
                   scale: [1, 1.1, 1],
@@ -106,11 +110,20 @@ export function ItineraryGenerator({
                 Crafting Your Perfect Itinerary
               </h2>
               <p className="mt-2 text-gray-600">
-                Our AI agents are working together to create a personalized experience
+                Our AI agents are working in parallel to create a personalized experience
               </p>
             </div>
 
-            <GenerationProgress agents={agents} />
+            {/* Agent Orchestration Visualizer */}
+            <AgentOrchestrationVisualizer agents={agentNodes} />
+
+            {/* Progressive Preview Cards */}
+            <ProgressiveItineraryPreview results={partialResults} />
+
+            {/* Legacy Progress (hidden but kept for compatibility) */}
+            <div className="hidden">
+              <GenerationProgress agents={agents} />
+            </div>
           </motion.div>
         )}
 
