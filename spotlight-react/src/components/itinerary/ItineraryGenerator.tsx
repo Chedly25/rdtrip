@@ -1,10 +1,8 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, AlertCircle, ArrowLeft } from 'lucide-react';
-import { GenerationProgress } from './GenerationProgress';
+import { AlertCircle, ArrowLeft } from 'lucide-react';
 import { ItineraryTimeline } from './ItineraryTimeline';
-import { AgentOrchestrationVisualizerV4 as AgentOrchestrationVisualizer } from './AgentOrchestrationVisualizerV4';
-import { ProgressiveItineraryPreview } from './ProgressiveItineraryPreview';
+import { AgentOrchestrationVisualizerV5 as AgentOrchestrationVisualizer } from './AgentOrchestrationVisualizerV5';
 import { useItineraryGeneration } from '../../hooks/useItineraryGeneration';
 import { getTheme } from '../../config/theme';
 
@@ -21,7 +19,7 @@ export function ItineraryGenerator({
   preferences,
   onBack
 }: ItineraryGeneratorProps) {
-  const { agents, agentNodes, partialResults, itinerary, error, isGenerating, generate, loadFromId } = useItineraryGeneration();
+  const { agentNodes, partialResults, itinerary, error, isGenerating, generate, loadFromId } = useItineraryGeneration();
   const theme = getTheme(agentType as any);
   const [hasStarted, setHasStarted] = useState(false);
 
@@ -80,51 +78,9 @@ export function ItineraryGenerator({
           </motion.div>
         )}
 
-        {/* Generating State */}
+        {/* Generating State - Full Screen */}
         {isGenerating && !error && (
-          <motion.div
-            key="generating"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="space-y-8"
-          >
-            {/* Header */}
-            <div className="text-center">
-              <motion.div
-                animate={{
-                  scale: [1, 1.1, 1],
-                  rotate: [0, 5, -5, 0]
-                }}
-                transition={{
-                  duration: 2,
-                  repeat: Infinity,
-                  repeatType: 'loop'
-                }}
-                className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full"
-                style={{ backgroundColor: `${theme.primary}20` }}
-              >
-                <Sparkles className="h-8 w-8" style={{ color: theme.primary }} />
-              </motion.div>
-              <h2 className="text-3xl font-bold text-gray-900">
-                Crafting Your Perfect Itinerary
-              </h2>
-              <p className="mt-2 text-gray-600">
-                Our AI agents are working in parallel to create a personalized experience
-              </p>
-            </div>
-
-            {/* Agent Orchestration Visualizer */}
-            <AgentOrchestrationVisualizer agents={agentNodes} partialResults={partialResults} />
-
-            {/* Progressive Preview Cards */}
-            <ProgressiveItineraryPreview results={partialResults} />
-
-            {/* Legacy Progress (hidden but kept for compatibility) */}
-            <div className="hidden">
-              <GenerationProgress agents={agents} />
-            </div>
-          </motion.div>
+          <AgentOrchestrationVisualizer agents={agentNodes} partialResults={partialResults} />
         )}
 
         {/* Success State - Show Itinerary */}
