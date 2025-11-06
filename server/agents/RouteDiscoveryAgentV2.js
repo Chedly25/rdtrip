@@ -33,13 +33,18 @@ class RouteDiscoveryAgentV2 {
   /**
    * Main entry point: Discover and validate a complete route
    */
-  async discoverRoute(origin, destination, stops, travelStyle, budget) {
+  async discoverRoute(origin, destination, stops, travelStyle, budget, nightsOnRoad = 7, nightsAtDestination = 3) {
     console.log(`\n🎯 RouteDiscoveryAgentV2: Discovering route from ${origin} to ${destination}`);
     console.log(`   Style: ${travelStyle} | Stops: ${stops} | Budget: ${budget}`);
+    console.log(`   Duration: ${nightsOnRoad} nights on road, ${nightsAtDestination} nights at destination`);
+
+    // Calculate optimal waypoint count based on nights
+    const recommendedWaypoints = this.calculateOptimalWaypoints(nightsOnRoad);
+    console.log(`   Recommended waypoints: ${recommendedWaypoints} (based on ${nightsOnRoad} nights)`);
 
     // STEP 1: Strategic Discovery
     console.log('\n📍 Step 1: Strategic Discovery');
-    const candidates = await this.strategicDiscovery(origin, destination, stops, travelStyle, budget);
+    const candidates = await this.strategicDiscovery(origin, destination, recommendedWaypoints, travelStyle, budget, nightsOnRoad, nightsAtDestination);
 
     // Check for discovery errors
     if (candidates.error) {
@@ -87,8 +92,8 @@ class RouteDiscoveryAgentV2 {
   /**
    * Strategic Discovery: Use Perplexity to find candidate cities
    */
-  async strategicDiscovery(origin, destination, stops, travelStyle, budget) {
-    const prompt = this.buildDiscoveryPrompt(origin, destination, stops, travelStyle, budget);
+  async strategicDiscovery(origin, destination, stops, travelStyle, budget, nightsOnRoad, nightsAtDestination) {
+    const prompt = this.buildDiscoveryPrompt(origin, destination, stops, travelStyle, budget, nightsOnRoad, nightsAtDestination);
 
     try {
       const response = await axios.post(
@@ -140,7 +145,7 @@ class RouteDiscoveryAgentV2 {
   /**
    * Build strategic discovery prompt
    */
-  buildDiscoveryPrompt(origin, destination, stops, travelStyle, budget) {
+  buildDiscoveryPrompt(origin, destination, stops, travelStyle, budget, nightsOnRoad, nightsAtDestination) {
     const styleDescriptions = {
       adventure: 'outdoor activities, hiking, nature, scenic landscapes',
       culture: 'historical sites, museums, architecture, cultural heritage',
@@ -154,6 +159,8 @@ class RouteDiscoveryAgentV2 {
       mid: 'moderate pricing, good value destinations',
       luxury: 'premium destinations with high-end offerings'
     };
+
+    const avgNightsPerCity = Math.round(nightsOnRoad / stops);
 
     // Theme-specific insight templates
     const insightTemplates = {
@@ -205,6 +212,18 @@ Focus on: ${styleDescriptions[travelStyle] || styleDescriptions['best-overall']}
 
 BUDGET: ${budget}
 Target: ${budgetDescriptions[budget] || budgetDescriptions['mid']}
+
+DURATION CONTEXT:
+- User has ${nightsOnRoad} nights for the road journey
+- This means ${stops} waypoint cities (comfortable pace)
+- Each city should be worth approximately ${avgNightsPerCity} nights
+- Destination (${destination}) will have ${nightsAtDestination} nights allocated
+
+NIGHT ALLOCATION GUIDANCE:
+- Larger/culturally rich cities: 2-3 nights (e.g., Lyon, Florence, Prague)
+- Medium charming towns: 1-2 nights (e.g., Annecy, Salzburg)
+- Smaller scenic stops: 1 night (e.g., Carcassonne, Hallstatt)
+- Consider: Can you see the main highlights in the allocated nights?
 
 REQUIREMENTS:
 1. MUST start from ${origin} (this is the user's starting location - DO NOT CHANGE THIS)
@@ -566,6 +585,45 @@ CRITICAL RULES:
 
   toRad(deg) {
     return deg * (Math.PI / 180);
+  }
+
+  /**
+   * Calculate optimal number of waypoint cities based on available nights
+   * @param {number} nightsOnRoad - Total nights available for travel
+   * @returns {number} Recommended waypoint count
+   */
+  calculateOptimalWaypoints(nightsOnRoad) {
+    // Heuristic: 2 nights per city (comfortable pace)
+    const avgNightsPerCity = 2;
+    const waypoints = Math.max(1, Math.round(nightsOnRoad / avgNightsPerCity));
+
+    // Examples:
+    // 3 nights → 2 cities
+    // 7 nights → 4 cities
+    // 14 nights → 7 cities
+
+    // Cap at reasonable limits
+    return Math.min(Math.max(waypoints, 1), 10); // Between 1-10 cities
+  }
+
+  /**
+   * Distribute nights across waypoint cities
+   * @param {Array} waypoints - Array of city objects
+   * @param {number} totalNights - Total nights to distribute
+   * @returns {Array} Waypoints with nights allocated
+   */
+  allocateNightsToWaypoints(waypoints, totalNights) {
+    if (!waypoints || waypoints.length === 0) return [];
+
+    // Distribute evenly (MVP approach)
+    const baseNights = Math.floor(totalNights / waypoints.length);
+    const extraNights = totalNights % waypoints.length;
+
+    return waypoints.map((city, index) => ({
+      ...city,
+      nights: baseNights + (index < extraNights ? 1 : 0)
+      // Example: 7 nights, 3 cities → [3, 2, 2] or [2, 3, 2]
+    }));
   }
 }
 

@@ -12,6 +12,7 @@ interface Activity {
 
 interface City {
   name: string
+  city?: string  // Backend format from RouteDiscoveryAgentV2
   country?: string  // Country from AI response
   activities?: (string | Activity)[]
   image?: string
@@ -70,7 +71,9 @@ export default function CityActionModal({
 
     // If city doesn't have coordinates, fetch them
     if (!cityToAdd.coordinates) {
-      console.log(`Fetching coordinates for ${cityToAdd.name}...`)
+      // Backend sends 'city' field, frontend uses 'name' - normalize it
+      const cityName = cityToAdd.city || cityToAdd.name
+      console.log(`Fetching coordinates for ${cityName}...`)
 
       // Use city's country if available (from AI response), otherwise infer from route
       const countryHint = cityToAdd.country || inferCountryFromRoute(currentRoute)
@@ -82,7 +85,7 @@ export default function CityActionModal({
       }
 
       // Fetch coordinates
-      const coordinates = await fetchCityCoordinates(cityToAdd.name, countryHint)
+      const coordinates = await fetchCityCoordinates(cityName, countryHint)
 
       if (coordinates) {
         cityToAdd.coordinates = coordinates

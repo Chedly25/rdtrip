@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { MapPin, Navigation, Users } from 'lucide-react'
+import { MapPin, Navigation, Users, Calendar } from 'lucide-react'
 import { useFormStore } from '../stores/formStore'
 import { BudgetSelector } from './BudgetSelector'
 import { AgentSelector } from './AgentSelector'
@@ -17,6 +17,8 @@ export function RouteForm({ onRouteGenerated }: RouteFormProps) {
     stops,
     budget,
     agents,
+    nightsOnRoad,
+    nightsAtDestination,
     isLoading,
     error,
     setOrigin,
@@ -24,9 +26,15 @@ export function RouteForm({ onRouteGenerated }: RouteFormProps) {
     setStops,
     setBudget,
     setAgents,
+    setNightsOnRoad,
+    setNightsAtDestination,
     setLoading,
     setError,
   } = useFormStore()
+
+  // Calculate total duration
+  const totalNights = nightsOnRoad + nightsAtDestination
+  const totalDays = totalNights + 1
 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [progress, setProgress] = useState({
@@ -65,6 +73,8 @@ export function RouteForm({ onRouteGenerated }: RouteFormProps) {
           stops,
           budget,
           agents,
+          nightsOnRoad,
+          nightsAtDestination,
         }),
       })
 
@@ -231,6 +241,75 @@ export function RouteForm({ onRouteGenerated }: RouteFormProps) {
             <div className="flex justify-between text-xs text-gray-500">
               <span>1 stop</span>
               <span>8 stops</span>
+            </div>
+          </div>
+
+          {/* Trip Duration */}
+          <div className="space-y-6 rounded-lg bg-gradient-to-br from-purple-50 to-blue-50 p-6 border-2 border-purple-200">
+            <div className="flex items-center gap-2 mb-2">
+              <Calendar className="h-5 w-5 text-purple-600" />
+              <h3 className="text-lg font-bold text-gray-900">Trip Duration</h3>
+            </div>
+
+            {/* Nights on Road */}
+            <div className="space-y-3">
+              <label className="flex items-center justify-between text-sm font-semibold text-gray-700">
+                <span>Nights traveling from {origin || 'origin'} to {destination || 'destination'}</span>
+                <span className="text-purple-600 font-bold text-lg">{nightsOnRoad} nights</span>
+              </label>
+              <input
+                type="range"
+                min="0"
+                max="30"
+                value={nightsOnRoad}
+                onChange={(e) => setNightsOnRoad(Number(e.target.value))}
+                className="h-2 w-full cursor-pointer appearance-none rounded-lg"
+                style={{
+                  background: `linear-gradient(to right, #9333ea 0%, #9333ea ${(nightsOnRoad / 30) * 100}%, #e5e7eb ${(nightsOnRoad / 30) * 100}%, #e5e7eb 100%)`,
+                }}
+              />
+              <div className="flex justify-between text-xs text-gray-500">
+                <span>0 nights (direct trip)</span>
+                <span>30 nights (epic journey)</span>
+              </div>
+            </div>
+
+            {/* Nights at Destination */}
+            <div className="space-y-3">
+              <label className="flex items-center justify-between text-sm font-semibold text-gray-700">
+                <span>Nights staying at {destination || 'destination'}</span>
+                <span className="text-blue-600 font-bold text-lg">{nightsAtDestination} nights</span>
+              </label>
+              <input
+                type="range"
+                min="0"
+                max="14"
+                value={nightsAtDestination}
+                onChange={(e) => setNightsAtDestination(Number(e.target.value))}
+                className="h-2 w-full cursor-pointer appearance-none rounded-lg"
+                style={{
+                  background: `linear-gradient(to right, #2563eb 0%, #2563eb ${(nightsAtDestination / 14) * 100}%, #e5e7eb ${(nightsAtDestination / 14) * 100}%, #e5e7eb 100%)`,
+                }}
+              />
+              <div className="flex justify-between text-xs text-gray-500">
+                <span>0 nights (just passing through)</span>
+                <span>14 nights (extended stay)</span>
+              </div>
+            </div>
+
+            {/* Total Display */}
+            <div className="mt-4 pt-4 border-t-2 border-purple-300">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold text-gray-700">Total Trip Duration:</span>
+                <div className="text-right">
+                  <div className="text-2xl font-bold text-gray-900">
+                    {totalNights} {totalNights === 1 ? 'night' : 'nights'}
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    ({totalDays} {totalDays === 1 ? 'day' : 'days'})
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
