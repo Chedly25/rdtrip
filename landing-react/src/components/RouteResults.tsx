@@ -196,7 +196,9 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
       return
     }
 
-    const originalWaypoints = parsedRecs?.waypoints || []
+    // Ensure waypoints is always an array (not an object)
+    const rawWaypoints = parsedRecs?.waypoints
+    const originalWaypoints = Array.isArray(rawWaypoints) ? rawWaypoints : []
     const currentWaypoints = modifiedWaypoints[currentAgentIndex] || originalWaypoints
 
     // Get human-readable position description
@@ -243,7 +245,9 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
       return
     }
 
-    const originalWaypoints = parsedRecs?.waypoints || []
+    // Ensure waypoints is always an array (not an object)
+    const rawWaypoints = parsedRecs?.waypoints
+    const originalWaypoints = Array.isArray(rawWaypoints) ? rawWaypoints : []
     const currentWaypoints = modifiedWaypoints[currentAgentIndex] || originalWaypoints
     const updatedWaypoints = [...currentWaypoints]
     const replacedCity = updatedWaypoints[cityIndexToReplace]
@@ -688,9 +692,15 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
             }
 
             // Use modified waypoints if available, otherwise use original (and transform)
-            const rawCities = modifiedWaypoints[index] || parsedRecs.waypoints || []
+            // Ensure waypoints is always an array
+            const rawWaypoints = parsedRecs.waypoints
+            const originalWaypoints = Array.isArray(rawWaypoints) ? rawWaypoints : []
+            const rawCities = modifiedWaypoints[index] || originalWaypoints
             const cities = rawCities.map(transformCity)
-            const alternatives = (parsedRecs.alternatives || []).map(transformCity)
+
+            // Ensure alternatives is always an array
+            const rawAlternatives = parsedRecs.alternatives
+            const alternatives = (Array.isArray(rawAlternatives) ? rawAlternatives : []).map(transformCity)
 
             return (
               <motion.div
@@ -1028,7 +1038,9 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
                 const agentResult = routeData.agentResults[currentAgentIndex]
                 try {
                   const parsedRecs = JSON.parse(agentResult.recommendations)
-                  return modifiedWaypoints[currentAgentIndex] || parsedRecs.waypoints || []
+                  const rawWaypoints = parsedRecs.waypoints
+                  const originalWaypoints = Array.isArray(rawWaypoints) ? rawWaypoints : []
+                  return modifiedWaypoints[currentAgentIndex] || originalWaypoints
                 } catch {
                   return []
                 }
