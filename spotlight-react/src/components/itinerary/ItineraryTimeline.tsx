@@ -2,10 +2,13 @@ import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
 import { DayCardV2 } from './DayCardV2';
 import { DayNavigator } from './DayNavigator';
+import { DensitySelector } from './DensitySelector';
 import { BudgetSummary } from './BudgetSummary';
 import { AutoSaveIndicator } from './AutoSaveIndicator';
 import { useItineraryStore } from '../../stores/useItineraryStore';
-import { Download, Calendar, Share2, MapPin } from 'lucide-react';
+import { Download, Calendar, Share2, MapPin, Printer } from 'lucide-react';
+
+type DensityMode = 'compact' | 'comfortable' | 'spacious';
 
 interface ItineraryTimelineProps {
   itinerary: any;
@@ -15,6 +18,7 @@ interface ItineraryTimelineProps {
 export function ItineraryTimeline({ itinerary, agentType }: ItineraryTimelineProps) {
   const { setItinerary, getEffectiveItinerary } = useItineraryStore();
   const [activeDay, setActiveDay] = useState(1);
+  const [density, setDensity] = useState<DensityMode>('compact');
 
   // Initialize the store with itinerary data
   useEffect(() => {
@@ -116,33 +120,41 @@ export function ItineraryTimeline({ itinerary, agentType }: ItineraryTimelinePro
           </div>
         </div>
         <div className="flex gap-2">
+          <DensitySelector value={density} onChange={setDensity} />
+          <button
+            onClick={() => window.print()}
+            className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 no-print"
+          >
+            <Printer className="h-4 w-4" />
+            <span className="hidden sm:inline">Print</span>
+          </button>
           <button
             onClick={handleExportPDF}
-            className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+            className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 no-print"
           >
             <Download className="h-4 w-4" />
-            Export PDF
+            <span className="hidden sm:inline">PDF</span>
           </button>
           <button
             onClick={handleExportCalendar}
-            className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+            className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 no-print"
           >
             <Calendar className="h-4 w-4" />
-            Add to Calendar
+            <span className="hidden sm:inline">Calendar</span>
           </button>
           <button
             onClick={handleShareGoogleMaps}
-            className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+            className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 no-print"
           >
             <MapPin className="h-4 w-4" />
-            Google Maps
+            <span className="hidden sm:inline">Maps</span>
           </button>
           <button
             onClick={handleShare}
-            className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+            className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 no-print"
           >
             <Share2 className="h-4 w-4" />
-            Share
+            <span className="hidden sm:inline">Share</span>
           </button>
         </div>
       </div>
