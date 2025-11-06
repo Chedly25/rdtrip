@@ -50,7 +50,16 @@ class DayPlannerAgent {
     const totalDistance = this.calculateTotalDistance(waypoints);
 
     // Build city list - handle both formats (name/location for old, city for new)
-    const cities = waypoints?.map(w => w.city || w.name || w.location).filter(Boolean) || [];
+    // CRITICAL FIX: Add logging to debug missing city names
+    console.log('📅 Processing waypoints for cities:', JSON.stringify(waypoints, null, 2));
+    const cities = waypoints?.map(w => {
+      const cityName = w.city || w.name || w.location;
+      if (!cityName) {
+        console.warn('⚠️  Waypoint missing city name:', w);
+      }
+      return cityName;
+    }).filter(Boolean) || [];
+    console.log('📅 Extracted cities:', cities);
 
     return `You are an expert ${agent} travel planner creating a road trip itinerary.
 
