@@ -3,8 +3,8 @@
  * Phase 1: 3-Column Layout with Agent Personalities
  */
 
-import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
+import { useEffect, useState, useRef } from 'react';
+import { motion, useSpring, useTransform } from 'framer-motion';
 import {
   Calendar,
   Sparkles,
@@ -36,6 +36,80 @@ interface DiscoveredPlace {
   city?: string;
   agent: string;
 }
+
+// Count-up animation component
+function AnimatedNumber({ value }: { value: number }) {
+  const nodeRef = useRef<HTMLSpanElement>(null);
+  const motionValue = useSpring(0, { stiffness: 100, damping: 20 });
+  const rounded = useTransform(motionValue, (latest) => Math.round(latest));
+
+  useEffect(() => {
+    motionValue.set(value);
+  }, [value, motionValue]);
+
+  useEffect(() => {
+    const unsubscribe = rounded.on('change', (latest) => {
+      if (nodeRef.current) {
+        nodeRef.current.textContent = latest.toString();
+      }
+    });
+    return unsubscribe;
+  }, [rounded]);
+
+  return <span ref={nodeRef}>0</span>;
+}
+
+// Agent activity messages
+const AGENT_ACTIVITIES = {
+  dayPlanner: {
+    running: ['Planning your route...', 'Analyzing waypoints...', 'Optimizing stops...'],
+    completed: 'Route structure complete'
+  },
+  googleActivities: {
+    running: ['Searching for activities...', 'Finding top attractions...', 'Discovering experiences...'],
+    completed: 'Activities discovered'
+  },
+  activities: {
+    running: ['Searching for activities...', 'Finding top attractions...', 'Discovering experiences...'],
+    completed: 'Activities discovered'
+  },
+  googleRestaurants: {
+    running: ['Finding restaurants...', 'Discovering dining spots...', 'Searching for cuisines...'],
+    completed: 'Restaurants found'
+  },
+  restaurants: {
+    running: ['Finding restaurants...', 'Discovering dining spots...', 'Searching for cuisines...'],
+    completed: 'Restaurants found'
+  },
+  googleAccommodations: {
+    running: ['Searching for hotels...', 'Finding accommodations...', 'Checking availability...'],
+    completed: 'Hotels located'
+  },
+  accommodations: {
+    running: ['Searching for hotels...', 'Finding accommodations...', 'Checking availability...'],
+    completed: 'Hotels located'
+  },
+  scenicStops: {
+    running: ['Discovering scenic routes...', 'Finding viewpoints...', 'Locating photo spots...'],
+    completed: 'Scenic stops found'
+  },
+  weather: {
+    running: ['Checking weather...', 'Getting forecasts...', 'Analyzing conditions...'],
+    completed: 'Weather data ready'
+  },
+  events: {
+    running: ['Finding local events...', 'Searching festivals...', 'Checking calendars...'],
+    completed: 'Events discovered'
+  },
+  practicalInfo: {
+    running: ['Gathering tips...', 'Finding parking info...', 'Collecting insights...'],
+    completed: 'Practical info ready'
+  },
+  budget: {
+    running: ['Calculating costs...', 'Estimating budget...', 'Analyzing prices...'],
+    completed: 'Budget calculated'
+  }
+};
 
 // Agent theme configuration
 const AGENT_THEMES = {
@@ -191,6 +265,18 @@ function PhaseIndicator({ currentPhase }: { currentPhase: number }) {
 function AgentCard({ agent }: { agent: AgentNode }) {
   const theme = getAgentTheme(agent.name);
   const Icon = theme.icon;
+  const [activityIndex, setActivityIndex] = useState(0);
+  const activities = AGENT_ACTIVITIES[agent.name as keyof typeof AGENT_ACTIVITIES];
+
+  // Rotate through activity messages for running agents
+  useEffect(() => {
+    if (agent.status === 'running' && activities?.running) {
+      const interval = setInterval(() => {
+        setActivityIndex((prev) => (prev + 1) % activities.running.length);
+      }, 3000);
+      return () => clearInterval(interval);
+    }
+  }, [agent.status, activities]);
 
   const getStatusIcon = () => {
     switch (agent.status) {
@@ -209,6 +295,7 @@ function AgentCard({ agent }: { agent: AgentNode }) {
     <motion.div
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
+      transition={{ type: 'spring', stiffness: 100, damping: 20 }}
       className="relative overflow-hidden rounded-xl transition-all"
       style={{
         backdropFilter: 'blur(20px)',
@@ -226,15 +313,19 @@ function AgentCard({ agent }: { agent: AgentNode }) {
       {/* Icon and title */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-3">
-          <div
+          <motion.div
             className="p-2 rounded-lg"
             style={{
               background: `${theme.color}15`,
-              boxShadow: `0 0 15px ${theme.glow}`
+              boxShadow: agent.status === 'running' ? `0 0 15px ${theme.glow}` : 'none'
             }}
+            animate={agent.status === 'running' ? {
+              scale: [1, 1.1, 1],
+            } : {}}
+            transition={{ duration: 2, repeat: Infinity }}
           >
             <Icon className="w-5 h-5" style={{ color: theme.color }} />
-          </div>
+          </motion.div>
           <div>
             <div className="text-sm font-semibold text-white">{theme.label}</div>
             <div className="flex items-center gap-1.5 mt-1">
@@ -247,40 +338,56 @@ function AgentCard({ agent }: { agent: AgentNode }) {
         </div>
       </div>
 
-      {/* Activity feed (placeholder for Phase 2) */}
-      {agent.status === 'running' && (
+      {/* Activity feed with rotating messages */}
+      {agent.status === 'running' && activities?.running && (
         <motion.div
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: 'auto' }}
-          className="mt-3 space-y-1.5"
+          className="mt-3"
         >
-          <div className="text-xs text-white/80">
-            ⏳ Working...
+          <motion.div
+            key={activityIndex}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="text-xs text-white/80 flex items-center gap-2"
+          >
+            <motion.span
+              animate={{ rotate: 360 }}
+              transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+            >
+              ⚡
+            </motion.span>
+            {activities.running[activityIndex]}
+          </motion.div>
+        </motion.div>
+      )}
+
+      {agent.status === 'completed' && activities?.completed && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ type: 'spring', stiffness: 200, damping: 15 }}
+          className="mt-3"
+        >
+          <div className="text-xs text-green-400 flex items-center gap-2">
+            <span>✓</span>
+            {activities.completed}
           </div>
         </motion.div>
       )}
 
-      {agent.status === 'completed' && (
-        <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: 'auto' }}
-          className="mt-3 space-y-1.5"
-        >
-          <div className="text-xs text-green-400">
-            ✓ Complete
-          </div>
-        </motion.div>
-      )}
-
-      {/* Progress bar */}
+      {/* Animated progress bar */}
       {agent.status === 'running' && (
         <div className="mt-3 h-1 bg-white/10 rounded-full overflow-hidden">
           <motion.div
             className="h-full rounded-full"
-            style={{ background: theme.color }}
+            style={{
+              background: `linear-gradient(90deg, ${theme.color}, ${theme.glow})`,
+            }}
             initial={{ width: '0%' }}
             animate={{ width: `${agent.progress}%` }}
-            transition={{ duration: 0.5 }}
+            transition={{ type: 'spring', stiffness: 50, damping: 20 }}
           />
         </div>
       )}
@@ -288,11 +395,26 @@ function AgentCard({ agent }: { agent: AgentNode }) {
   );
 }
 
-// Progress sidebar
-function ProgressSidebar({ agents, elapsedTime }: { agents: AgentNode[]; elapsedTime: number }) {
+// Progress sidebar with real discovered counts
+function ProgressSidebar({ agents, elapsedTime, partialResults }: { agents: AgentNode[]; elapsedTime: number; partialResults: PartialItinerary }) {
   const completed = agents.filter(a => a.status === 'completed').length;
   const total = agents.length;
   const progress = total > 0 ? (completed / total) * 100 : 0;
+
+  // Calculate real discovered counts
+  const placesCount = (partialResults.activities?.length || 0) +
+                      (partialResults.restaurants?.length || 0) +
+                      (partialResults.accommodations?.length || 0) +
+                      (partialResults.scenicStops?.length || 0);
+
+  const photosCount = [
+    ...(partialResults.activities || []),
+    ...(partialResults.restaurants || []),
+    ...(partialResults.accommodations || []),
+    ...(partialResults.scenicStops || [])
+  ].reduce((sum, item) => sum + (item.photos?.length || 0), 0);
+
+  const hotelsCount = partialResults.accommodations?.length || 0;
 
   return (
     <div className="space-y-6">
@@ -308,7 +430,9 @@ function ProgressSidebar({ agents, elapsedTime }: { agents: AgentNode[]; elapsed
       >
         <div className="flex items-start justify-between mb-4">
           <div className="text-xs uppercase tracking-wider text-white/60">Progress</div>
-          <div className="text-sm font-mono text-white/80">{elapsedTime}s</div>
+          <div className="text-sm font-mono text-white/80">
+            <AnimatedNumber value={elapsedTime} />s
+          </div>
         </div>
 
         {/* Circular progress */}
@@ -335,7 +459,7 @@ function ProgressSidebar({ agents, elapsedTime }: { agents: AgentNode[]; elapsed
                 animate={{
                   strokeDasharray: `${(progress / 100) * 352} 352`
                 }}
-                transition={{ duration: 0.8, ease: 'easeInOut' }}
+                transition={{ type: 'spring', stiffness: 50, damping: 20 }}
               />
               <defs>
                 <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -345,7 +469,9 @@ function ProgressSidebar({ agents, elapsedTime }: { agents: AgentNode[]; elapsed
               </defs>
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <div className="text-3xl font-bold text-white">{completed}</div>
+              <div className="text-3xl font-bold text-white">
+                <AnimatedNumber value={completed} />
+              </div>
               <div className="text-xs text-white/60">/ {total}</div>
             </div>
           </div>
@@ -355,7 +481,9 @@ function ProgressSidebar({ agents, elapsedTime }: { agents: AgentNode[]; elapsed
         <div className="space-y-3">
           <div className="flex items-center justify-between text-sm">
             <span className="text-white/70">Completed</span>
-            <span className="font-semibold text-white">{completed}/{total}</span>
+            <span className="font-semibold text-white">
+              <AnimatedNumber value={completed} />/{total}
+            </span>
           </div>
           <div className="h-1 bg-white/10 rounded-full overflow-hidden">
             <motion.div
@@ -365,46 +493,79 @@ function ProgressSidebar({ agents, elapsedTime }: { agents: AgentNode[]; elapsed
               }}
               initial={{ width: '0%' }}
               animate={{ width: `${progress}%` }}
-              transition={{ duration: 0.8, ease: [0.4, 0, 0.2, 1] }}
+              transition={{ type: 'spring', stiffness: 50, damping: 20 }}
             />
           </div>
         </div>
       </div>
 
-      {/* Discovery stats (placeholder for Phase 2) */}
-      <div
+      {/* Discovery stats with real counts */}
+      <motion.div
         className="rounded-2xl p-6"
         style={{
           backdropFilter: 'blur(20px)',
           background: 'rgba(255, 255, 255, 0.05)',
           border: '1px solid rgba(255, 255, 255, 0.1)'
         }}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
       >
-        <div className="text-sm font-semibold text-white mb-4">Discovered</div>
+        <div className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
+          <Sparkles className="w-4 h-4 text-purple-400" />
+          Discovered
+        </div>
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-sm text-white/70">Places</span>
-            <span className="text-lg font-bold text-white">0</span>
+            <motion.span
+              className="text-lg font-bold text-white"
+              key={placesCount}
+              initial={{ scale: 1.5, color: '#8b5cf6' }}
+              animate={{ scale: 1, color: '#ffffff' }}
+              transition={{ type: 'spring', stiffness: 200, damping: 15 }}
+            >
+              <AnimatedNumber value={placesCount} />
+            </motion.span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-sm text-white/70">Photos</span>
-            <span className="text-lg font-bold text-white">0</span>
+            <motion.span
+              className="text-lg font-bold text-white"
+              key={photosCount}
+              initial={{ scale: 1.5, color: '#06b6d4' }}
+              animate={{ scale: 1, color: '#ffffff' }}
+              transition={{ type: 'spring', stiffness: 200, damping: 15 }}
+            >
+              <AnimatedNumber value={photosCount} />
+            </motion.span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-sm text-white/70">Hotels</span>
-            <span className="text-lg font-bold text-white">0</span>
+            <motion.span
+              className="text-lg font-bold text-white"
+              key={hotelsCount}
+              initial={{ scale: 1.5, color: '#f97316' }}
+              animate={{ scale: 1, color: '#ffffff' }}
+              transition={{ type: 'spring', stiffness: 200, damping: 15 }}
+            >
+              <AnimatedNumber value={hotelsCount} />
+            </motion.span>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Next up */}
-      <div
+      <motion.div
         className="rounded-2xl p-6"
         style={{
           backdropFilter: 'blur(20px)',
           background: 'rgba(255, 255, 255, 0.05)',
           border: '1px solid rgba(255, 255, 255, 0.1)'
         }}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
       >
         <div className="text-sm font-semibold text-white mb-3">Next Up</div>
         <div className="space-y-2">
@@ -415,14 +576,20 @@ function ProgressSidebar({ agents, elapsedTime }: { agents: AgentNode[]; elapsed
               const theme = getAgentTheme(agent.name);
               const Icon = theme.icon;
               return (
-                <div key={agent.id} className="flex items-center gap-2">
+                <motion.div
+                  key={agent.id}
+                  className="flex items-center gap-2"
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ type: 'spring', stiffness: 100, damping: 15 }}
+                >
                   <Icon className="w-3.5 h-3.5" style={{ color: theme.color }} />
                   <span className="text-xs text-white/70">{theme.label}</span>
-                </div>
+                </motion.div>
               );
             })}
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }
@@ -511,10 +678,23 @@ function ContentDiscoveryGrid({ partialResults }: { partialResults: PartialItine
 
   return (
     <div className="h-full overflow-y-auto p-6">
-      {/* Statistics header */}
-      <div className="mb-6 flex items-center justify-between">
+      {/* Statistics header with count-up animation */}
+      <motion.div
+        className="mb-6 flex items-center justify-between"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ type: 'spring', stiffness: 100, damping: 20 }}
+      >
         <div className="text-white">
-          <div className="text-2xl font-bold">{discoveredPlaces.length}</div>
+          <motion.div
+            className="text-2xl font-bold"
+            key={discoveredPlaces.length}
+            initial={{ scale: 1.3 }}
+            animate={{ scale: 1 }}
+            transition={{ type: 'spring', stiffness: 200, damping: 15 }}
+          >
+            <AnimatedNumber value={discoveredPlaces.length} />
+          </motion.div>
           <div className="text-sm text-white/60">Places Discovered</div>
         </div>
         <div className="flex gap-2">
@@ -522,29 +702,38 @@ function ContentDiscoveryGrid({ partialResults }: { partialResults: PartialItine
             const count = discoveredPlaces.filter(p => p.type === type).length;
             if (count === 0) return null;
             return (
-              <div
+              <motion.div
                 key={type}
                 className="px-3 py-1 rounded-full text-xs"
                 style={{
                   background: 'rgba(255, 255, 255, 0.1)',
                   border: '1px solid rgba(255, 255, 255, 0.2)'
                 }}
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ type: 'spring', stiffness: 150, damping: 15 }}
               >
-                <span className="text-white/80 capitalize">{type}s: {count}</span>
-              </div>
+                <span className="text-white/80 capitalize">{type}s: <AnimatedNumber value={count} /></span>
+              </motion.div>
             );
           })}
         </div>
-      </div>
+      </motion.div>
 
-      {/* Masonry grid */}
+      {/* Masonry grid with spring physics */}
       <div className="grid grid-cols-3 gap-4">
         {discoveredPlaces.map((place, index) => (
           <motion.div
             key={place.id}
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            initial={{ opacity: 0, scale: 0.8, y: 30 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ delay: index * 0.05, duration: 0.3 }}
+            transition={{
+              type: 'spring',
+              stiffness: 100,
+              damping: 15,
+              delay: index * 0.05
+            }}
+            whileHover={{ scale: 1.05, y: -5 }}
             className="relative group overflow-hidden rounded-xl cursor-pointer"
             style={{
               background: 'rgba(255, 255, 255, 0.05)',
@@ -552,14 +741,17 @@ function ContentDiscoveryGrid({ partialResults }: { partialResults: PartialItine
               aspectRatio: '1'
             }}
           >
-            {/* Image */}
+            {/* Image with blur-to-sharp reveal */}
             <motion.img
               src={place.photo}
               alt={place.name}
               className="w-full h-full object-cover"
-              initial={{ filter: 'blur(20px)' }}
-              animate={{ filter: 'blur(0px)' }}
-              transition={{ duration: 0.5, delay: index * 0.05 + 0.1 }}
+              initial={{ filter: 'blur(20px)', scale: 1.1 }}
+              animate={{ filter: 'blur(0px)', scale: 1 }}
+              transition={{
+                filter: { duration: 0.5, delay: index * 0.05 + 0.1 },
+                scale: { type: 'spring', stiffness: 100, damping: 20, delay: index * 0.05 + 0.1 }
+              }}
               loading="lazy"
             />
 
@@ -569,9 +761,14 @@ function ContentDiscoveryGrid({ partialResults }: { partialResults: PartialItine
               style={{
                 background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.4) 50%, transparent 100%)'
               }}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: index * 0.05 + 0.2 }}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{
+                type: 'spring',
+                stiffness: 100,
+                damping: 20,
+                delay: index * 0.05 + 0.2
+              }}
             >
               <div className="text-white text-sm font-medium line-clamp-2 mb-1">
                 {place.name}
@@ -587,15 +784,27 @@ function ContentDiscoveryGrid({ partialResults }: { partialResults: PartialItine
               </div>
             </motion.div>
 
-            {/* Hover glow effect */}
+            {/* Hover glow effect with spring physics */}
             <motion.div
               className="absolute inset-0 pointer-events-none"
               style={{
-                background: 'radial-gradient(circle at center, rgba(139, 92, 246, 0.3), transparent)',
+                background: 'radial-gradient(circle at center, rgba(139, 92, 246, 0.4), transparent)',
                 opacity: 0
               }}
               whileHover={{ opacity: 1 }}
-              transition={{ duration: 0.2 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+            />
+
+            {/* Shimmer effect on hover */}
+            <motion.div
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background: 'linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent)',
+                backgroundSize: '200% 200%'
+              }}
+              initial={{ x: '-100%' }}
+              whileHover={{ x: '100%' }}
+              transition={{ duration: 0.6 }}
             />
           </motion.div>
         ))}
@@ -712,7 +921,7 @@ export function AgentOrchestrationVisualizerV4({ agents, partialResults }: Props
 
         {/* Right sidebar - Progress */}
         <div className="w-72">
-          <ProgressSidebar agents={agents} elapsedTime={elapsedTime} />
+          <ProgressSidebar agents={agents} elapsedTime={elapsedTime} partialResults={partialResults} />
         </div>
       </div>
     </div>
