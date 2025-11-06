@@ -42,11 +42,26 @@ async function geocodeCity(cityName: string): Promise<{ lat: number; lng: number
 
 // Function to extract waypoints from route data (same logic as old spotlight.js)
 function extractWaypoints(routeData: any): Waypoint[] {
-  if (!routeData?.agentResults?.length) return []
+  console.log('🔍 extractWaypoints called with routeData:', {
+    hasAgentResults: !!routeData?.agentResults,
+    agentResultsLength: routeData?.agentResults?.length || 0,
+    agentTypes: routeData?.agentResults?.map((ar: any) => ar.agent),
+    routeAgent: routeData?.agent
+  });
+
+  if (!routeData?.agentResults?.length) {
+    console.warn('❌ No agentResults found in routeData');
+    return [];
+  }
 
   const waypoints: Waypoint[] = []
 
-  routeData.agentResults.forEach((agentResult: any) => {
+  routeData.agentResults.forEach((agentResult: any, index: number) => {
+    console.log(`\n📊 Processing agent result #${index}:`, {
+      agent: agentResult.agent,
+      recommendationsLength: agentResult.recommendations?.length || 0
+    });
+
     try {
       let cleanedRecommendations = agentResult.recommendations
         .replace(/```json\s*/g, '')
@@ -56,6 +71,10 @@ function extractWaypoints(routeData: any): Waypoint[] {
       let parsed
       try {
         parsed = JSON.parse(cleanedRecommendations)
+        console.log(`  ✅ Successfully parsed JSON for agent: ${agentResult.agent}`, {
+          hasWaypoints: !!parsed.waypoints,
+          waypointsLength: parsed.waypoints?.length || 0
+        });
       } catch (jsonError) {
         // Extract location names from the text
         const locationMatches = cleanedRecommendations.match(/"name":\s*"([^"]+)"/g) ||
