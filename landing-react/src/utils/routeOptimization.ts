@@ -29,6 +29,22 @@ function toRadians(degrees: number): number {
 }
 
 /**
+ * Check if a coordinate value is valid (finite number, not NaN)
+ */
+function isValidCoordinate(coord: any): boolean {
+  return typeof coord === 'number' && isFinite(coord) && !isNaN(coord)
+}
+
+/**
+ * Check if a city has valid coordinates [lat, lng]
+ */
+function hasValidCoordinates(city: City | undefined): boolean {
+  if (!city?.coordinates) return false
+  const [lat, lng] = city.coordinates
+  return isValidCoordinate(lat) && isValidCoordinate(lng)
+}
+
+/**
  * Calculate distance between two geographic points using Haversine formula
  * @param lat1 - Latitude of first point
  * @param lon1 - Longitude of first point
@@ -84,12 +100,35 @@ export function calculateOptimalInsertPosition(
 
   // Edge case: No coordinates for new city
   if (!newCity.coordinates) {
-    console.warn('New city has no coordinates, adding at end')
+    console.warn('⚠️ New city has no coordinates, adding at end')
     return currentRoute.length // Add at end as fallback
   }
 
   const [newLat, newLng] = newCity.coordinates
+
+  // Validate new city coordinates
+  if (!isValidCoordinate(newLat) || !isValidCoordinate(newLng)) {
+    console.error(`❌ Invalid coordinates for ${newCity.name}: [${newLat}, ${newLng}]`)
+    return currentRoute.length // Add at end as fallback
+  }
+
   const [originLat, originLng] = originCoords
+
+  // Log current route with coordinates for debugging
+  console.log(`📍 Calculating optimal position for ${newCity.name} [${newLat.toFixed(4)}, ${newLng.toFixed(4)}]:`)
+  console.log('Current route:')
+  currentRoute.forEach((c, i) => {
+    if (c.coordinates) {
+      const [lat, lng] = c.coordinates
+      const valid = isValidCoordinate(lat) && isValidCoordinate(lng)
+      const coordStr = valid
+        ? `[${lat.toFixed(4)}, ${lng.toFixed(4)}]`
+        : `[${lat}, ${lng}] ⚠️ INVALID`
+      console.log(`  ${i}: ${c.name} ${coordStr}`)
+    } else {
+      console.log(`  ${i}: ${c.name} [NO COORDINATES]`)
+    }
+  })
 
   let bestPosition = 0
   let minAdditionalDistance = Infinity
@@ -98,55 +137,54 @@ export function calculateOptimalInsertPosition(
   const positionAnalysis: Array<{ position: number; description: string; addedDistance: number }> = []
 
   for (let i = 0; i <= currentRoute.length; i++) {
-    let additionalDistance = 0
+    let additionalDistance = Infinity // Default to Infinity for invalid positions
     let description = ''
 
     if (i === 0) {
       // Insert at beginning (before first city)
       const distanceFromOrigin = haversineDistance(originLat, originLng, newLat, newLng)
 
-      const distanceToFirst =
-        currentRoute.length > 0 && currentRoute[0].coordinates
-          ? haversineDistance(
-              newLat,
-              newLng,
-              currentRoute[0].coordinates[0],
-              currentRoute[0].coordinates[1]
-            )
-          : 0
-
-      const originalDistanceToFirst =
-        currentRoute.length > 0 && currentRoute[0]?.coordinates
-          ? haversineDistance(
-              originLat,
-              originLng,
-              currentRoute[0].coordinates[0],
-              currentRoute[0].coordinates[1]
-            )
-          : 0
-
-      additionalDistance = distanceFromOrigin + distanceToFirst - originalDistanceToFirst
+      if (currentRoute.length > 0 && hasValidCoordinates(currentRoute[0])) {
+        const distanceToFirst = haversineDistance(
+          newLat,
+          newLng,
+          currentRoute[0].coordinates![0],
+          currentRoute[0].coordinates![1]
+        )
+        const originalDistanceToFirst = haversineDistance(
+          originLat,
+          originLng,
+          currentRoute[0].coordinates![0],
+          currentRoute[0].coordinates![1]
+        )
+        additionalDistance = distanceFromOrigin + distanceToFirst - originalDistanceToFirst
+      } else {
+        additionalDistance = distanceFromOrigin
+      }
       description = `Start (before ${currentRoute[0]?.name || 'route'})`
     } else if (i === currentRoute.length) {
       // Insert at end (after last city)
       const prevCity = currentRoute[i - 1]
-      if (prevCity?.coordinates) {
+      if (hasValidCoordinates(prevCity)) {
         additionalDistance = haversineDistance(
-          prevCity.coordinates[0],
-          prevCity.coordinates[1],
+          prevCity.coordinates![0],
+          prevCity.coordinates![1],
           newLat,
           newLng
         )
         description = `End (after ${prevCity.name})`
+      } else {
+        description = `End (after ${prevCity.name}) [INVALID COORDS]`
       }
     } else {
       // Insert between two cities
       const prevCity = currentRoute[i - 1]
       const nextCity = currentRoute[i]
-      if (prevCity?.coordinates && nextCity?.coordinates) {
+
+      if (hasValidCoordinates(prevCity) && hasValidCoordinates(nextCity)) {
         const distanceFromPrev = haversineDistance(
-          prevCity.coordinates[0],
-          prevCity.coordinates[1],
+          prevCity.coordinates![0],
+          prevCity.coordinates![1],
           newLat,
           newLng
         )
@@ -154,37 +192,38 @@ export function calculateOptimalInsertPosition(
         const distanceToNext = haversineDistance(
           newLat,
           newLng,
-          nextCity.coordinates[0],
-          nextCity.coordinates[1]
+          nextCity.coordinates![0],
+          nextCity.coordinates![1]
         )
 
         const originalDistance = haversineDistance(
-          prevCity.coordinates[0],
-          prevCity.coordinates[1],
-          nextCity.coordinates[0],
-          nextCity.coordinates[1]
+          prevCity.coordinates![0],
+          prevCity.coordinates![1],
+          nextCity.coordinates![0],
+          nextCity.coordinates![1]
         )
 
         additionalDistance = distanceFromPrev + distanceToNext - originalDistance
         description = `Between ${prevCity.name} and ${nextCity.name}`
+      } else {
+        description = `Between ${prevCity.name} and ${nextCity.name} [INVALID COORDS]`
       }
     }
 
     positionAnalysis.push({ position: i, description, addedDistance: additionalDistance })
 
-    // Update best position if this is better
-    if (additionalDistance < minAdditionalDistance) {
+    // Only consider positions with valid finite distances
+    if (isFinite(additionalDistance) && additionalDistance < minAdditionalDistance) {
       minAdditionalDistance = additionalDistance
       bestPosition = i
     }
   }
 
-  console.log(`📍 Calculating optimal position for ${newCity.name}:`)
-  console.log('Current route:', currentRoute.map((c, i) => `${i}: ${c.name}`).join(', '))
   console.log('Position analysis:')
   positionAnalysis.forEach(p => {
     const marker = p.position === bestPosition ? '✅ BEST' : '  '
-    console.log(`  ${marker} Position ${p.position}: ${p.description} → +${p.addedDistance.toFixed(1)} km`)
+    const distStr = isFinite(p.addedDistance) ? `+${p.addedDistance.toFixed(1)} km` : 'INVALID'
+    console.log(`  ${marker} Position ${p.position}: ${p.description} → ${distStr}`)
   })
   console.log(`✅ Optimal position: ${bestPosition} (adds ${minAdditionalDistance.toFixed(1)} km)`)
 
