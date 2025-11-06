@@ -20,9 +20,21 @@ import {
   Clock
 } from 'lucide-react';
 import type { AgentNode } from './AgentOrchestrationVisualizer';
+import type { PartialItinerary } from './ProgressiveItineraryPreview';
 
 interface Props {
   agents: AgentNode[];
+  partialResults: PartialItinerary;
+}
+
+interface DiscoveredPlace {
+  id: string;
+  name: string;
+  type: 'activity' | 'restaurant' | 'accommodation' | 'scenic';
+  photo: string;
+  rating?: number;
+  city?: string;
+  agent: string;
 }
 
 // Agent theme configuration
@@ -415,8 +427,185 @@ function ProgressSidebar({ agents, elapsedTime }: { agents: AgentNode[]; elapsed
   );
 }
 
+// Content Discovery Grid - Phase 2
+function ContentDiscoveryGrid({ partialResults }: { partialResults: PartialItinerary }) {
+  // Extract all places with photos from partial results
+  const discoveredPlaces: DiscoveredPlace[] = [];
+
+  // Extract activities
+  if (partialResults.activities) {
+    partialResults.activities.forEach(activity => {
+      if (activity.photos && activity.photos.length > 0) {
+        discoveredPlaces.push({
+          id: activity.id,
+          name: activity.name,
+          type: 'activity',
+          photo: activity.photos[0].url,
+          rating: activity.rating,
+          city: activity.city,
+          agent: 'Activities'
+        });
+      }
+    });
+  }
+
+  // Extract restaurants
+  if (partialResults.restaurants) {
+    partialResults.restaurants.forEach(restaurant => {
+      if (restaurant.photos && restaurant.photos.length > 0) {
+        discoveredPlaces.push({
+          id: restaurant.id,
+          name: restaurant.name,
+          type: 'restaurant',
+          photo: restaurant.photos[0].url,
+          rating: restaurant.rating,
+          agent: 'Restaurants'
+        });
+      }
+    });
+  }
+
+  // Extract accommodations
+  if (partialResults.accommodations) {
+    partialResults.accommodations.forEach(accommodation => {
+      if (accommodation.photos && accommodation.photos.length > 0) {
+        discoveredPlaces.push({
+          id: accommodation.id,
+          name: accommodation.name,
+          type: 'accommodation',
+          photo: accommodation.photos[0].url,
+          rating: accommodation.rating,
+          agent: 'Hotels'
+        });
+      }
+    });
+  }
+
+  // Extract scenic stops
+  if (partialResults.scenicStops) {
+    partialResults.scenicStops.forEach(scenic => {
+      if (scenic.photos && scenic.photos.length > 0) {
+        discoveredPlaces.push({
+          id: scenic.id,
+          name: scenic.name,
+          type: 'scenic',
+          photo: scenic.photos[0].url,
+          agent: 'Scenic Stops'
+        });
+      }
+    });
+  }
+
+  if (discoveredPlaces.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <Sparkles className="w-16 h-16 text-purple-400 mx-auto mb-4 opacity-50" />
+          <div className="text-white/60 text-sm">
+            Discovering amazing places for your trip...
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full overflow-y-auto p-6">
+      {/* Statistics header */}
+      <div className="mb-6 flex items-center justify-between">
+        <div className="text-white">
+          <div className="text-2xl font-bold">{discoveredPlaces.length}</div>
+          <div className="text-sm text-white/60">Places Discovered</div>
+        </div>
+        <div className="flex gap-2">
+          {['activity', 'restaurant', 'accommodation', 'scenic'].map(type => {
+            const count = discoveredPlaces.filter(p => p.type === type).length;
+            if (count === 0) return null;
+            return (
+              <div
+                key={type}
+                className="px-3 py-1 rounded-full text-xs"
+                style={{
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)'
+                }}
+              >
+                <span className="text-white/80 capitalize">{type}s: {count}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Masonry grid */}
+      <div className="grid grid-cols-3 gap-4">
+        {discoveredPlaces.map((place, index) => (
+          <motion.div
+            key={place.id}
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ delay: index * 0.05, duration: 0.3 }}
+            className="relative group overflow-hidden rounded-xl cursor-pointer"
+            style={{
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              aspectRatio: '1'
+            }}
+          >
+            {/* Image */}
+            <motion.img
+              src={place.photo}
+              alt={place.name}
+              className="w-full h-full object-cover"
+              initial={{ filter: 'blur(20px)' }}
+              animate={{ filter: 'blur(0px)' }}
+              transition={{ duration: 0.5, delay: index * 0.05 + 0.1 }}
+              loading="lazy"
+            />
+
+            {/* Overlay with info */}
+            <motion.div
+              className="absolute inset-0 flex flex-col justify-end p-3"
+              style={{
+                background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.4) 50%, transparent 100%)'
+              }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: index * 0.05 + 0.2 }}
+            >
+              <div className="text-white text-sm font-medium line-clamp-2 mb-1">
+                {place.name}
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="text-xs text-white/70 capitalize">{place.agent}</div>
+                {place.rating && (
+                  <div className="flex items-center gap-1">
+                    <span className="text-yellow-400 text-xs">⭐</span>
+                    <span className="text-white text-xs">{place.rating.toFixed(1)}</span>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+
+            {/* Hover glow effect */}
+            <motion.div
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background: 'radial-gradient(circle at center, rgba(139, 92, 246, 0.3), transparent)',
+                opacity: 0
+              }}
+              whileHover={{ opacity: 1 }}
+              transition={{ duration: 0.2 }}
+            />
+          </motion.div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // Main component
-export function AgentOrchestrationVisualizerV4({ agents }: Props) {
+export function AgentOrchestrationVisualizerV4({ agents, partialResults }: Props) {
   const [elapsedTime, setElapsedTime] = useState(0);
 
   // Track elapsed time
@@ -511,19 +700,14 @@ export function AgentOrchestrationVisualizerV4({ agents }: Props) {
 
         {/* Center - Content discovery (Phase 2) */}
         <div
-          className="flex-1 rounded-3xl flex items-center justify-center"
+          className="flex-1 rounded-3xl overflow-hidden"
           style={{
             backdropFilter: 'blur(20px)',
             background: 'rgba(255, 255, 255, 0.02)',
             border: '1px solid rgba(255, 255, 255, 0.05)'
           }}
         >
-          <div className="text-center">
-            <Sparkles className="w-16 h-16 text-purple-400 mx-auto mb-4 opacity-50" />
-            <div className="text-white/60 text-sm">
-              Content discovery will appear here in Phase 2
-            </div>
-          </div>
+          <ContentDiscoveryGrid partialResults={partialResults} />
         </div>
 
         {/* Right sidebar - Progress */}
