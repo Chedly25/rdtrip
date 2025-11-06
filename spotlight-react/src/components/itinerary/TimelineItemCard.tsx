@@ -19,10 +19,9 @@ interface TimelineItemCardProps {
   time?: string;
   item: any;
   color?: string;
-  density?: 'compact' | 'comfortable' | 'spacious';
 }
 
-export function TimelineItemCard({ type, time, item, color = '#3B82F6', density = 'compact' }: TimelineItemCardProps) {
+export function TimelineItemCard({ type, time, item, color = '#3B82F6' }: TimelineItemCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
