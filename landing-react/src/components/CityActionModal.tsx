@@ -12,6 +12,7 @@ interface Activity {
 
 interface City {
   name: string
+  country?: string  // Country from AI response
   activities?: (string | Activity)[]
   image?: string
   imageUrl?: string
@@ -71,8 +72,14 @@ export default function CityActionModal({
     if (!cityToAdd.coordinates) {
       console.log(`Fetching coordinates for ${cityToAdd.name}...`)
 
-      // Infer country from existing route for better geocoding accuracy
-      const countryHint = inferCountryFromRoute(currentRoute)
+      // Use city's country if available (from AI response), otherwise infer from route
+      const countryHint = cityToAdd.country || inferCountryFromRoute(currentRoute)
+
+      if (cityToAdd.country) {
+        console.log(`✅ Using country from AI: ${cityToAdd.country}`)
+      } else {
+        console.log(`⚠️ No country in city data, inferring from route: ${countryHint || 'Unknown'}`)
+      }
 
       // Fetch coordinates
       const coordinates = await fetchCityCoordinates(cityToAdd.name, countryHint)

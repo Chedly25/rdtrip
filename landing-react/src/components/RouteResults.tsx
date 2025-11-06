@@ -20,6 +20,7 @@ interface Activity {
 interface City {
   name: string
   city?: string  // New format from RouteDiscoveryAgentV2
+  country?: string  // Country from AI response
   activities?: (string | Activity)[]
   image?: string
   imageUrl?: string
