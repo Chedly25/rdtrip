@@ -60,6 +60,18 @@ export async function fetchCityCoordinates(
  * Helps improve geocoding accuracy
  */
 export function inferCountryFromRoute(routeCities: { name: string }[]): string | undefined {
+  // Defensive: Ensure routeCities is actually an array
+  if (!Array.isArray(routeCities)) {
+    console.error('❌ inferCountryFromRoute: routeCities is not an array:', typeof routeCities, routeCities)
+    return undefined
+  }
+
+  // Edge case: Empty route
+  if (routeCities.length === 0) {
+    console.log('⚠️ inferCountryFromRoute: Empty route, cannot infer country')
+    return undefined
+  }
+
   // Common European countries in our routes - EXPANDED
   const europeanCountries = {
     france: ['paris', 'lyon', 'marseille', 'nice', 'toulouse', 'bordeaux', 'nantes', 'strasbourg', 'avignon', 'aix-en-provence', 'annecy', 'grenoble', 'montpellier', 'nimes', 'nîmes', 'dijon', 'reims', 'lille', 'cannes', 'antibes'],
