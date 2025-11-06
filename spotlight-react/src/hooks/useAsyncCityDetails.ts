@@ -318,7 +318,7 @@ export function useAsyncCityDetails(cityName: string, country?: string, isOpen?:
           console.log(`🔄 [useAsyncCityDetails] Polling job status...`)
           pollJobStatus(jobId)
         }
-      }, 2000)
+      }, 2000) as unknown as number
 
       // Immediately poll once
       console.log(`🔄 [useAsyncCityDetails] Immediate first poll...`)
