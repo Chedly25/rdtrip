@@ -199,7 +199,9 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
     // Ensure waypoints is always an array (not an object)
     const rawWaypoints = parsedRecs?.waypoints
     const originalWaypoints = Array.isArray(rawWaypoints) ? rawWaypoints : []
-    const currentWaypoints = modifiedWaypoints[currentAgentIndex] || originalWaypoints
+    // CRITICAL: Validate modifiedWaypoints is an array before using it
+    const modified = modifiedWaypoints[currentAgentIndex]
+    const currentWaypoints = Array.isArray(modified) ? modified : originalWaypoints
 
     // Get human-readable position description
     const positionDesc = getPositionDescription(position, currentWaypoints)
@@ -248,7 +250,9 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
     // Ensure waypoints is always an array (not an object)
     const rawWaypoints = parsedRecs?.waypoints
     const originalWaypoints = Array.isArray(rawWaypoints) ? rawWaypoints : []
-    const currentWaypoints = modifiedWaypoints[currentAgentIndex] || originalWaypoints
+    // CRITICAL: Validate modifiedWaypoints is an array before using it
+    const modified = modifiedWaypoints[currentAgentIndex]
+    const currentWaypoints = Array.isArray(modified) ? modified : originalWaypoints
     const updatedWaypoints = [...currentWaypoints]
     const replacedCity = updatedWaypoints[cityIndexToReplace]
 
