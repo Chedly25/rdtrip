@@ -122,21 +122,21 @@ export function calculateOptimalInsertPosition(
     return 0
   }
 
-  // Edge case: No coordinates for new city
-  if (!newCity.coordinates) {
-    console.warn('⚠️ New city has no coordinates, adding at end')
+  // Extract and validate new city coordinates
+  const newCityCoords = extractCoordinates(newCity.coordinates)
+  if (!newCityCoords) {
+    console.error(`❌ Invalid or missing coordinates for ${newCity.name}`)
     return currentRoute.length // Add at end as fallback
   }
+  const [newLat, newLng] = newCityCoords
 
-  const [newLat, newLng] = newCity.coordinates
-
-  // Validate new city coordinates
-  if (!isValidCoordinate(newLat) || !isValidCoordinate(newLng)) {
-    console.error(`❌ Invalid coordinates for ${newCity.name}: [${newLat}, ${newLng}]`)
-    return currentRoute.length // Add at end as fallback
+  // Extract origin coordinates (should always be valid, but check anyway)
+  const originCoordsExtracted = extractCoordinates(originCoords)
+  if (!originCoordsExtracted) {
+    console.error('❌ Invalid origin coordinates, using defaults')
+    return 0 // Add at start as fallback
   }
-
-  const [originLat, originLng] = originCoords
+  const [originLat, originLng] = originCoordsExtracted
 
   // Log current route with coordinates for debugging
   console.log(`📍 Calculating optimal position for ${newCity.name} [${newLat.toFixed(4)}, ${newLng.toFixed(4)}]:`)
