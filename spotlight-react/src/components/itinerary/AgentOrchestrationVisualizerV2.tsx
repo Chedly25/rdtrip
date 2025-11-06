@@ -1,6 +1,6 @@
-import { motion, AnimatePresence, useSpring, useTransform } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect, useMemo } from 'react';
-import { Check, X, AlertCircle } from 'lucide-react';
+import { Check, X } from 'lucide-react';
 
 export interface AgentNode {
   id: string;
@@ -47,7 +47,7 @@ function GrainTexture() {
 }
 
 // Animated gradient mesh background
-function GradientMesh({ progress }: { progress: number }) {
+function GradientMesh() {
   return (
     <motion.div
       className="absolute inset-0 pointer-events-none"
@@ -562,7 +562,7 @@ function calculateForceDirectedPositions(agents: AgentNode[], width: number, hei
 
   Array.from(phases.entries())
     .sort(([a], [b]) => a - b)
-    .forEach(([phaseNum, phaseAgents], phaseIdx) => {
+    .forEach(([_phaseNum, phaseAgents], phaseIdx) => {
       const y = padding + phaseIdx * verticalSpacing;
       const horizontalSpacing = (width - padding * 2) / Math.max(phaseAgents.length + 1, 1);
 
@@ -633,7 +633,7 @@ export function AgentOrchestrationVisualizer({ agents }: { agents: AgentNode[] }
       <GrainTexture />
 
       {/* Animated gradient mesh */}
-      <GradientMesh progress={progress} />
+      <GradientMesh />
 
       {/* SVG Canvas */}
       <svg className="w-full h-full relative z-10" style={{ minHeight: 700 }}>
