@@ -93,6 +93,12 @@ export function calculateOptimalInsertPosition(
   newCity: City,
   originCoords: [number, number] = [43.5297, 5.4474] // Aix-en-Provence [lat, lng]
 ): number {
+  // Defensive: Ensure currentRoute is actually an array
+  if (!Array.isArray(currentRoute)) {
+    console.error('❌ currentRoute is not an array:', typeof currentRoute, currentRoute)
+    return 0 // Add at start as fallback
+  }
+
   // Edge case: Empty route
   if (currentRoute.length === 0) {
     return 0

@@ -1040,7 +1040,9 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
                   const parsedRecs = JSON.parse(agentResult.recommendations)
                   const rawWaypoints = parsedRecs.waypoints
                   const originalWaypoints = Array.isArray(rawWaypoints) ? rawWaypoints : []
-                  return modifiedWaypoints[currentAgentIndex] || originalWaypoints
+                  const modified = modifiedWaypoints[currentAgentIndex]
+                  // Ensure both modified and original are arrays
+                  return Array.isArray(modified) ? modified : originalWaypoints
                 } catch {
                   return []
                 }
