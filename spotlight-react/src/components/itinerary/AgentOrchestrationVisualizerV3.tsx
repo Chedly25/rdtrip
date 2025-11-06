@@ -285,7 +285,7 @@ function GlassNode({
             times: [0, 0.2, 0.5, 1],
             type: 'spring',
             ...springConfig
-          }
+          } as any
         };
       case 'error':
         return {
