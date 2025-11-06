@@ -95,8 +95,11 @@ export function calculateOptimalInsertPosition(
   let minAdditionalDistance = Infinity
 
   // Try each possible insertion position (0 to route.length)
+  const positionAnalysis: Array<{ position: number; description: string; addedDistance: number }> = []
+
   for (let i = 0; i <= currentRoute.length; i++) {
     let additionalDistance = 0
+    let description = ''
 
     if (i === 0) {
       // Insert at beginning (before first city)
@@ -123,6 +126,7 @@ export function calculateOptimalInsertPosition(
           : 0
 
       additionalDistance = distanceFromOrigin + distanceToFirst - originalDistanceToFirst
+      description = `Start (before ${currentRoute[0]?.name || 'route'})`
     } else if (i === currentRoute.length) {
       // Insert at end (after last city)
       const prevCity = currentRoute[i - 1]
@@ -133,6 +137,7 @@ export function calculateOptimalInsertPosition(
           newLat,
           newLng
         )
+        description = `End (after ${prevCity.name})`
       }
     } else {
       // Insert between two cities
@@ -161,8 +166,11 @@ export function calculateOptimalInsertPosition(
         )
 
         additionalDistance = distanceFromPrev + distanceToNext - originalDistance
+        description = `Between ${prevCity.name} and ${nextCity.name}`
       }
     }
+
+    positionAnalysis.push({ position: i, description, addedDistance: additionalDistance })
 
     // Update best position if this is better
     if (additionalDistance < minAdditionalDistance) {
@@ -171,9 +179,14 @@ export function calculateOptimalInsertPosition(
     }
   }
 
-  console.log(
-    `Optimal position for ${newCity.name}: ${bestPosition} (adds ${minAdditionalDistance.toFixed(1)} km)`
-  )
+  console.log(`📍 Calculating optimal position for ${newCity.name}:`)
+  console.log('Current route:', currentRoute.map((c, i) => `${i}: ${c.name}`).join(', '))
+  console.log('Position analysis:')
+  positionAnalysis.forEach(p => {
+    const marker = p.position === bestPosition ? '✅ BEST' : '  '
+    console.log(`  ${marker} Position ${p.position}: ${p.description} → +${p.addedDistance.toFixed(1)} km`)
+  })
+  console.log(`✅ Optimal position: ${bestPosition} (adds ${minAdditionalDistance.toFixed(1)} km)`)
 
   return bestPosition
 }

@@ -60,33 +60,47 @@ export async function fetchCityCoordinates(
  * Helps improve geocoding accuracy
  */
 export function inferCountryFromRoute(routeCities: { name: string }[]): string | undefined {
-  // Common European countries in our routes
+  // Common European countries in our routes - EXPANDED
   const europeanCountries = {
-    france: ['paris', 'lyon', 'marseille', 'nice', 'toulouse', 'bordeaux', 'nantes', 'strasbourg', 'avignon', 'aix-en-provence'],
-    spain: ['barcelona', 'madrid', 'valencia', 'seville', 'bilbao', 'malaga', 'granada', 'figueres', 'girona'],
-    italy: ['rome', 'milan', 'florence', 'venice', 'naples', 'turin', 'bologna'],
-    switzerland: ['geneva', 'zurich', 'bern', 'lausanne', 'basel'],
-    germany: ['berlin', 'munich', 'hamburg', 'cologne', 'frankfurt']
+    france: ['paris', 'lyon', 'marseille', 'nice', 'toulouse', 'bordeaux', 'nantes', 'strasbourg', 'avignon', 'aix-en-provence', 'annecy', 'grenoble', 'montpellier', 'nimes', 'nîmes', 'dijon', 'reims', 'lille', 'cannes', 'antibes'],
+    spain: ['barcelona', 'madrid', 'valencia', 'seville', 'bilbao', 'malaga', 'granada', 'figueres', 'girona', 'san sebastian', 'toledo', 'cordoba', 'zaragoza'],
+    italy: ['rome', 'milan', 'florence', 'venice', 'naples', 'turin', 'bologna', 'verona', 'pisa', 'genoa', 'siena', 'padua'],
+    switzerland: ['geneva', 'zurich', 'bern', 'lausanne', 'basel', 'lucerne', 'interlaken', 'zermatt', 'montreux'],
+    austria: ['vienna', 'salzburg', 'innsbruck', 'graz', 'hallstatt', 'linz'],
+    germany: ['berlin', 'munich', 'hamburg', 'cologne', 'frankfurt', 'stuttgart', 'dresden', 'nuremberg', 'heidelberg']
   }
 
   // Check which country appears most in the route
   const countryMatches: Record<string, number> = {}
 
   for (const city of routeCities) {
-    const cityLower = city.name.toLowerCase()
+    const cityLower = city.name.toLowerCase().trim()
     for (const [country, cities] of Object.entries(europeanCountries)) {
-      if (cities.some(c => cityLower.includes(c) || c.includes(cityLower))) {
+      // Exact match gets higher priority (score of 3)
+      if (cities.includes(cityLower)) {
+        countryMatches[country] = (countryMatches[country] || 0) + 3
+      }
+      // Partial match gets lower score (score of 1)
+      else if (cities.some(c => cityLower.includes(c) || c.includes(cityLower))) {
         countryMatches[country] = (countryMatches[country] || 0) + 1
       }
     }
   }
 
+  console.log('🌍 Country inference:', {
+    cities: routeCities.map(c => c.name),
+    matches: countryMatches
+  })
+
   // Return most common country
   const entries = Object.entries(countryMatches)
   if (entries.length > 0) {
-    const [country] = entries.reduce((a, b) => (a[1] > b[1] ? a : b))
-    return country.charAt(0).toUpperCase() + country.slice(1) // Capitalize
+    const [country, score] = entries.reduce((a, b) => (a[1] > b[1] ? a : b))
+    const capitalizedCountry = country.charAt(0).toUpperCase() + country.slice(1)
+    console.log(`✅ Inferred country: ${capitalizedCountry} (score: ${score})`)
+    return capitalizedCountry
   }
 
+  console.log('⚠️ Could not infer country from route')
   return undefined
 }
