@@ -616,9 +616,6 @@ export function AgentOrchestrationVisualizer({ agents }: { agents: AgentNode[] }
     [agents, dimensions]
   );
 
-  const completed = agents.filter((a) => a.status === 'completed').length;
-  const total = agents.length;
-
   return (
     <div
       id="agent-viz-container"
