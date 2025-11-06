@@ -15,6 +15,7 @@ interface DayCardProps {
   weather: any;
   events: any[];
   agentType: string;
+  density?: 'compact' | 'comfortable' | 'spacious';
 }
 
 export function DayCardV2({
@@ -26,7 +27,8 @@ export function DayCardV2({
   practicalInfo,
   weather,
   events,
-  agentType
+  agentType,
+  density = 'compact'
 }: DayCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const theme = getTheme(agentType as any);
@@ -235,6 +237,7 @@ export function DayCardV2({
                     time={item.time}
                     item={item.item}
                     color={item.color}
+                    density={density}
                   />
                 ))
               ) : (
@@ -254,6 +257,7 @@ export function DayCardV2({
                       time={item.time}
                       item={item.item}
                       color={item.color}
+                      density={density}
                     />
                   ))
                 ) : (

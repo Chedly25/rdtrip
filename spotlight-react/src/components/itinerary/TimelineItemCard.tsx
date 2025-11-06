@@ -19,9 +19,10 @@ interface TimelineItemCardProps {
   time?: string;
   item: any;
   color?: string;
+  density?: 'compact' | 'comfortable' | 'spacious';
 }
 
-export function TimelineItemCard({ type, time, item, color = '#3B82F6' }: TimelineItemCardProps) {
+export function TimelineItemCard({ type, time, item, color = '#3B82F6', density = 'compact' }: TimelineItemCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
@@ -80,13 +81,18 @@ export function TimelineItemCard({ type, time, item, color = '#3B82F6' }: Timeli
   // Get thumbnail
   const getThumbnail = () => {
     if (item.photos && item.photos.length > 0) {
-      return item.photos[0];
+      const photo = item.photos[0];
+      // Handle both string URLs and photo objects
+      return typeof photo === 'string' ? photo : photo?.url || photo?.thumbnail || null;
     }
     if (item.primaryPhoto) {
-      return item.primaryPhoto;
+      return typeof item.primaryPhoto === 'string' ? item.primaryPhoto : item.primaryPhoto?.url;
     }
     if (item.imageUrl) {
       return item.imageUrl;
+    }
+    if (item.image) {
+      return item.image;
     }
     return null;
   };
@@ -97,15 +103,42 @@ export function TimelineItemCard({ type, time, item, color = '#3B82F6' }: Timeli
   const rating = item.rating;
   const ratingCount = item.ratingCount || item.user_ratings_total;
 
+  // Density-based sizing
+  const densityStyles = {
+    compact: {
+      padding: 'p-3',
+      iconSize: 'w-8 h-8',
+      thumbSize: 'w-12 h-12',
+      fontSize: 'text-sm',
+      gap: 'gap-2'
+    },
+    comfortable: {
+      padding: 'p-4',
+      iconSize: 'w-10 h-10',
+      thumbSize: 'w-16 h-16',
+      fontSize: 'text-base',
+      gap: 'gap-4'
+    },
+    spacious: {
+      padding: 'p-6',
+      iconSize: 'w-12 h-12',
+      thumbSize: 'w-20 h-20',
+      fontSize: 'text-lg',
+      gap: 'gap-6'
+    }
+  };
+
+  const styles = densityStyles[density];
+
   return (
     <motion.div
       layout
       className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
     >
-      {/* Collapsed State - 80px */}
+      {/* Collapsed State */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full p-4 flex items-center gap-4 text-left hover:bg-gray-50 transition-colors"
+        className={`w-full ${styles.padding} flex items-center ${styles.gap} text-left hover:bg-gray-50 transition-colors`}
       >
         {/* Time Marker */}
         {time && (
@@ -116,7 +149,7 @@ export function TimelineItemCard({ type, time, item, color = '#3B82F6' }: Timeli
 
         {/* Icon with color */}
         <div
-          className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center text-white"
+          className={`flex-shrink-0 ${styles.iconSize} rounded-lg flex items-center justify-center text-white`}
           style={{ backgroundColor: color }}
         >
           {getIcon()}
@@ -124,7 +157,7 @@ export function TimelineItemCard({ type, time, item, color = '#3B82F6' }: Timeli
 
         {/* Thumbnail (optional) */}
         {thumbnail && (
-          <div className="flex-shrink-0 w-16 h-16 rounded-md overflow-hidden bg-gray-100">
+          <div className={`flex-shrink-0 ${styles.thumbSize} rounded-md overflow-hidden bg-gray-100`}>
             <img
               src={thumbnail}
               alt={item.name}
@@ -194,26 +227,30 @@ export function TimelineItemCard({ type, time, item, color = '#3B82F6' }: Timeli
               {item.photos && item.photos.length > 0 && (
                 <div>
                   <div className="flex gap-2 overflow-x-auto scrollbar-hide">
-                    {item.photos.slice(0, 5).map((photo: string, index: number) => (
-                      <button
-                        key={index}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setLightboxIndex(index);
-                          setLightboxOpen(true);
-                        }}
-                        className="relative group h-32 w-48 flex-shrink-0 rounded-lg overflow-hidden hover:ring-2 hover:ring-blue-500 transition-all"
-                      >
-                        <img
-                          src={photo}
-                          alt={`${item.name} ${index + 1}`}
-                          className="h-full w-full object-cover"
-                        />
+                    {item.photos.slice(0, 5).map((photo: any, index: number) => {
+                      const photoUrl = typeof photo === 'string' ? photo : photo?.url || photo?.thumbnail;
+                      if (!photoUrl) return null;
+                      return (
+                        <button
+                          key={index}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setLightboxIndex(index);
+                            setLightboxOpen(true);
+                          }}
+                          className="relative group h-32 w-48 flex-shrink-0 rounded-lg overflow-hidden hover:ring-2 hover:ring-blue-500 transition-all"
+                        >
+                          <img
+                            src={photoUrl}
+                            alt={`${item.name} ${index + 1}`}
+                            className="h-full w-full object-cover"
+                          />
                         <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-30 transition-opacity flex items-center justify-center">
                           <ImageIcon className="h-8 w-8 text-white" />
                         </div>
                       </button>
-                    ))}
+                    );
+                    })}
                   </div>
                   {item.photos.length > 5 && (
                     <button
@@ -333,7 +370,7 @@ export function TimelineItemCard({ type, time, item, color = '#3B82F6' }: Timeli
       {/* Photo Lightbox */}
       {item.photos && item.photos.length > 0 && (
         <PhotoLightbox
-          photos={item.photos}
+          photos={item.photos.map((p: any) => typeof p === 'string' ? p : p?.url || p?.thumbnail || '')}
           isOpen={lightboxOpen}
           onClose={() => setLightboxOpen(false)}
           initialIndex={lightboxIndex}
