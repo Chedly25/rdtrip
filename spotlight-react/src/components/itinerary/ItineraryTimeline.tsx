@@ -9,7 +9,7 @@ import { MapSidebar } from './MapSidebar';
 import { ExportMenu } from './ExportMenu';
 import { useItineraryStore } from '../../stores/useItineraryStore';
 import { getCityCoordinates } from '../../utils/geocoding';
-import { Printer, Map as MapIcon, X } from 'lucide-react';
+import { Printer } from 'lucide-react';
 
 type DensityMode = 'compact' | 'comfortable' | 'spacious';
 
@@ -42,10 +42,14 @@ export function ItineraryTimeline({ itinerary, agentType }: ItineraryTimelinePro
     }
   }, [itinerary?.id, setItinerary]);
 
+  // Get the effective itinerary (original + customizations)
+  const effectiveItinerary = getEffectiveItinerary() || itinerary;
+  const { dayStructure, activities, restaurants, accommodations, scenicStops, practicalInfo, weather, events, budget } = effectiveItinerary;
+
   // Track scroll position to update active day
   useEffect(() => {
     const handleScroll = () => {
-      const dayElements = effectiveItinerary?.dayStructure?.days?.map((day: any) =>
+      const dayElements = dayStructure?.days?.map((day: any) =>
         document.getElementById(`day-${day.day}`)
       );
 
@@ -64,13 +68,9 @@ export function ItineraryTimeline({ itinerary, agentType }: ItineraryTimelinePro
 
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [itinerary?.dayStructure]);
+  }, [dayStructure]);
 
   if (!itinerary) return null;
-
-  // Get the effective itinerary (original + customizations)
-  const effectiveItinerary = getEffectiveItinerary() || itinerary;
-  const { dayStructure, activities, restaurants, accommodations, scenicStops, practicalInfo, weather, events, budget } = effectiveItinerary;
 
   // Build map locations from itinerary data
   const mapLocations: MapLocation[] = useMemo(() => {
@@ -163,7 +163,8 @@ export function ItineraryTimeline({ itinerary, agentType }: ItineraryTimelinePro
           </div>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <button
+          {/* Map toggle temporarily disabled - will be re-enabled when map coordinates are fixed */}
+          {/* <button
             onClick={() => setShowMap(!showMap)}
             className={`flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-colors no-print ${
               showMap
@@ -173,7 +174,7 @@ export function ItineraryTimeline({ itinerary, agentType }: ItineraryTimelinePro
           >
             {showMap ? <X className="h-4 w-4" /> : <MapIcon className="h-4 w-4" />}
             <span className="hidden sm:inline">{showMap ? 'Hide Map' : 'Show Map'}</span>
-          </button>
+          </button> */}
           <DensitySelector value={density} onChange={setDensity} />
           <button
             onClick={() => window.print()}
@@ -250,6 +251,7 @@ export function ItineraryTimeline({ itinerary, agentType }: ItineraryTimelinePro
                     .flatMap((e: any) => e.events || []) || []
                 }
                 agentType={agentType}
+                density={density}
               />
             );
           })}
