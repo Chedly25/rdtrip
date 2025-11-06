@@ -63,14 +63,6 @@ function extractCoordinates(coords: any): [number, number] | null {
 }
 
 /**
- * Check if a city has valid coordinates [lat, lng]
- */
-function hasValidCoordinates(city: City | undefined): boolean {
-  if (!city?.coordinates) return false
-  return extractCoordinates(city.coordinates) !== null
-}
-
-/**
  * Calculate distance between two geographic points using Haversine formula
  * @param lat1 - Latitude of first point
  * @param lon1 - Longitude of first point
@@ -173,11 +165,16 @@ export function calculateOptimalInsertPosition(
       // Insert at beginning (before first city)
       const distanceFromOrigin = haversineDistance(originLat, originLng, newLat, newLng)
 
-      if (currentRoute.length > 0 && hasValidCoordinates(currentRoute[0])) {
-        const [firstLat, firstLng] = extractCoordinates(currentRoute[0].coordinates)!
-        const distanceToFirst = haversineDistance(newLat, newLng, firstLat, firstLng)
-        const originalDistanceToFirst = haversineDistance(originLat, originLng, firstLat, firstLng)
-        additionalDistance = distanceFromOrigin + distanceToFirst - originalDistanceToFirst
+      if (currentRoute.length > 0) {
+        const firstCoords = extractCoordinates(currentRoute[0].coordinates)
+        if (firstCoords) {
+          const [firstLat, firstLng] = firstCoords
+          const distanceToFirst = haversineDistance(newLat, newLng, firstLat, firstLng)
+          const originalDistanceToFirst = haversineDistance(originLat, originLng, firstLat, firstLng)
+          additionalDistance = distanceFromOrigin + distanceToFirst - originalDistanceToFirst
+        } else {
+          additionalDistance = distanceFromOrigin
+        }
       } else {
         additionalDistance = distanceFromOrigin
       }
@@ -185,8 +182,9 @@ export function calculateOptimalInsertPosition(
     } else if (i === currentRoute.length) {
       // Insert at end (after last city)
       const prevCity = currentRoute[i - 1]
-      if (hasValidCoordinates(prevCity)) {
-        const [prevLat, prevLng] = extractCoordinates(prevCity.coordinates)!
+      const prevCoords = extractCoordinates(prevCity?.coordinates)
+      if (prevCoords) {
+        const [prevLat, prevLng] = prevCoords
         additionalDistance = haversineDistance(prevLat, prevLng, newLat, newLng)
         description = `End (after ${prevCity.name})`
       } else {
@@ -197,9 +195,12 @@ export function calculateOptimalInsertPosition(
       const prevCity = currentRoute[i - 1]
       const nextCity = currentRoute[i]
 
-      if (hasValidCoordinates(prevCity) && hasValidCoordinates(nextCity)) {
-        const [prevLat, prevLng] = extractCoordinates(prevCity.coordinates)!
-        const [nextLat, nextLng] = extractCoordinates(nextCity.coordinates)!
+      const prevCoords = extractCoordinates(prevCity?.coordinates)
+      const nextCoords = extractCoordinates(nextCity?.coordinates)
+
+      if (prevCoords && nextCoords) {
+        const [prevLat, prevLng] = prevCoords
+        const [nextLat, nextLng] = nextCoords
 
         const distanceFromPrev = haversineDistance(prevLat, prevLng, newLat, newLng)
         const distanceToNext = haversineDistance(newLat, newLng, nextLat, nextLng)
