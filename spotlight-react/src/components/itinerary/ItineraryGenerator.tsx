@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, AlertCircle, ArrowLeft } from 'lucide-react';
 import { GenerationProgress } from './GenerationProgress';
 import { ItineraryTimeline } from './ItineraryTimeline';
-import { AgentOrchestrationVisualizerV3 as AgentOrchestrationVisualizer } from './AgentOrchestrationVisualizerV3';
+import { AgentOrchestrationVisualizerV4 as AgentOrchestrationVisualizer } from './AgentOrchestrationVisualizerV4';
 import { ProgressiveItineraryPreview } from './ProgressiveItineraryPreview';
 import { useItineraryGeneration } from '../../hooks/useItineraryGeneration';
 import { getTheme } from '../../config/theme';
