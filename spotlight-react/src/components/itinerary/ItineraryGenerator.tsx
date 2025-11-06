@@ -115,7 +115,7 @@ export function ItineraryGenerator({
             </div>
 
             {/* Agent Orchestration Visualizer */}
-            <AgentOrchestrationVisualizer agents={agentNodes} />
+            <AgentOrchestrationVisualizer agents={agentNodes} partialResults={partialResults} />
 
             {/* Progressive Preview Cards */}
             <ProgressiveItineraryPreview results={partialResults} />
