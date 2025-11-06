@@ -1,0 +1,240 @@
+/* Print-optimized styles for itinerary */
+@media print {
+  /* Hide UI controls */
+  .day-navigator,
+  .export-buttons,
+  .no-print,
+  button:not(.print-keep),
+  nav,
+  header,
+  .sticky,
+  [class*="hover:"],
+  .map-sidebar {
+    display: none !important;
+  }
+
+  /* Reset layout for print */
+  body {
+    background: white !important;
+    font-size: 11pt;
+    line-height: 1.4;
+  }
+
+  /* Page setup */
+  @page {
+    size: A4;
+    margin: 1.5cm 2cm;
+  }
+
+  /* Prevent page breaks inside elements */
+  .day-card,
+  .timeline-card,
+  .activity-card,
+  .restaurant-card {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* Day headers start new page */
+  .day-card {
+    page-break-before: always;
+  }
+
+  .day-card:first-child {
+    page-break-before: avoid;
+  }
+
+  /* Compact card styles */
+  .timeline-card {
+    box-shadow: none !important;
+    border: 1px solid #e5e7eb;
+    padding: 8px !important;
+    margin: 4px 0 !important;
+    border-radius: 4px;
+  }
+
+  /* Hide collapsed/expanded states - show all */
+  .collapsed,
+  .expanded {
+    display: block !important;
+    height: auto !important;
+    opacity: 1 !important;
+  }
+
+  /* Compact photos */
+  img {
+    max-width: 100%;
+    page-break-inside: avoid;
+  }
+
+  .photo-gallery {
+    display: none; /* Hide large photos, save ink */
+  }
+
+  /* Black & white mode for icons */
+  .icon,
+  .rating-star,
+  [class*="text-"] {
+    filter: grayscale(100%);
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Preserve essential colors */
+  .timeline-marker,
+  .day-header-color {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Typography */
+  h1 {
+    font-size: 18pt;
+    margin-bottom: 8pt;
+  }
+
+  h2 {
+    font-size: 14pt;
+    margin-bottom: 6pt;
+  }
+
+  h3 {
+    font-size: 12pt;
+    margin-bottom: 4pt;
+  }
+
+  p, li {
+    font-size: 10pt;
+    margin-bottom: 4pt;
+  }
+
+  /* Links */
+  a {
+    color: #000;
+    text-decoration: none;
+  }
+
+  a[href]:after {
+    content: " (" attr(href) ")";
+    font-size: 8pt;
+    color: #666;
+  }
+
+  /* Headers and footers */
+  .print-header {
+    position: running(header);
+  }
+
+  .print-footer {
+    position: running(footer);
+  }
+
+  @page {
+    @top-center {
+      content: element(header);
+    }
+    @bottom-center {
+      content: element(footer) " - Page " counter(page) " of " counter(pages);
+    }
+  }
+
+  /* Budget summary - compact */
+  .budget-summary {
+    font-size: 9pt;
+    padding: 8px;
+    margin-bottom: 12px;
+    border: 1px solid #ccc;
+    page-break-inside: avoid;
+  }
+
+  /* Practical tips */
+  .practical-info {
+    font-size: 9pt;
+    padding: 6px;
+    background: #f9f9f9 !important;
+    border: 1px solid #ddd;
+  }
+
+  /* Timeline markers */
+  .timeline-time {
+    font-weight: bold;
+    font-size: 10pt;
+  }
+
+  /* Compact spacing */
+  .space-y-6 > * + * {
+    margin-top: 8px !important;
+  }
+
+  .space-y-3 > * + * {
+    margin-top: 4px !important;
+  }
+
+  /* Grid layouts */
+  .grid {
+    display: block !important;
+  }
+
+  .grid > * {
+    margin-bottom: 4px;
+  }
+
+  /* Remove shadows and effects */
+  * {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  /* Optimize for black & white printing */
+  .bg-blue-50,
+  .bg-green-50,
+  .bg-purple-50,
+  .bg-gray-50 {
+    background: #f5f5f5 !important;
+  }
+
+  .bg-blue-600,
+  .bg-green-600 {
+    background: #333 !important;
+    color: white !important;
+  }
+
+  /* Footer with page info */
+  .print-footer-content {
+    display: block;
+    text-align: center;
+    font-size: 8pt;
+    color: #666;
+    border-top: 1px solid #ccc;
+    padding-top: 4px;
+    margin-top: 12px;
+  }
+}
+
+/* Print button enhancement */
+@media screen {
+  .print-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: white;
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #374151;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .print-button:hover {
+    background: #f9fafb;
+    border-color: #9ca3af;
+  }
+
+  .print-button svg {
+    width: 1rem;
+    height: 1rem;
+  }
+}

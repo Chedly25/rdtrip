@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronDown, ChevronUp, MapPin, Cloud, DollarSign, Car } from 'lucide-react';
 import { TimelineItemCard } from './TimelineItemCard';
+import { EmptyState } from './EmptyState';
 import { getTheme } from '../../config/theme';
 
 interface DayCardProps {
@@ -226,22 +227,8 @@ export function DayCardV2({
           {!isExpanded ? (
             /* Collapsed: Show timeline items */
             <div className="p-6 space-y-3">
-              {timelineItems.map((item, index) => (
-                <TimelineItemCard
-                  key={index}
-                  type={item.type}
-                  time={item.time}
-                  item={item.item}
-                  color={item.color}
-                />
-              ))}
-            </div>
-          ) : (
-            /* Expanded: Show additional details like practical tips */
-            <div className="p-6 space-y-6">
-              {/* Timeline Items */}
-              <div className="space-y-3">
-                {timelineItems.map((item, index) => (
+              {timelineItems.length > 0 ? (
+                timelineItems.map((item, index) => (
                   <TimelineItemCard
                     key={index}
                     type={item.type}
@@ -249,7 +236,29 @@ export function DayCardV2({
                     item={item.item}
                     color={item.color}
                   />
-                ))}
+                ))
+              ) : (
+                <EmptyState type="activities" cityName={day.location} />
+              )}
+            </div>
+          ) : (
+            /* Expanded: Show additional details like practical tips */
+            <div className="p-6 space-y-6">
+              {/* Timeline Items */}
+              <div className="space-y-3">
+                {timelineItems.length > 0 ? (
+                  timelineItems.map((item, index) => (
+                    <TimelineItemCard
+                      key={index}
+                      type={item.type}
+                      time={item.time}
+                      item={item.item}
+                      color={item.color}
+                    />
+                  ))
+                ) : (
+                  <EmptyState type="activities" cityName={day.location} />
+                )}
               </div>
 
               {/* Practical Info */}

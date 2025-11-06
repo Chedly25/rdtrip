@@ -9,18 +9,23 @@ import {
   Phone,
   Utensils,
   Hotel,
-  Landmark
+  Landmark,
+  Image as ImageIcon
 } from 'lucide-react';
+import { PhotoLightbox } from './PhotoLightbox';
 
 interface TimelineItemCardProps {
   type: 'activity' | 'restaurant' | 'accommodation' | 'drive';
   time?: string;
   item: any;
   color?: string;
+  density?: 'compact' | 'comfortable' | 'spacious';
 }
 
-export function TimelineItemCard({ type, time, item, color = '#3B82F6' }: TimelineItemCardProps) {
+export function TimelineItemCard({ type, time, item, color = '#3B82F6', density = 'compact' }: TimelineItemCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
 
   // Get icon based on type
   const getIcon = () => {
@@ -186,17 +191,43 @@ export function TimelineItemCard({ type, time, item, color = '#3B82F6' }: Timeli
             className="border-t border-gray-100"
           >
             <div className="p-4 space-y-4">
-              {/* Photo Gallery */}
+              {/* Photo Gallery - Clickable to open lightbox */}
               {item.photos && item.photos.length > 0 && (
-                <div className="flex gap-2 overflow-x-auto scrollbar-hide">
-                  {item.photos.slice(0, 5).map((photo: string, index: number) => (
-                    <img
-                      key={index}
-                      src={photo}
-                      alt={`${item.name} ${index + 1}`}
-                      className="h-32 w-48 object-cover rounded-lg flex-shrink-0"
-                    />
-                  ))}
+                <div>
+                  <div className="flex gap-2 overflow-x-auto scrollbar-hide">
+                    {item.photos.slice(0, 5).map((photo: string, index: number) => (
+                      <button
+                        key={index}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setLightboxIndex(index);
+                          setLightboxOpen(true);
+                        }}
+                        className="relative group h-32 w-48 flex-shrink-0 rounded-lg overflow-hidden hover:ring-2 hover:ring-blue-500 transition-all"
+                      >
+                        <img
+                          src={photo}
+                          alt={`${item.name} ${index + 1}`}
+                          className="h-full w-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-30 transition-opacity flex items-center justify-center">
+                          <ImageIcon className="h-8 w-8 text-white" />
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                  {item.photos.length > 5 && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setLightboxIndex(0);
+                        setLightboxOpen(true);
+                      }}
+                      className="mt-2 text-sm text-blue-600 hover:text-blue-700 font-medium"
+                    >
+                      View all {item.photos.length} photos
+                    </button>
+                  )}
                 </div>
               )}
 
@@ -299,6 +330,16 @@ export function TimelineItemCard({ type, time, item, color = '#3B82F6' }: Timeli
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Photo Lightbox */}
+      {item.photos && item.photos.length > 0 && (
+        <PhotoLightbox
+          photos={item.photos}
+          isOpen={lightboxOpen}
+          onClose={() => setLightboxOpen(false)}
+          initialIndex={lightboxIndex}
+        />
+      )}
     </motion.div>
   );
 }
