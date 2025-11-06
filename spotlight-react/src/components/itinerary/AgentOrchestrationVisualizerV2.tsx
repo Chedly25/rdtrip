@@ -618,7 +618,6 @@ export function AgentOrchestrationVisualizer({ agents }: { agents: AgentNode[] }
 
   const completed = agents.filter((a) => a.status === 'completed').length;
   const total = agents.length;
-  const progress = (completed / total) * 100;
 
   return (
     <div
