@@ -3,7 +3,7 @@
  * Premium, Linear/Vercel-quality loading screen
  */
 
-import { useEffect, useRef, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check, X } from 'lucide-react';
 import type { AgentNode } from './AgentOrchestrationVisualizer';
@@ -139,39 +139,24 @@ interface Particle {
   size: number;
 }
 
-// Canvas-based particle system
-function ParticleCanvas({ particles }: { particles: Particle[] }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const animate = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      particles.forEach(particle => {
-        const alpha = particle.life / particle.maxLife;
-        ctx.fillStyle = particle.color.replace(')', `, ${alpha})`).replace('rgb', 'rgba');
-        ctx.beginPath();
-        ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
-        ctx.fill();
-      });
-    };
-
-    animate();
-  }, [particles]);
-
+// SVG-based particle system (works inside SVG unlike canvas)
+function SVGParticles({ particles }: { particles: Particle[] }) {
   return (
-    <canvas
-      ref={canvasRef}
-      className="absolute inset-0 pointer-events-none"
-      width={1920}
-      height={1080}
-    />
+    <>
+      {particles.map((particle) => {
+        const alpha = particle.life / particle.maxLife;
+        return (
+          <circle
+            key={particle.id}
+            cx={particle.x}
+            cy={particle.y}
+            r={particle.size}
+            fill={particle.color}
+            opacity={alpha}
+          />
+        );
+      })}
+    </>
   );
 }
 
@@ -301,7 +286,7 @@ function GlassNode({
 
   return (
     <>
-      <ParticleCanvas particles={particles} />
+      <SVGParticles particles={particles} />
 
       <motion.g
         style={{ cursor: agent.status === 'running' || agent.status === 'completed' ? 'pointer' : 'default' }}
