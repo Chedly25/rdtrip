@@ -298,15 +298,15 @@ function AgentCard({ agent }: { agent: AgentNode }) {
       transition={{ type: 'spring', stiffness: 100, damping: 20 }}
       className="relative overflow-hidden rounded-xl transition-all"
       style={{
-        backdropFilter: 'blur(20px)',
+        backdropFilter: 'blur(10px)',
         background: agent.status === 'running'
-          ? 'rgba(255, 255, 255, 0.08)'
-          : 'rgba(255, 255, 255, 0.05)',
-        border: '1px solid rgba(255, 255, 255, 0.1)',
-        borderLeft: `3px solid ${theme.color}`,
+          ? 'rgba(255, 255, 255, 0.03)'
+          : 'rgba(255, 255, 255, 0.02)',
+        border: '1px solid rgba(255, 255, 255, 0.05)',
+        borderLeft: `2px solid ${theme.color}`,
         padding: '16px',
         boxShadow: agent.status === 'running'
-          ? `0 0 20px ${theme.glow}`
+          ? `0 0 10px ${theme.glow.replace('0.4', '0.15')}`
           : 'none'
       }}
     >
@@ -422,10 +422,10 @@ function ProgressSidebar({ agents, elapsedTime, partialResults }: { agents: Agen
       <div
         className="rounded-2xl p-6"
         style={{
-          backdropFilter: 'blur(20px) saturate(180%)',
-          background: 'rgba(255, 255, 255, 0.05)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)'
+          backdropFilter: 'blur(10px)',
+          background: 'rgba(255, 255, 255, 0.02)',
+          border: '1px solid rgba(255, 255, 255, 0.05)',
+          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)'
         }}
       >
         <div className="flex items-start justify-between mb-4">
@@ -503,9 +503,9 @@ function ProgressSidebar({ agents, elapsedTime, partialResults }: { agents: Agen
       <motion.div
         className="rounded-2xl p-6"
         style={{
-          backdropFilter: 'blur(20px)',
-          background: 'rgba(255, 255, 255, 0.05)',
-          border: '1px solid rgba(255, 255, 255, 0.1)'
+          backdropFilter: 'blur(10px)',
+          background: 'rgba(255, 255, 255, 0.02)',
+          border: '1px solid rgba(255, 255, 255, 0.05)'
         }}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -559,9 +559,9 @@ function ProgressSidebar({ agents, elapsedTime, partialResults }: { agents: Agen
       <motion.div
         className="rounded-2xl p-6"
         style={{
-          backdropFilter: 'blur(20px)',
-          background: 'rgba(255, 255, 255, 0.05)',
-          border: '1px solid rgba(255, 255, 255, 0.1)'
+          backdropFilter: 'blur(10px)',
+          background: 'rgba(255, 255, 255, 0.02)',
+          border: '1px solid rgba(255, 255, 255, 0.05)'
         }}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -666,10 +666,18 @@ function ContentDiscoveryGrid({ partialResults }: { partialResults: PartialItine
   if (discoveredPlaces.length === 0) {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="text-center">
-          <Sparkles className="w-16 h-16 text-purple-400 mx-auto mb-4 opacity-50" />
-          <div className="text-white/60 text-sm">
-            Discovering amazing places for your trip...
+        <div className="text-center max-w-md px-6">
+          <motion.div
+            animate={{ rotate: [0, 5, -5, 0], scale: [1, 1.1, 1] }}
+            transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+          >
+            <Sparkles className="w-12 h-12 text-blue-400/50 mx-auto mb-4" />
+          </motion.div>
+          <div className="text-white/80 text-base font-medium mb-2">
+            Agents are working...
+          </div>
+          <div className="text-white/50 text-sm">
+            Discovered places and images will appear here as agents find them
           </div>
         </div>
       </div>
@@ -706,14 +714,14 @@ function ContentDiscoveryGrid({ partialResults }: { partialResults: PartialItine
                 key={type}
                 className="px-3 py-1 rounded-full text-xs"
                 style={{
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)'
+                  background: 'rgba(255, 255, 255, 0.03)',
+                  border: '1px solid rgba(255, 255, 255, 0.08)'
                 }}
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ type: 'spring', stiffness: 150, damping: 15 }}
               >
-                <span className="text-white/80 capitalize">{type}s: <AnimatedNumber value={count} /></span>
+                <span className="text-white/70 capitalize">{type}s: <AnimatedNumber value={count} /></span>
               </motion.div>
             );
           })}
@@ -733,11 +741,11 @@ function ContentDiscoveryGrid({ partialResults }: { partialResults: PartialItine
               damping: 15,
               delay: index * 0.05
             }}
-            whileHover={{ scale: 1.05, y: -5 }}
-            className="relative group overflow-hidden rounded-xl cursor-pointer"
+            whileHover={{ scale: 1.03, y: -3 }}
+            className="relative group overflow-hidden rounded-lg cursor-pointer"
             style={{
-              background: 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
+              background: 'rgba(255, 255, 255, 0.02)',
+              border: '1px solid rgba(255, 255, 255, 0.05)',
               aspectRatio: '1'
             }}
           >
@@ -841,50 +849,39 @@ export function AgentOrchestrationVisualizerV4({ agents, partialResults }: Props
     <div
       className="relative w-full min-h-screen flex flex-col overflow-hidden"
       style={{
-        background: 'radial-gradient(circle at 30% 40%, rgba(139, 92, 246, 0.15) 0%, rgba(6, 182, 212, 0.1) 40%, #0a0a0f 80%)'
+        background: 'linear-gradient(to bottom, #1a1a2e 0%, #16213e 50%, #0f3460 100%)'
       }}
     >
-      {/* Animated mesh spots */}
-      <div className="absolute inset-0 opacity-15">
+      {/* Subtle animated mesh spots */}
+      <div className="absolute inset-0 opacity-5">
         <motion.div
           className="absolute w-[500px] h-[500px] rounded-full"
           style={{
-            background: 'radial-gradient(circle, #8b5cf6 0%, transparent 70%)',
+            background: 'radial-gradient(circle, #6366f1 0%, transparent 70%)',
             filter: 'blur(200px)',
             left: '20%',
             top: '30%'
           }}
-          animate={{ x: [0, 100, 0], y: [0, -50, 0] }}
+          animate={{ x: [0, 50, 0], y: [0, -30, 0] }}
           transition={{ duration: 60, repeat: Infinity, ease: 'easeInOut' }}
         />
         <motion.div
           className="absolute w-[600px] h-[600px] rounded-full"
           style={{
-            background: 'radial-gradient(circle, #06b6d4 0%, transparent 70%)',
+            background: 'radial-gradient(circle, #3b82f6 0%, transparent 70%)',
             filter: 'blur(200px)',
             right: '15%',
             top: '20%'
           }}
-          animate={{ x: [0, -80, 0], y: [0, 100, 0] }}
+          animate={{ x: [0, -40, 0], y: [0, 50, 0] }}
           transition={{ duration: 50, repeat: Infinity, ease: 'easeInOut' }}
-        />
-        <motion.div
-          className="absolute w-[550px] h-[550px] rounded-full"
-          style={{
-            background: 'radial-gradient(circle, #ec4899 0%, transparent 70%)',
-            filter: 'blur(200px)',
-            left: '50%',
-            bottom: '20%'
-          }}
-          animate={{ x: [0, 60, 0], y: [0, -70, 0] }}
-          transition={{ duration: 55, repeat: Infinity, ease: 'easeInOut' }}
         />
       </div>
 
-      {/* Grain texture */}
-      <svg className="absolute inset-0 w-full h-full opacity-40 pointer-events-none">
+      {/* Subtle grain texture */}
+      <svg className="absolute inset-0 w-full h-full opacity-10 pointer-events-none">
         <filter id="grain">
-          <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="4" stitchTiles="stitch" />
+          <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" stitchTiles="stitch" />
           <feColorMatrix type="saturate" values="0" />
         </filter>
         <rect width="100%" height="100%" filter="url(#grain)" />
@@ -909,11 +906,11 @@ export function AgentOrchestrationVisualizerV4({ agents, partialResults }: Props
 
         {/* Center - Content discovery (Phase 2) */}
         <div
-          className="flex-1 rounded-3xl overflow-hidden"
+          className="flex-1 rounded-2xl overflow-hidden"
           style={{
-            backdropFilter: 'blur(20px)',
-            background: 'rgba(255, 255, 255, 0.02)',
-            border: '1px solid rgba(255, 255, 255, 0.05)'
+            backdropFilter: 'blur(10px)',
+            background: 'rgba(255, 255, 255, 0.01)',
+            border: '1px solid rgba(255, 255, 255, 0.03)'
           }}
         >
           <ContentDiscoveryGrid partialResults={partialResults} />
