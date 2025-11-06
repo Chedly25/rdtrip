@@ -4,8 +4,8 @@
  */
 
 import { useEffect, useRef, useState, useMemo } from 'react';
-import { motion, useSpring, AnimatePresence } from 'framer-motion';
-import { Check, X, AlertCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Check, X } from 'lucide-react';
 import type { AgentNode } from './AgentOrchestrationVisualizer';
 
 interface Props {
@@ -179,13 +179,11 @@ function ParticleCanvas({ particles }: { particles: Particle[] }) {
 function GlassNode({
   agent,
   position,
-  onClick,
-  isExpanded
+  onClick
 }: {
   agent: AgentNode;
   position: { x: number; y: number };
   onClick: () => void;
-  isExpanded: boolean;
 }) {
   const [particles, setParticles] = useState<Particle[]>([]);
 
@@ -272,26 +270,32 @@ function GlassNode({
     }
   };
 
-  const nodeVariants = {
-    waiting: {
-      scale: [1, 1.08, 1],
-      transition: { duration: 2.5, repeat: Infinity, ease: 'easeInOut' }
-    },
-    running: {
-      scale: 1
-    },
-    completed: {
-      scale: [1, 1.25, 1.05, 1],
-      transition: {
-        duration: 0.5,
-        times: [0, 0.2, 0.5, 1],
-        type: 'spring',
-        ...springConfig
-      }
-    },
-    error: {
-      x: [-5, 5, -5, 5, 0],
-      transition: { duration: 0.4 }
+  const getAnimationProps = () => {
+    switch (agent.status) {
+      case 'waiting':
+        return {
+          animate: { scale: [1, 1.08, 1] },
+          transition: { duration: 2.5, repeat: Infinity, ease: 'easeInOut' }
+        };
+      case 'completed':
+        return {
+          animate: { scale: [1, 1.25, 1.05, 1] },
+          transition: {
+            duration: 0.5,
+            times: [0, 0.2, 0.5, 1],
+            type: 'spring',
+            ...springConfig
+          }
+        };
+      case 'error':
+        return {
+          animate: { x: [-5, 5, -5, 5, 0] },
+          transition: { duration: 0.4 }
+        };
+      default:
+        return {
+          animate: { scale: 1 }
+        };
     }
   };
 
@@ -306,8 +310,7 @@ function GlassNode({
             onClick();
           }
         }}
-        animate={agent.status}
-        variants={nodeVariants}
+        {...getAnimationProps()}
       >
         {/* Outer glow */}
         <circle
@@ -522,7 +525,7 @@ function ExpansionPanel({
   onClose: () => void;
   position: { x: number; y: number };
 }) {
-  const activities = agent.activities || [];
+  const activities = (agent as any).activities || [];
 
   return (
     <motion.div
@@ -620,7 +623,7 @@ function ExpansionPanel({
             {activities.length === 0 ? (
               <div className="text-white/60 text-sm">No activities yet...</div>
             ) : (
-              activities.map((activity, index) => (
+              activities.map((activity: any, index: number) => (
                 <motion.div
                   key={index}
                   initial={{ opacity: 0, y: 20 }}
