@@ -275,7 +275,7 @@ function GlassNode({
       case 'waiting':
         return {
           animate: { scale: [1, 1.08, 1] },
-          transition: { duration: 2.5, repeat: Infinity, ease: 'easeInOut' }
+          transition: { duration: 2.5, repeat: Infinity, ease: 'easeInOut' as any }
         };
       case 'completed':
         return {
@@ -783,7 +783,6 @@ export function AgentOrchestrationVisualizerV3({ agents }: Props) {
               agent={agent}
               position={positions[agent.id]}
               onClick={() => setExpandedAgent(agent.id)}
-              isExpanded={expandedAgent === agent.id}
             />
           );
         })}
