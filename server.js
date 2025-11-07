@@ -767,30 +767,47 @@ app.get('/api/auth/me', authenticate, (req, res) => {
 // POST /api/routes - Save a new route (protected)
 app.post('/api/routes', authenticate, async (req, res) => {
   try {
-    const { name, origin, destination, stops, budget, selectedAgents, routeData } = req.body;
+    const { name, origin, destination, stops, budget, selectedAgents, routeData, totalNights, tripPace } = req.body;
 
-    // Validate required fields
-    if (!origin || !destination || !stops || !budget || !selectedAgents || !routeData) {
+    // Validate required fields (accept either old or new format)
+    if (!origin || !destination || !budget || !selectedAgents || !routeData) {
       return res.status(400).json({
         error: 'Missing required fields',
-        required: ['origin', 'destination', 'stops', 'budget', 'selectedAgents', 'routeData']
+        required: ['origin', 'destination', 'budget', 'selectedAgents', 'routeData']
       });
     }
 
-    // Save route to database
+    // Extract totalNights and tripPace (from new format or routeData)
+    let finalTotalNights = totalNights;
+    let finalTripPace = tripPace;
+    let finalStops = stops;
+
+    if (!finalTotalNights && routeData.totalNights) {
+      finalTotalNights = routeData.totalNights;
+    }
+    if (!finalTripPace && routeData.tripPace) {
+      finalTripPace = routeData.tripPace;
+    }
+    if (!finalStops && stops) {
+      finalStops = stops;
+    }
+
+    // Save route to database (with new columns)
     const result = await db.query(
-      `INSERT INTO routes (user_id, name, origin, destination, stops, budget, selected_agents, route_data)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-       RETURNING id, user_id, name, origin, destination, stops, budget, selected_agents, route_data, is_favorite, is_public, created_at, updated_at`,
+      `INSERT INTO routes (user_id, name, origin, destination, stops, budget, selected_agents, route_data, total_nights, trip_pace)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       RETURNING id, user_id, name, origin, destination, stops, budget, selected_agents, route_data, total_nights, trip_pace, is_favorite, is_public, created_at, updated_at`,
       [
         req.user.id,
         name || `${origin} to ${destination}`,
         origin,
         destination,
-        stops,
+        finalStops,
         budget,
         selectedAgents,
-        JSON.stringify(routeData)
+        JSON.stringify(routeData),
+        finalTotalNights,
+        finalTripPace
       ]
     );
 
@@ -805,6 +822,8 @@ app.post('/api/routes', authenticate, async (req, res) => {
         origin: savedRoute.origin,
         destination: savedRoute.destination,
         stops: savedRoute.stops,
+        totalNights: savedRoute.total_nights,
+        tripPace: savedRoute.trip_pace,
         budget: savedRoute.budget,
         selectedAgents: savedRoute.selected_agents,
         routeData: savedRoute.route_data,
@@ -1227,8 +1246,50 @@ app.get('/api/routes/:id/stats', authenticate, async (req, res) => {
 // Start route generation job (returns immediately with job ID)
 app.post('/api/generate-route', async (req, res) => {
   try {
-    const { origin, destination, stops = 3, agents: selectedAgents = ['adventure', 'culture', 'food'], budget = 'budget' } = req.body;
+    // BACKWARD COMPATIBILITY: Convert old format to new format
+    let { origin, destination, stops, agents: selectedAgents = ['adventure', 'culture', 'food'], budget = 'budget', nightsOnRoad, nightsAtDestination, totalNights, tripPace } = req.body;
 
+    // If old format (stops, nightsOnRoad, nightsAtDestination) is used, convert to new format
+    if (stops !== undefined && !totalNights) {
+      console.log('⚠️  Old format detected - converting to nights-based format');
+
+      // Calculate total nights from old format
+      if (nightsOnRoad !== undefined && nightsAtDestination !== undefined) {
+        totalNights = nightsOnRoad + nightsAtDestination;
+      } else {
+        // Fallback: estimate 2 nights per stop
+        totalNights = stops * 2;
+      }
+
+      // Default to balanced pace
+      tripPace = 'balanced';
+
+      console.log(`   Converted: ${stops} stops → ${totalNights} nights (${tripPace} pace)`);
+    }
+
+    // Use new format if provided, otherwise keep old logic
+    if (totalNights && tripPace) {
+      // Redirect to new nights-based endpoint
+      console.log('🔀 Redirecting to nights-based route generation');
+
+      const response = await fetch(`${req.protocol}://${req.get('host')}/api/generate-route-nights-based`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          origin,
+          destination,
+          totalNights,
+          tripPace,
+          agents: selectedAgents,
+          budget
+        })
+      });
+
+      const result = await response.json();
+      return res.json(result);
+    }
+
+    // OLD LOGIC: Continue with stops-based generation for pure legacy calls
     if (!destination) {
       return res.status(400).json({ error: 'Destination is required' });
     }
@@ -1236,6 +1297,8 @@ app.post('/api/generate-route', async (req, res) => {
     if (!origin) {
       return res.status(400).json({ error: 'Origin is required' });
     }
+
+    stops = stops || 3;
 
     // Create unique job ID
     const jobId = `route_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
