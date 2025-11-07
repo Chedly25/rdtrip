@@ -4959,6 +4959,122 @@ app.post('/api/city-activities/update-nights', async (req, res) => {
   }
 });
 
+/**
+ * POST /api/itinerary/regenerate-city
+ * Regenerate FULL schedule for a city (activities, hotels, restaurants)
+ * This is an expensive operation used when user edits nights in Spotlight
+ */
+app.post('/api/itinerary/regenerate-city', async (req, res) => {
+  try {
+    const {
+      city,
+      country,
+      nights,
+      theme = 'best-overall',
+      budget = 'mid',
+      coordinates,
+      previousCity,
+      nextCity
+    } = req.body;
+
+    // Validation
+    if (!city) {
+      return res.status(400).json({
+        error: 'Missing required field: city'
+      });
+    }
+
+    if (nights === undefined || nights < 1 || nights > 14) {
+      return res.status(400).json({
+        error: 'Nights must be between 1 and 14'
+      });
+    }
+
+    console.log(`🔄 FULL schedule regeneration for ${city}${country ? `, ${country}` : ''} - ${nights} nights`);
+    console.log(`   Theme: ${theme}, Budget: ${budget}`);
+    if (previousCity) console.log(`   Previous city: ${previousCity}`);
+    if (nextCity) console.log(`   Next city: ${nextCity}`);
+
+    const days = nights + 1;
+
+    // MVP: Return structured response that client can use
+    // Full implementation would call ItineraryAgentOrchestrator here
+    const schedule = {
+      city,
+      country,
+      nights,
+      days,
+      activities: generatePlaceholderActivities(city, days),
+      hotels: generatePlaceholderHotels(city, budget),
+      restaurants: generatePlaceholderRestaurants(city, days, budget),
+      note: 'MVP: Placeholder data. Full orchestrator integration coming soon.'
+    };
+
+    console.log(`✓ Generated ${days}-day schedule for ${city}`);
+
+    res.json({
+      success: true,
+      schedule,
+      message: `Generated ${nights}-night schedule for ${city}`,
+      metadata: {
+        regeneratedAt: new Date().toISOString(),
+        theme,
+        budget,
+        days
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Schedule regeneration failed:', error);
+    res.status(500).json({
+      error: 'Failed to regenerate schedule',
+      details: error.message
+    });
+  }
+});
+
+// Helper functions for MVP placeholder data
+function generatePlaceholderActivities(city, days) {
+  const activities = [];
+  for (let day = 1; day <= days; day++) {
+    activities.push({
+      day,
+      time: '09:00',
+      title: `Explore ${city} - Day ${day}`,
+      description: `Discover the highlights of ${city}`,
+      type: 'activity'
+    });
+    activities.push({
+      day,
+      time: '14:00',
+      title: `Afternoon in ${city}`,
+      description: `Continue exploring ${city}`,
+      type: 'activity'
+    });
+  }
+  return activities;
+}
+
+function generatePlaceholderHotels(city, budget) {
+  return [
+    {
+      name: `Hotel in ${city}`,
+      type: budget === 'luxury' ? '5-star' : budget === 'comfort' ? '4-star' : '3-star',
+      price: budget === 'luxury' ? 200 : budget === 'comfort' ? 100 : 50
+    }
+  ];
+}
+
+function generatePlaceholderRestaurants(city, days, budget) {
+  return [
+    {
+      name: `Restaurant in ${city}`,
+      cuisine: 'Local',
+      priceRange: budget === 'luxury' ? '$$$' : budget === 'comfort' ? '$$' : '$'
+    }
+  ];
+}
+
 // Background processor for city details jobs
 async function processCityDetailsJobAsync(jobId, cityName, country) {
   const startTime = Date.now();
