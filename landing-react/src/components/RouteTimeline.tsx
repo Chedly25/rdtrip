@@ -21,6 +21,12 @@ export function RouteTimeline({ cities, destination, themeColor }: RouteTimeline
 
       <div className="flex flex-wrap items-center gap-4">
         {cities.map((city, index) => {
+          // CRITICAL: Guard against undefined city
+          if (!city || !city.name) {
+            console.warn(`⚠️ RouteTimeline: Skipping invalid city at index ${index}`, city);
+            return null;
+          }
+
           const nights = city.nights || 0
           const startDay = currentDay
           const endDay = currentDay + nights - 1
@@ -57,20 +63,21 @@ export function RouteTimeline({ cities, destination, themeColor }: RouteTimeline
         })}
 
         {/* Destination */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: cities.length * 0.1 }}
-          className="flex flex-col items-center min-w-[140px] rounded-lg border-2 p-3 bg-gradient-to-br"
-          style={{
-            borderColor: themeColor,
-            background: `linear-gradient(135deg, ${themeColor}15, ${themeColor}30)`
-          }}
-        >
-          <div className="flex items-center gap-2 mb-1">
-            <MapPin className="h-4 w-4" style={{ color: themeColor }} />
-            <span className="font-bold text-gray-900">{destination.name}</span>
-          </div>
+        {destination && destination.name && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: cities.length * 0.1 }}
+            className="flex flex-col items-center min-w-[140px] rounded-lg border-2 p-3 bg-gradient-to-br"
+            style={{
+              borderColor: themeColor,
+              background: `linear-gradient(135deg, ${themeColor}15, ${themeColor}30)`
+            }}
+          >
+            <div className="flex items-center gap-2 mb-1">
+              <MapPin className="h-4 w-4" style={{ color: themeColor }} />
+              <span className="font-bold text-gray-900">{destination.name}</span>
+            </div>
           <span className="text-xs text-gray-600">
             Day {currentDay}-{currentDay + (destination.nights || 0) - 1}
           </span>
@@ -79,6 +86,7 @@ export function RouteTimeline({ cities, destination, themeColor }: RouteTimeline
           </span>
           <span className="text-xs font-medium text-gray-500 mt-1">Destination</span>
         </motion.div>
+        )}
       </div>
 
       {/* Total Summary */}
@@ -86,8 +94,8 @@ export function RouteTimeline({ cities, destination, themeColor }: RouteTimeline
         <div className="flex justify-between text-sm">
           <span className="text-gray-600">Total Duration:</span>
           <span className="font-bold text-gray-900">
-            {cities.reduce((sum, c) => sum + (c.nights || 0), 0) + (destination.nights || 0)} nights
-            ({cities.reduce((sum, c) => sum + (c.nights || 0), 0) + (destination.nights || 0) + 1} days)
+            {cities.filter(c => c && c.nights !== undefined).reduce((sum, c) => sum + (c.nights || 0), 0) + (destination?.nights || 0)} nights
+            ({cities.filter(c => c && c.nights !== undefined).reduce((sum, c) => sum + (c.nights || 0), 0) + (destination?.nights || 0) + 1} days)
           </span>
         </div>
       </div>
