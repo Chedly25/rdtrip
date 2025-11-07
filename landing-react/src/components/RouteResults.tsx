@@ -718,12 +718,15 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
               const theme = agentThemes[activeAgentResult.agent] || agentThemes.adventure
               return (
                 <RouteTimeline
-                  cities={validWaypoints.map((city: any) => ({
-                    name: city.name || city.city,
-                    nights: city.nights || 0
-                  }))}
+                  cities={validWaypoints
+                    .map((city: any) => ({
+                      name: city.name || city.city || 'Unknown City',  // FIXED: Fallback if both undefined
+                      nights: city.nights || 0
+                    }))
+                    .filter((city: any) => city.name)  // Extra safety: ensure name exists
+                  }
                   destination={{
-                    name: destination.name,
+                    name: destination.name || 'Unknown Destination',  // FIXED: Fallback for destination
                     nights: destination.nights || 3
                   }}
                   themeColor={theme.color}
