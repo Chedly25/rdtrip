@@ -963,6 +963,12 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
                   </h3>
                   <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                     {cities.map((city, cityIndex) => {
+                      // CRITICAL: Guard against undefined city
+                      if (!city) {
+                        console.warn(`⚠️ Skipping undefined city at index ${cityIndex}`);
+                        return null;
+                      }
+
                       // Handle both old format (name) and new format (city)
                       const cityName = city.name || city.city || 'Unknown'
 
@@ -1025,16 +1031,23 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
                       These cities were also considered for your route. Click "Add to Route" to customize your journey.
                     </p>
                     <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                      {alternatives.map((altCity, altIndex) => (
-                        <div key={altIndex} className="relative">
-                          <CityCard
-                            city={altCity}
-                            index={altIndex}
-                            themeColor={theme.color}
-                            showThemeBadges={agentResult.agent === 'best-overall'}
-                            themes={altCity.themes || []}
-                            onClick={() => handleOpenCityDetails(altCity.name)}
-                          />
+                      {alternatives.map((altCity, altIndex) => {
+                        // CRITICAL: Guard against undefined altCity
+                        if (!altCity) {
+                          console.warn(`⚠️ Skipping undefined alternative city at index ${altIndex}`);
+                          return null;
+                        }
+
+                        return (
+                          <div key={altIndex} className="relative">
+                            <CityCard
+                              city={altCity}
+                              index={altIndex}
+                              themeColor={theme.color}
+                              showThemeBadges={agentResult.agent === 'best-overall'}
+                              themes={altCity.themes || []}
+                              onClick={() => handleOpenCityDetails(altCity.name)}
+                            />
                           {/* Add to Route Button */}
                           <div className="mt-4">
                             <button
@@ -1047,7 +1060,8 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
                             </button>
                           </div>
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 )}
