@@ -1634,7 +1634,7 @@ async function processRouteJobNightsBased(jobId, origin, destination, totalNight
         agentResults.push({
           agent: agentType,
           name: agentConfig.name,
-          recommendations: JSON.stringify(result.route),
+          recommendations: JSON.stringify(result),  // FIX: result is the route object, not result.route
           metricsRaw: result.metrics,
           metrics: result.formattedMetrics || {}
         });
@@ -1669,7 +1669,7 @@ async function processRouteJobNightsBased(jobId, origin, destination, totalNight
     agentResults.push({
       agent: 'best-overall',
       name: 'Best Overall',
-      recommendations: JSON.stringify(mergedResult.route),
+      recommendations: JSON.stringify(mergedResult),  // FIX: mergedResult is the route object, not mergedResult.route
       metrics: mergedResult.metrics || {}
     });
 
