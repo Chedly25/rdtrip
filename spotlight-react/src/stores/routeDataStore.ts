@@ -5,7 +5,8 @@ export interface RouteData {
   agent: 'adventure' | 'culture' | 'food' | 'hidden-gems' | 'best-overall'
   destination: string
   origin: string
-  totalStops: number
+  totalNights: number  // Total nights for the trip
+  tripPace: 'leisurely' | 'balanced' | 'fast-paced'  // Trip pace preference
   waypoints?: any[]
   alternatives?: any[]
   nightAllocations?: Record<string, number>  // Night allocations from landing page
