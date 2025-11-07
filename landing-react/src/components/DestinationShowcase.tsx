@@ -4,12 +4,11 @@ import { destinations, getAgentColor, getAgentIconPath } from '../data/destinati
 import { useFormStore } from '../stores/formStore'
 
 export function DestinationShowcase() {
-  const { setDestination, setStops } = useFormStore()
+  const { setDestination } = useFormStore()
 
-  const handleCardClick = (destName: string, stops: number) => {
-    // Pre-fill the form
+  const handleCardClick = (destName: string, _stops: number) => {
+    // Pre-fill the form (AI will determine optimal stops based on nights + pace)
     setDestination(destName)
-    setStops(stops)
 
     // Smooth scroll to form
     setTimeout(() => {

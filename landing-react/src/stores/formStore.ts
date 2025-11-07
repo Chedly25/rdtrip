@@ -1,21 +1,22 @@
 import { create } from 'zustand'
 import type { AgentType, BudgetLevel, RouteFormData } from '../types'
 
+export type TripPace = 'leisurely' | 'balanced' | 'fast-paced'
+
 interface FormState extends RouteFormData {
   isLoading: boolean
   error: string | null
-  nightsOnRoad: number
-  nightsAtDestination: number
+  totalNights: number
+  tripPace: TripPace
 
   // Actions
   setOrigin: (origin: string) => void
   setDestination: (destination: string) => void
-  setStops: (stops: number) => void
   setBudget: (budget: BudgetLevel) => void
   toggleAgent: (agent: AgentType) => void
   setAgents: (agents: AgentType[]) => void
-  setNightsOnRoad: (nights: number) => void
-  setNightsAtDestination: (nights: number) => void
+  setTotalNights: (nights: number) => void
+  setTripPace: (pace: TripPace) => void
   setLoading: (isLoading: boolean) => void
   setError: (error: string | null) => void
   reset: () => void
@@ -24,11 +25,10 @@ interface FormState extends RouteFormData {
 const initialState = {
   origin: 'Aix-en-Provence',
   destination: '',
-  stops: 3,
   budget: 'comfort' as BudgetLevel,
   agents: ['adventure', 'culture', 'food', 'hidden-gems'] as AgentType[],
-  nightsOnRoad: 7,
-  nightsAtDestination: 3,
+  totalNights: 10,
+  tripPace: 'balanced' as TripPace,
   isLoading: false,
   error: null,
 }
@@ -39,8 +39,6 @@ export const useFormStore = create<FormState>((set) => ({
   setOrigin: (origin) => set({ origin }),
 
   setDestination: (destination) => set({ destination }),
-
-  setStops: (stops) => set({ stops }),
 
   setBudget: (budget) => set({ budget }),
 
@@ -54,9 +52,9 @@ export const useFormStore = create<FormState>((set) => ({
 
   setAgents: (agents) => set({ agents }),
 
-  setNightsOnRoad: (nightsOnRoad) => set({ nightsOnRoad }),
+  setTotalNights: (totalNights) => set({ totalNights }),
 
-  setNightsAtDestination: (nightsAtDestination) => set({ nightsAtDestination }),
+  setTripPace: (tripPace) => set({ tripPace }),
 
   setLoading: (isLoading) => set({ isLoading }),
 
