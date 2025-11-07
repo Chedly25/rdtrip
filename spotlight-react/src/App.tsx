@@ -63,6 +63,12 @@ function extractWaypoints(routeData: any): Waypoint[] {
     });
 
     try {
+      // Check if recommendations exist and are a string
+      if (!agentResult.recommendations || typeof agentResult.recommendations !== 'string') {
+        console.warn(`⚠️ Invalid recommendations for agent ${agentResult.agent}:`, agentResult.recommendations);
+        return;
+      }
+
       let cleanedRecommendations = agentResult.recommendations
         .replace(/```json\s*/g, '')
         .replace(/```\s*$/g, '')
@@ -208,7 +214,7 @@ function AppContent() {
         // PRIORITY 1: Check if agentResults have modified waypoints in recommendations
         if (routeData.agentResults && routeData.agentResults.length > 0) {
           const agentResult = routeData.agentResults[0];
-          if (agentResult.recommendations) {
+          if (agentResult.recommendations && typeof agentResult.recommendations === 'string') {
             try {
               const parsed = JSON.parse(agentResult.recommendations);
               // Check if this agent result has modified waypoints (from RouteResults customization)
@@ -288,7 +294,7 @@ function AppContent() {
 
           // Check if backend sent origin object with coordinates
           const agentResult = routeData.agentResults && routeData.agentResults[0];
-          if (agentResult && agentResult.recommendations) {
+          if (agentResult && agentResult.recommendations && typeof agentResult.recommendations === 'string') {
             try {
               const parsed = JSON.parse(agentResult.recommendations);
               if (parsed.origin && parsed.origin.latitude && parsed.origin.longitude) {
@@ -342,7 +348,7 @@ function AppContent() {
 
           // Check if backend sent destination object with coordinates
           const agentResult = routeData.agentResults && routeData.agentResults[0];
-          if (agentResult && agentResult.recommendations) {
+          if (agentResult && agentResult.recommendations && typeof agentResult.recommendations === 'string') {
             try {
               const parsed = JSON.parse(agentResult.recommendations);
               if (parsed.destination && parsed.destination.latitude && parsed.destination.longitude) {
