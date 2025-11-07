@@ -122,7 +122,7 @@ Return ONLY a valid JSON object in this exact format:
 
     try {
       const response = await this.openai.chat.completions.create({
-        model: 'llama-3.1-sonar-huge-128k-online',
+        model: 'sonar',
         messages: [
           {
             role: 'system',
