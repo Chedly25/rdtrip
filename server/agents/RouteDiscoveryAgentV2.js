@@ -73,10 +73,22 @@ class RouteDiscoveryAgentV2 {
     console.log(`   Destination: ${optimized.destination?.city || optimized.destination?.name || 'Unknown'}`);
     console.log(`   Waypoints: ${optimized.selected?.map(w => w.city || w.name).join(' → ') || 'None'}`);
 
+    // STEP 5: Allocate nights to waypoints and destination
+    console.log(`\n⏰ Step 4: Allocating nights`);
+    const waypointsWithNights = this.allocateNightsToWaypoints(optimized.selected || [], nightsOnRoad);
+    console.log(`   Allocated ${nightsOnRoad} nights across ${waypointsWithNights.length} waypoints`);
+    console.log(`   Allocated ${nightsAtDestination} nights to destination`);
+
+    // Add nights to destination
+    const destinationWithNights = optimized.destination ? {
+      ...optimized.destination,
+      nights: nightsAtDestination
+    } : null;
+
     return {
       origin: optimized.origin,
-      destination: optimized.destination,
-      waypoints: optimized.selected || [],
+      destination: destinationWithNights,
+      waypoints: waypointsWithNights,
       alternatives: optimized.alternatives || [],
       themeInsights: candidates.themeInsights || {},
       metadata: {
@@ -84,6 +96,8 @@ class RouteDiscoveryAgentV2 {
         validated: true,
         totalCandidates: candidates.waypoints?.length || 0,
         validatedCount: validated.waypoints?.length || 0,
+        nightsOnRoad: nightsOnRoad,
+        nightsAtDestination: nightsAtDestination,
         error: candidates.error || validated.error
       }
     };

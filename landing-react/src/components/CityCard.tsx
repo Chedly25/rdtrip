@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { MapPin } from 'lucide-react'
+import { MapPin, Calendar } from 'lucide-react'
 import { getWikipediaImage } from '../utils/wikipedia'
 
 interface Activity {
@@ -12,6 +12,8 @@ interface Activity {
 interface City {
   name: string
   city?: string  // New format from RouteDiscoveryAgentV2
+  country?: string
+  nights?: number  // Number of nights allocated to this city (optional for user-added/alternative cities)
   activities?: (string | Activity)[]
   image?: string
   imageUrl?: string
@@ -136,6 +138,16 @@ export function CityCard({ city, index, themeColor, showThemeBadges = false, the
         >
           {cityName}
         </h4>
+
+        {/* Duration Badge */}
+        {city.nights !== undefined && (
+          <div className="flex items-center gap-2 mb-3 text-sm">
+            <Calendar className="h-4 w-4" style={{ color: themeColor }} />
+            <span className="font-semibold text-gray-700">
+              {city.nights} {city.nights === 1 ? 'night' : 'nights'}
+            </span>
+          </div>
+        )}
 
         {/* Theme Badges for Best Overall */}
         {showThemeBadges && themes.length > 0 && (

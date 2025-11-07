@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { MapPin, DollarSign, ArrowRight, Map, Save, RefreshCw, Share2, Plus, Sparkles, Undo, RotateCcw, Mountain, Landmark, UtensilsCrossed, Compass, Star, Calendar, TrendingUp, Award, Globe, Info } from 'lucide-react'
 import { CityCard } from './CityCard'
 import { BudgetDisplay } from './BudgetDisplay'
+import { RouteTimeline } from './RouteTimeline'
 import { useAuth } from '../contexts/AuthContext'
 import SaveRouteModal from './SaveRouteModal'
 import ShareRouteModal from './ShareRouteModal'
@@ -21,6 +22,7 @@ interface City {
   name: string
   city?: string  // New format from RouteDiscoveryAgentV2
   country?: string  // Country from AI response
+  nights?: number  // Number of nights allocated to this city (optional for user-added/alternative cities)
   activities?: (string | Activity)[]
   image?: string
   imageUrl?: string
@@ -37,7 +39,7 @@ interface ParsedRecommendations {
   alternatives?: City[]
   description?: string
   origin?: { name: string; latitude: number; longitude: number }
-  destination?: { name: string; latitude: number; longitude: number }
+  destination?: { name: string; latitude: number; longitude: number; nights?: number }
 }
 
 interface AgentResult {
@@ -118,9 +120,18 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
         try {
           const parsedRecs = JSON.parse(agentResult.recommendations)
 
-          // Estimate duration: 1.5 days per city (rounded up)
-          const waypointsCount = parsedRecs.waypoints?.length || 0
-          const estimatedDuration = Math.max(2, Math.ceil(waypointsCount * 1.5))
+          // Use actual night allocation instead of estimation
+          const waypoints = Array.isArray(parsedRecs.waypoints) ? parsedRecs.waypoints : []
+          const totalNights = waypoints.reduce((sum: number, city: any) =>
+            sum + (city.nights || 0), 0
+          ) + (parsedRecs.destination?.nights || 0)
+
+          // Fallback to estimation if nights not allocated yet
+          const nights = totalNights > 0
+            ? totalNights
+            : Math.max(2, Math.ceil((waypoints.length || 0) * 1.5))
+
+          console.log(`Calculating budget for ${nights} nights (${totalNights > 0 ? 'actual' : 'estimated'})`)
 
           const response = await fetch('/api/calculate-budget', {
             method: 'POST',
@@ -128,7 +139,7 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
             body: JSON.stringify({
               route: parsedRecs,
               tripDetails: {
-                duration: estimatedDuration,
+                nights: nights,  // Use nights instead of duration
                 travelers: 2, // Default to 2 travelers
                 budgetLevel: routeData.budget || 'mid',
                 preferences: { agent: agentResult.agent }
@@ -581,6 +592,43 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
             </div>
           )}
         </motion.div>
+
+        {/* Route Timeline (if nights are allocated) */}
+        {(() => {
+          const activeAgentResult = routeData.agentResults[activeTab]
+          if (!activeAgentResult) return null
+
+          try {
+            const parsedRecs = JSON.parse(activeAgentResult.recommendations)
+            const rawWaypoints = parsedRecs.waypoints
+            const waypoints = Array.isArray(rawWaypoints) ? rawWaypoints : []
+            const currentWaypoints = modifiedWaypoints[activeTab] || waypoints
+
+            // Check if cities have nights allocated
+            const hasNights = currentWaypoints.some((city: any) => city.nights !== undefined)
+            const destination = parsedRecs.destination
+
+            if (hasNights && destination && destination.name) {
+              const theme = agentThemes[activeAgentResult.agent] || agentThemes.adventure
+              return (
+                <RouteTimeline
+                  cities={currentWaypoints.map((city: any) => ({
+                    name: city.name || city.city,
+                    nights: city.nights || 0
+                  }))}
+                  destination={{
+                    name: destination.name,
+                    nights: destination.nights || 3
+                  }}
+                  themeColor={theme.color}
+                />
+              )
+            }
+          } catch (error) {
+            console.error('Failed to render timeline:', error)
+          }
+          return null
+        })()}
 
         {/* Theme Tabs */}
         <motion.div
