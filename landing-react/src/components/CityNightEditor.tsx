@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Plus, Minus } from 'lucide-react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 
 interface CityNightEditorProps {
   cityName: string
@@ -48,73 +48,129 @@ export function CityNightEditor({
     }
   }
 
+  const canDecrease = nights > minNights && !loading && !disabled
+  const canIncrease = nights < maxNights && !loading && !disabled
+
   return (
-    <div className="city-night-editor">
-      <div className="flex items-center gap-3 p-3 border rounded-lg bg-gray-50">
+    <div className="city-night-editor flex flex-col items-center">
+      {/* Sleek Pill Counter */}
+      <div
+        className="inline-flex items-stretch rounded-full shadow-md overflow-hidden border-2 transition-all duration-300 hover:shadow-lg"
+        style={{
+          borderColor: `${themeColor}40`,
+          backgroundColor: 'white'
+        }}
+      >
         {/* Decrease Button */}
         <button
           onClick={() => handleChange(nights - 1)}
-          disabled={nights <= minNights || loading || disabled}
-          className="flex-shrink-0 rounded-full p-2 transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:scale-110"
+          disabled={!canDecrease}
+          className="px-4 py-3 transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed active:scale-95"
           style={{
-            backgroundColor: nights > minNights ? themeColor : '#d1d5db',
-            color: 'white'
+            backgroundColor: canDecrease ? `${themeColor}15` : 'transparent',
+            color: canDecrease ? themeColor : '#9ca3af',
+          }}
+          onMouseEnter={(e) => {
+            if (canDecrease) {
+              e.currentTarget.style.backgroundColor = `${themeColor}25`
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (canDecrease) {
+              e.currentTarget.style.backgroundColor = `${themeColor}15`
+            }
           }}
           title={nights === 0 ? 'Remove from route' : 'Decrease nights'}
         >
-          <Minus className="h-4 w-4" />
+          <Minus className="h-5 w-5" strokeWidth={2.5} />
         </button>
 
-        {/* Display */}
-        <div className="flex flex-col items-center min-w-[100px]">
-          <motion.span
-            key={nights}
-            initial={{ scale: 1.2, color: themeColor }}
-            animate={{ scale: 1, color: '#111827' }}
-            className="text-2xl font-bold"
-          >
-            {nights}
-          </motion.span>
-          <span className="text-xs text-gray-600 font-medium">
-            {nights === 0 ? 'Pass through' : nights === 1 ? 'night' : 'nights'}
-          </span>
+        {/* Subtle Divider */}
+        <div className="w-px bg-gray-200" />
+
+        {/* Number Display */}
+        <div className="px-6 py-3 flex items-center justify-center min-w-[140px] relative">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={nights}
+              initial={{ scale: 1.3, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              transition={{
+                type: "spring",
+                stiffness: 300,
+                damping: 20
+              }}
+              className="flex items-baseline gap-2"
+            >
+              <span
+                className="text-3xl font-bold tabular-nums"
+                style={{ color: themeColor }}
+              >
+                {nights}
+              </span>
+              <span className="text-sm font-semibold text-gray-600">
+                {nights === 0 ? 'skip' : nights === 1 ? 'night' : 'nights'}
+              </span>
+            </motion.div>
+          </AnimatePresence>
+
+          {/* Loading Spinner Overlay */}
+          {loading && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="absolute inset-0 flex items-center justify-center bg-white/80 backdrop-blur-sm"
+            >
+              <div
+                className="h-6 w-6 animate-spin rounded-full border-2 border-t-transparent"
+                style={{ borderColor: themeColor, borderTopColor: 'transparent' }}
+              />
+            </motion.div>
+          )}
         </div>
+
+        {/* Subtle Divider */}
+        <div className="w-px bg-gray-200" />
 
         {/* Increase Button */}
         <button
           onClick={() => handleChange(nights + 1)}
-          disabled={nights >= maxNights || loading || disabled}
-          className="flex-shrink-0 rounded-full p-2 transition-all disabled:opacity-30 disabled:cursor-not-allowed hover:scale-110"
+          disabled={!canIncrease}
+          className="px-4 py-3 transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed active:scale-95"
           style={{
-            backgroundColor: nights < maxNights ? themeColor : '#d1d5db',
-            color: 'white'
+            backgroundColor: canIncrease ? `${themeColor}15` : 'transparent',
+            color: canIncrease ? themeColor : '#9ca3af',
+          }}
+          onMouseEnter={(e) => {
+            if (canIncrease) {
+              e.currentTarget.style.backgroundColor = `${themeColor}25`
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (canIncrease) {
+              e.currentTarget.style.backgroundColor = `${themeColor}15`
+            }
           }}
           title="Increase nights"
         >
-          <Plus className="h-4 w-4" />
+          <Plus className="h-5 w-5" strokeWidth={2.5} />
         </button>
-
-        {/* Loading Spinner */}
-        {loading && (
-          <div className="ml-2">
-            <div
-              className="h-5 w-5 animate-spin rounded-full border-2 border-t-transparent"
-              style={{ borderColor: themeColor, borderTopColor: 'transparent' }}
-            />
-          </div>
-        )}
       </div>
 
       {/* Error Message */}
-      {error && (
-        <motion.p
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mt-2 text-xs text-red-600"
-        >
-          {error}
-        </motion.p>
-      )}
+      <AnimatePresence>
+        {error && (
+          <motion.p
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="mt-2 text-xs text-red-600 text-center"
+          >
+            {error}
+          </motion.p>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
