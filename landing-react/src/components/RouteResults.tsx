@@ -789,13 +789,13 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
                 >
                   <img
                     src={theme.icon}
-                    alt={agentResult.agentConfig.name}
+                    alt={(agentResult as any).name || agentResult.agent}
                     className="h-6 w-6 object-contain"
                     style={{
                       filter: activeTab === index ? 'brightness(0) invert(1)' : 'none'
                     }}
                   />
-                  <span>{agentResult.agentConfig.name}</span>
+                  <span>{(agentResult as any).name || agentResult.agent}</span>
                   {isModified && (
                     <motion.div
                       initial={{ scale: 0 }}
@@ -1098,7 +1098,7 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
                     style={{ backgroundColor: theme.color }}
                   >
                     <Map className="h-5 w-5" />
-                    View {agentResult.agentConfig.name} Route on Map
+                    View {(agentResult as any).name || agentResult.agent} Route on Map
                     <ArrowRight className="h-5 w-5" />
                   </button>
                 </div>
@@ -1291,7 +1291,7 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
             }
             agentTheme={{
               color: agentThemes[routeData.agentResults[currentAgentIndex]?.agent]?.color || '#055948',
-              name: routeData.agentResults[currentAgentIndex]?.agentConfig?.name || 'Route'
+              name: (routeData.agentResults[currentAgentIndex] as any)?.name || routeData.agentResults[currentAgentIndex]?.agent || 'Route'
             }}
             onAddCity={handleAddCity}
             onReplaceCity={handleReplaceCity}
