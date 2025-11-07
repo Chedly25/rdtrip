@@ -4,6 +4,7 @@ import { MapPin, DollarSign, ArrowRight, Map, Save, RefreshCw, Share2, Plus, Spa
 import { CityCard } from './CityCard'
 import { BudgetDisplay } from './BudgetDisplay'
 import { RouteTimeline } from './RouteTimeline'
+import { CityNightEditor } from './CityNightEditor'
 import { useAuth } from '../contexts/AuthContext'
 import SaveRouteModal from './SaveRouteModal'
 import ShareRouteModal from './ShareRouteModal'
@@ -339,6 +340,77 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
       type: 'success'
     })
     setTimeout(() => setToast(null), 3000)
+  }
+
+  // Handle night changes for a city
+  const handleNightsChange = async (city: City, newNights: number, agentIndex: number) => {
+    console.log(`🔄 Updating ${city.name} from ${city.nights || 0} to ${newNights} nights...`)
+
+    try {
+      // Call backend to acknowledge the change
+      const response = await fetch('/api/city-activities/update-nights', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          city: city.name,
+          country: city.country,
+          nights: newNights,
+          theme: routeData.agentResults[agentIndex].agent,
+          budget: routeData.budget,
+          coordinates: city.coordinates
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to update nights')
+      }
+
+      await response.json()
+
+      // Update city in modified waypoints
+      setModifiedWaypoints(prev => {
+        const agentResult = routeData.agentResults[agentIndex]
+        const parsedRecs = JSON.parse(agentResult.recommendations)
+        const rawWaypoints = parsedRecs.waypoints
+        const originalWaypoints = Array.isArray(rawWaypoints) ? rawWaypoints : []
+        const currentWaypoints = prev[agentIndex] || originalWaypoints
+
+        const updatedWaypoints = currentWaypoints.map(c =>
+          (c.name || c.city) === city.name
+            ? { ...c, nights: newNights }
+            : c
+        )
+
+        return {
+          ...prev,
+          [agentIndex]: updatedWaypoints
+        }
+      })
+
+      // Add to history for undo
+      setHistory(prev => [...prev, {
+        agentIndex,
+        previousWaypoints: modifiedWaypoints[agentIndex] || [],
+        action: `Changed ${city.name} from ${city.nights || 0}n to ${newNights}n`,
+        timestamp: Date.now()
+      }])
+
+      // Show success toast
+      setToast({
+        message: `Updated ${city.name} to ${newNights} ${newNights === 1 ? 'night' : 'nights'}`,
+        type: 'success'
+      })
+      setTimeout(() => setToast(null), 3000)
+
+    } catch (error) {
+      console.error('Failed to update nights:', error)
+      setToast({
+        message: `Failed to update ${city.name}`,
+        type: 'error'
+      })
+      setTimeout(() => setToast(null), 3000)
+      throw error // Re-throw so CityNightEditor can revert
+    }
   }
 
   // Create enriched route data with modifications
@@ -851,24 +923,38 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
                         )
 
                       return (
-                        <div key={cityIndex} className="relative">
-                          <CityCard
-                            city={city}
-                            index={cityIndex}
-                            themeColor={theme.color}
-                            showThemeBadges={agentResult.agent === 'best-overall'}
-                            themes={city.themes || []}
-                            onClick={() => handleOpenCityDetails(cityName)}
-                          />
-                          {isUserAdded && (
-                            <motion.div
-                              initial={{ scale: 0 }}
-                              animate={{ scale: 1 }}
-                              className="absolute top-2 right-2 flex items-center gap-1 rounded-full bg-purple-600 px-3 py-1 text-xs font-bold text-white shadow-lg"
-                            >
-                              <Sparkles className="h-3 w-3" />
-                              <span>Added by you</span>
-                            </motion.div>
+                        <div key={cityIndex} className="space-y-3">
+                          <div className="relative">
+                            <CityCard
+                              city={city}
+                              index={cityIndex}
+                              themeColor={theme.color}
+                              showThemeBadges={agentResult.agent === 'best-overall'}
+                              themes={city.themes || []}
+                              onClick={() => handleOpenCityDetails(cityName)}
+                            />
+                            {isUserAdded && (
+                              <motion.div
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                className="absolute top-2 right-2 flex items-center gap-1 rounded-full bg-purple-600 px-3 py-1 text-xs font-bold text-white shadow-lg"
+                              >
+                                <Sparkles className="h-3 w-3" />
+                                <span>Added by you</span>
+                              </motion.div>
+                            )}
+                          </div>
+
+                          {/* Night Editor */}
+                          {city.nights !== undefined && (
+                            <CityNightEditor
+                              cityName={cityName}
+                              currentNights={city.nights}
+                              minNights={0}
+                              maxNights={7}
+                              onNightsChange={(newNights) => handleNightsChange(city, newNights, index)}
+                              themeColor={theme.color}
+                            />
                           )}
                         </div>
                       )

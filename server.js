@@ -4876,6 +4876,68 @@ app.get('/api/cities/details/job/:jobId', async (req, res) => {
   }
 });
 
+/**
+ * POST /api/city-activities/update-nights
+ * Update nights for a city (MVP: No full regeneration, just acknowledgment)
+ * Full activity regeneration happens in Spotlight
+ */
+app.post('/api/city-activities/update-nights', async (req, res) => {
+  try {
+    const {
+      city,
+      country,
+      nights,
+      theme = 'best-overall',
+      budget = 'mid'
+    } = req.body;
+
+    // Validation
+    if (!city) {
+      return res.status(400).json({
+        error: 'Missing required field: city'
+      });
+    }
+
+    if (nights === undefined || nights < 0 || nights > 14) {
+      return res.status(400).json({
+        error: 'Nights must be between 0 and 14'
+      });
+    }
+
+    console.log(`🔄 Updating nights for ${city}${country ? `, ${country}` : ''} to ${nights} nights (${theme} theme)`);
+
+    // MVP: Return success without full regeneration
+    // Activities will be regenerated in Spotlight when user views the itinerary
+    if (nights === 0) {
+      return res.json({
+        success: true,
+        city,
+        country,
+        nights: 0,
+        message: `${city} marked as pass-through (0 nights)`,
+        note: 'Full itinerary will be generated in Spotlight'
+      });
+    }
+
+    res.json({
+      success: true,
+      city,
+      country,
+      nights,
+      days: nights + 1,
+      message: `Updated ${city} to ${nights} ${nights === 1 ? 'night' : 'nights'}`,
+      note: 'Full itinerary will be generated in Spotlight'
+    });
+
+  } catch (error) {
+    console.error('❌ Night update failed:', error);
+    res.status(500).json({
+      error: 'Failed to update nights',
+      details: error.message
+    });
+  }
+});
+
 // Background processor for city details jobs
 async function processCityDetailsJobAsync(jobId, cityName, country) {
   const startTime = Date.now();
