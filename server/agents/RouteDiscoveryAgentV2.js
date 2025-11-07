@@ -109,12 +109,11 @@ class RouteDiscoveryAgentV2 {
   async strategicDiscovery(origin, destination, stops, travelStyle, budget, nightsOnRoad, nightsAtDestination) {
     const prompt = this.buildDiscoveryPrompt(origin, destination, stops, travelStyle, budget, nightsOnRoad, nightsAtDestination);
 
-    // Hidden gems requires premium model and extended search time
-    const isHiddenGems = travelStyle === 'hidden-gems';
-    const model = isHiddenGems ? 'sonar-pro' : 'sonar';
-    const timeout = isHiddenGems ? 90000 : 30000;  // 90s for hidden gems, 30s for others
-    const maxTokens = isHiddenGems ? 2500 : 2000;  // More detail for hidden gems
-    const temperature = isHiddenGems ? 0.5 : 0.4;  // Slightly more creative for hidden gems
+    // All agents now use premium model for better quality
+    const model = 'sonar-pro';
+    const timeout = 90000;  // 90s for all agents
+    const maxTokens = 2500;  // More detail for all agents
+    const temperature = 0.5;  // Balanced creativity for all agents
 
     console.log(`   Using model: ${model}, timeout: ${timeout}ms`);
 
@@ -182,7 +181,7 @@ class RouteDiscoveryAgentV2 {
    */
   buildDiscoveryPrompt(origin, destination, stops, travelStyle, budget, nightsOnRoad, nightsAtDestination) {
     const styleDescriptions = {
-      adventure: 'outdoor activities, hiking, nature, scenic landscapes',
+      adventure: 'EXTREME outdoor activities, challenging multi-day hikes, technical terrain, remote wilderness areas requiring proper gear and experience - think multi-pitch climbing routes, backcountry trails with minimal infrastructure, wild camping spots, demanding via ferratas, off-trail scrambling, and activities that push physical limits',
       culture: 'historical sites, museums, architecture, cultural heritage',
       food: 'culinary experiences, local cuisine, food markets, wineries',
       'hidden-gems': 'ULTRA-OBSCURE off-the-beaten-path locations that locals treasure but tourists rarely discover - think secret swimming holes, family-run restaurants with no English menu, medieval villages with population under 500, artisan workshops passed down through generations, viewpoints only accessible by unmarked trails',
@@ -200,39 +199,54 @@ class RouteDiscoveryAgentV2 {
     // Theme-specific insight templates
     const insightTemplates = {
       adventure: {
-        terrain: 'Describe the terrain diversity (e.g., "Coastal cliffs → Mountain passes → River valleys")',
-        activities: 'Count outdoor activities (e.g., "8 hiking trails, 3 water sports, 2 cycling routes")',
-        difficulty: 'Overall difficulty level (e.g., "Moderate - suitable for active travelers")',
-        highlight: 'Most spectacular outdoor experience on this route',
-        season: 'Best time for outdoor activities (e.g., "April-June, September-October")'
+        terrain: 'Terrain diversity with elevation changes (e.g., "Sea level → 2,400m peaks, 3 distinct zones: coastal, alpine, karst")',
+        activities: 'Count ALL activities with specifics (e.g., "12 hiking trails (3-18km), 4 via ferratas, 2 canyoning sites, kayaking in 3 locations")',
+        difficulty: 'Difficulty breakdown by percentage (e.g., "40% moderate, 40% challenging, 20% extreme. Requires good fitness level.")',
+        equipment: 'Required gear and rental costs (e.g., "Hiking boots essential, climbing harness €15/day, kayak €35/half-day. Total equipment budget: €80-150")',
+        technical_level: 'Technical skills needed (e.g., "Basic scrambling on 3 trails, swimming required for 2 activities, no climbing experience needed")',
+        highlight: 'Most spectacular outdoor experience with details (e.g., "Multi-pitch via ferrata with 400m vertical exposure")',
+        season: 'Optimal months with weather notes (e.g., "May-June, Sept-Oct. July-Aug too hot for hiking. Snow possible above 2000m until June.")',
+        daily_distance: 'Average activity duration and intensity (e.g., "4-6 hours active per day, 8-15km hiking, 1-2 rest days recommended")'
       },
       culture: {
-        historical_span: 'Historical periods covered (e.g., "Roman → Medieval → Renaissance")',
-        heritage_sites: 'Number of UNESCO or major heritage sites',
-        architecture: 'Architectural styles featured (e.g., "Gothic cathedrals, Moorish palaces")',
-        highlight: 'Most significant cultural landmark on this route',
-        experiences: 'Cultural activities available (e.g., "Museums, festivals, artisan workshops")'
+        historical_span: 'Complete timeline with centuries (e.g., "Roman (2nd-5th century) → Medieval (11th-15th) → Renaissance (16th) → Modern (20th)")',
+        heritage_sites: 'Count with breakdown (e.g., "3 UNESCO sites, 8 national monuments, 12 historic centers, 5 archaeological sites")',
+        architecture: 'Architectural styles with examples (e.g., "Romanesque (4 churches), Gothic (2 cathedrals), Modernist (Gaudí works), Moorish (palace complex)")',
+        museums: 'Museum count by type with costs (e.g., "5 art museums (€12-18), 3 history museums (€8-12), 2 archaeological (€10). Multi-pass available: €45")',
+        cultural_events: 'Festivals and events by season (e.g., "Medieval fair (June), Music festival (July), Art biennale (Sept-Nov). Book 2 months ahead.")',
+        highlight: 'Most significant cultural landmark with context (e.g., "12th century cathedral with intact frescoes, only 3 exist in Europe")',
+        local_traditions: 'Living traditions and experiences (e.g., "Attend traditional craft workshops, witness religious processions, visit artisan quarters")',
+        visiting_time: 'Realistic time per site (e.g., "Major sites need 2-3 hours, museums 1.5-2 hours, walking tours 3 hours. Total: 4-6 hours/day")'
       },
       food: {
-        culinary_regions: 'Distinct food cultures (e.g., "Provençal, Catalan, Andalusian")',
-        signature_dishes: 'Must-try dishes per stop (e.g., "Bouillabaisse in Marseille, Paella in Valencia")',
-        dining_variety: 'Types of food experiences (e.g., "Street markets, Michelin restaurants, wineries")',
-        highlight: 'Best culinary experience on this route',
-        budget_range: 'Daily food budget estimate (e.g., "€40-80 for excellent meals")'
+        culinary_regions: 'Distinct cuisines with influences (e.g., "Catalan (Spanish-French), Provençal (Mediterranean), Italian (Ligurian). 3 wine regions.")',
+        signature_dishes: 'Must-try dishes per stop with restaurants (e.g., "Stop 1: Paella (Casa Carmen €18), Stop 2: Bouillabaisse (Chez Fonfon €45)")',
+        dining_variety: 'Breakdown by experience type (e.g., "4 local markets, 8 family taverns, 3 Michelin restaurants (1-star), 2 wineries with tastings")',
+        price_range: 'Detailed budget per meal type (e.g., "Breakfast €5-12, lunch €15-25, dinner €25-50. Street food €8-15. Wine tasting €20-40")',
+        specialties: 'Regional products to buy (e.g., "Olive oil (€12-25/bottle), local cheese (€8-15/kg), wine (€8-30/bottle), honey (€10-18/jar)")',
+        highlight: 'Best culinary experience with booking (e.g., "3-hour cooking class with market visit €95. Book 1 week ahead.")',
+        dietary_options: 'Dietary accommodation (e.g., "Vegetarian options plentiful, vegan moderate (check ahead), gluten-free available in cities")',
+        food_tours: 'Guided food experiences (e.g., "2 food walking tours available (€60-80, 3-4 hours), wine region day trip €120")'
       },
       'hidden-gems': {
-        authenticity: 'Level of tourist crowds (e.g., "Low density - authentic local life")',
-        discoveries: 'Types of hidden finds (e.g., "Secret viewpoints, family taverns, artisan workshops")',
-        local_secrets: 'What makes these places special vs tourist hotspots',
-        highlight: 'Most unique hidden gem on this route',
-        insider_tip: 'Best way to explore these places'
+        authenticity: 'Tourist density with metrics (e.g., "Average 5-15 visitors/day vs 500+ at nearby attractions. English spoken by <20% of locals")',
+        discoveries: 'Categorized hidden finds (e.g., "3 secret viewpoints (unmarked), 5 family taverns (3+ generations), 2 artisan workshops, 1 local festival")',
+        local_secrets: 'What locals treasure vs tourist spots (e.g., "Locals swim at Cala Escondida, tourists at crowded Cala Grande. 90% fewer people, better water quality")',
+        access_difficulty: 'How to find these places (e.g., "2 locations require asking locals, 3 need unmarked trail navigation, 1 needs introduction from resident")',
+        insider_value: 'Cost comparison to tourist alternatives (e.g., "Local tavern €12-18 vs tourist restaurant €35-50. Same quality, authentic atmosphere")',
+        highlight: 'Most unique hidden gem with story (e.g., "Family-run olive mill (1847), owner teaches traditional pressing. Not on any map.")',
+        insider_tip: 'Practical access advice (e.g., "Learn 5 key phrases in local language, arrive before 10am or after 6pm, bring cash (no cards)")',
+        preservation: 'How to visit responsibly (e.g., "Visit in groups <4, don\'t share exact locations on social media, support by buying local products")'
       },
       'best-overall': {
-        balance: 'Distribution of experiences (e.g., "40% culture, 30% nature, 20% food, 10% relaxation")',
-        diversity: 'Range of experiences (e.g., "Medieval towns, coastal drives, mountain scenery")',
-        route_quality: 'Overall route characteristics (e.g., "Scenic roads, optimal distances, easy navigation")',
-        highlight: 'Standout feature of this route',
-        flexibility: 'How easy to customize (e.g., "Easy to add beach days or extend city stays")'
+        balance: 'Quantified experience distribution (e.g., "35% culture (6 major sites), 25% nature (4 hikes), 25% food (8 experiences), 15% relaxation (beach/spa)")',
+        diversity: 'Range with specifics (e.g., "Medieval towns (3), coastal scenery (150km), mountain passes (2), modern cities (1), wine regions (2)")',
+        route_quality: 'Driving and navigation details (e.g., "Scenic routes: 75%. Average drive: 2-3 hours. Toll costs: €45 total. Easy parking except city centers")',
+        pacing: 'Activity intensity and rest (e.g., "2 active days, 1 moderate, 1 relaxed per cycle. Flexible to add beach days or extend city stays")',
+        costs: 'Comprehensive budget breakdown (e.g., "Accommodation €70-120/night, food €45-70/day, activities €20-40/day, fuel €80 total")',
+        highlight: 'Standout feature with details (e.g., "Coastal drive from X to Y: 80km of clifftop roads, 12 viewpoints, voted top 10 drives in Europe")',
+        flexibility: 'Customization options (e.g., "Easy to add: 2 beach days, 1 extra city, hiking detour. Skip if rushed: smaller towns. Weather backup plans included")',
+        accessibility: 'Physical requirements (e.g., "Mostly accessible, 3 sites need stair climbing, 1 activity needs moderate fitness. Family-friendly except 1 hike")'
       }
     };
 
@@ -277,7 +291,48 @@ REQUIREMENTS:
 8. Ensure all cities are real, accessible, and worth visiting
 9. Waypoints should form a natural route between ${origin} and ${destination}
 10. Alternatives should also fit geographically but offer different experiences
-${travelStyle === 'hidden-gems' ? `
+${travelStyle === 'adventure' ? `
+SPECIAL ADVENTURE CRITERIA (ULTRA-DEMANDING):
+⚠️  DO NOT suggest places with:
+   - Only beginner-friendly walking paths or promenades
+   - Heavily developed/commercialized outdoor areas (gondolas, cable cars to viewpoints)
+   - Activities that are primarily tourist entertainment (zip lines over cities, tourist rafting)
+   - Locations where you can drive to the scenic spot
+   - Indoor climbing gyms or artificial adventure parks
+
+✓  DO prioritize:
+   - Multi-day hiking routes with refugios/huts requiring advance booking
+   - Technical trails requiring scrambling, exposure to heights, or fixed cables/chains
+   - Remote peaks or cols requiring 6+ hours approach or 1000m+ elevation gain
+   - Backcountry areas where self-rescue knowledge is recommended
+   - Via ferratas rated C (difficult) or higher, or multi-pitch climbing routes grade 4+
+   - Canyoning/canyoneering requiring technical skills (rappelling, swimming in cold water)
+   - Wild camping spots or bivouac sites (where legal) away from facilities
+   - Locations requiring proper equipment: harness, helmet, ropes, crampons, or technical gear
+   - Activities with objective hazards requiring weather monitoring and early starts
+   - Routes that serious outdoor athletes and mountaineers actually do (not just tourists)
+
+RESEARCH DEPTH REQUIRED:
+   - Consult mountaineering club websites, hiking forums (like SummitPost, UKClimbing regional forums)
+   - Look for routes in climbing guidebooks and topo guides (not general travel guides)
+   - Check regional mountain rescue reports for area difficulty and required experience
+   - Find beta from outdoor communities on Reddit (r/alpinism, r/climbing regional subs)
+   - Identify routes that require permits, have limited daily access, or mandatory guide requirements
+   - Reference actual difficulty grades (UIAA, French, YDS for climbing; T3-T6 for alpine hiking)
+
+QUALITY BAR:
+Each activity must pass: "Would an experienced outdoors person (who climbs 5.9/6a+, hikes 20km with 1500m gain regularly, or has wilderness experience) find this genuinely challenging and rewarding?"
+
+REQUIRED SPECIFICATIONS FOR EACH ACTIVITY:
+   - Exact distance, elevation gain/loss, estimated time
+   - Technical grade (hiking: T1-T6, climbing: UIAA/French/YDS, via ferrata: A-E)
+   - Required equipment list (approach shoes vs boots, helmet, harness, rope, etc.)
+   - Skills needed (scrambling, exposure tolerance, navigation, rope skills)
+   - Objective dangers (rockfall, weather exposure, river crossings)
+   - Fitness requirement (beginner/intermediate/advanced/expert)
+   - Estimated cost for equipment rental if not owned
+   - Best time of day/season and weather dependencies
+` : travelStyle === 'hidden-gems' ? `
 SPECIAL HIDDEN GEMS CRITERIA (ULTRA-DEMANDING):
 ⚠️  DO NOT suggest places featured in:
    - Lonely Planet or Rick Steves guidebooks
@@ -368,10 +423,13 @@ OUTPUT FORMAT (return ONLY this JSON, no markdown):
 
 THEME INSIGHTS INSTRUCTIONS:
 You MUST provide the "themeInsights" object with ALL ${Object.keys(currentTemplate).length} fields specified above.
-- Be specific and factual based on the actual route you're creating
-- Use real city names and actual features from your selected waypoints
-- Keep each insight concise (1-2 sentences max)
-- Make insights compelling and useful for decision-making
+- Be QUANTITATIVE: Include specific numbers, counts, distances, costs, times, and grades
+- Base everything on the ACTUAL waypoints you selected - reference specific city names and real locations
+- Use real data: actual trail grades, real restaurant names with prices, specific costs for equipment/activities
+- Follow the format examples EXACTLY - include units (km, €, hours, meters, percentages)
+- Be factual and verifiable - a traveler should be able to validate your numbers
+- Keep each insight detailed but concise (2-3 sentences max per field)
+- Make insights actionable - travelers should be able to budget and plan from this data
 
 CRITICAL RULES:
 - Return EXACTLY ${stops} waypoints (not origin, not destination, just the stops in between)
