@@ -1575,13 +1575,15 @@ async function processRouteJobNightsBased(jobId, origin, destination, totalNight
     job.progress.percentComplete = 15;
     job.updatedAt = new Date();
 
-    // Convert to waypoints format
-    const waypoints = routePlan.cities.map(city => ({
-      name: city.name,
-      country: city.country || '',
-      description: city.description || '',
-      highlights: city.highlights || []
-    }));
+    // Convert to waypoints format (exclude first and last cities = origin/destination)
+    const waypoints = routePlan.cities
+      .slice(1, -1) // Remove first (origin) and last (destination)
+      .map(city => ({
+        name: city.name,
+        country: city.country || '',
+        description: city.description || '',
+        highlights: city.highlights || []
+      }));
 
     // Build night allocations object
     const nightAllocations = {};

@@ -88,7 +88,7 @@ class RoutePlanningAgent {
    * Get city suggestions from AI based on route parameters
    */
   async getCitySuggestionsFromAI(origin, destination, numCities, totalNights, tripPace, budget) {
-    const numWaypoints = numCities - 2; // Exclude origin and destination
+    const numWaypoints = Math.max(1, numCities - 2); // Exclude origin and destination, but minimum 1 waypoint
 
     const prompt = `You are a road trip route planner. Plan a ${totalNights}-night ${tripPace}-paced road trip from ${origin} to ${destination}.
 
