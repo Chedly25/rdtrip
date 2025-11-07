@@ -1522,13 +1522,14 @@ app.get('/api/route-status/:jobId', (req, res) => {
     jobId: job.id,
     status: job.status,
     progress: job.progress,
-    route: job.status === 'completed' ? {
+    route: job.status === 'completed' ? (job.result || {
+      // Fallback to old format if job.result doesn't exist (for old jobs)
       origin: actualOrigin,
       destination: job.destination,
       totalStops: job.stops,
       budget: job.budget,
       agentResults: job.agentResults
-    } : null,
+    }) : null,
     error: job.error
   });
 });
