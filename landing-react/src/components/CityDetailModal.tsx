@@ -65,6 +65,7 @@ export default function CityDetailModal({
 }: CityDetailModalProps) {
   // Use the async hook - we only need quick data for this preview
   const {
+    data: cityDetails,
     quickData,
     loading,
     error,
@@ -72,6 +73,9 @@ export default function CityDetailModal({
     message,
     retry
   } = useAsyncCityDetails(cityName, country, isOpen)
+
+  // Use whichever data is available (full or quick)
+  const displayData = cityDetails || quickData
 
   const renderStars = (rating: number) => {
     return (
@@ -214,16 +218,16 @@ export default function CityDetailModal({
                   </div>
                 )}
 
-                {!loading && !error && quickData && (
+                {!loading && !error && displayData && (
                   <div className="p-6 space-y-6">
                     {/* Hero Section */}
                     <div className="space-y-4">
                       {/* Hero Image */}
-                      {quickData.mainImageUrl ? (
+                      {displayData.mainImageUrl ? (
                         <div className="relative h-64 rounded-xl overflow-hidden">
                           <img
-                            src={quickData.mainImageUrl}
-                            alt={quickData.cityName}
+                            src={displayData.mainImageUrl}
+                            alt={displayData.cityName}
                             className="w-full h-full object-cover"
                             onError={(e) => {
                               // Hide broken image and show gradient fallback
@@ -239,7 +243,7 @@ export default function CityDetailModal({
                                           <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
                                         </svg>
                                       </div>
-                                      <p class="text-2xl font-bold text-gray-800">${quickData.cityName}</p>
+                                      <p class="text-2xl font-bold text-gray-800">${displayData.cityName}</p>
                                     </div>
                                   </div>
                                 `
@@ -256,7 +260,7 @@ export default function CityDetailModal({
                         >
                           <div className="text-center">
                             <MapPin className="w-16 h-16 mx-auto mb-2" style={{ color: themeColor }} />
-                            <p className="text-2xl font-bold text-gray-800">{quickData.cityName}</p>
+                            <p className="text-2xl font-bold text-gray-800">{displayData.cityName}</p>
                           </div>
                         </div>
                       )}
@@ -264,26 +268,26 @@ export default function CityDetailModal({
                       {/* Tagline and Quick Stats */}
                       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                         <div>
-                          <h3 className="text-2xl font-bold text-gray-900">{quickData.cityName}</h3>
-                          <p className="text-lg text-gray-600 italic">{quickData.tagline}</p>
+                          <h3 className="text-2xl font-bold text-gray-900">{displayData.cityName}</h3>
+                          <p className="text-lg text-gray-600 italic">{displayData.tagline}</p>
                         </div>
                         <div className="flex items-center gap-4">
                           <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg">
                             <Clock className="w-4 h-4 text-gray-500" />
                             <span className="text-sm font-medium text-gray-700">
-                              {quickData.recommendedDuration}
+                              {displayData.recommendedDuration}
                             </span>
                           </div>
                           <div className="px-3 py-2 bg-gray-50 rounded-lg">
-                            {renderStars(quickData.rating)}
+                            {renderStars(displayData.rating)}
                           </div>
                         </div>
                       </div>
 
                       {/* Best For Tags with Brand Icons */}
-                      {quickData.bestFor && quickData.bestFor.length > 0 && (
+                      {displayData.bestFor && displayData.bestFor.length > 0 && (
                         <div className="flex flex-wrap gap-2">
-                          {parseTravelerType(quickData.bestFor).map((travelerType, index) => (
+                          {parseTravelerType(displayData.bestFor).map((travelerType, index) => (
                             <span
                               key={index}
                               className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold shadow-sm"
@@ -311,26 +315,26 @@ export default function CityDetailModal({
                       className="p-6 rounded-xl"
                       style={{ backgroundColor: `${themeColor}08` }}
                     >
-                      <h4 className="text-lg font-bold text-gray-900 mb-3">Why Visit {quickData.cityName}?</h4>
+                      <h4 className="text-lg font-bold text-gray-900 mb-3">Why Visit {displayData.cityName}?</h4>
                       <p className="text-gray-700 leading-relaxed whitespace-pre-line">
-                        {quickData.whyVisit}
+                        {displayData.whyVisit}
                       </p>
                     </div>
 
                     {/* Environmental Zones Warning (if applicable) */}
-                    {quickData.environmentalZones?.hasRestrictions && (
+                    {displayData.environmentalZones?.hasRestrictions && (
                       <div className="p-4 bg-amber-50 border-2 border-amber-200 rounded-xl">
                         <div className="flex items-start gap-3">
                           <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
                           <div>
                             <h5 className="font-bold text-amber-900 mb-1">
-                              {quickData.environmentalZones.type}
+                              {displayData.environmentalZones.type}
                             </h5>
                             <p className="text-sm text-amber-800 mb-2">
-                              {quickData.environmentalZones.description}
+                              {displayData.environmentalZones.description}
                             </p>
                             <p className="text-sm text-amber-700 font-medium">
-                              💡 {quickData.environmentalZones.advice}
+                              💡 {displayData.environmentalZones.advice}
                             </p>
                           </div>
                         </div>
@@ -338,13 +342,13 @@ export default function CityDetailModal({
                     )}
 
                     {/* Top Highlights */}
-                    {quickData.highlights && quickData.highlights.length > 0 && (
+                    {displayData.highlights && displayData.highlights.length > 0 && (
                       <div>
                         <h4 className="text-lg font-bold text-gray-900 mb-4">
-                          Top Highlights ({quickData.highlights.length})
+                          Top Highlights ({displayData.highlights.length})
                         </h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                          {quickData.highlights.map((highlight, index) => (
+                          {displayData.highlights.map((highlight, index) => (
                             <div
                               key={index}
                               className="group overflow-hidden bg-white border-2 border-gray-100 rounded-xl hover:border-gray-300 hover:shadow-lg transition-all"
@@ -382,14 +386,14 @@ export default function CityDetailModal({
                     )}
 
                     {/* Warnings (Important only) */}
-                    {quickData.warnings && quickData.warnings.length > 0 && (
+                    {displayData.warnings && displayData.warnings.length > 0 && (
                       <div className="p-4 bg-red-50 border-2 border-red-200 rounded-xl">
                         <div className="flex items-start gap-3">
                           <ShieldAlert className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
                           <div className="flex-1">
                             <h5 className="font-bold text-red-900 mb-3">Important to Know</h5>
                             <ul className="space-y-2">
-                              {quickData.warnings.map((warning, index) => (
+                              {displayData.warnings.map((warning, index) => (
                                 <li key={index} className="flex items-start gap-2">
                                   <span className="text-red-600 mt-0.5">⚠️</span>
                                   <span className="text-sm text-red-800">{warning}</span>
@@ -405,7 +409,7 @@ export default function CityDetailModal({
               </div>
 
               {/* Footer - Fixed Actions */}
-              {!loading && !error && quickData && onAddToRoute && (
+              {!loading && !error && displayData && onAddToRoute && (
                 <div
                   className="flex items-center justify-between px-6 py-4 border-t border-gray-200 flex-shrink-0"
                   style={{ borderTopColor: `${themeColor}20` }}
