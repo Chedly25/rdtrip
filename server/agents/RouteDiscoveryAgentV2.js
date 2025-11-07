@@ -148,8 +148,20 @@ class RouteDiscoveryAgentV2 {
       });
       // Return minimal fallback with error info
       return {
-        origin: { city: destination, country: 'Unknown', why: 'Fallback - Discovery failed' },
-        destination: { city: destination, country: 'Unknown', why: 'Fallback - Discovery failed' },
+        origin: {
+          city: origin,
+          country: 'Unknown',
+          why: 'Fallback - Discovery failed',
+          recommended_min_nights: 2,
+          recommended_max_nights: 4
+        },
+        destination: {
+          city: destination,
+          country: 'Unknown',
+          why: 'Fallback - Discovery failed',
+          recommended_min_nights: 2,
+          recommended_max_nights: 4
+        },
         waypoints: [],
         error: error.message
       };
@@ -361,15 +373,62 @@ CRITICAL RULES:
         jsonText = jsonText.substring(jsonStart, jsonEnd + 1);
       }
 
-      return JSON.parse(jsonText);
+      const result = JSON.parse(jsonText);
+
+      // PHASE 4: Validate and set defaults for missing night recommendations
+      const validateCityNights = (city, cityType) => {
+        if (!city) return;
+
+        // Set defaults if missing
+        if (!city.recommended_min_nights) {
+          city.recommended_min_nights = 1;  // Conservative default
+          console.log(`   ℹ️  ${cityType} ${city.city || city.name}: defaulting min_nights to 1`);
+        }
+        if (!city.recommended_max_nights) {
+          city.recommended_max_nights = 5;  // Reasonable default
+          console.log(`   ℹ️  ${cityType} ${city.city || city.name}: defaulting max_nights to 5`);
+        }
+
+        // Sanity check: min should not exceed max
+        if (city.recommended_min_nights > city.recommended_max_nights) {
+          console.warn(`   ⚠️  ${cityType} ${city.city || city.name}: min (${city.recommended_min_nights}) > max (${city.recommended_max_nights}), swapping`);
+          const temp = city.recommended_min_nights;
+          city.recommended_min_nights = city.recommended_max_nights;
+          city.recommended_max_nights = temp;
+        }
+      };
+
+      // Validate waypoints
+      if (result.waypoints && Array.isArray(result.waypoints)) {
+        result.waypoints.forEach(waypoint => validateCityNights(waypoint, 'Waypoint'));
+      }
+
+      // Validate alternatives
+      if (result.alternatives && Array.isArray(result.alternatives)) {
+        result.alternatives.forEach(alt => validateCityNights(alt, 'Alternative'));
+      }
+
+      return result;
 
     } catch (error) {
       console.error('Failed to parse discovery response:', error.message);
       console.error('   Response preview:', responseText.substring(0, 300));
-      // Return minimal valid structure
+      // Return minimal valid structure with night defaults
       return {
-        origin: { city: destination, country: 'Unknown', why: 'Fallback - Parse failed' },
-        destination: { city: destination, country: 'Unknown', why: 'Fallback - Parse failed' },
+        origin: {
+          city: destination,
+          country: 'Unknown',
+          why: 'Fallback - Parse failed',
+          recommended_min_nights: 2,
+          recommended_max_nights: 4
+        },
+        destination: {
+          city: destination,
+          country: 'Unknown',
+          why: 'Fallback - Parse failed',
+          recommended_min_nights: 2,
+          recommended_max_nights: 4
+        },
         waypoints: [],
         themeInsights: {},
         error: `Parse failed: ${error.message}`
@@ -666,28 +725,67 @@ CRITICAL RULES:
       }));
     }
 
-    // Distribute remaining nights, respecting max constraints
-    let index = 0;
-    while (remaining > 0) {
-      const city = citiesWithNights[index % citiesWithNights.length];
+    // PHASE 6: Distribute remaining nights with priority (favor middle cities)
+    let attempts = 0;
+    const maxAttempts = totalNights * 2;  // Safety valve
+    const priorityOrder = this.getCityPriority(citiesWithNights.length);
 
-      // Only add if we haven't hit the max
-      if (city.nights < city.max) {
-        city.nights++;
-        remaining--;
+    while (remaining > 0 && attempts < maxAttempts) {
+      let addedThisRound = false;
+
+      // Go through cities in priority order
+      for (const cityIndex of priorityOrder) {
+        if (remaining === 0) break;
+
+        const city = citiesWithNights[cityIndex];
+
+        // Only add if we haven't hit the max
+        if (city.nights < city.max) {
+          city.nights++;
+          remaining--;
+          addedThisRound = true;
+        }
       }
 
-      index++;
-
-      // Safety check: if we've looped through all cities and can't add more, stop
-      if (index >= citiesWithNights.length * city.max) {
-        console.warn(`⚠️  Could not allocate all ${totalNights} nights while respecting max constraints. ${remaining} nights unallocated.`);
+      // If we couldn't add any nights this round, all cities are at capacity
+      if (!addedThisRound) {
+        console.warn(`⚠️  All cities at capacity, ${remaining} nights unallocated`);
         break;
       }
+
+      attempts++;
     }
 
     // Clean up temporary fields and return
     return citiesWithNights.map(({ min, max, ...city }) => city);
+  }
+
+  /**
+   * Get priority order for distributing extra nights
+   * Returns array of indices in priority order (middle cities favored)
+   */
+  getCityPriority(numCities) {
+    if (numCities <= 2) return [0, 1];
+    if (numCities === 3) return [1, 0, 2];  // Middle, first, last
+    if (numCities === 4) return [1, 2, 0, 3];  // Middle two, then endpoints
+
+    // For 5+ cities, favor middle cities
+    const priority = [];
+    const middle = Math.floor(numCities / 2);
+
+    // Add middle cities first
+    priority.push(middle);
+    if (middle - 1 >= 0) priority.push(middle - 1);
+    if (middle + 1 < numCities) priority.push(middle + 1);
+
+    // Add remaining cities (further from middle have lower priority)
+    for (let i = 0; i < numCities; i++) {
+      if (!priority.includes(i)) {
+        priority.push(i);
+      }
+    }
+
+    return priority;
   }
 }
 
