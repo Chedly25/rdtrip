@@ -7,7 +7,9 @@ import { BudgetSummary } from './BudgetSummary';
 import { AutoSaveIndicator } from './AutoSaveIndicator';
 import { MapSidebar } from './MapSidebar';
 import { ExportMenu } from './ExportMenu';
+import { TripDurationPanel } from './TripDurationPanel';
 import { useItineraryStore } from '../../stores/useItineraryStore';
+import { useRouteDataStore } from '../../stores/routeDataStore';
 import { getCityCoordinates } from '../../utils/geocoding';
 import { Printer } from 'lucide-react';
 
@@ -30,6 +32,7 @@ interface MapLocation {
 
 export function ItineraryTimeline({ itinerary, agentType }: ItineraryTimelineProps) {
   const { setItinerary, getEffectiveItinerary } = useItineraryStore();
+  const { routeData } = useRouteDataStore();
   const [activeDay, setActiveDay] = useState(1);
   const [density, setDensity] = useState<DensityMode>('compact');
   const [showMap, setShowMap] = useState(false);
@@ -45,6 +48,73 @@ export function ItineraryTimeline({ itinerary, agentType }: ItineraryTimelinePro
   // Get the effective itinerary (original + customizations)
   const effectiveItinerary = getEffectiveItinerary() || itinerary;
   const { dayStructure, activities, restaurants, accommodations, scenicStops, practicalInfo, weather, events, budget } = effectiveItinerary;
+
+  // Extract cities and their night allocations from the itinerary
+  const cities = useMemo(() => {
+    if (!dayStructure?.days) return [];
+
+    // Group days by overnight city
+    const cityMap = new Map<string, { name: string; nights: number; country?: string }>();
+
+    dayStructure.days.forEach((day: any) => {
+      const cityName = day.overnight || day.location;
+      if (cityName) {
+        const existing = cityMap.get(cityName);
+        if (existing) {
+          existing.nights++;
+        } else {
+          cityMap.set(cityName, {
+            name: cityName,
+            nights: 1,
+            country: day.country
+          });
+        }
+      }
+    });
+
+    return Array.from(cityMap.values());
+  }, [dayStructure]);
+
+  // Handle itinerary regeneration with new night allocations
+  const handleRegenerateItinerary = async (nightAllocations: Record<string, number>) => {
+    if (!itinerary?.id) {
+      console.error('No itinerary ID available');
+      return;
+    }
+
+    console.log('🔄 Regenerating itinerary with new night allocations:', nightAllocations);
+
+    try {
+      const response = await fetch(`/api/itinerary/${itinerary.id}/regenerate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nightAllocations,
+          agent: routeData?.agent || agentType,
+          origin: routeData?.origin,
+          destination: routeData?.destination,
+          waypoints: routeData?.waypoints
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to regenerate itinerary');
+      }
+
+      const result = await response.json();
+      console.log('✅ Itinerary regenerated:', result);
+
+      // Update the itinerary in the store
+      if (result.itinerary) {
+        setItinerary(itinerary.id, result.itinerary, {});
+        // Reload the page to show the new itinerary
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error('❌ Regeneration failed:', error);
+      throw error;
+    }
+  };
 
   // Track scroll position to update active day
   useEffect(() => {
@@ -195,6 +265,21 @@ export function ItineraryTimeline({ itinerary, agentType }: ItineraryTimelinePro
           transition={{ delay: 0.1 }}
         >
           <BudgetSummary budget={budget} />
+        </motion.div>
+      )}
+
+      {/* Trip Duration Panel */}
+      {cities.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <TripDurationPanel
+            cities={cities}
+            onRegenerateItinerary={handleRegenerateItinerary}
+            themeColor="#064d51"
+          />
         </motion.div>
       )}
 

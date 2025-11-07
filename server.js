@@ -5075,6 +5075,71 @@ function generatePlaceholderRestaurants(city, days, budget) {
   ];
 }
 
+/**
+ * PHASE 5: Regenerate full itinerary with new night allocations
+ * POST /api/itinerary/:id/regenerate
+ *
+ * When user edits trip duration in Spotlight, regenerate the entire itinerary
+ * with new night allocations using the full ItineraryAgentOrchestrator
+ */
+app.post('/api/itinerary/:id/regenerate', async (req, res) => {
+  try {
+    const { nightAllocations, agent, origin, destination, waypoints } = req.body;
+    const itineraryId = req.params.id;
+
+    console.log(`🔄 FULL ITINERARY REGENERATION - ID: ${itineraryId}`);
+    console.log(`   Agent: ${agent}`);
+    console.log(`   Route: ${origin} → ${destination}`);
+    console.log(`   Night allocations:`, nightAllocations);
+
+    // Validation
+    if (!agent || !origin || !destination) {
+      return res.status(400).json({
+        error: 'Missing required fields: agent, origin, destination'
+      });
+    }
+
+    if (!nightAllocations || Object.keys(nightAllocations).length === 0) {
+      return res.status(400).json({
+        error: 'Missing night allocations'
+      });
+    }
+
+    // Get agent config
+    const agentConfig = agents[agent];
+    if (!agentConfig) {
+      return res.status(400).json({ error: 'Invalid agent type' });
+    }
+
+    // Generate new itinerary with updated night allocations
+    console.log('🚀 Calling generateDetailedItinerary with new night allocations...');
+    const newItinerary = await generateDetailedItinerary(
+      agentConfig,
+      origin,
+      destination,
+      waypoints,
+      nightAllocations
+    );
+
+    // Add ID to match the expected format
+    newItinerary.id = itineraryId;
+
+    console.log(`✅ Itinerary regenerated successfully - ${newItinerary.dayStructure?.days?.length || 0} days`);
+
+    res.json({
+      success: true,
+      itinerary: newItinerary,
+      message: 'Itinerary regenerated with new night allocations'
+    });
+  } catch (error) {
+    console.error('❌ Itinerary regeneration failed:', error);
+    res.status(500).json({
+      error: 'Failed to regenerate itinerary',
+      details: error.message
+    });
+  }
+});
+
 // Background processor for city details jobs
 async function processCityDetailsJobAsync(jobId, cityName, country) {
   const startTime = Date.now();
