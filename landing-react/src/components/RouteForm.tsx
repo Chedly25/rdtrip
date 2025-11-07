@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { MapPin, Navigation, Users, Calendar } from 'lucide-react'
+import { MapPin, Navigation, Calendar, Zap } from 'lucide-react'
 import { useFormStore } from '../stores/formStore'
 import { BudgetSelector } from './BudgetSelector'
 import { AgentSelector } from './AgentSelector'
@@ -14,26 +14,23 @@ export function RouteForm({ onRouteGenerated }: RouteFormProps) {
   const {
     origin,
     destination,
-    stops,
     budget,
     agents,
-    nightsOnRoad,
-    nightsAtDestination,
+    totalNights,
+    tripPace,
     isLoading,
     error,
     setOrigin,
     setDestination,
-    setStops,
     setBudget,
     setAgents,
-    setNightsOnRoad,
-    setNightsAtDestination,
+    setTotalNights,
+    setTripPace,
     setLoading,
     setError,
   } = useFormStore()
 
   // Calculate total duration
-  const totalNights = nightsOnRoad + nightsAtDestination
   const totalDays = totalNights + 1
 
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -63,18 +60,17 @@ export function RouteForm({ onRouteGenerated }: RouteFormProps) {
     setIsSubmitting(true)
 
     try {
-      // Start route generation job
-      const response = await fetch('/api/generate-route', {
+      // Start route generation job with NEW nights-based endpoint
+      const response = await fetch('/api/generate-route-nights-based', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           origin,
           destination,
-          stops,
+          totalNights,
+          tripPace,
           budget,
           agents,
-          nightsOnRoad,
-          nightsAtDestination,
         }),
       })
 
@@ -221,93 +217,90 @@ export function RouteForm({ onRouteGenerated }: RouteFormProps) {
             </div>
           </div>
 
-          {/* Number of Stops */}
+          {/* Trip Pace */}
           <div className="space-y-3">
             <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-              <Users className="h-4 w-4" />
-              Number of Stops: <span className="text-slate-900 font-bold">{stops}</span>
+              <Zap className="h-4 w-4 text-purple-600" />
+              Trip Pace
             </label>
-            <input
-              type="range"
-              min="1"
-              max="8"
-              value={stops}
-              onChange={(e) => setStops(Number(e.target.value))}
-              className="h-2 w-full cursor-pointer appearance-none rounded-lg bg-gray-200"
-              style={{
-                background: `linear-gradient(to right, #1e293b 0%, #1e293b ${((stops - 1) / 7) * 100}%, #e5e7eb ${((stops - 1) / 7) * 100}%, #e5e7eb 100%)`,
-              }}
-            />
-            <div className="flex justify-between text-xs text-gray-500">
-              <span>1 stop</span>
-              <span>8 stops</span>
+            <div className="grid grid-cols-3 gap-3">
+              <button
+                type="button"
+                onClick={() => setTripPace('leisurely')}
+                className={`rounded-lg border-2 p-4 transition-all ${
+                  tripPace === 'leisurely'
+                    ? 'border-purple-500 bg-purple-50 shadow-md'
+                    : 'border-gray-200 bg-white hover:border-purple-300'
+                }`}
+              >
+                <div className="text-2xl mb-1">🚶</div>
+                <div className="font-semibold text-gray-900">Leisurely</div>
+                <div className="text-xs text-gray-500 mt-1">2-4 cities, deeper stays</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setTripPace('balanced')}
+                className={`rounded-lg border-2 p-4 transition-all ${
+                  tripPace === 'balanced'
+                    ? 'border-purple-500 bg-purple-50 shadow-md'
+                    : 'border-gray-200 bg-white hover:border-purple-300'
+                }`}
+              >
+                <div className="text-2xl mb-1">🚶‍♂️</div>
+                <div className="font-semibold text-gray-900">Balanced</div>
+                <div className="text-xs text-gray-500 mt-1">3-5 cities, mixed pace</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setTripPace('fast-paced')}
+                className={`rounded-lg border-2 p-4 transition-all ${
+                  tripPace === 'fast-paced'
+                    ? 'border-purple-500 bg-purple-50 shadow-md'
+                    : 'border-gray-200 bg-white hover:border-purple-300'
+                }`}
+              >
+                <div className="text-2xl mb-1">🏃</div>
+                <div className="font-semibold text-gray-900">Fast-Paced</div>
+                <div className="text-xs text-gray-500 mt-1">4-7 cities, see more</div>
+              </button>
             </div>
           </div>
 
           {/* Trip Duration */}
-          <div className="space-y-6 rounded-lg bg-gradient-to-br from-purple-50 to-blue-50 p-6 border-2 border-purple-200">
+          <div className="space-y-4 rounded-lg bg-gradient-to-br from-purple-50 to-blue-50 p-6 border-2 border-purple-200">
             <div className="flex items-center gap-2 mb-2">
               <Calendar className="h-5 w-5 text-purple-600" />
-              <h3 className="text-lg font-bold text-gray-900">Trip Duration</h3>
+              <h3 className="text-lg font-bold text-gray-900">Total Trip Duration</h3>
             </div>
 
-            {/* Nights on Road */}
             <div className="space-y-3">
               <label className="flex items-center justify-between text-sm font-semibold text-gray-700">
-                <span>Nights traveling from {origin || 'origin'} to {destination || 'destination'}</span>
-                <span className="text-purple-600 font-bold text-lg">{nightsOnRoad} nights</span>
+                <span>How long is your trip?</span>
+                <span className="text-purple-600 font-bold text-2xl">{totalNights} nights</span>
               </label>
               <input
                 type="range"
-                min="0"
+                min="3"
                 max="30"
-                value={nightsOnRoad}
-                onChange={(e) => setNightsOnRoad(Number(e.target.value))}
+                value={totalNights}
+                onChange={(e) => setTotalNights(Number(e.target.value))}
                 className="h-2 w-full cursor-pointer appearance-none rounded-lg"
                 style={{
-                  background: `linear-gradient(to right, #9333ea 0%, #9333ea ${(nightsOnRoad / 30) * 100}%, #e5e7eb ${(nightsOnRoad / 30) * 100}%, #e5e7eb 100%)`,
+                  background: `linear-gradient(to right, #9333ea 0%, #9333ea ${((totalNights - 3) / 27) * 100}%, #e5e7eb ${((totalNights - 3) / 27) * 100}%, #e5e7eb 100%)`,
                 }}
               />
               <div className="flex justify-between text-xs text-gray-500">
-                <span>0 nights (direct trip)</span>
-                <span>30 nights (epic journey)</span>
+                <span>3 nights (weekend)</span>
+                <span>30 nights (epic adventure)</span>
               </div>
-            </div>
 
-            {/* Nights at Destination */}
-            <div className="space-y-3">
-              <label className="flex items-center justify-between text-sm font-semibold text-gray-700">
-                <span>Nights staying at {destination || 'destination'}</span>
-                <span className="text-blue-600 font-bold text-lg">{nightsAtDestination} nights</span>
-              </label>
-              <input
-                type="range"
-                min="0"
-                max="14"
-                value={nightsAtDestination}
-                onChange={(e) => setNightsAtDestination(Number(e.target.value))}
-                className="h-2 w-full cursor-pointer appearance-none rounded-lg"
-                style={{
-                  background: `linear-gradient(to right, #2563eb 0%, #2563eb ${(nightsAtDestination / 14) * 100}%, #e5e7eb ${(nightsAtDestination / 14) * 100}%, #e5e7eb 100%)`,
-                }}
-              />
-              <div className="flex justify-between text-xs text-gray-500">
-                <span>0 nights (just passing through)</span>
-                <span>14 nights (extended stay)</span>
-              </div>
-            </div>
-
-            {/* Total Display */}
-            <div className="mt-4 pt-4 border-t-2 border-purple-300">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-gray-700">Total Trip Duration:</span>
-                <div className="text-right">
-                  <div className="text-2xl font-bold text-gray-900">
-                    {totalNights} {totalNights === 1 ? 'night' : 'nights'}
-                  </div>
-                  <div className="text-sm text-gray-600">
-                    ({totalDays} {totalDays === 1 ? 'day' : 'days'})
-                  </div>
+              {/* Days Display */}
+              <div className="mt-3 text-center">
+                <div className="text-xl font-bold text-gray-900">
+                  = {totalDays} {totalDays === 1 ? 'day' : 'days'} total
+                </div>
+                <div className="text-xs text-gray-600 mt-1">
+                  AI will determine optimal cities based on your pace
                 </div>
               </div>
             </div>
