@@ -147,19 +147,21 @@ function extractWaypoints(routeData: any): Waypoint[] {
     }
   })
 
-  // Ensure we have at least as many waypoints as requested
-  const targetWaypoints = routeData?.totalStops || 3
-  while (waypoints.length < targetWaypoints) {
+  // Ensure we have at least some waypoints (fallback)
+  // Note: With nights-based system, waypoints come from backend route planning
+  const minWaypoints = 3
+  while (waypoints.length < minWaypoints) {
     waypoints.push({
       id: `city-${waypoints.length + 1}`,
-      name: `Stop ${waypoints.length + 1}`,
+      name: `City ${waypoints.length + 1}`,
       order: waypoints.length,
       activities: ['Explore the area', 'Discover local attractions'],
       coordinates: { lat: 44.0 + Math.random() * 6.0, lng: 2.0 + Math.random() * 8.0 },
     })
   }
 
-  return waypoints.slice(0, targetWaypoints)
+  // Return all waypoints (backend determines optimal number based on totalNights + tripPace)
+  return waypoints
 }
 
 function extractCityName(locationName: string): string {

@@ -55,16 +55,24 @@ export function RouteOverview() {
   const totalDistance = calculateTotalDistance(waypoints)
   const estimatedDays = estimateTripDays(waypoints, totalDistance)
 
+  // Get total nights and trip pace from route data
+  const totalNights = routeData?.totalNights || estimatedDays - 1
+  const tripPace = routeData?.tripPace || 'balanced'
+
+  // Format trip pace for display
+  const paceLabel = tripPace === 'leisurely' ? 'Leisurely' :
+                   tripPace === 'fast-paced' ? 'Fast' : 'Balanced'
+
   const stats = [
     {
       icon: MapPin,
       number: waypoints.length,
-      label: 'Stops',
+      label: 'Cities',
     },
     {
       icon: Calendar,
-      number: estimatedDays,
-      label: 'Days',
+      number: totalNights,
+      label: `Nights • ${paceLabel}`,
     },
     {
       icon: Route,
