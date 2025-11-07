@@ -999,7 +999,7 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
                       // Check if this city was added by user (not in original waypoints)
                       const isUserAdded = modifiedWaypoints[index] && parsedRecs?.waypoints &&
                         !parsedRecs.waypoints.some((origCity: City) =>
-                          (origCity.name || origCity.city) === cityName
+                          origCity && (origCity.name || origCity.city) === cityName
                         )
 
                       return (
