@@ -109,11 +109,20 @@ class RouteDiscoveryAgentV2 {
   async strategicDiscovery(origin, destination, stops, travelStyle, budget, nightsOnRoad, nightsAtDestination) {
     const prompt = this.buildDiscoveryPrompt(origin, destination, stops, travelStyle, budget, nightsOnRoad, nightsAtDestination);
 
+    // Hidden gems requires premium model and extended search time
+    const isHiddenGems = travelStyle === 'hidden-gems';
+    const model = isHiddenGems ? 'sonar-pro' : 'sonar';
+    const timeout = isHiddenGems ? 90000 : 30000;  // 90s for hidden gems, 30s for others
+    const maxTokens = isHiddenGems ? 2500 : 2000;  // More detail for hidden gems
+    const temperature = isHiddenGems ? 0.5 : 0.4;  // Slightly more creative for hidden gems
+
+    console.log(`   Using model: ${model}, timeout: ${timeout}ms`);
+
     try {
       const response = await axios.post(
         'https://api.perplexity.ai/chat/completions',
         {
-          model: 'sonar',
+          model,
           messages: [
             {
               role: 'system',
@@ -124,15 +133,15 @@ class RouteDiscoveryAgentV2 {
               content: prompt
             }
           ],
-          max_tokens: 2000,
-          temperature: 0.4 // Lower temperature for more focused results
+          max_tokens: maxTokens,
+          temperature
         },
         {
           headers: {
             'Authorization': `Bearer ${this.perplexityApiKey}`,
             'Content-Type': 'application/json'
           },
-          timeout: 30000
+          timeout
         }
       );
 
@@ -176,7 +185,7 @@ class RouteDiscoveryAgentV2 {
       adventure: 'outdoor activities, hiking, nature, scenic landscapes',
       culture: 'historical sites, museums, architecture, cultural heritage',
       food: 'culinary experiences, local cuisine, food markets, wineries',
-      'hidden-gems': 'off-the-beaten-path locations, local secrets, unique experiences',
+      'hidden-gems': 'ULTRA-OBSCURE off-the-beaten-path locations that locals treasure but tourists rarely discover - think secret swimming holes, family-run restaurants with no English menu, medieval villages with population under 500, artisan workshops passed down through generations, viewpoints only accessible by unmarked trails',
       'best-overall': 'balanced mix of popular attractions and unique experiences'
     };
 
@@ -268,7 +277,34 @@ REQUIREMENTS:
 8. Ensure all cities are real, accessible, and worth visiting
 9. Waypoints should form a natural route between ${origin} and ${destination}
 10. Alternatives should also fit geographically but offer different experiences
+${travelStyle === 'hidden-gems' ? `
+SPECIAL HIDDEN GEMS CRITERIA (ULTRA-DEMANDING):
+⚠️  DO NOT suggest places featured in:
+   - Lonely Planet or Rick Steves guidebooks
+   - Instagram "top 10" lists
+   - TripAdvisor top 20 for the region
+   - Major tour bus routes
 
+✓  DO prioritize:
+   - Villages with population under 2,000 where you might be the only foreigner
+   - Family-run establishments (3+ generations) with no website or social media
+   - Places requiring local knowledge to find (unmarked trailheads, word-of-mouth locations)
+   - Festivals or traditions NOT listed on official tourism sites
+   - Locations where English is rarely spoken
+   - Natural sites without signage or facilities
+   - Artisan workshops where you can watch (and learn) traditional crafts
+   - Local markets (not tourist markets) where vendors sell to residents
+
+RESEARCH DEPTH REQUIRED:
+- Consult local blogs written BY residents FOR residents (not travel blogs)
+- Look for mentions in regional newspapers, not travel media
+- Seek places praised by locals on Reddit, local forums, or regional subreddits
+- Find locations recommended in NATIVE LANGUAGE sources, not English tourism sites
+- Prioritize places that require asking locals for directions
+
+QUALITY BAR:
+Each suggestion must pass: "Would a local who grew up here enthusiastically recommend this to their best friend visiting from abroad, saying 'don't tell anyone else about this'?"
+` : ''}
 OUTPUT FORMAT (return ONLY this JSON, no markdown):
 {
   "origin": {
