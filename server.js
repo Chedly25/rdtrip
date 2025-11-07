@@ -8,6 +8,7 @@ const ZTLService = require('./services/ztl-service');
 const cheerio = require('cheerio');
 const ItineraryAgentOrchestrator = require('./server/agents/ItineraryAgentOrchestrator');
 const RouteDiscoveryAgentV2 = require('./server/agents/RouteDiscoveryAgentV2');
+const RoutePlanningAgent = require('./server/agents/RoutePlanningAgent');
 const GooglePlacesService = require('./server/services/googlePlacesService');
 
 const app = express();
@@ -1293,6 +1294,101 @@ app.post('/api/generate-route', async (req, res) => {
   }
 });
 
+// NEW: Nights-based route generation (Phase 1 of stops removal)
+// Start nights-based route generation job (returns immediately with job ID)
+app.post('/api/generate-route-nights-based', async (req, res) => {
+  try {
+    const {
+      origin,
+      destination,
+      totalNights,
+      tripPace = 'balanced',
+      agents: selectedAgents = ['adventure', 'culture', 'food'],
+      budget = 'mid'
+    } = req.body;
+
+    // Validation
+    if (!destination) {
+      return res.status(400).json({ error: 'Destination is required' });
+    }
+
+    if (!origin) {
+      return res.status(400).json({ error: 'Origin is required' });
+    }
+
+    if (!totalNights || totalNights < 2 || totalNights > 30) {
+      return res.status(400).json({ error: 'Total nights must be between 2 and 30' });
+    }
+
+    if (!['leisurely', 'balanced', 'fast-paced'].includes(tripPace)) {
+      return res.status(400).json({ error: 'Trip pace must be leisurely, balanced, or fast-paced' });
+    }
+
+    console.log(`\n🗺️  === NEW NIGHTS-BASED ROUTE GENERATION ===`);
+    console.log(`   Origin: ${origin}`);
+    console.log(`   Destination: ${destination}`);
+    console.log(`   Total nights: ${totalNights}`);
+    console.log(`   Trip pace: ${tripPace}`);
+    console.log(`   Budget: ${budget}`);
+    console.log(`   Agents: ${selectedAgents.join(', ')}`);
+
+    // Create unique job ID
+    const jobId = `route_nights_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    // Initialize job status
+    const job = {
+      id: jobId,
+      status: 'processing',
+      origin,
+      destination,
+      totalNights,
+      tripPace,
+      budget,
+      selectedAgents,
+      progress: {
+        phase: 'route_planning',
+        message: 'Planning optimal route and night allocations...',
+        total: selectedAgents.length + 1, // +1 for route planning phase
+        completed: 0,
+        currentAgent: null,
+        percentComplete: 0,
+        startTime: Date.now(),
+        estimatedTimeRemaining: (selectedAgents.length + 1) * 20000, // 20s per phase estimate
+        currentAgentStartTime: null
+      },
+      agentResults: [],
+      routePlan: null,
+      error: null,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    routeJobs.set(jobId, job);
+
+    // Return immediately with job ID
+    res.json({
+      jobId,
+      status: 'processing',
+      message: 'Nights-based route generation started. Poll /api/route-status/:jobId for progress.'
+    });
+
+    // Start processing in background (don't await)
+    processRouteJobNightsBased(jobId, origin, destination, totalNights, tripPace, selectedAgents, budget).catch(error => {
+      console.error(`Job ${jobId} failed:`, error);
+      const failedJob = routeJobs.get(jobId);
+      if (failedJob) {
+        failedJob.status = 'failed';
+        failedJob.error = error.message;
+        failedJob.updatedAt = new Date();
+      }
+    });
+
+  } catch (error) {
+    console.error('Error starting nights-based route generation:', error);
+    res.status(500).json({ error: 'Failed to start route generation', details: error.message });
+  }
+});
+
 // Geocode a city name to coordinates using Google Places API
 app.post('/api/geocode', async (req, res) => {
   try {
@@ -1373,6 +1469,185 @@ app.get('/api/route-status/:jobId', (req, res) => {
     error: job.error
   });
 });
+
+// NIGHTS-BASED Background Job Processor - Uses RoutePlanningAgent
+async function processRouteJobNightsBased(jobId, origin, destination, totalNights, tripPace, selectedAgents, budget) {
+  const job = routeJobs.get(jobId);
+  if (!job) return;
+
+  console.log(`\n🗺️  === Starting NIGHTS-BASED route job ${jobId} ===`);
+  console.log(`Origin: ${origin}`);
+  console.log(`Destination: ${destination}`);
+  console.log(`Total nights: ${totalNights}`);
+  console.log(`Trip pace: ${tripPace}`);
+  console.log(`Agents: ${selectedAgents.join(', ')}`);
+  console.log(`Budget: ${budget}`);
+
+  try {
+    // PHASE 1: Route Planning - Let AI determine optimal cities and night allocations
+    console.log(`\n📍 PHASE 1: Route Planning`);
+    job.progress.phase = 'route_planning';
+    job.progress.message = 'AI is planning optimal route and allocating nights...';
+    job.progress.percentComplete = 5;
+    job.updatedAt = new Date();
+
+    const routePlanner = new RoutePlanningAgent();
+    const routePlan = await routePlanner.planRoute({
+      origin,
+      destination,
+      totalNights,
+      tripPace,
+      budget
+    });
+
+    console.log(`✅ Route plan complete:`);
+    console.log(`   - ${routePlan.numCities} cities recommended`);
+    routePlan.cities.forEach(city => {
+      console.log(`   - ${city.name}: ${city.nights} nights`);
+    });
+
+    // Store route plan in job
+    job.routePlan = routePlan;
+    job.progress.percentComplete = 15;
+    job.updatedAt = new Date();
+
+    // Convert to waypoints format
+    const waypoints = routePlan.cities.map(city => ({
+      name: city.name,
+      country: city.country || '',
+      description: city.description || '',
+      highlights: city.highlights || []
+    }));
+
+    // Build night allocations object
+    const nightAllocations = {};
+    routePlan.cities.forEach(city => {
+      nightAllocations[city.name] = city.nights;
+    });
+
+    console.log(`\n📦 Night allocations:`, nightAllocations);
+
+    // PHASE 2: Agent Discovery - Get recommendations from each agent
+    console.log(`\n🤖 PHASE 2: Agent Discovery`);
+    const googleApiKey = process.env.GOOGLE_PLACES_API_KEY;
+    const routeAgent = new RouteDiscoveryAgentV2(pool, googleApiKey);
+
+    const agentResults = [];
+
+    // Process each agent style
+    for (let i = 0; i < selectedAgents.length; i++) {
+      const agentType = selectedAgents[i];
+      const agentConfig = agents[agentType];
+
+      try {
+        // Update progress
+        const agentStartTime = Date.now();
+        job.progress.phase = 'agent_discovery';
+        job.progress.currentAgent = agentConfig.name;
+        job.progress.currentAgentStartTime = agentStartTime;
+        job.progress.percentComplete = 15 + Math.round(((i + 1) / selectedAgents.length) * 80);
+
+        const elapsed = agentStartTime - job.progress.startTime;
+        const avgTimePerAgent = i > 0 ? elapsed / (i + 1) : 15000;
+        job.progress.estimatedTimeRemaining = Math.round(avgTimePerAgent * (selectedAgents.length - i));
+
+        job.updatedAt = new Date();
+
+        console.log(`\n--- Processing ${agentConfig.name} (${i + 1}/${selectedAgents.length}) ---`);
+
+        // Use agentic discovery with the planned cities
+        // Note: We pass routePlan.numCities as "stops" for compatibility with existing agent code
+        const result = await routeAgent.discoverRoute(
+          origin,
+          destination,
+          routePlan.numCities,
+          agentType,
+          budget
+        );
+
+        console.log(`✓ ${agentConfig.name} completed`);
+
+        // Add to results
+        agentResults.push({
+          agent: agentType,
+          name: agentConfig.name,
+          recommendations: JSON.stringify(result.route),
+          metricsRaw: result.metrics,
+          metrics: result.formattedMetrics || {}
+        });
+
+        // Update progress
+        job.progress.completed = i + 1;
+        job.updatedAt = new Date();
+
+      } catch (error) {
+        console.error(`❌ ${agentConfig.name} failed:`, error.message);
+        // Continue with other agents even if one fails
+        agentResults.push({
+          agent: agentType,
+          name: agentConfig.name,
+          recommendations: JSON.stringify({ error: error.message }),
+          metrics: {}
+        });
+      }
+    }
+
+    // PHASE 3: Merge results
+    console.log(`\n🔗 PHASE 3: Merging Results`);
+    job.progress.phase = 'merging';
+    job.progress.message = 'Creating best overall route...';
+    job.progress.percentComplete = 95;
+    job.updatedAt = new Date();
+
+    // Create best-overall route (reuse existing function, but pass numCities instead of stops)
+    const mergedResult = createBestOverallRoute(agentResults, routePlan.numCities);
+
+    // Add to agent results
+    agentResults.push({
+      agent: 'best-overall',
+      name: 'Best Overall',
+      recommendations: JSON.stringify(mergedResult.route),
+      metrics: mergedResult.metrics || {}
+    });
+
+    // FINAL: Mark job complete with night allocations
+    job.status = 'completed';
+    job.progress.percentComplete = 100;
+    job.progress.phase = 'completed';
+    job.progress.message = 'Route generation complete!';
+    job.agentResults = agentResults;
+
+    // IMPORTANT: Include night allocations in the result
+    job.result = {
+      origin,
+      destination,
+      totalNights,
+      tripPace,
+      waypoints,
+      nightAllocations,  // ← KEY: This is what Phase 4 needs
+      routePlan,
+      agentResults
+    };
+
+    job.updatedAt = new Date();
+
+    const duration = (Date.now() - job.progress.startTime) / 1000;
+    console.log(`\n✅ === Route job ${jobId} completed in ${duration.toFixed(1)}s ===`);
+    console.log(`   - ${routePlan.numCities} cities`);
+    console.log(`   - ${totalNights} nights total`);
+    console.log(`   - ${selectedAgents.length} agent perspectives`);
+
+  } catch (error) {
+    console.error(`\n❌ === Route job ${jobId} failed ===`);
+    console.error(error);
+
+    job.status = 'failed';
+    job.error = error.message;
+    job.updatedAt = new Date();
+
+    throw error;
+  }
+}
 
 // AGENTIC Background Job Processor - Uses RouteDiscoveryAgentV2
 async function processRouteJobAgentic(jobId, origin, destination, stops, selectedAgents, budget) {
