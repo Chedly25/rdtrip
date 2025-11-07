@@ -710,8 +710,10 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
             // Filter out undefined/null waypoints for safety
             const validWaypoints = currentWaypoints.filter((city: any) => city && (city.name || city.city))
 
-            // Check if cities have nights allocated
-            const hasNights = validWaypoints.some((city: any) => city.nights !== undefined)
+            // Use nightAllocations from route data as source of truth for nights
+            const nightAllocations = (routeData as any).nightAllocations || {}
+            const hasNights = Object.keys(nightAllocations).length > 0
+
             const destination = parsedRecs.destination
             const origin = parsedRecs.origin
 
@@ -723,24 +725,33 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
 
               // Add origin first if it exists
               if (origin && (origin.name || origin.city)) {
+                const originName = origin.name || origin.city || routeData.origin || 'Origin'
                 allCities.push({
-                  name: origin.name || origin.city || routeData.origin || 'Origin',
-                  nights: origin.nights || 0
+                  name: originName,
+                  nights: nightAllocations[originName] || 0
                 })
               }
 
-              // Add waypoints
-              allCities.push(...validWaypoints.map((city: any) => ({
-                name: city.name || city.city || 'Unknown City',
-                nights: city.nights || 0
-              })))
+              // Add waypoints with nights from nightAllocations
+              validWaypoints.forEach((city: any) => {
+                const cityName = city.name || city.city
+                if (cityName && cityName !== destination.name) {
+                  allCities.push({
+                    name: cityName,
+                    nights: nightAllocations[cityName] || 0
+                  })
+                }
+              })
+
+              // Filter out any cities with no nights (safety check)
+              const citiesWithNights = allCities.filter((city: any) => city && city.name && city.nights > 0)
 
               return (
                 <RouteTimeline
-                  cities={allCities.filter((city: any) => city.name)}
+                  cities={citiesWithNights}
                   destination={{
                     name: destination.name || 'Unknown Destination',
-                    nights: destination.nights || 3
+                    nights: nightAllocations[destination.name] || destination.nights || 3
                   }}
                   themeColor={theme.color}
                 />
