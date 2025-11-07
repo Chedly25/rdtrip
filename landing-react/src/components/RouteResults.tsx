@@ -706,15 +706,18 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
             const waypoints = Array.isArray(rawWaypoints) ? rawWaypoints : []
             const currentWaypoints = modifiedWaypoints[activeTab] || waypoints
 
+            // Filter out undefined/null waypoints for safety
+            const validWaypoints = currentWaypoints.filter((city: any) => city && (city.name || city.city))
+
             // Check if cities have nights allocated
-            const hasNights = currentWaypoints.some((city: any) => city.nights !== undefined)
+            const hasNights = validWaypoints.some((city: any) => city.nights !== undefined)
             const destination = parsedRecs.destination
 
             if (hasNights && destination && destination.name) {
               const theme = agentThemes[activeAgentResult.agent] || agentThemes.adventure
               return (
                 <RouteTimeline
-                  cities={currentWaypoints.map((city: any) => ({
+                  cities={validWaypoints.map((city: any) => ({
                     name: city.name || city.city,
                     nights: city.nights || 0
                   }))}
@@ -851,11 +854,12 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
             const rawWaypoints = parsedRecs.waypoints
             const originalWaypoints = Array.isArray(rawWaypoints) ? rawWaypoints : []
             const rawCities = modifiedWaypoints[index] || originalWaypoints
-            const cities = rawCities.map(transformCity)
+            // Filter out undefined/null cities before transforming
+            const cities = rawCities.filter((city: any) => city && (city.name || city.city)).map(transformCity)
 
             // Ensure alternatives is always an array
             const rawAlternatives = parsedRecs.alternatives
-            const alternatives = (Array.isArray(rawAlternatives) ? rawAlternatives : []).map(transformCity)
+            const alternatives = (Array.isArray(rawAlternatives) ? rawAlternatives : []).filter((city: any) => city && (city.name || city.city)).map(transformCity)
 
             return (
               <motion.div
