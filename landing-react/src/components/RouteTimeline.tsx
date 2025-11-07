@@ -54,10 +54,8 @@ export function RouteTimeline({ cities, destination, themeColor }: RouteTimeline
                 </span>
               </motion.div>
 
-              {/* Arrow (if not last) */}
-              {index < cities.length && (
-                <ArrowRight className="h-6 w-6 text-gray-400" />
-              )}
+              {/* Arrow (if not last) - always show arrow after each city since destination comes after */}
+              <ArrowRight className="h-6 w-6 text-gray-400" />
             </div>
           )
         })}

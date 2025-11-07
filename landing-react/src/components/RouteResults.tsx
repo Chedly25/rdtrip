@@ -713,20 +713,33 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
             // Check if cities have nights allocated
             const hasNights = validWaypoints.some((city: any) => city.nights !== undefined)
             const destination = parsedRecs.destination
+            const origin = parsedRecs.origin
 
             if (hasNights && destination && destination.name) {
               const theme = agentThemes[activeAgentResult.agent] || agentThemes.adventure
+
+              // Build cities array: origin + waypoints (exclude destination as it's passed separately)
+              const allCities = []
+
+              // Add origin first if it exists
+              if (origin && (origin.name || origin.city)) {
+                allCities.push({
+                  name: origin.name || origin.city || routeData.origin || 'Origin',
+                  nights: origin.nights || 0
+                })
+              }
+
+              // Add waypoints
+              allCities.push(...validWaypoints.map((city: any) => ({
+                name: city.name || city.city || 'Unknown City',
+                nights: city.nights || 0
+              })))
+
               return (
                 <RouteTimeline
-                  cities={validWaypoints
-                    .map((city: any) => ({
-                      name: city.name || city.city || 'Unknown City',  // FIXED: Fallback if both undefined
-                      nights: city.nights || 0
-                    }))
-                    .filter((city: any) => city.name)  // Extra safety: ensure name exists
-                  }
+                  cities={allCities.filter((city: any) => city.name)}
                   destination={{
-                    name: destination.name || 'Unknown Destination',  // FIXED: Fallback for destination
+                    name: destination.name || 'Unknown Destination',
                     nights: destination.nights || 3
                   }}
                   themeColor={theme.color}
