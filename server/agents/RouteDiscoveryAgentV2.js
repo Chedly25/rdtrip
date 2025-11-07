@@ -233,11 +233,17 @@ DURATION CONTEXT:
 - Each city should be worth approximately ${avgNightsPerCity} nights
 - Destination (${destination}) will have ${nightsAtDestination} nights allocated
 
-NIGHT ALLOCATION GUIDANCE:
-- Larger/culturally rich cities: 2-3 nights (e.g., Lyon, Florence, Prague)
-- Medium charming towns: 1-2 nights (e.g., Annecy, Salzburg)
-- Smaller scenic stops: 1 night (e.g., Carcassonne, Hallstatt)
-- Consider: Can you see the main highlights in the allocated nights?
+NIGHT ALLOCATION REQUIREMENTS:
+For each waypoint city, you MUST provide realistic minimum and maximum nights based on:
+- City size and number of major attractions
+- Typical visitor stay duration
+- What can realistically be seen/done
+
+Guidelines:
+- Small towns (e.g., Carcassonne, Bruges, Sintra): 1-2 nights MAXIMUM
+- Medium cities (e.g., Lyon, Porto, Seville): 2-4 nights typical range
+- Major cities (e.g., Barcelona, Paris, Rome): 3-7 nights for full exploration
+- Be CONSERVATIVE with small towns - don't over-allocate nights
 
 REQUIREMENTS:
 1. MUST start from ${origin} (this is the user's starting location - DO NOT CHANGE THIS)
@@ -268,13 +274,17 @@ OUTPUT FORMAT (return ONLY this JSON, no markdown):
       "city": "Example City 1",
       "country": "Spain",
       "why": "Brief explanation why this city fits ${travelStyle} style and makes sense on the route",
-      "highlights": ["attraction 1", "attraction 2", "attraction 3"]
+      "highlights": ["attraction 1", "attraction 2", "attraction 3"],
+      "recommended_min_nights": 1,
+      "recommended_max_nights": 2
     },
     {
       "city": "Example City 2",
       "country": "Spain",
       "why": "Brief explanation why this city fits ${travelStyle} style and makes sense on the route",
-      "highlights": ["attraction 1", "attraction 2", "attraction 3"]
+      "highlights": ["attraction 1", "attraction 2", "attraction 3"],
+      "recommended_min_nights": 2,
+      "recommended_max_nights": 3
     }
   ],
   "alternatives": [
@@ -282,19 +292,25 @@ OUTPUT FORMAT (return ONLY this JSON, no markdown):
       "city": "Alternative City 1",
       "country": "Spain",
       "why": "Great ${travelStyle} option that could replace or complement the main route",
-      "highlights": ["highlight 1", "highlight 2", "highlight 3"]
+      "highlights": ["highlight 1", "highlight 2", "highlight 3"],
+      "recommended_min_nights": 1,
+      "recommended_max_nights": 2
     },
     {
       "city": "Alternative City 2",
       "country": "Spain",
       "why": "Another excellent ${travelStyle} choice for route customization",
-      "highlights": ["highlight 1", "highlight 2", "highlight 3"]
+      "highlights": ["highlight 1", "highlight 2", "highlight 3"],
+      "recommended_min_nights": 2,
+      "recommended_max_nights": 3
     },
     {
       "city": "Alternative City 3",
       "country": "Spain",
       "why": "Strong ${travelStyle} alternative for travelers wanting different experiences",
-      "highlights": ["highlight 1", "highlight 2", "highlight 3"]
+      "highlights": ["highlight 1", "highlight 2", "highlight 3"],
+      "recommended_min_nights": 1,
+      "recommended_max_nights": 2
     }
   ],
   "themeInsights": {
@@ -629,15 +645,49 @@ CRITICAL RULES:
   allocateNightsToWaypoints(waypoints, totalNights) {
     if (!waypoints || waypoints.length === 0) return [];
 
-    // Distribute evenly (MVP approach)
-    const baseNights = Math.floor(totalNights / waypoints.length);
-    const extraNights = totalNights % waypoints.length;
-
-    return waypoints.map((city, index) => ({
+    // Start with minimum nights for each city (use AI recommendations or fallback to 1)
+    const citiesWithNights = waypoints.map(city => ({
       ...city,
-      nights: baseNights + (index < extraNights ? 1 : 0)
-      // Example: 7 nights, 3 cities → [3, 2, 2] or [2, 3, 2]
+      nights: city.recommended_min_nights || 1,
+      min: city.recommended_min_nights || 1,
+      max: city.recommended_max_nights || 3
     }));
+
+    // Calculate how many nights we've allocated vs total
+    let allocated = citiesWithNights.reduce((sum, city) => sum + city.nights, 0);
+    let remaining = totalNights - allocated;
+
+    // If we don't have enough nights for minimums, give 1 night to each city
+    if (remaining < 0) {
+      console.warn(`⚠️  Not enough nights (${totalNights}) for ${waypoints.length} cities with minimums. Giving 1 night each.`);
+      return waypoints.map(city => ({
+        ...city,
+        nights: 1
+      }));
+    }
+
+    // Distribute remaining nights, respecting max constraints
+    let index = 0;
+    while (remaining > 0) {
+      const city = citiesWithNights[index % citiesWithNights.length];
+
+      // Only add if we haven't hit the max
+      if (city.nights < city.max) {
+        city.nights++;
+        remaining--;
+      }
+
+      index++;
+
+      // Safety check: if we've looped through all cities and can't add more, stop
+      if (index >= citiesWithNights.length * city.max) {
+        console.warn(`⚠️  Could not allocate all ${totalNights} nights while respecting max constraints. ${remaining} nights unallocated.`);
+        break;
+      }
+    }
+
+    // Clean up temporary fields and return
+    return citiesWithNights.map(({ min, max, ...city }) => city);
   }
 }
 
