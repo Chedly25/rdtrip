@@ -375,7 +375,8 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
         const originalWaypoints = Array.isArray(rawWaypoints) ? rawWaypoints : []
         const currentWaypoints = prev[agentIndex] || originalWaypoints
 
-        const updatedWaypoints = currentWaypoints.map(c =>
+        // Filter out undefined/null cities before mapping
+        const updatedWaypoints = currentWaypoints.filter((c: any) => c && (c.name || c.city)).map(c =>
           (c.name || c.city) === city.name
             ? { ...c, nights: newNights }
             : c
@@ -817,6 +818,12 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
 
             // Transform RouteDiscoveryAgentV2 format to CityCard format
             const transformCity = (city: any) => {
+              // Guard against undefined/null cities
+              if (!city) {
+                console.warn('⚠️ transformCity received null/undefined city, skipping');
+                return null;
+              }
+
               const transformed = {
                 ...city,
                 name: city.name || city.city,  // Normalize name
@@ -854,12 +861,18 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
             const rawWaypoints = parsedRecs.waypoints
             const originalWaypoints = Array.isArray(rawWaypoints) ? rawWaypoints : []
             const rawCities = modifiedWaypoints[index] || originalWaypoints
-            // Filter out undefined/null cities before transforming
-            const cities = rawCities.filter((city: any) => city && (city.name || city.city)).map(transformCity)
+            // Filter out undefined/null cities before AND after transforming (double safety)
+            const cities = rawCities
+              .filter((city: any) => city && (city.name || city.city))
+              .map(transformCity)
+              .filter((city: any) => city !== null)
 
             // Ensure alternatives is always an array
             const rawAlternatives = parsedRecs.alternatives
-            const alternatives = (Array.isArray(rawAlternatives) ? rawAlternatives : []).filter((city: any) => city && (city.name || city.city)).map(transformCity)
+            const alternatives = (Array.isArray(rawAlternatives) ? rawAlternatives : [])
+              .filter((city: any) => city && (city.name || city.city))
+              .map(transformCity)
+              .filter((city: any) => city !== null)
 
             return (
               <motion.div
