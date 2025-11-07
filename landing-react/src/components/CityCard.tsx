@@ -176,7 +176,7 @@ export function CityCard({ city, index, themeColor, showThemeBadges = false, the
               Highlights
             </p>
             <ul className="space-y-2">
-              {cityActivities.slice(0, 3).map((activity, actIndex) => {
+              {cityActivities.filter(a => a).slice(0, 3).map((activity, actIndex) => {
                 const activityText = typeof activity === 'string'
                   ? activity
                   : (activity as Activity).name || (activity as Activity).activity || 'Activity'
