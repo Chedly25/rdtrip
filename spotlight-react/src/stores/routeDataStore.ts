@@ -8,6 +8,7 @@ export interface RouteData {
   totalStops: number
   waypoints?: any[]
   alternatives?: any[]
+  nightAllocations?: Record<string, number>  // Night allocations from landing page
   agentResults: Array<{
     agent: string
     recommendations: string
@@ -39,6 +40,14 @@ export const useRouteDataStore = create<RouteDataState>()(
           try {
             const parsed = JSON.parse(data)
             console.log('Parsed spotlight data:', parsed)
+
+            // Log night allocations if present
+            if (parsed.nightAllocations) {
+              console.log('📦 Night allocations received from landing:', parsed.nightAllocations)
+            } else {
+              console.log('⚠️ No night allocations found in spotlightData')
+            }
+
             set({ routeData: parsed })
           } catch (error) {
             console.error('Failed to parse spotlight data:', error)

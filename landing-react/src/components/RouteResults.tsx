@@ -503,14 +503,44 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
     // Get enriched route data with modifications
     const enrichedRouteData = getEnrichedRouteData()
 
-    // Store enriched data in localStorage so spotlight can use it
+    // Extract night allocations from all agents
+    const nightAllocations: Record<string, number> = {}
+    enrichedRouteData.agentResults.forEach((ar: any) => {
+      try {
+        const parsed = JSON.parse(ar.recommendations)
+        if (parsed.waypoints && Array.isArray(parsed.waypoints)) {
+          parsed.waypoints.forEach((city: any) => {
+            const cityName = city.name || city.city
+            if (cityName && city.nights !== undefined) {
+              nightAllocations[cityName] = city.nights
+            }
+          })
+        }
+        if (parsed.destination) {
+          const destName = parsed.destination.name || parsed.destination.city
+          if (destName && parsed.destination.nights !== undefined) {
+            nightAllocations[destName] = parsed.destination.nights
+          }
+        }
+      } catch (error) {
+        console.error('Failed to extract nights from agent:', ar.agent, error)
+      }
+    })
+
+    console.log('📦 Passing night allocations to Spotlight:', nightAllocations)
+
+    // Store enriched data with night info
     const dataToStore = agent
       ? {
           ...enrichedRouteData,
           agentResults: enrichedRouteData.agentResults.filter((ar: any) => ar.agent === agent),
-          agent: agent
+          agent: agent,
+          nightAllocations  // Include night data
         }
-      : enrichedRouteData
+      : {
+          ...enrichedRouteData,
+          nightAllocations  // Include night data
+        }
 
     localStorage.setItem('spotlightData', JSON.stringify(dataToStore))
 

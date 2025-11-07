@@ -2728,8 +2728,8 @@ app.post('/api/get-hotels-restaurants', async (req, res) => {
 // Generate detailed day-by-day itinerary
 app.post('/api/generate-itinerary', async (req, res) => {
   try {
-    const { agent, origin, destination, waypoints } = req.body;
-    
+    const { agent, origin, destination, waypoints, nightAllocations = {} } = req.body;
+
     if (!agent || !origin || !destination) {
       return res.status(400).json({ error: 'Agent, origin, and destination are required' });
     }
@@ -2739,8 +2739,13 @@ app.post('/api/generate-itinerary', async (req, res) => {
       return res.status(400).json({ error: 'Invalid agent type' });
     }
 
-    const itinerary = await generateDetailedItinerary(agentConfig, origin, destination, waypoints);
-    
+    // Log night allocations if provided
+    if (Object.keys(nightAllocations).length > 0) {
+      console.log('📦 Night allocations for itinerary generation:', nightAllocations);
+    }
+
+    const itinerary = await generateDetailedItinerary(agentConfig, origin, destination, waypoints, nightAllocations);
+
     res.json({
       agent: agent,
       origin: origin,
@@ -2753,18 +2758,34 @@ app.post('/api/generate-itinerary', async (req, res) => {
   }
 });
 
-async function generateDetailedItinerary(agent, origin, destination, waypoints) {
+async function generateDetailedItinerary(agent, origin, destination, waypoints, nightAllocations = {}) {
   const maxRetries = 3;
   const retryDelay = 2000; // 2 seconds
-  
+
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       const waypointNames = waypoints ? waypoints.map(w => w.name).join(', ') : '';
-      
+
+      // Build night allocation info for prompt
+      let nightInfo = '';
+      if (Object.keys(nightAllocations).length > 0) {
+        nightInfo = '\n\nDURATION ALLOCATION:\n';
+        if (waypoints && waypoints.length > 0) {
+          waypoints.forEach(w => {
+            const cityName = w.name || w.city;
+            const nights = nightAllocations[cityName] || 2;
+            nightInfo += `- ${cityName}: ${nights} ${nights === 1 ? 'night' : 'nights'}\n`;
+          });
+        }
+        const destNights = nightAllocations[destination] || 3;
+        nightInfo += `- ${destination} (destination): ${destNights} ${destNights === 1 ? 'night' : 'nights'}\n`;
+        nightInfo += '\nPlease create a day-by-day itinerary that respects these night allocations for each city.';
+      }
+
       const prompt = `${agent.prompt}
 
 Create a detailed day-by-day itinerary for a road trip from ${origin} to ${destination}.
-${waypoints && waypoints.length > 0 ? `Include these waypoints: ${waypointNames}` : ''}
+${waypoints && waypoints.length > 0 ? `Include these waypoints: ${waypointNames}` : ''}${nightInfo}
 
 Provide a JSON response with:
 - days: array of daily plans
@@ -2773,7 +2794,7 @@ Provide a JSON response with:
   - location: main city/area for the day
   - activities: array of timed activities (with time, title, description)
   - accommodation: suggested place to stay
-  - meals: breakfast, lunch, dinner recommendations  
+  - meals: breakfast, lunch, dinner recommendations
   - travel: driving details if moving to next location
 
 Focus on providing detailed, practical travel information and specific recommendations.
