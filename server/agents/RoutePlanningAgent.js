@@ -105,6 +105,14 @@ IMPORTANT:
 - Avoid suggesting cities that are too close together
 - Consider major highways and realistic driving distances
 
+NIGHT RECOMMENDATIONS:
+- For each city, provide realistic minimum and maximum nights based on city size and attractions
+- Small towns (e.g., Carcassonne, Bruges, Sintra): 1-2 nights maximum
+- Medium cities (e.g., Lyon, Porto, Seville): 2-4 nights typical range
+- Major cities (e.g., Barcelona, Paris, Rome): 3-7 nights for full exploration
+- Consider: city size, number of major attractions, typical visitor stay duration
+- Be conservative with small towns - avoid over-allocating nights
+
 Return ONLY a valid JSON object in this exact format:
 {
   "origin": "${origin}",
@@ -114,7 +122,9 @@ Return ONLY a valid JSON object in this exact format:
       "name": "City Name",
       "country": "Country",
       "description": "Brief reason why this city is perfect for this route (1 sentence)",
-      "highlights": ["Thing 1", "Thing 2", "Thing 3"]
+      "highlights": ["Thing 1", "Thing 2", "Thing 3"],
+      "recommended_min_nights": 1,
+      "recommended_max_nights": 2
     }
   ],
   "routeNotes": "Brief overview of the route character and flow"
