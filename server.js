@@ -12,7 +12,8 @@ const RoutePlanningAgent = require('./server/agents/RoutePlanningAgent');
 const GooglePlacesService = require('./server/services/googlePlacesService');
 const ReceiptScannerService = require('./server/services/ReceiptScannerService');
 const CurrencyService = require('./server/services/CurrencyService');
-const { authenticate: authMiddleware, optionalAuth } = require('./middleware/auth');
+const { authenticate, optionalAuth } = require('./middleware/auth');
+const authMiddleware = authenticate; // Alias for compatibility
 const { generateToken } = require('./utils/jwt');
 
 const app = express();
