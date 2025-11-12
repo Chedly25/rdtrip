@@ -58,6 +58,16 @@ CREATE TABLE IF NOT EXISTS published_routes (
   moderated_at TIMESTAMP WITH TIME ZONE,
   moderated_by UUID REFERENCES users(id) ON DELETE SET NULL,
 
+  -- Full-text search (generated column for IMMUTABLE indexing)
+  search_vector tsvector GENERATED ALWAYS AS (
+    to_tsvector('english',
+      COALESCE(title, '') || ' ' ||
+      COALESCE(description, '') || ' ' ||
+      COALESCE(array_to_string(tags, ' '), '') || ' ' ||
+      COALESCE(array_to_string(cities_visited, ' '), '')
+    )
+  ) STORED,
+
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
 
@@ -79,9 +89,8 @@ CREATE INDEX idx_published_routes_tags ON published_routes USING GIN(tags);
 CREATE INDEX idx_published_routes_slug ON published_routes(slug);
 CREATE INDEX idx_published_routes_primary_style ON published_routes(primary_style) WHERE status = 'published';
 
--- Full-text search index
-CREATE INDEX idx_published_routes_search ON published_routes
-  USING GIN(to_tsvector('english', title || ' ' || description || ' ' || COALESCE(array_to_string(tags, ' '), '') || ' ' || COALESCE(array_to_string(cities_visited, ' '), '')));
+-- Full-text search index (on generated column)
+CREATE INDEX idx_published_routes_search ON published_routes USING GIN(search_vector);
 
 -- Popular routes compound index
 CREATE INDEX idx_published_routes_popular ON published_routes(clone_count DESC, rating DESC, view_count DESC)
