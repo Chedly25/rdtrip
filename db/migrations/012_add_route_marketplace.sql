@@ -58,15 +58,8 @@ CREATE TABLE IF NOT EXISTS published_routes (
   moderated_at TIMESTAMP WITH TIME ZONE,
   moderated_by UUID REFERENCES users(id) ON DELETE SET NULL,
 
-  -- Full-text search (generated column for IMMUTABLE indexing)
-  search_vector tsvector GENERATED ALWAYS AS (
-    to_tsvector('english',
-      COALESCE(title, '') || ' ' ||
-      COALESCE(description, '') || ' ' ||
-      COALESCE(array_to_string(tags, ' '), '') || ' ' ||
-      COALESCE(array_to_string(cities_visited, ' '), '')
-    )
-  ) STORED,
+  -- Full-text search (maintained by trigger)
+  search_vector tsvector,
 
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -225,6 +218,24 @@ CREATE INDEX idx_review_helpful_votes_review ON review_helpful_votes(review_id);
 -- =====================================================
 -- TRIGGERS & FUNCTIONS
 -- =====================================================
+
+-- Auto-update search_vector for full-text search
+CREATE OR REPLACE FUNCTION update_search_vector() RETURNS TRIGGER AS $$
+BEGIN
+  NEW.search_vector := to_tsvector('english',
+    COALESCE(NEW.title, '') || ' ' ||
+    COALESCE(NEW.description, '') || ' ' ||
+    COALESCE(array_to_string(NEW.tags, ' '), '') || ' ' ||
+    COALESCE(array_to_string(NEW.cities_visited, ' '), '')
+  );
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_update_search_vector
+  BEFORE INSERT OR UPDATE ON published_routes
+  FOR EACH ROW
+  EXECUTE FUNCTION update_search_vector();
 
 -- Auto-update rating and review count when review added/updated/deleted
 CREATE OR REPLACE FUNCTION update_published_route_rating() RETURNS TRIGGER AS $$
