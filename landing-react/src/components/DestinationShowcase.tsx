@@ -1,14 +1,23 @@
 import { motion } from 'framer-motion'
 import { MapPin, Clock, TrendingUp, ArrowRight } from 'lucide-react'
-import { destinations, getAgentColor, getAgentIconPath } from '../data/destinations'
+import { destinations, getAgentColor, getAgentIconPath, type Destination } from '../data/destinations'
 import { useFormStore } from '../stores/formStore'
+import type { CityData } from '../types'
 
 export function DestinationShowcase() {
   const { setDestination } = useFormStore()
 
-  const handleCardClick = (destName: string, _stops: number) => {
+  const handleCardClick = (destination: Destination) => {
+    // Convert Destination to CityData format
+    const cityData: CityData = {
+      name: destination.name,
+      country: destination.country,
+      coordinates: destination.coordinates,
+      displayName: `${destination.name}, ${destination.country}`
+    }
+
     // Pre-fill the form (AI will determine optimal stops based on nights + pace)
-    setDestination(destName)
+    setDestination(cityData)
 
     // Smooth scroll to form
     setTimeout(() => {
@@ -46,7 +55,7 @@ export function DestinationShowcase() {
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: index * 0.1 }}
               className="group relative cursor-pointer"
-              onClick={() => handleCardClick(destination.name, destination.recommendedStops)}
+              onClick={() => handleCardClick(destination)}
             >
               <div className="flex h-full flex-col overflow-hidden rounded-2xl bg-white shadow-lg transition-all duration-300 hover:shadow-2xl hover:-translate-y-2">
                 {/* Image Section */}
@@ -161,7 +170,7 @@ export function DestinationShowcase() {
                     className="group/btn mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-3 font-semibold text-white transition-all hover:bg-slate-800"
                     onClick={(e) => {
                       e.stopPropagation()
-                      handleCardClick(destination.name, destination.recommendedStops)
+                      handleCardClick(destination)
                     }}
                   >
                     <span>Plan Route to {destination.name}</span>

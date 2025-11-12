@@ -1370,26 +1370,125 @@ app.post('/api/generate-route-nights-based', async (req, res) => {
       budget = 'mid'
     } = req.body;
 
-    // Validation
+    // ============= ENHANCED VALIDATION =============
+
+    // Validate destination exists
     if (!destination) {
       return res.status(400).json({ error: 'Destination is required' });
     }
 
+    // Validate origin exists
     if (!origin) {
       return res.status(400).json({ error: 'Origin is required' });
     }
 
+    // NEW: Support both string (backward compatibility) and object format
+    let originData = origin;
+    let destinationData = destination;
+
+    // If origin is a string, geocode it (backward compatibility)
+    if (typeof origin === 'string') {
+      console.log(`⚠️ Origin is string format (legacy), geocoding: ${origin}`);
+      const googlePlacesService = new GooglePlacesService(process.env.GOOGLE_PLACES_API_KEY);
+      const result = await googlePlacesService.textSearch(origin);
+      if (result && result.length > 0) {
+        const place = result[0];
+        const countryComponent = place.address_components?.find(c => c.types.includes('country'));
+        originData = {
+          name: place.name,
+          country: countryComponent?.long_name || 'Unknown',
+          coordinates: [place.geometry.location.lat, place.geometry.location.lng]
+        };
+      } else {
+        return res.status(400).json({ error: `Could not geocode origin: ${origin}` });
+      }
+    }
+
+    // If destination is a string, geocode it (backward compatibility)
+    if (typeof destination === 'string') {
+      console.log(`⚠️ Destination is string format (legacy), geocoding: ${destination}`);
+      const googlePlacesService = new GooglePlacesService(process.env.GOOGLE_PLACES_API_KEY);
+      const result = await googlePlacesService.textSearch(destination);
+      if (result && result.length > 0) {
+        const place = result[0];
+        const countryComponent = place.address_components?.find(c => c.types.includes('country'));
+        destinationData = {
+          name: place.name,
+          country: countryComponent?.long_name || 'Unknown',
+          coordinates: [place.geometry.location.lat, place.geometry.location.lng]
+        };
+      } else {
+        return res.status(400).json({ error: `Could not geocode destination: ${destination}` });
+      }
+    }
+
+    // NEW: Validate origin has required fields
+    if (!originData.name || !originData.coordinates || !originData.country) {
+      return res.status(400).json({
+        error: 'Origin must include name, coordinates, and country'
+      });
+    }
+
+    // NEW: Validate destination has required fields
+    if (!destinationData.name || !destinationData.coordinates || !destinationData.country) {
+      return res.status(400).json({
+        error: 'Destination must include name, coordinates, and country'
+      });
+    }
+
+    // NEW: Validate coordinates format
+    if (!Array.isArray(originData.coordinates) || originData.coordinates.length !== 2 ||
+        typeof originData.coordinates[0] !== 'number' || typeof originData.coordinates[1] !== 'number') {
+      return res.status(400).json({
+        error: 'Origin coordinates must be [latitude, longitude]'
+      });
+    }
+
+    if (!Array.isArray(destinationData.coordinates) || destinationData.coordinates.length !== 2 ||
+        typeof destinationData.coordinates[0] !== 'number' || typeof destinationData.coordinates[1] !== 'number') {
+      return res.status(400).json({
+        error: 'Destination coordinates must be [latitude, longitude]'
+      });
+    }
+
+    // NEW: Calculate distance between origin and destination
+    const distance = calculateDistance(
+      { lat: originData.coordinates[0], lng: originData.coordinates[1] },
+      { lat: destinationData.coordinates[0], lng: destinationData.coordinates[1] }
+    );
+
+    console.log(`📏 Distance: ${distance.toFixed(0)} km`);
+
+    // NEW: Validate minimum distance (50km)
+    if (distance < 50) {
+      return res.status(400).json({
+        error: `Destination too close to origin (${distance.toFixed(0)} km). Minimum distance is 50 km for a road trip.`,
+        distance: Math.round(distance)
+      });
+    }
+
+    // NEW: Validate maximum distance (3000km)
+    if (distance > 3000) {
+      return res.status(400).json({
+        error: `Destination too far from origin (${distance.toFixed(0)} km). Maximum distance is 3000 km. Consider flying or splitting into multiple trips.`,
+        distance: Math.round(distance)
+      });
+    }
+
+    // Validate nights
     if (!totalNights || totalNights < 2 || totalNights > 30) {
       return res.status(400).json({ error: 'Total nights must be between 2 and 30' });
     }
 
+    // Validate trip pace
     if (!['leisurely', 'balanced', 'fast-paced'].includes(tripPace)) {
       return res.status(400).json({ error: 'Trip pace must be leisurely, balanced, or fast-paced' });
     }
 
     console.log(`\n🗺️  === NEW NIGHTS-BASED ROUTE GENERATION ===`);
-    console.log(`   Origin: ${origin}`);
-    console.log(`   Destination: ${destination}`);
+    console.log(`   Origin: ${originData.name}, ${originData.country} (${originData.coordinates[0].toFixed(4)}, ${originData.coordinates[1].toFixed(4)})`);
+    console.log(`   Destination: ${destinationData.name}, ${destinationData.country} (${destinationData.coordinates[0].toFixed(4)}, ${destinationData.coordinates[1].toFixed(4)})`);
+    console.log(`   Distance: ${distance.toFixed(0)} km`);
     console.log(`   Total nights: ${totalNights}`);
     console.log(`   Trip pace: ${tripPace}`);
     console.log(`   Budget: ${budget}`);
@@ -1402,8 +1501,8 @@ app.post('/api/generate-route-nights-based', async (req, res) => {
     const job = {
       id: jobId,
       status: 'processing',
-      origin,
-      destination,
+      origin: originData,  // Store full object
+      destination: destinationData,  // Store full object
       totalNights,
       tripPace,
       budget,
@@ -1436,7 +1535,7 @@ app.post('/api/generate-route-nights-based', async (req, res) => {
     });
 
     // Start processing in background (don't await)
-    processRouteJobNightsBased(jobId, origin, destination, totalNights, tripPace, selectedAgents, budget).catch(error => {
+    processRouteJobNightsBased(jobId, originData, destinationData, totalNights, tripPace, selectedAgents, budget).catch(error => {
       console.error(`Job ${jobId} failed:`, error);
       const failedJob = routeJobs.get(jobId);
       if (failedJob) {
@@ -1488,6 +1587,83 @@ app.post('/api/geocode', async (req, res) => {
   }
 });
 
+// POST /api/geocode/autocomplete - Get city suggestions for autocomplete
+// Returns European cities only with full details (name, country, coordinates)
+app.post('/api/geocode/autocomplete', async (req, res) => {
+  try {
+    const { query } = req.body;
+
+    if (!query || query.length < 2) {
+      return res.json({ cities: [] });
+    }
+
+    console.log(`🔍 Autocomplete search for: ${query}`);
+
+    // Use Google Places Autocomplete API
+    const googleApiKey = process.env.GOOGLE_PLACES_API_KEY;
+
+    // European countries filter (ISO 3166-1 alpha-2 codes)
+    const europeanCountries = 'country:at|country:be|country:bg|country:hr|country:cy|country:cz|country:dk|country:ee|country:fi|country:fr|country:de|country:gr|country:hu|country:is|country:ie|country:it|country:lv|country:lt|country:lu|country:mt|country:nl|country:no|country:pl|country:pt|country:ro|country:sk|country:si|country:es|country:se|country:ch|country:gb';
+
+    const autocompleteUrl = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(query)}&types=(cities)&components=${europeanCountries}&key=${googleApiKey}`;
+
+    const response = await axios.get(autocompleteUrl);
+
+    if (!response.data || !response.data.predictions) {
+      console.log(`⚠️ No predictions for "${query}"`);
+      return res.json({ cities: [] });
+    }
+
+    console.log(`📍 Found ${response.data.predictions.length} predictions`);
+
+    // Get place details for each prediction to get coordinates
+    const cityPromises = response.data.predictions.slice(0, 5).map(async (prediction) => {
+      try {
+        const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${prediction.place_id}&fields=name,geometry,address_components&key=${googleApiKey}`;
+        const detailsResponse = await axios.get(detailsUrl);
+
+        if (!detailsResponse.data || !detailsResponse.data.result) {
+          return null;
+        }
+
+        const place = detailsResponse.data.result;
+
+        // Extract country from address components
+        const countryComponent = place.address_components?.find(
+          (component) => component.types.includes('country')
+        );
+        const country = countryComponent?.long_name || 'Unknown';
+
+        return {
+          name: place.name,
+          country: country,
+          coordinates: [
+            place.geometry.location.lat,
+            place.geometry.location.lng
+          ],
+          displayName: `${place.name}, ${country}`
+        };
+      } catch (error) {
+        console.error(`Failed to get details for ${prediction.description}:`, error.message);
+        return null;
+      }
+    });
+
+    // Wait for all city details to resolve
+    const cities = await Promise.all(cityPromises);
+
+    // Filter out nulls and return
+    const validCities = cities.filter(city => city !== null);
+
+    console.log(`✅ Returning ${validCities.length} cities for "${query}"`);
+    res.json({ cities: validCities });
+
+  } catch (error) {
+    console.error('Autocomplete error:', error);
+    res.json({ cities: [] });
+  }
+});
+
 // Get job status and results
 app.get('/api/route-status/:jobId', (req, res) => {
   const { jobId } = req.params;
@@ -1505,18 +1681,8 @@ app.get('/api/route-status/:jobId', (req, res) => {
     }
   }
 
-  // Extract origin from first successful agent result
-  let actualOrigin = "Aix-en-Provence, France"; // Fallback
-  if (job.status === 'completed' && job.agentResults && job.agentResults.length > 0) {
-    try {
-      const firstResult = JSON.parse(job.agentResults[0].recommendations);
-      if (firstResult.origin) {
-        actualOrigin = firstResult.origin.name || firstResult.origin.city || actualOrigin;
-      }
-    } catch (e) {
-      console.error('Failed to extract origin from agent results:', e.message);
-    }
-  }
+  // NEW: Use origin directly from job (no more hardcoded fallback!)
+  // Origin is now stored as full object {name, country, coordinates} in job
 
   res.json({
     jobId: job.id,
@@ -1524,7 +1690,7 @@ app.get('/api/route-status/:jobId', (req, res) => {
     progress: job.progress,
     route: job.status === 'completed' ? (job.result || {
       // Fallback to old format if job.result doesn't exist (for old jobs)
-      origin: actualOrigin,
+      origin: job.origin,  // Full object or string (backward compatible)
       destination: job.destination,
       totalStops: job.stops,
       budget: job.budget,
@@ -1539,9 +1705,10 @@ async function processRouteJobNightsBased(jobId, origin, destination, totalNight
   const job = routeJobs.get(jobId);
   if (!job) return;
 
+  // Origin and destination are now full objects: {name, country, coordinates}
   console.log(`\n🗺️  === Starting NIGHTS-BASED route job ${jobId} ===`);
-  console.log(`Origin: ${origin}`);
-  console.log(`Destination: ${destination}`);
+  console.log(`Origin: ${origin.name}, ${origin.country} (${origin.coordinates[0].toFixed(4)}, ${origin.coordinates[1].toFixed(4)})`);
+  console.log(`Destination: ${destination.name}, ${destination.country} (${destination.coordinates[0].toFixed(4)}, ${destination.coordinates[1].toFixed(4)})`);
   console.log(`Total nights: ${totalNights}`);
   console.log(`Trip pace: ${tripPace}`);
   console.log(`Agents: ${selectedAgents.join(', ')}`);
@@ -1557,8 +1724,8 @@ async function processRouteJobNightsBased(jobId, origin, destination, totalNight
 
     const routePlanner = new RoutePlanningAgent();
     const routePlan = await routePlanner.planRoute({
-      origin,
-      destination,
+      origin: origin.name,  // Pass city name to RoutePlanningAgent
+      destination: destination.name,  // Pass city name to RoutePlanningAgent
       totalNights,
       tripPace,
       budget
@@ -1624,8 +1791,8 @@ async function processRouteJobNightsBased(jobId, origin, destination, totalNight
         // Use agentic discovery with the planned cities
         // Note: We pass routePlan.numCities as "stops" for compatibility with existing agent code
         const result = await routeAgent.discoverRoute(
-          origin,
-          destination,
+          origin.name,  // Pass city name to RouteDiscoveryAgentV2
+          destination.name,  // Pass city name to RouteDiscoveryAgentV2
           routePlan.numCities,
           agentType,
           budget

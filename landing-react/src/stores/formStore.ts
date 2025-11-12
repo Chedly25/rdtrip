@@ -1,17 +1,21 @@
 import { create } from 'zustand'
-import type { AgentType, BudgetLevel, RouteFormData } from '../types'
+import type { AgentType, BudgetLevel, RouteFormData, CityData } from '../types'
 
 export type TripPace = 'leisurely' | 'balanced' | 'fast-paced'
 
 interface FormState extends RouteFormData {
   isLoading: boolean
   error: string | null
+  originError: string | null
+  destinationError: string | null
   totalNights: number
   tripPace: TripPace
 
   // Actions
-  setOrigin: (origin: string) => void
-  setDestination: (destination: string) => void
+  setOrigin: (origin: CityData) => void
+  setDestination: (destination: CityData) => void
+  setOriginError: (error: string | null) => void
+  setDestinationError: (error: string | null) => void
   setBudget: (budget: BudgetLevel) => void
   toggleAgent: (agent: AgentType) => void
   setAgents: (agents: AgentType[]) => void
@@ -23,8 +27,10 @@ interface FormState extends RouteFormData {
 }
 
 const initialState = {
-  origin: 'Aix-en-Provence',
-  destination: '',
+  origin: null,  // No hardcoded default - user must select
+  destination: null,
+  originError: null,
+  destinationError: null,
   budget: 'comfort' as BudgetLevel,
   agents: ['adventure', 'culture', 'food', 'hidden-gems'] as AgentType[],
   totalNights: 10,
@@ -36,9 +42,13 @@ const initialState = {
 export const useFormStore = create<FormState>((set) => ({
   ...initialState,
 
-  setOrigin: (origin) => set({ origin }),
+  setOrigin: (origin) => set({ origin, originError: null }),
 
-  setDestination: (destination) => set({ destination }),
+  setDestination: (destination) => set({ destination, destinationError: null }),
+
+  setOriginError: (originError) => set({ originError }),
+
+  setDestinationError: (destinationError) => set({ destinationError }),
 
   setBudget: (budget) => set({ budget }),
 
