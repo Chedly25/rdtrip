@@ -7052,6 +7052,456 @@ async function runDatabaseMigrations() {
   }
 }
 
+// ==================== COLLABORATION ENDPOINTS (PHASE 2) ====================
+
+/**
+ * Helper function: Check if user has permission to access a route
+ * Returns { role: 'owner'|'editor'|'viewer' } or null
+ */
+async function checkRoutePermission(routeId, userId) {
+  try {
+    // Check if collaborator with accepted status
+    const collabResult = await pool.query(`
+      SELECT role FROM route_collaborators
+      WHERE route_id = $1 AND user_id = $2 AND status = 'accepted'
+    `, [routeId, userId]);
+
+    if (collabResult.rows.length > 0) {
+      return collabResult.rows[0];
+    }
+
+    // Check if owner
+    const ownerResult = await pool.query(`
+      SELECT 1 FROM routes WHERE id = $1 AND user_id = $2
+    `, [routeId, userId]);
+
+    if (ownerResult.rows.length > 0) {
+      return { role: 'owner' };
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Error checking route permission:', error);
+    return null;
+  }
+}
+
+/**
+ * Helper function: Log activity to route_activity table
+ */
+async function logRouteActivity(routeId, userId, action, description = null, metadata = null) {
+  try {
+    await pool.query(`
+      INSERT INTO route_activity (route_id, user_id, action, description, metadata)
+      VALUES ($1, $2, $3, $4, $5)
+    `, [routeId, userId, action, description, metadata ? JSON.stringify(metadata) : null]);
+  } catch (error) {
+    console.error('Error logging route activity:', error);
+  }
+}
+
+// POST /api/routes/:id/collaborators - Invite collaborator
+app.post('/api/routes/:id/collaborators', authMiddleware, async (req, res) => {
+  try {
+    const { email, role = 'editor', message } = req.body;
+    const routeId = req.params.id;
+    const inviterId = req.user.id;
+
+    // Validate inputs
+    if (!email || !email.includes('@')) {
+      return res.status(400).json({ error: 'Valid email address is required' });
+    }
+
+    if (!['editor', 'viewer'].includes(role)) {
+      return res.status(400).json({ error: 'Role must be editor or viewer' });
+    }
+
+    // Verify user is owner or editor
+    const permission = await checkRoutePermission(routeId, inviterId);
+    if (!permission || permission.role === 'viewer') {
+      return res.status(403).json({ error: 'Not authorized to invite collaborators' });
+    }
+
+    // Find user by email
+    const invitee = await pool.query('SELECT id, name FROM users WHERE email = $1', [email]);
+    if (!invitee.rows.length) {
+      return res.status(404).json({ error: 'User not found. They need to create an account first.' });
+    }
+
+    const inviteeId = invitee.rows[0].id;
+    const inviteeName = invitee.rows[0].name;
+
+    // Check if user is inviting themselves
+    if (inviteeId === inviterId) {
+      return res.status(400).json({ error: 'You cannot invite yourself' });
+    }
+
+    // Check if already a collaborator
+    const existing = await pool.query(
+      'SELECT * FROM route_collaborators WHERE route_id = $1 AND user_id = $2',
+      [routeId, inviteeId]
+    );
+
+    if (existing.rows.length > 0) {
+      return res.status(400).json({ error: 'User is already a collaborator on this trip' });
+    }
+
+    // Insert collaborator
+    await pool.query(`
+      INSERT INTO route_collaborators (route_id, user_id, role, invited_by, status)
+      VALUES ($1, $2, $3, $4, 'pending')
+    `, [routeId, inviteeId, role, inviterId]);
+
+    // Get route details for notification
+    const route = await pool.query('SELECT name, destination FROM routes WHERE id = $1', [routeId]);
+    const routeName = route.rows[0].name || `Trip to ${route.rows[0].destination}`;
+
+    // Log activity
+    await logRouteActivity(
+      routeId,
+      inviterId,
+      'collaborator_invited',
+      `Invited ${inviteeName} as ${role}`,
+      { invitee: email, role }
+    );
+
+    // TODO: Send email notification (implement sendCollaborationInvite)
+    console.log(`📧 Would send invitation email to ${email} for route ${routeId}`);
+
+    res.json({ success: true, message: 'Collaborator invited successfully' });
+  } catch (error) {
+    console.error('Error inviting collaborator:', error);
+    res.status(500).json({ error: 'Failed to invite collaborator' });
+  }
+});
+
+// GET /api/routes/:id/collaborators - List collaborators
+app.get('/api/routes/:id/collaborators', authMiddleware, async (req, res) => {
+  try {
+    const routeId = req.params.id;
+    const userId = req.user.id;
+
+    // Verify user has access
+    const permission = await checkRoutePermission(routeId, userId);
+    if (!permission) {
+      return res.status(403).json({ error: 'Not authorized to view collaborators' });
+    }
+
+    // Get collaborators
+    const result = await pool.query(`
+      SELECT
+        c.id,
+        c.role,
+        c.status,
+        c.invited_at,
+        c.accepted_at,
+        c.last_viewed_at,
+        c.last_edited_at,
+        u.id as user_id,
+        u.name as user_name,
+        u.email as user_email,
+        u.avatar_url,
+        i.name as invited_by_name
+      FROM route_collaborators c
+      JOIN users u ON c.user_id = u.id
+      LEFT JOIN users i ON c.invited_by = i.id
+      WHERE c.route_id = $1
+      ORDER BY
+        CASE c.role
+          WHEN 'owner' THEN 1
+          WHEN 'editor' THEN 2
+          WHEN 'viewer' THEN 3
+        END,
+        c.created_at ASC
+    `, [routeId]);
+
+    // Add route owner as well
+    const owner = await pool.query(`
+      SELECT u.id, u.name, u.email, u.avatar_url
+      FROM routes r
+      JOIN users u ON r.user_id = u.id
+      WHERE r.id = $1
+    `, [routeId]);
+
+    const collaborators = [
+      {
+        user_id: owner.rows[0].id,
+        user_name: owner.rows[0].name,
+        user_email: owner.rows[0].email,
+        avatar_url: owner.rows[0].avatar_url,
+        role: 'owner',
+        status: 'accepted',
+        invited_at: null,
+        accepted_at: null
+      },
+      ...result.rows
+    ];
+
+    res.json({ collaborators });
+  } catch (error) {
+    console.error('Error fetching collaborators:', error);
+    res.status(500).json({ error: 'Failed to fetch collaborators' });
+  }
+});
+
+// PATCH /api/routes/:id/collaborators/:userId - Update collaborator role
+app.patch('/api/routes/:id/collaborators/:userId', authMiddleware, async (req, res) => {
+  try {
+    const { id: routeId, userId: targetUserId } = req.params;
+    const { role } = req.body;
+    const requesterId = req.user.id;
+
+    // Validate role
+    if (!['editor', 'viewer'].includes(role)) {
+      return res.status(400).json({ error: 'Role must be editor or viewer' });
+    }
+
+    // Only owner can update roles
+    const permission = await checkRoutePermission(routeId, requesterId);
+    if (!permission || permission.role !== 'owner') {
+      return res.status(403).json({ error: 'Only the owner can update roles' });
+    }
+
+    // Update role
+    const result = await pool.query(`
+      UPDATE route_collaborators
+      SET role = $1, updated_at = CURRENT_TIMESTAMP
+      WHERE route_id = $2 AND user_id = $3
+      RETURNING *
+    `, [role, routeId, targetUserId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Collaborator not found' });
+    }
+
+    // Log activity
+    await logRouteActivity(
+      routeId,
+      requesterId,
+      'collaborator_role_updated',
+      `Changed collaborator role to ${role}`
+    );
+
+    res.json({ success: true, collaborator: result.rows[0] });
+  } catch (error) {
+    console.error('Error updating collaborator:', error);
+    res.status(500).json({ error: 'Failed to update collaborator' });
+  }
+});
+
+// DELETE /api/routes/:id/collaborators/:userId - Remove collaborator
+app.delete('/api/routes/:id/collaborators/:userId', authMiddleware, async (req, res) => {
+  try {
+    const { id: routeId, userId: targetUserId } = req.params;
+    const requesterId = req.user.id;
+
+    // Only owner can remove others, or users can remove themselves
+    const permission = await checkRoutePermission(routeId, requesterId);
+    if (permission.role !== 'owner' && requesterId !== targetUserId) {
+      return res.status(403).json({ error: 'Not authorized to remove collaborator' });
+    }
+
+    // Remove collaborator
+    const result = await pool.query(`
+      DELETE FROM route_collaborators
+      WHERE route_id = $1 AND user_id = $2
+      RETURNING *
+    `, [routeId, targetUserId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Collaborator not found' });
+    }
+
+    // Log activity
+    const description = requesterId === targetUserId ? 'Left the trip' : 'Removed a collaborator';
+    await logRouteActivity(routeId, requesterId, 'collaborator_removed', description);
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error removing collaborator:', error);
+    res.status(500).json({ error: 'Failed to remove collaborator' });
+  }
+});
+
+// POST /api/routes/:id/collaborators/:userId/accept - Accept invitation
+app.post('/api/routes/:id/collaborators/:userId/accept', authMiddleware, async (req, res) => {
+  try {
+    const { id: routeId, userId } = req.params;
+    const requesterId = req.user.id;
+
+    // User can only accept their own invitation
+    if (requesterId !== userId) {
+      return res.status(403).json({ error: 'You can only accept your own invitations' });
+    }
+
+    // Update status to accepted
+    const result = await pool.query(`
+      UPDATE route_collaborators
+      SET status = 'accepted', accepted_at = CURRENT_TIMESTAMP
+      WHERE route_id = $1 AND user_id = $2
+      RETURNING *
+    `, [routeId, userId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Invitation not found' });
+    }
+
+    // Log activity
+    await logRouteActivity(routeId, userId, 'collaborator_joined', 'Accepted invitation to collaborate');
+
+    res.json({ success: true, message: 'Invitation accepted' });
+  } catch (error) {
+    console.error('Error accepting invitation:', error);
+    res.status(500).json({ error: 'Failed to accept invitation' });
+  }
+});
+
+// POST /api/routes/:id/messages - Send chat message
+app.post('/api/routes/:id/messages', authMiddleware, async (req, res) => {
+  try {
+    const { message, messageType = 'text', metadata } = req.body;
+    const routeId = req.params.id;
+    const userId = req.user.id;
+
+    // Validate message
+    if (!message || !message.trim()) {
+      return res.status(400).json({ error: 'Message cannot be empty' });
+    }
+
+    // Verify access
+    const permission = await checkRoutePermission(routeId, userId);
+    if (!permission) {
+      return res.status(403).json({ error: 'Not authorized to send messages' });
+    }
+
+    // Insert message
+    const result = await pool.query(`
+      INSERT INTO trip_messages (route_id, user_id, message, message_type, metadata)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING
+        *,
+        (SELECT name FROM users WHERE id = $2) as user_name,
+        (SELECT avatar_url FROM users WHERE id = $2) as user_avatar
+    `, [routeId, userId, message, messageType, metadata ? JSON.stringify(metadata) : null]);
+
+    const newMessage = result.rows[0];
+
+    // Broadcast via WebSocket if available
+    if (global.collaborationService) {
+      global.collaborationService.broadcast(routeId, {
+        type: 'chat_message',
+        data: newMessage
+      });
+    }
+
+    res.json({ message: newMessage });
+  } catch (error) {
+    console.error('Error sending message:', error);
+    res.status(500).json({ error: 'Failed to send message' });
+  }
+});
+
+// GET /api/routes/:id/messages - Get chat history
+app.get('/api/routes/:id/messages', authMiddleware, async (req, res) => {
+  try {
+    const routeId = req.params.id;
+    const userId = req.user.id;
+    const { limit = 100, offset = 0 } = req.query;
+
+    // Verify access
+    const permission = await checkRoutePermission(routeId, userId);
+    if (!permission) {
+      return res.status(403).json({ error: 'Not authorized to view messages' });
+    }
+
+    // Get messages
+    const result = await pool.query(`
+      SELECT
+        m.*,
+        u.name as user_name,
+        u.avatar_url as user_avatar
+      FROM trip_messages m
+      JOIN users u ON m.user_id = u.id
+      WHERE m.route_id = $1
+        AND m.is_deleted = false
+      ORDER BY m.created_at DESC
+      LIMIT $2 OFFSET $3
+    `, [routeId, parseInt(limit), parseInt(offset)]);
+
+    res.json({ messages: result.rows.reverse() });
+  } catch (error) {
+    console.error('Error fetching messages:', error);
+    res.status(500).json({ error: 'Failed to fetch messages' });
+  }
+});
+
+// GET /api/routes/:id/activity - Get activity log
+app.get('/api/routes/:id/activity', authMiddleware, async (req, res) => {
+  try {
+    const routeId = req.params.id;
+    const userId = req.user.id;
+    const { limit = 50 } = req.query;
+
+    // Verify access
+    const permission = await checkRoutePermission(routeId, userId);
+    if (!permission) {
+      return res.status(403).json({ error: 'Not authorized to view activity' });
+    }
+
+    // Get activity log
+    const result = await pool.query(`
+      SELECT
+        a.*,
+        u.name as user_name,
+        u.avatar_url as user_avatar
+      FROM route_activity a
+      JOIN users u ON a.user_id = u.id
+      WHERE a.route_id = $1
+      ORDER BY a.created_at DESC
+      LIMIT $2
+    `, [routeId, parseInt(limit)]);
+
+    res.json({ activities: result.rows });
+  } catch (error) {
+    console.error('Error fetching activity:', error);
+    res.status(500).json({ error: 'Failed to fetch activity' });
+  }
+});
+
+// GET /api/routes/:id/presence - Get current presence (who's online)
+app.get('/api/routes/:id/presence', authMiddleware, async (req, res) => {
+  try {
+    const routeId = req.params.id;
+    const userId = req.user.id;
+
+    // Verify access
+    const permission = await checkRoutePermission(routeId, userId);
+    if (!permission) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    // Get presence (users seen in last 5 minutes)
+    const result = await pool.query(`
+      SELECT
+        p.*,
+        u.name as user_name,
+        u.avatar_url as user_avatar
+      FROM user_presence p
+      JOIN users u ON p.user_id = u.id
+      WHERE p.route_id = $1
+        AND p.last_seen_at > NOW() - INTERVAL '5 minutes'
+      ORDER BY p.last_seen_at DESC
+    `, [routeId]);
+
+    res.json({ presence: result.rows });
+  } catch (error) {
+    console.error('Error fetching presence:', error);
+    res.status(500).json({ error: 'Failed to fetch presence' });
+  }
+});
+
+console.log('✅ Collaboration API endpoints initialized');
+
 // ==================== CACHE WARMING (OPTIONAL) ====================
 
 /**
@@ -7177,12 +7627,36 @@ async function warmCacheForPopularCities() {
 
 // Run migrations and then start server
 runDatabaseMigrations().then(() => {
-  app.listen(PORT, () => {
+  const server = app.listen(PORT, () => {
     console.log(`🚗 Road Trip Planner MVP running on port ${PORT}`);
     console.log(`📍 Loaded ${europeanLandmarks.length} European landmarks`);
 
+    // Initialize WebSocket CollaborationService for real-time features
+    const CollaborationService = require('./server/services/CollaborationService');
+    const collaborationService = new CollaborationService(server, pool);
+    global.collaborationService = collaborationService; // Make available to API endpoints
+
     // Cache warming enabled for instant loads on popular cities
     warmCacheForPopularCities();
+
+    // Graceful shutdown handler
+    process.on('SIGTERM', () => {
+      console.log('🛑 SIGTERM received, closing server gracefully...');
+      collaborationService.close();
+      server.close(() => {
+        console.log('✅ Server closed');
+        process.exit(0);
+      });
+    });
+
+    process.on('SIGINT', () => {
+      console.log('🛑 SIGINT received, closing server gracefully...');
+      collaborationService.close();
+      server.close(() => {
+        console.log('✅ Server closed');
+        process.exit(0);
+      });
+    });
   });
 }).catch(error => {
   console.error('Failed to start server:', error);
