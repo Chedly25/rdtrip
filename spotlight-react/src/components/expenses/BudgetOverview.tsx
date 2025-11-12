@@ -3,7 +3,6 @@ import { motion } from 'framer-motion'
 import {
   PiggyBank,
   AlertTriangle,
-  TrendingUp,
   CheckCircle,
   Loader2,
   Plus
@@ -28,13 +27,14 @@ const CATEGORY_ICONS: Record<ExpenseCategory, string> = {
   other: '📝'
 }
 
-export function BudgetOverview({ routeId, userId }: BudgetOverviewProps) {
+export function BudgetOverview({ routeId }: BudgetOverviewProps) {
   const [budgets, setBudgets] = useState<Budget[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   // WebSocket for real-time updates
-  const { lastMessage } = useWebSocket('/ws/collab', {
+  // @ts-ignore - lastMessage not needed, using onMessage callback
+  const { lastMessage: _ } = useWebSocket('/ws/collab', {
     onMessage: (message) => {
       // Refresh budgets when expenses change (budget vs actual spending)
       if (
@@ -200,7 +200,6 @@ export function BudgetOverview({ routeId, userId }: BudgetOverviewProps) {
           <div className="space-y-4">
             {budgets.map((budget, idx) => {
               const percentage = budget.spendPercentage || 0
-              const statusColor = getStatusColor(percentage, budget.alertThreshold)
               const isOverBudget = percentage >= 1
               const isNearLimit = percentage >= budget.alertThreshold && !isOverBudget
 
