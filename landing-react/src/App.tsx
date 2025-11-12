@@ -13,6 +13,8 @@ import { About } from './components/About'
 import { Footer } from './components/Footer'
 import MyRoutes from './pages/MyRoutes'
 import SharedRoute from './pages/SharedRoute'
+import MarketplacePage from './pages/MarketplacePage'
+import RouteDetailPage from './pages/RouteDetailPage'
 import './App.css'
 
 const queryClient = new QueryClient()
@@ -100,6 +102,8 @@ function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/my-routes" element={<MyRoutes />} />
             <Route path="/shared/:token" element={<SharedRoute />} />
+            <Route path="/marketplace" element={<MarketplacePage />} />
+            <Route path="/marketplace/:slug" element={<RouteDetailPage />} />
           </Routes>
           <Footer />
         </div>

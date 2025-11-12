@@ -57,6 +57,14 @@ export function Navigation() {
           >
             Plan Route
           </button>
+          <a
+            href="/marketplace"
+            className={`font-medium transition-colors hover:text-slate-900 ${
+              isScrolled ? 'text-gray-700' : 'text-white'
+            }`}
+          >
+            Marketplace
+          </a>
           <button
             onClick={() => scrollToSection('features')}
             className={`font-medium transition-colors hover:text-slate-900 ${
@@ -105,6 +113,12 @@ export function Navigation() {
               >
                 Plan Route
               </button>
+              <a
+                href="/marketplace"
+                className="text-left font-medium text-gray-700 hover:text-slate-900"
+              >
+                Marketplace
+              </a>
               <button
                 onClick={() => scrollToSection('features')}
                 className="text-left font-medium text-gray-700 hover:text-slate-900"
