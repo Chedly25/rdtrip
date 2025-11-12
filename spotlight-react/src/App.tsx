@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { SpotlightPageComplete } from './components/spotlight/SpotlightPageComplete'
+import { BrowserRouter as Router } from 'react-router-dom'
+import SpotlightV2 from './components/spotlight/v2/SpotlightV2'
 import { useSpotlightStore } from './stores/spotlightStore'
 import { useRouteDataStore } from './stores/routeDataStore'
 import { enrichCityData } from './services/cityEnrichment'
@@ -444,13 +445,17 @@ function AppContent() {
     }
   }, [routeData, setWaypoints, setOriginalCities, updateWaypoint]);
 
-  return <SpotlightPageComplete />
+  // Note: Old spotlight enrichment logic is preserved above but not used by SpotlightV2
+  // SpotlightV2 handles data loading from localStorage directly
+  return <SpotlightV2 />
 }
 
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AppContent />
+      <Router>
+        <AppContent />
+      </Router>
     </QueryClientProvider>
   )
 }
