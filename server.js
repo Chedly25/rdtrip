@@ -10,6 +10,8 @@ const ItineraryAgentOrchestrator = require('./server/agents/ItineraryAgentOrches
 const RouteDiscoveryAgentV2 = require('./server/agents/RouteDiscoveryAgentV2');
 const RoutePlanningAgent = require('./server/agents/RoutePlanningAgent');
 const GooglePlacesService = require('./server/services/googlePlacesService');
+const ReceiptScannerService = require('./server/services/ReceiptScannerService');
+const CurrencyService = require('./server/services/CurrencyService');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -7501,6 +7503,1627 @@ app.get('/api/routes/:id/presence', authMiddleware, async (req, res) => {
 });
 
 console.log('✅ Collaboration API endpoints initialized');
+
+// ==================== PHASE 3: EXPENSE TRACKING & SPLITTING ====================
+
+/**
+ * Middleware for file upload (receipts)
+ */
+const multer = require('multer');
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB max
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/heic'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only JPEG, PNG, WEBP, and HEIC images are allowed.'));
+    }
+  }
+});
+
+// POST /api/routes/:id/expenses - Create new expense
+app.post('/api/routes/:id/expenses', authMiddleware, async (req, res) => {
+  try {
+    const routeId = req.params.id;
+    const userId = req.user.id;
+    const {
+      description,
+      category,
+      amount,
+      currency = 'EUR',
+      expenseDate,
+      location,
+      cityName,
+      receiptUrl,
+      receiptData,
+      splitMethod = 'equal',
+      splitData,
+      participants,
+      notes,
+      tags
+    } = req.body;
+
+    // Verify user has edit access
+    const permission = await checkRoutePermission(routeId, userId);
+    if (!permission || permission.role === 'viewer') {
+      return res.status(403).json({ error: 'Not authorized to add expenses' });
+    }
+
+    // Validate required fields
+    if (!description || !category || !amount || !expenseDate || !participants || participants.length === 0) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    // Convert amount to EUR for calculations
+    const amountEur = await CurrencyService.convertToEUR(parseFloat(amount), currency);
+
+    // Insert expense
+    const result = await pool.query(`
+      INSERT INTO trip_expenses (
+        route_id, paid_by, description, category, amount, currency, amount_eur,
+        expense_date, location, city_name, receipt_url, receipt_data,
+        split_method, split_data, participants, notes, tags
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+      RETURNING *
+    `, [
+      routeId,
+      userId,
+      description,
+      category,
+      parseFloat(amount),
+      currency,
+      amountEur,
+      expenseDate,
+      location,
+      cityName,
+      receiptUrl,
+      receiptData ? JSON.stringify(receiptData) : null,
+      splitMethod,
+      splitData ? JSON.stringify(splitData) : null,
+      participants,
+      notes,
+      tags
+    ]);
+
+    const expense = result.rows[0];
+
+    // Log activity
+    await logRouteActivity(
+      routeId,
+      userId,
+      'expense_added',
+      `Added expense: ${description} (${CurrencyService.formatAmount(parseFloat(amount), currency)})`
+    );
+
+    // Broadcast via WebSocket
+    if (global.collaborationService) {
+      global.collaborationService.broadcast(routeId, {
+        type: 'expense_added',
+        data: expense
+      });
+    }
+
+    res.json({ expense });
+  } catch (error) {
+    console.error('Error creating expense:', error);
+    res.status(500).json({ error: 'Failed to create expense' });
+  }
+});
+
+// GET /api/routes/:id/expenses - List expenses
+app.get('/api/routes/:id/expenses', authMiddleware, async (req, res) => {
+  try {
+    const routeId = req.params.id;
+    const userId = req.user.id;
+    const { category, startDate, endDate, paidBy } = req.query;
+
+    // Verify access
+    const permission = await checkRoutePermission(routeId, userId);
+    if (!permission) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    // Build query with filters
+    let query = `
+      SELECT
+        e.*,
+        u.name as paid_by_name,
+        u.avatar_url as paid_by_avatar
+      FROM trip_expenses e
+      JOIN users u ON e.paid_by = u.id
+      WHERE e.route_id = $1
+    `;
+    const params = [routeId];
+    let paramIndex = 2;
+
+    if (category) {
+      query += ` AND e.category = $${paramIndex}`;
+      params.push(category);
+      paramIndex++;
+    }
+
+    if (startDate) {
+      query += ` AND e.expense_date >= $${paramIndex}`;
+      params.push(startDate);
+      paramIndex++;
+    }
+
+    if (endDate) {
+      query += ` AND e.expense_date <= $${paramIndex}`;
+      params.push(endDate);
+      paramIndex++;
+    }
+
+    if (paidBy) {
+      query += ` AND e.paid_by = $${paramIndex}`;
+      params.push(paidBy);
+      paramIndex++;
+    }
+
+    query += ` ORDER BY e.expense_date DESC, e.created_at DESC`;
+
+    const result = await pool.query(query, params);
+
+    // Get total summary
+    const summaryResult = await pool.query(`
+      SELECT
+        COUNT(*) as total_count,
+        SUM(amount_eur) as total_eur,
+        category
+      FROM trip_expenses
+      WHERE route_id = $1
+      GROUP BY category
+    `, [routeId]);
+
+    res.json({
+      expenses: result.rows,
+      summary: summaryResult.rows
+    });
+  } catch (error) {
+    console.error('Error fetching expenses:', error);
+    res.status(500).json({ error: 'Failed to fetch expenses' });
+  }
+});
+
+// GET /api/routes/:id/expenses/:expenseId - Get single expense
+app.get('/api/routes/:id/expenses/:expenseId', authMiddleware, async (req, res) => {
+  try {
+    const { id: routeId, expenseId } = req.params;
+    const userId = req.user.id;
+
+    // Verify access
+    const permission = await checkRoutePermission(routeId, userId);
+    if (!permission) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    const result = await pool.query(`
+      SELECT
+        e.*,
+        u.name as paid_by_name,
+        u.avatar_url as paid_by_avatar
+      FROM trip_expenses e
+      JOIN users u ON e.paid_by = u.id
+      WHERE e.id = $1 AND e.route_id = $2
+    `, [expenseId, routeId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Expense not found' });
+    }
+
+    res.json({ expense: result.rows[0] });
+  } catch (error) {
+    console.error('Error fetching expense:', error);
+    res.status(500).json({ error: 'Failed to fetch expense' });
+  }
+});
+
+// PATCH /api/routes/:id/expenses/:expenseId - Update expense
+app.patch('/api/routes/:id/expenses/:expenseId', authMiddleware, async (req, res) => {
+  try {
+    const { id: routeId, expenseId } = req.params;
+    const userId = req.user.id;
+    const updates = req.body;
+
+    // Verify edit access
+    const permission = await checkRoutePermission(routeId, userId);
+    if (!permission || permission.role === 'viewer') {
+      return res.status(403).json({ error: 'Not authorized to edit expenses' });
+    }
+
+    // Check if user is the one who paid (or is owner)
+    const expenseCheck = await pool.query(
+      'SELECT paid_by FROM trip_expenses WHERE id = $1 AND route_id = $2',
+      [expenseId, routeId]
+    );
+
+    if (expenseCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Expense not found' });
+    }
+
+    if (expenseCheck.rows[0].paid_by !== userId && permission.role !== 'owner') {
+      return res.status(403).json({ error: 'Only the payer or owner can edit this expense' });
+    }
+
+    // Build update query dynamically
+    const allowedFields = [
+      'description', 'category', 'amount', 'currency', 'expense_date',
+      'location', 'city_name', 'split_method', 'split_data', 'participants',
+      'notes', 'tags', 'is_reimbursed'
+    ];
+
+    const updateFields = [];
+    const values = [];
+    let paramIndex = 1;
+
+    for (const [key, value] of Object.entries(updates)) {
+      const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+      if (allowedFields.includes(snakeKey)) {
+        updateFields.push(`${snakeKey} = $${paramIndex}`);
+        values.push(value);
+        paramIndex++;
+      }
+    }
+
+    if (updateFields.length === 0) {
+      return res.status(400).json({ error: 'No valid fields to update' });
+    }
+
+    // Recalculate EUR amount if amount or currency changed
+    if (updates.amount || updates.currency) {
+      const currentExpense = expenseCheck.rows[0];
+      const newAmount = updates.amount || currentExpense.amount;
+      const newCurrency = updates.currency || currentExpense.currency;
+      const amountEur = await CurrencyService.convertToEUR(parseFloat(newAmount), newCurrency);
+      updateFields.push(`amount_eur = $${paramIndex}`);
+      values.push(amountEur);
+      paramIndex++;
+    }
+
+    updateFields.push('updated_at = CURRENT_TIMESTAMP');
+    values.push(expenseId, routeId);
+
+    const query = `
+      UPDATE trip_expenses
+      SET ${updateFields.join(', ')}
+      WHERE id = $${paramIndex} AND route_id = $${paramIndex + 1}
+      RETURNING *
+    `;
+
+    const result = await pool.query(query, values);
+
+    // Log activity
+    await logRouteActivity(routeId, userId, 'expense_updated', `Updated expense: ${result.rows[0].description}`);
+
+    // Broadcast update
+    if (global.collaborationService) {
+      global.collaborationService.broadcast(routeId, {
+        type: 'expense_updated',
+        data: result.rows[0]
+      });
+    }
+
+    res.json({ expense: result.rows[0] });
+  } catch (error) {
+    console.error('Error updating expense:', error);
+    res.status(500).json({ error: 'Failed to update expense' });
+  }
+});
+
+// DELETE /api/routes/:id/expenses/:expenseId - Delete expense
+app.delete('/api/routes/:id/expenses/:expenseId', authMiddleware, async (req, res) => {
+  try {
+    const { id: routeId, expenseId } = req.params;
+    const userId = req.user.id;
+
+    // Verify edit access
+    const permission = await checkRoutePermission(routeId, userId);
+    if (!permission || permission.role === 'viewer') {
+      return res.status(403).json({ error: 'Not authorized to delete expenses' });
+    }
+
+    // Check if user is the one who paid (or is owner)
+    const expenseCheck = await pool.query(
+      'SELECT paid_by, description FROM trip_expenses WHERE id = $1 AND route_id = $2',
+      [expenseId, routeId]
+    );
+
+    if (expenseCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Expense not found' });
+    }
+
+    if (expenseCheck.rows[0].paid_by !== userId && permission.role !== 'owner') {
+      return res.status(403).json({ error: 'Only the payer or owner can delete this expense' });
+    }
+
+    // Delete expense
+    await pool.query('DELETE FROM trip_expenses WHERE id = $1 AND route_id = $2', [expenseId, routeId]);
+
+    // Log activity
+    await logRouteActivity(routeId, userId, 'expense_deleted', `Deleted expense: ${expenseCheck.rows[0].description}`);
+
+    // Broadcast deletion
+    if (global.collaborationService) {
+      global.collaborationService.broadcast(routeId, {
+        type: 'expense_deleted',
+        data: { expenseId }
+      });
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting expense:', error);
+    res.status(500).json({ error: 'Failed to delete expense' });
+  }
+});
+
+// POST /api/routes/:id/expenses/scan-receipt - Scan receipt with AI
+app.post('/api/routes/:id/expenses/scan-receipt', authMiddleware, upload.single('receipt'), async (req, res) => {
+  try {
+    const routeId = req.params.id;
+    const userId = req.user.id;
+
+    // Verify edit access
+    const permission = await checkRoutePermission(routeId, userId);
+    if (!permission || permission.role === 'viewer') {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ error: 'No receipt image provided' });
+    }
+
+    console.log(`Scanning receipt for route ${routeId}...`);
+
+    // Scan receipt with AI
+    const scannedData = await ReceiptScannerService.scanReceipt(req.file.buffer, req.file.mimetype);
+
+    res.json({
+      success: true,
+      data: scannedData,
+      message: 'Receipt scanned successfully'
+    });
+  } catch (error) {
+    console.error('Error scanning receipt:', error);
+    res.status(500).json({ error: error.message || 'Failed to scan receipt' });
+  }
+});
+
+// GET /api/routes/:id/expenses/balances - Get user balances
+app.get('/api/routes/:id/expenses/balances', authMiddleware, async (req, res) => {
+  try {
+    const routeId = req.params.id;
+    const userId = req.user.id;
+
+    // Verify access
+    const permission = await checkRoutePermission(routeId, userId);
+    if (!permission) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    // Get balances from view
+    const result = await pool.query(`
+      SELECT
+        b.user_id,
+        b.balance,
+        u.name as user_name,
+        u.email as user_email,
+        u.avatar_url as user_avatar
+      FROM user_balances b
+      JOIN users u ON b.user_id = u.id
+      WHERE b.route_id = $1
+      ORDER BY b.balance DESC
+    `, [routeId]);
+
+    // Calculate simplified settlements (who owes whom)
+    const balances = result.rows;
+    const settlements = calculateSimplifiedSettlements(balances);
+
+    res.json({
+      balances: balances,
+      settlements: settlements
+    });
+  } catch (error) {
+    console.error('Error calculating balances:', error);
+    res.status(500).json({ error: 'Failed to calculate balances' });
+  }
+});
+
+// POST /api/routes/:id/expenses/settlements - Create settlement
+app.post('/api/routes/:id/expenses/settlements', authMiddleware, async (req, res) => {
+  try {
+    const routeId = req.params.id;
+    const userId = req.user.id;
+    const { debtorId, creditorId, amount, currency = 'EUR', paymentMethod, paymentReference } = req.body;
+
+    // Verify edit access
+    const permission = await checkRoutePermission(routeId, userId);
+    if (!permission || permission.role === 'viewer') {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    // Validate
+    if (!debtorId || !creditorId || !amount) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    if (debtorId === creditorId) {
+      return res.status(400).json({ error: 'Debtor and creditor cannot be the same' });
+    }
+
+    // Insert settlement
+    const result = await pool.query(`
+      INSERT INTO expense_settlements (
+        route_id, debtor, creditor, amount, currency, payment_method, payment_reference
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+      RETURNING *
+    `, [routeId, debtorId, creditorId, parseFloat(amount), currency, paymentMethod, paymentReference]);
+
+    const settlement = result.rows[0];
+
+    // Log activity
+    await logRouteActivity(routeId, userId, 'settlement_created', `Created settlement: ${CurrencyService.formatAmount(parseFloat(amount), currency)}`);
+
+    // Broadcast
+    if (global.collaborationService) {
+      global.collaborationService.broadcast(routeId, {
+        type: 'settlement_created',
+        data: settlement
+      });
+    }
+
+    res.json({ settlement });
+  } catch (error) {
+    console.error('Error creating settlement:', error);
+    res.status(500).json({ error: 'Failed to create settlement' });
+  }
+});
+
+// GET /api/routes/:id/expenses/settlements - List settlements
+app.get('/api/routes/:id/expenses/settlements', authMiddleware, async (req, res) => {
+  try {
+    const routeId = req.params.id;
+    const userId = req.user.id;
+
+    // Verify access
+    const permission = await checkRoutePermission(routeId, userId);
+    if (!permission) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    const result = await pool.query(`
+      SELECT
+        s.*,
+        d.name as debtor_name,
+        d.avatar_url as debtor_avatar,
+        c.name as creditor_name,
+        c.avatar_url as creditor_avatar
+      FROM expense_settlements s
+      JOIN users d ON s.debtor = d.id
+      JOIN users c ON s.creditor = c.id
+      WHERE s.route_id = $1
+      ORDER BY s.created_at DESC
+    `, [routeId]);
+
+    res.json({ settlements: result.rows });
+  } catch (error) {
+    console.error('Error fetching settlements:', error);
+    res.status(500).json({ error: 'Failed to fetch settlements' });
+  }
+});
+
+// PATCH /api/routes/:id/expenses/settlements/:settlementId - Update settlement status
+app.patch('/api/routes/:id/expenses/settlements/:settlementId', authMiddleware, async (req, res) => {
+  try {
+    const { id: routeId, settlementId } = req.params;
+    const userId = req.user.id;
+    const { status } = req.body;
+
+    // Verify edit access
+    const permission = await checkRoutePermission(routeId, userId);
+    if (!permission || permission.role === 'viewer') {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    // Validate status
+    if (!['pending', 'completed', 'cancelled'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+
+    // Update settlement
+    const result = await pool.query(`
+      UPDATE expense_settlements
+      SET
+        status = $1,
+        settled_at = CASE WHEN $1 = 'completed' THEN CURRENT_TIMESTAMP ELSE settled_at END,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $2 AND route_id = $3
+      RETURNING *
+    `, [status, settlementId, routeId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Settlement not found' });
+    }
+
+    // Log activity
+    await logRouteActivity(routeId, userId, 'settlement_updated', `Updated settlement status to ${status}`);
+
+    // Broadcast
+    if (global.collaborationService) {
+      global.collaborationService.broadcast(routeId, {
+        type: 'settlement_updated',
+        data: result.rows[0]
+      });
+    }
+
+    res.json({ settlement: result.rows[0] });
+  } catch (error) {
+    console.error('Error updating settlement:', error);
+    res.status(500).json({ error: 'Failed to update settlement' });
+  }
+});
+
+// POST /api/routes/:id/budgets - Create/update budget
+app.post('/api/routes/:id/budgets', authMiddleware, async (req, res) => {
+  try {
+    const routeId = req.params.id;
+    const userId = req.user.id;
+    const { category, budgetedAmount, currency = 'EUR', alertThreshold = 0.8 } = req.body;
+
+    // Verify edit access
+    const permission = await checkRoutePermission(routeId, userId);
+    if (!permission || permission.role === 'viewer') {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    // Validate
+    if (!category || !budgetedAmount) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    // Upsert budget
+    const result = await pool.query(`
+      INSERT INTO trip_budgets (route_id, category, budgeted_amount, currency, alert_threshold)
+      VALUES ($1, $2, $3, $4, $5)
+      ON CONFLICT (route_id, category)
+      DO UPDATE SET
+        budgeted_amount = EXCLUDED.budgeted_amount,
+        currency = EXCLUDED.currency,
+        alert_threshold = EXCLUDED.alert_threshold,
+        alert_sent = false,
+        updated_at = CURRENT_TIMESTAMP
+      RETURNING *
+    `, [routeId, category, parseFloat(budgetedAmount), currency, parseFloat(alertThreshold)]);
+
+    res.json({ budget: result.rows[0] });
+  } catch (error) {
+    console.error('Error creating budget:', error);
+    res.status(500).json({ error: 'Failed to create budget' });
+  }
+});
+
+// GET /api/routes/:id/budgets - Get budgets with actual spending
+app.get('/api/routes/:id/budgets', authMiddleware, async (req, res) => {
+  try {
+    const routeId = req.params.id;
+    const userId = req.user.id;
+
+    // Verify access
+    const permission = await checkRoutePermission(routeId, userId);
+    if (!permission) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    // Get budgets with actual spending from view
+    const result = await pool.query(`
+      SELECT
+        budget_id,
+        route_id,
+        category,
+        budgeted_amount,
+        currency,
+        actual_spent,
+        remaining,
+        spend_percentage,
+        alert_threshold,
+        alert_sent
+      FROM budget_vs_actual
+      WHERE route_id = $1
+      ORDER BY spend_percentage DESC
+    `, [routeId]);
+
+    res.json({ budgets: result.rows });
+  } catch (error) {
+    console.error('Error fetching budgets:', error);
+    res.status(500).json({ error: 'Failed to fetch budgets' });
+  }
+});
+
+/**
+ * Helper: Calculate simplified settlements using greedy algorithm
+ * Minimizes number of transactions needed to settle all debts
+ */
+function calculateSimplifiedSettlements(balances) {
+  // Separate creditors (positive balance) and debtors (negative balance)
+  const creditors = balances
+    .filter(b => b.balance > 0.01) // Small threshold to avoid floating point issues
+    .map(b => ({ ...b, remaining: b.balance }))
+    .sort((a, b) => b.remaining - a.remaining);
+
+  const debtors = balances
+    .filter(b => b.balance < -0.01)
+    .map(b => ({ ...b, remaining: Math.abs(b.balance) }))
+    .sort((a, b) => b.remaining - a.remaining);
+
+  const settlements = [];
+
+  // Greedy algorithm: match largest creditor with largest debtor
+  let i = 0;
+  let j = 0;
+
+  while (i < creditors.length && j < debtors.length) {
+    const creditor = creditors[i];
+    const debtor = debtors[j];
+
+    const amount = Math.min(creditor.remaining, debtor.remaining);
+
+    if (amount > 0.01) {
+      settlements.push({
+        from: debtor.user_id,
+        fromName: debtor.user_name,
+        to: creditor.user_id,
+        toName: creditor.user_name,
+        amount: parseFloat(amount.toFixed(2)),
+        currency: 'EUR'
+      });
+
+      creditor.remaining -= amount;
+      debtor.remaining -= amount;
+    }
+
+    // Move to next creditor/debtor if current one is settled
+    if (creditor.remaining < 0.01) i++;
+    if (debtor.remaining < 0.01) j++;
+  }
+
+  return settlements;
+}
+
+console.log('✅ Expense tracking API endpoints initialized');
+
+// ==================== PHASE 4: MARKETPLACE API ENDPOINTS ====================
+
+/**
+ * Helper: Generate SEO-friendly slug from title
+ */
+function generateSlug(title) {
+  return title
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '') // Remove special characters
+    .replace(/\s+/g, '-') // Replace spaces with hyphens
+    .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
+    .substring(0, 255); // Limit to 255 chars
+}
+
+/**
+ * Helper: Ensure unique slug by appending counter if needed
+ */
+async function ensureUniqueSlug(baseSlug, excludeId = null) {
+  let slug = baseSlug;
+  let counter = 1;
+
+  while (true) {
+    const query = excludeId
+      ? 'SELECT id FROM published_routes WHERE slug = $1 AND id != $2'
+      : 'SELECT id FROM published_routes WHERE slug = $1';
+    const params = excludeId ? [slug, excludeId] : [slug];
+
+    const result = await pool.query(query, params);
+
+    if (result.rows.length === 0) {
+      return slug;
+    }
+
+    slug = `${baseSlug}-${counter}`;
+    counter++;
+  }
+}
+
+// GET /api/marketplace/routes - Browse and search marketplace routes
+app.get('/api/marketplace/routes', async (req, res) => {
+  try {
+    const {
+      search = '',
+      style = 'all',
+      duration = 'any',
+      difficulty = 'any',
+      season = 'any',
+      sortBy = 'popular',
+      page = 1,
+      pageSize = 12
+    } = req.query;
+
+    const offset = (parseInt(page) - 1) * parseInt(pageSize);
+    const limit = parseInt(pageSize);
+
+    // Build WHERE clause
+    let whereConditions = ["pr.status = 'published'"];
+    let queryParams = [];
+    let paramCounter = 1;
+
+    // Full-text search
+    if (search && search.trim()) {
+      whereConditions.push(`(
+        to_tsvector('english', pr.title || ' ' || pr.description || ' ' ||
+          COALESCE(array_to_string(pr.tags, ' '), '') || ' ' ||
+          COALESCE(array_to_string(pr.cities_visited, ' '), ''))
+        @@ plainto_tsquery('english', $${paramCounter})
+      )`);
+      queryParams.push(search.trim());
+      paramCounter++;
+    }
+
+    // Style filter
+    if (style !== 'all') {
+      whereConditions.push(`pr.primary_style = $${paramCounter}`);
+      queryParams.push(style);
+      paramCounter++;
+    }
+
+    // Duration filter
+    if (duration !== 'any') {
+      const durationMap = {
+        'weekend': [2, 3],
+        'week': [4, 7],
+        '2-weeks': [8, 14],
+        'month': [15, 365]
+      };
+      const [min, max] = durationMap[duration] || [0, 365];
+      whereConditions.push(`pr.duration_days >= $${paramCounter} AND pr.duration_days <= $${paramCounter + 1}`);
+      queryParams.push(min, max);
+      paramCounter += 2;
+    }
+
+    // Difficulty filter
+    if (difficulty !== 'any') {
+      whereConditions.push(`pr.difficulty_level = $${paramCounter}`);
+      queryParams.push(difficulty);
+      paramCounter++;
+    }
+
+    // Season filter
+    if (season !== 'any') {
+      whereConditions.push(`(pr.best_season = $${paramCounter} OR pr.best_season = 'year-round')`);
+      queryParams.push(season);
+      paramCounter++;
+    }
+
+    const whereClause = whereConditions.length > 0
+      ? 'WHERE ' + whereConditions.join(' AND ')
+      : '';
+
+    // Sorting
+    const sortMap = {
+      'popular': 'pr.clone_count DESC, pr.view_count DESC',
+      'recent': 'pr.created_at DESC',
+      'rating': 'pr.rating DESC, pr.review_count DESC',
+      'clones': 'pr.clone_count DESC'
+    };
+    const orderBy = sortMap[sortBy] || sortMap['popular'];
+
+    // Get total count
+    const countQuery = `
+      SELECT COUNT(*) as total
+      FROM published_routes pr
+      ${whereClause}
+    `;
+    const countResult = await pool.query(countQuery, queryParams);
+    const total = parseInt(countResult.rows[0].total);
+
+    // Get routes with author info
+    queryParams.push(limit, offset);
+    const routesQuery = `
+      SELECT
+        pr.*,
+        u.name as author_name,
+        u.email as author_email,
+        u.avatar_url as author_avatar
+      FROM published_routes pr
+      JOIN users u ON pr.user_id = u.id
+      ${whereClause}
+      ORDER BY ${orderBy}
+      LIMIT $${paramCounter} OFFSET $${paramCounter + 1}
+    `;
+
+    const routesResult = await pool.query(routesQuery, queryParams);
+
+    res.json({
+      routes: routesResult.rows.map(row => ({
+        id: row.id,
+        routeId: row.route_id,
+        userId: row.user_id,
+        title: row.title,
+        description: row.description,
+        coverImageUrl: row.cover_image_url,
+        difficultyLevel: row.difficulty_level,
+        durationDays: row.duration_days,
+        totalDistanceKm: parseFloat(row.total_distance_km) || 0,
+        citiesVisited: row.cities_visited || [],
+        countriesVisited: row.countries_visited || [],
+        primaryStyle: row.primary_style,
+        tags: row.tags || [],
+        bestSeason: row.best_season,
+        isPremium: row.is_premium,
+        price: row.price ? parseFloat(row.price) : null,
+        currency: row.currency,
+        viewCount: row.view_count,
+        cloneCount: row.clone_count,
+        rating: parseFloat(row.rating) || 0,
+        reviewCount: row.review_count,
+        status: row.status,
+        featured: row.featured,
+        slug: row.slug,
+        metaDescription: row.meta_description,
+        isModerated: row.is_moderated,
+        moderatedAt: row.moderated_at,
+        moderatedBy: row.moderated_by,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+        authorName: row.author_name,
+        authorEmail: row.author_email,
+        authorAvatar: row.author_avatar
+      })),
+      total,
+      page: parseInt(page),
+      pageSize: parseInt(pageSize)
+    });
+  } catch (error) {
+    console.error('Error fetching marketplace routes:', error);
+    res.status(500).json({ error: 'Failed to fetch marketplace routes' });
+  }
+});
+
+// GET /api/marketplace/routes/:slug - Get route detail by slug
+app.get('/api/marketplace/routes/:slug', async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const userId = req.headers.authorization ?
+      (await authMiddleware(req, res, () => {}), req.user?.id) : null;
+
+    // Increment view count
+    await pool.query(`
+      UPDATE published_routes
+      SET view_count = view_count + 1, updated_at = CURRENT_TIMESTAMP
+      WHERE slug = $1
+    `, [slug]);
+
+    // Get route with author info
+    const routeResult = await pool.query(`
+      SELECT
+        pr.*,
+        u.name as author_name,
+        u.email as author_email,
+        u.avatar_url as author_avatar
+      FROM published_routes pr
+      JOIN users u ON pr.user_id = u.id
+      WHERE pr.slug = $1 AND pr.status = 'published'
+    `, [slug]);
+
+    if (routeResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Route not found' });
+    }
+
+    const route = routeResult.rows[0];
+
+    // Get reviews
+    const reviewsResult = await pool.query(`
+      SELECT
+        rr.*,
+        u.name as user_name,
+        u.avatar_url as user_avatar
+      FROM route_reviews rr
+      JOIN users u ON rr.user_id = u.id
+      WHERE rr.published_route_id = $1
+      ORDER BY rr.helpful_count DESC, rr.created_at DESC
+    `, [route.id]);
+
+    // Check if user has cloned this route
+    let isClonedByUser = false;
+    let userReview = null;
+
+    if (userId) {
+      const cloneResult = await pool.query(`
+        SELECT id FROM route_clones
+        WHERE published_route_id = $1 AND user_id = $2
+      `, [route.id, userId]);
+      isClonedByUser = cloneResult.rows.length > 0;
+
+      // Get user's review if exists
+      const userReviewResult = reviewsResult.rows.find(r => r.user_id === userId);
+      if (userReviewResult) {
+        userReview = {
+          id: userReviewResult.id,
+          publishedRouteId: userReviewResult.published_route_id,
+          userId: userReviewResult.user_id,
+          rating: userReviewResult.rating,
+          title: userReviewResult.title,
+          comment: userReviewResult.comment,
+          helpfulCount: userReviewResult.helpful_count,
+          notHelpfulCount: userReviewResult.not_helpful_count,
+          tripCompletedAt: userReviewResult.trip_completed_at,
+          traveledWith: userReviewResult.traveled_with,
+          isVerified: userReviewResult.is_verified,
+          isFlagged: userReviewResult.is_flagged,
+          flaggedReason: userReviewResult.flagged_reason,
+          createdAt: userReviewResult.created_at,
+          updatedAt: userReviewResult.updated_at,
+          userName: userReviewResult.user_name,
+          userAvatar: userReviewResult.user_avatar
+        };
+      }
+    }
+
+    res.json({
+      route: {
+        id: route.id,
+        routeId: route.route_id,
+        userId: route.user_id,
+        title: route.title,
+        description: route.description,
+        coverImageUrl: route.cover_image_url,
+        difficultyLevel: route.difficulty_level,
+        durationDays: route.duration_days,
+        totalDistanceKm: parseFloat(route.total_distance_km) || 0,
+        citiesVisited: route.cities_visited || [],
+        countriesVisited: route.countries_visited || [],
+        primaryStyle: route.primary_style,
+        tags: route.tags || [],
+        bestSeason: route.best_season,
+        isPremium: route.is_premium,
+        price: route.price ? parseFloat(route.price) : null,
+        currency: route.currency,
+        viewCount: route.view_count,
+        cloneCount: route.clone_count,
+        rating: parseFloat(route.rating) || 0,
+        reviewCount: route.review_count,
+        status: route.status,
+        featured: route.featured,
+        slug: route.slug,
+        metaDescription: route.meta_description,
+        isModerated: route.is_moderated,
+        moderatedAt: route.moderated_at,
+        moderatedBy: route.moderated_by,
+        createdAt: route.created_at,
+        updatedAt: route.updated_at,
+        authorName: route.author_name,
+        authorEmail: route.author_email,
+        authorAvatar: route.author_avatar
+      },
+      reviews: reviewsResult.rows.map(r => ({
+        id: r.id,
+        publishedRouteId: r.published_route_id,
+        userId: r.user_id,
+        rating: r.rating,
+        title: r.title,
+        comment: r.comment,
+        helpfulCount: r.helpful_count,
+        notHelpfulCount: r.not_helpful_count,
+        tripCompletedAt: r.trip_completed_at,
+        traveledWith: r.traveled_with,
+        isVerified: r.is_verified,
+        isFlagged: r.is_flagged,
+        flaggedReason: r.flagged_reason,
+        createdAt: r.created_at,
+        updatedAt: r.updated_at,
+        userName: r.user_name,
+        userAvatar: r.user_avatar
+      })),
+      isClonedByUser,
+      userReview
+    });
+  } catch (error) {
+    console.error('Error fetching route detail:', error);
+    res.status(500).json({ error: 'Failed to fetch route detail' });
+  }
+});
+
+// GET /api/marketplace/featured - Get featured routes
+app.get('/api/marketplace/featured', async (req, res) => {
+  try {
+    const { limit = 6 } = req.query;
+
+    const result = await pool.query(`
+      SELECT
+        pr.*,
+        u.name as author_name,
+        u.avatar_url as author_avatar
+      FROM published_routes pr
+      JOIN users u ON pr.user_id = u.id
+      WHERE pr.status = 'published' AND pr.featured = true
+      ORDER BY pr.created_at DESC
+      LIMIT $1
+    `, [parseInt(limit)]);
+
+    res.json({
+      routes: result.rows.map(row => ({
+        id: row.id,
+        routeId: row.route_id,
+        userId: row.user_id,
+        title: row.title,
+        description: row.description,
+        coverImageUrl: row.cover_image_url,
+        difficultyLevel: row.difficulty_level,
+        durationDays: row.duration_days,
+        totalDistanceKm: parseFloat(row.total_distance_km) || 0,
+        citiesVisited: row.cities_visited || [],
+        countriesVisited: row.countries_visited || [],
+        primaryStyle: row.primary_style,
+        tags: row.tags || [],
+        bestSeason: row.best_season,
+        isPremium: row.is_premium,
+        price: row.price ? parseFloat(row.price) : null,
+        currency: row.currency,
+        viewCount: row.view_count,
+        cloneCount: row.clone_count,
+        rating: parseFloat(row.rating) || 0,
+        reviewCount: row.review_count,
+        status: row.status,
+        featured: row.featured,
+        slug: row.slug,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+        authorName: row.author_name,
+        authorAvatar: row.author_avatar
+      }))
+    });
+  } catch (error) {
+    console.error('Error fetching featured routes:', error);
+    res.status(500).json({ error: 'Failed to fetch featured routes' });
+  }
+});
+
+// GET /api/marketplace/trending - Get trending routes (most cloned recently)
+app.get('/api/marketplace/trending', async (req, res) => {
+  try {
+    const { limit = 6 } = req.query;
+
+    const result = await pool.query(`
+      SELECT
+        pr.*,
+        u.name as author_name,
+        u.avatar_url as author_avatar,
+        COUNT(rc.id) as recent_clones
+      FROM published_routes pr
+      JOIN users u ON pr.user_id = u.id
+      LEFT JOIN route_clones rc ON pr.id = rc.published_route_id
+        AND rc.created_at > NOW() - INTERVAL '30 days'
+      WHERE pr.status = 'published'
+      GROUP BY pr.id, u.name, u.avatar_url
+      ORDER BY recent_clones DESC, pr.clone_count DESC
+      LIMIT $1
+    `, [parseInt(limit)]);
+
+    res.json({
+      routes: result.rows.map(row => ({
+        id: row.id,
+        routeId: row.route_id,
+        userId: row.user_id,
+        title: row.title,
+        description: row.description,
+        coverImageUrl: row.cover_image_url,
+        difficultyLevel: row.difficulty_level,
+        durationDays: row.duration_days,
+        totalDistanceKm: parseFloat(row.total_distance_km) || 0,
+        citiesVisited: row.cities_visited || [],
+        countriesVisited: row.countries_visited || [],
+        primaryStyle: row.primary_style,
+        tags: row.tags || [],
+        bestSeason: row.best_season,
+        isPremium: row.is_premium,
+        price: row.price ? parseFloat(row.price) : null,
+        currency: row.currency,
+        viewCount: row.view_count,
+        cloneCount: row.clone_count,
+        rating: parseFloat(row.rating) || 0,
+        reviewCount: row.review_count,
+        status: row.status,
+        featured: row.featured,
+        slug: row.slug,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+        authorName: row.author_name,
+        authorAvatar: row.author_avatar
+      }))
+    });
+  } catch (error) {
+    console.error('Error fetching trending routes:', error);
+    res.status(500).json({ error: 'Failed to fetch trending routes' });
+  }
+});
+
+// POST /api/routes/:id/publish - Publish a route to marketplace
+app.post('/api/routes/:id/publish', authMiddleware, async (req, res) => {
+  try {
+    const routeId = req.params.id;
+    const userId = req.user.id;
+    const {
+      title,
+      description,
+      coverImageUrl,
+      difficultyLevel,
+      primaryStyle,
+      tags = [],
+      bestSeason,
+      isPremium = false,
+      price = null
+    } = req.body;
+
+    // Verify route ownership
+    const routeResult = await pool.query(`
+      SELECT * FROM routes WHERE id = $1 AND user_id = $2
+    `, [routeId, userId]);
+
+    if (routeResult.rows.length === 0) {
+      return res.status(403).json({ error: 'Not authorized to publish this route' });
+    }
+
+    const route = routeResult.rows[0];
+    const routeData = route.route_data || {};
+
+    // Extract route metadata
+    const waypoints = routeData.waypoints || [];
+    const citiesVisited = waypoints.map(w => w.city || w.name).filter(Boolean);
+    const countriesVisited = [...new Set(waypoints.map(w => w.country).filter(Boolean))];
+    const durationDays = routeData.nights ? routeData.nights + 1 : waypoints.length;
+    const totalDistanceKm = routeData.totalDistance || 0;
+
+    // Validation
+    if (!title || title.trim().length === 0) {
+      return res.status(400).json({ error: 'Title is required' });
+    }
+    if (!description || description.trim().length < 50) {
+      return res.status(400).json({ error: 'Description must be at least 50 characters' });
+    }
+    if (citiesVisited.length < 2) {
+      return res.status(400).json({ error: 'Route must have at least 2 cities' });
+    }
+    if (!difficultyLevel || !['easy', 'moderate', 'challenging'].includes(difficultyLevel)) {
+      return res.status(400).json({ error: 'Invalid difficulty level' });
+    }
+
+    // Generate unique slug
+    const baseSlug = generateSlug(title);
+    const slug = await ensureUniqueSlug(baseSlug);
+
+    // Insert published route
+    const result = await pool.query(`
+      INSERT INTO published_routes (
+        route_id, user_id, title, description, cover_image_url,
+        difficulty_level, duration_days, total_distance_km,
+        cities_visited, countries_visited, primary_style, tags,
+        best_season, is_premium, price, slug
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+      RETURNING *
+    `, [
+      routeId, userId, title, description, coverImageUrl,
+      difficultyLevel, durationDays, totalDistanceKm,
+      citiesVisited, countriesVisited, primaryStyle, tags,
+      bestSeason, isPremium, price, slug
+    ]);
+
+    res.json({
+      success: true,
+      publishedRoute: {
+        id: result.rows[0].id,
+        routeId: result.rows[0].route_id,
+        userId: result.rows[0].user_id,
+        title: result.rows[0].title,
+        description: result.rows[0].description,
+        coverImageUrl: result.rows[0].cover_image_url,
+        difficultyLevel: result.rows[0].difficulty_level,
+        durationDays: result.rows[0].duration_days,
+        totalDistanceKm: parseFloat(result.rows[0].total_distance_km) || 0,
+        citiesVisited: result.rows[0].cities_visited || [],
+        countriesVisited: result.rows[0].countries_visited || [],
+        primaryStyle: result.rows[0].primary_style,
+        tags: result.rows[0].tags || [],
+        bestSeason: result.rows[0].best_season,
+        isPremium: result.rows[0].is_premium,
+        price: result.rows[0].price ? parseFloat(result.rows[0].price) : null,
+        currency: result.rows[0].currency,
+        viewCount: result.rows[0].view_count,
+        cloneCount: result.rows[0].clone_count,
+        rating: parseFloat(result.rows[0].rating) || 0,
+        reviewCount: result.rows[0].review_count,
+        status: result.rows[0].status,
+        featured: result.rows[0].featured,
+        slug: result.rows[0].slug,
+        createdAt: result.rows[0].created_at,
+        updatedAt: result.rows[0].updated_at
+      }
+    });
+  } catch (error) {
+    console.error('Error publishing route:', error);
+    res.status(500).json({ error: 'Failed to publish route' });
+  }
+});
+
+// PATCH /api/marketplace/routes/:id - Update published route
+app.patch('/api/marketplace/routes/:id', authMiddleware, async (req, res) => {
+  try {
+    const publishedRouteId = req.params.id;
+    const userId = req.user.id;
+    const {
+      title,
+      description,
+      coverImageUrl,
+      difficultyLevel,
+      primaryStyle,
+      tags,
+      bestSeason,
+      status
+    } = req.body;
+
+    // Verify ownership
+    const ownerCheck = await pool.query(`
+      SELECT user_id FROM published_routes WHERE id = $1
+    `, [publishedRouteId]);
+
+    if (ownerCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Published route not found' });
+    }
+
+    if (ownerCheck.rows[0].user_id !== userId) {
+      return res.status(403).json({ error: 'Not authorized to update this route' });
+    }
+
+    // Build update query dynamically
+    const updates = [];
+    const values = [];
+    let paramCounter = 1;
+
+    if (title !== undefined) {
+      updates.push(`title = $${paramCounter}`);
+      values.push(title);
+      paramCounter++;
+
+      // Update slug if title changed
+      const newBaseSlug = generateSlug(title);
+      const newSlug = await ensureUniqueSlug(newBaseSlug, publishedRouteId);
+      updates.push(`slug = $${paramCounter}`);
+      values.push(newSlug);
+      paramCounter++;
+    }
+
+    if (description !== undefined) {
+      updates.push(`description = $${paramCounter}`);
+      values.push(description);
+      paramCounter++;
+    }
+
+    if (coverImageUrl !== undefined) {
+      updates.push(`cover_image_url = $${paramCounter}`);
+      values.push(coverImageUrl);
+      paramCounter++;
+    }
+
+    if (difficultyLevel !== undefined) {
+      updates.push(`difficulty_level = $${paramCounter}`);
+      values.push(difficultyLevel);
+      paramCounter++;
+    }
+
+    if (primaryStyle !== undefined) {
+      updates.push(`primary_style = $${paramCounter}`);
+      values.push(primaryStyle);
+      paramCounter++;
+    }
+
+    if (tags !== undefined) {
+      updates.push(`tags = $${paramCounter}`);
+      values.push(tags);
+      paramCounter++;
+    }
+
+    if (bestSeason !== undefined) {
+      updates.push(`best_season = $${paramCounter}`);
+      values.push(bestSeason);
+      paramCounter++;
+    }
+
+    if (status !== undefined) {
+      updates.push(`status = $${paramCounter}`);
+      values.push(status);
+      paramCounter++;
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ error: 'No fields to update' });
+    }
+
+    updates.push(`updated_at = CURRENT_TIMESTAMP`);
+    values.push(publishedRouteId);
+
+    const query = `
+      UPDATE published_routes
+      SET ${updates.join(', ')}
+      WHERE id = $${paramCounter}
+      RETURNING *
+    `;
+
+    const result = await pool.query(query, values);
+
+    res.json({
+      success: true,
+      publishedRoute: {
+        id: result.rows[0].id,
+        routeId: result.rows[0].route_id,
+        userId: result.rows[0].user_id,
+        title: result.rows[0].title,
+        description: result.rows[0].description,
+        coverImageUrl: result.rows[0].cover_image_url,
+        difficultyLevel: result.rows[0].difficulty_level,
+        durationDays: result.rows[0].duration_days,
+        totalDistanceKm: parseFloat(result.rows[0].total_distance_km) || 0,
+        citiesVisited: result.rows[0].cities_visited || [],
+        countriesVisited: result.rows[0].countries_visited || [],
+        primaryStyle: result.rows[0].primary_style,
+        tags: result.rows[0].tags || [],
+        bestSeason: result.rows[0].best_season,
+        isPremium: result.rows[0].is_premium,
+        price: result.rows[0].price ? parseFloat(result.rows[0].price) : null,
+        currency: result.rows[0].currency,
+        viewCount: result.rows[0].view_count,
+        cloneCount: result.rows[0].clone_count,
+        rating: parseFloat(result.rows[0].rating) || 0,
+        reviewCount: result.rows[0].review_count,
+        status: result.rows[0].status,
+        featured: result.rows[0].featured,
+        slug: result.rows[0].slug,
+        createdAt: result.rows[0].created_at,
+        updatedAt: result.rows[0].updated_at
+      }
+    });
+  } catch (error) {
+    console.error('Error updating published route:', error);
+    res.status(500).json({ error: 'Failed to update published route' });
+  }
+});
+
+// DELETE /api/marketplace/routes/:id - Unpublish route
+app.delete('/api/marketplace/routes/:id', authMiddleware, async (req, res) => {
+  try {
+    const publishedRouteId = req.params.id;
+    const userId = req.user.id;
+
+    // Verify ownership
+    const ownerCheck = await pool.query(`
+      SELECT user_id FROM published_routes WHERE id = $1
+    `, [publishedRouteId]);
+
+    if (ownerCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Published route not found' });
+    }
+
+    if (ownerCheck.rows[0].user_id !== userId) {
+      return res.status(403).json({ error: 'Not authorized to delete this route' });
+    }
+
+    // Delete (CASCADE will handle reviews, clones, etc.)
+    await pool.query(`
+      DELETE FROM published_routes WHERE id = $1
+    `, [publishedRouteId]);
+
+    res.json({ success: true, message: 'Route unpublished successfully' });
+  } catch (error) {
+    console.error('Error unpublishing route:', error);
+    res.status(500).json({ error: 'Failed to unpublish route' });
+  }
+});
+
+// POST /api/marketplace/routes/:slug/clone - Clone a route
+app.post('/api/marketplace/routes/:slug/clone', authMiddleware, async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const userId = req.user.id;
+
+    // Get published route
+    const publishedRouteResult = await pool.query(`
+      SELECT * FROM published_routes WHERE slug = $1 AND status = 'published'
+    `, [slug]);
+
+    if (publishedRouteResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Route not found' });
+    }
+
+    const publishedRoute = publishedRouteResult.rows[0];
+
+    // Check if already cloned
+    const existingClone = await pool.query(`
+      SELECT cloned_route_id FROM route_clones
+      WHERE published_route_id = $1 AND user_id = $2
+    `, [publishedRoute.id, userId]);
+
+    if (existingClone.rows.length > 0) {
+      return res.json({
+        success: true,
+        clonedRouteId: existingClone.rows[0].cloned_route_id,
+        message: 'Already cloned, returning existing clone'
+      });
+    }
+
+    // Get original route data
+    const originalRoute = await pool.query(`
+      SELECT * FROM routes WHERE id = $1
+    `, [publishedRoute.route_id]);
+
+    if (originalRoute.rows.length === 0) {
+      return res.status(404).json({ error: 'Original route data not found' });
+    }
+
+    const routeData = originalRoute.rows[0];
+
+    // Create cloned route
+    const clonedRouteResult = await pool.query(`
+      INSERT INTO routes (user_id, route_data, origin, destination, trip_style, created_at)
+      VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
+      RETURNING id
+    `, [
+      userId,
+      routeData.route_data,
+      routeData.origin,
+      routeData.destination,
+      routeData.trip_style
+    ]);
+
+    const clonedRouteId = clonedRouteResult.rows[0].id;
+
+    // Create clone tracking entry
+    await pool.query(`
+      INSERT INTO route_clones (
+        published_route_id, original_route_id, cloned_route_id, user_id
+      ) VALUES ($1, $2, $3, $4)
+    `, [publishedRoute.id, publishedRoute.route_id, clonedRouteId, userId]);
+
+    res.json({
+      success: true,
+      clonedRouteId,
+      message: 'Route cloned successfully'
+    });
+  } catch (error) {
+    console.error('Error cloning route:', error);
+    res.status(500).json({ error: 'Failed to clone route' });
+  }
+});
+
+// POST /api/marketplace/routes/:id/reviews - Add a review
+app.post('/api/marketplace/routes/:id/reviews', authMiddleware, async (req, res) => {
+  try {
+    const publishedRouteId = req.params.id;
+    const userId = req.user.id;
+    const {
+      rating,
+      title = null,
+      comment,
+      tripCompletedAt = null,
+      traveledWith = null
+    } = req.body;
+
+    // Validation
+    if (!rating || rating < 1 || rating > 5) {
+      return res.status(400).json({ error: 'Rating must be between 1 and 5' });
+    }
+    if (!comment || comment.trim().length < 10) {
+      return res.status(400).json({ error: 'Comment must be at least 10 characters' });
+    }
+
+    // Check if route exists
+    const routeCheck = await pool.query(`
+      SELECT user_id FROM published_routes WHERE id = $1 AND status = 'published'
+    `, [publishedRouteId]);
+
+    if (routeCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Published route not found' });
+    }
+
+    // Can't review own route
+    if (routeCheck.rows[0].user_id === userId) {
+      return res.status(400).json({ error: 'Cannot review your own route' });
+    }
+
+    // Check for existing review
+    const existingReview = await pool.query(`
+      SELECT id FROM route_reviews
+      WHERE published_route_id = $1 AND user_id = $2
+    `, [publishedRouteId, userId]);
+
+    if (existingReview.rows.length > 0) {
+      return res.status(400).json({ error: 'You have already reviewed this route' });
+    }
+
+    // Insert review
+    const result = await pool.query(`
+      INSERT INTO route_reviews (
+        published_route_id, user_id, rating, title, comment,
+        trip_completed_at, traveled_with
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+      RETURNING *
+    `, [publishedRouteId, userId, rating, title, comment, tripCompletedAt, traveledWith]);
+
+    res.json({
+      success: true,
+      review: {
+        id: result.rows[0].id,
+        publishedRouteId: result.rows[0].published_route_id,
+        userId: result.rows[0].user_id,
+        rating: result.rows[0].rating,
+        title: result.rows[0].title,
+        comment: result.rows[0].comment,
+        helpfulCount: result.rows[0].helpful_count,
+        notHelpfulCount: result.rows[0].not_helpful_count,
+        tripCompletedAt: result.rows[0].trip_completed_at,
+        traveledWith: result.rows[0].traveled_with,
+        isVerified: result.rows[0].is_verified,
+        isFlagged: result.rows[0].is_flagged,
+        createdAt: result.rows[0].created_at,
+        updatedAt: result.rows[0].updated_at
+      }
+    });
+  } catch (error) {
+    console.error('Error adding review:', error);
+    res.status(500).json({ error: 'Failed to add review' });
+  }
+});
+
+// GET /api/marketplace/routes/:id/reviews - Get reviews for a route
+app.get('/api/marketplace/routes/:id/reviews', async (req, res) => {
+  try {
+    const publishedRouteId = req.params.id;
+
+    const result = await pool.query(`
+      SELECT
+        rr.*,
+        u.name as user_name,
+        u.avatar_url as user_avatar
+      FROM route_reviews rr
+      JOIN users u ON rr.user_id = u.id
+      WHERE rr.published_route_id = $1
+      ORDER BY rr.helpful_count DESC, rr.created_at DESC
+    `, [publishedRouteId]);
+
+    res.json({
+      reviews: result.rows.map(r => ({
+        id: r.id,
+        publishedRouteId: r.published_route_id,
+        userId: r.user_id,
+        rating: r.rating,
+        title: r.title,
+        comment: r.comment,
+        helpfulCount: r.helpful_count,
+        notHelpfulCount: r.not_helpful_count,
+        tripCompletedAt: r.trip_completed_at,
+        traveledWith: r.traveled_with,
+        isVerified: r.is_verified,
+        isFlagged: r.is_flagged,
+        flaggedReason: r.flagged_reason,
+        createdAt: r.created_at,
+        updatedAt: r.updated_at,
+        userName: r.user_name,
+        userAvatar: r.user_avatar
+      }))
+    });
+  } catch (error) {
+    console.error('Error fetching reviews:', error);
+    res.status(500).json({ error: 'Failed to fetch reviews' });
+  }
+});
+
+console.log('✅ Marketplace API endpoints initialized');
 
 // ==================== CACHE WARMING (OPTIONAL) ====================
 

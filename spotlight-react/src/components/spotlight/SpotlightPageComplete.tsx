@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Navigation, Map as MapIcon, ArrowRight, Sparkles, Users } from 'lucide-react'
+import { ArrowLeft, Navigation, Map as MapIcon, ArrowRight, Sparkles, Users, DollarSign } from 'lucide-react'
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
 import { Button } from '../ui/Button'
 import { RouteOverview } from './RouteOverview'
@@ -22,6 +22,10 @@ import { extractCountry, getCountryFromGeocoding, formatCityWithCountry } from '
 import { ItineraryGenerator } from '../itinerary/ItineraryGenerator'
 import { CollaborationPanel } from '../collaboration/CollaborationPanel'
 import { InviteCollaboratorModal } from '../collaboration/InviteCollaboratorModal'
+import { ExpenseTracker } from '../expenses/ExpenseTracker'
+import { AddExpenseModal } from '../expenses/AddExpenseModal'
+import { BalanceSummary } from '../expenses/BalanceSummary'
+import { BudgetOverview } from '../expenses/BudgetOverview'
 
 // Agent configuration
 const agentConfig = {
@@ -56,6 +60,9 @@ function SpotlightContent() {
   const [showItineraryGenerator, setShowItineraryGenerator] = useState(false)
   const [showCollaborationPanel, setShowCollaborationPanel] = useState(false)
   const [showInviteModal, setShowInviteModal] = useState(false)
+  const [showExpensePanel, setShowExpensePanel] = useState(false)
+  const [showAddExpenseModal, setShowAddExpenseModal] = useState(false)
+  const [expensePanelTab, setExpensePanelTab] = useState<'expenses' | 'balances' | 'budgets'>('expenses')
   const [routeId, setRouteId] = useState<string | null>(null)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
 
@@ -176,15 +183,26 @@ function SpotlightContent() {
           <div className="absolute right-6 top-1/2 -translate-y-1/2 flex items-center gap-2">
             {/* Collaboration button - only show if routeId and userId are available */}
             {routeId && currentUserId && (
-              <Button
-                variant={showCollaborationPanel ? "default" : "outline"}
-                size="sm"
-                onClick={() => setShowCollaborationPanel(!showCollaborationPanel)}
-                className="gap-2"
-              >
-                <Users className="h-4 w-4" />
-                Collaborate
-              </Button>
+              <>
+                <Button
+                  variant={showCollaborationPanel ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setShowCollaborationPanel(!showCollaborationPanel)}
+                  className="gap-2"
+                >
+                  <Users className="h-4 w-4" />
+                  Collaborate
+                </Button>
+                <Button
+                  variant={showExpensePanel ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setShowExpensePanel(!showExpensePanel)}
+                  className="gap-2"
+                >
+                  <DollarSign className="h-4 w-4" />
+                  Expenses
+                </Button>
+              </>
             )}
             <Button
               variant="default"
@@ -397,6 +415,85 @@ function SpotlightContent() {
           onSuccess={() => {
             // Refresh will be handled by CollaborationPanel via WebSocket
             console.log('Collaborator invited successfully')
+          }}
+        />
+      )}
+
+      {/* Expense Panel - Floating on right side (with tabs) */}
+      <AnimatePresence>
+        {showExpensePanel && routeId && currentUserId && (
+          <motion.div
+            initial={{ x: 400, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: 400, opacity: 0 }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+            className="fixed right-0 top-0 bottom-0 w-96 z-40 shadow-2xl bg-white"
+          >
+            {/* Tab headers */}
+            <div className="flex border-b border-gray-200 bg-white">
+              <button
+                onClick={() => setExpensePanelTab('expenses')}
+                className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                  expensePanelTab === 'expenses'
+                    ? 'bg-green-50 text-green-700 border-b-2 border-green-500'
+                    : 'text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                Expenses
+              </button>
+              <button
+                onClick={() => setExpensePanelTab('balances')}
+                className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                  expensePanelTab === 'balances'
+                    ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-500'
+                    : 'text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                Balances
+              </button>
+              <button
+                onClick={() => setExpensePanelTab('budgets')}
+                className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                  expensePanelTab === 'budgets'
+                    ? 'bg-purple-50 text-purple-700 border-b-2 border-purple-500'
+                    : 'text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                Budgets
+              </button>
+            </div>
+
+            {/* Tab content */}
+            <div className="h-[calc(100%-49px)]">
+              {expensePanelTab === 'expenses' && (
+                <ExpenseTracker
+                  routeId={routeId}
+                  userId={currentUserId}
+                  onAddExpense={() => setShowAddExpenseModal(true)}
+                />
+              )}
+              {expensePanelTab === 'balances' && (
+                <BalanceSummary routeId={routeId} userId={currentUserId} />
+              )}
+              {expensePanelTab === 'budgets' && (
+                <BudgetOverview routeId={routeId} userId={currentUserId} />
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Add Expense Modal */}
+      {routeId && currentUserId && (
+        <AddExpenseModal
+          isOpen={showAddExpenseModal}
+          onClose={() => setShowAddExpenseModal(false)}
+          routeId={routeId}
+          userId={currentUserId}
+          collaborators={[]} // TODO: Pass actual collaborators from route
+          onSuccess={() => {
+            setShowAddExpenseModal(false)
+            // Refresh will be handled via WebSocket
           }}
         />
       )}
