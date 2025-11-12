@@ -1606,10 +1606,11 @@ app.post('/api/geocode/autocomplete', async (req, res) => {
     // Use Google Places Autocomplete API
     const googleApiKey = process.env.GOOGLE_PLACES_API_KEY;
 
-    // European countries filter (ISO 3166-1 alpha-2 codes)
-    const europeanCountries = 'country:at|country:be|country:bg|country:hr|country:cy|country:cz|country:dk|country:ee|country:fi|country:fr|country:de|country:gr|country:hu|country:is|country:ie|country:it|country:lv|country:lt|country:lu|country:mt|country:nl|country:no|country:pl|country:pt|country:ro|country:sk|country:si|country:es|country:se|country:ch|country:gb';
+    // European country codes for filtering (Google API limits to 5 countries in components parameter)
+    const europeanCountryCodes = ['AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR', 'HU', 'IS', 'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL', 'NO', 'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE', 'CH', 'GB'];
 
-    const autocompleteUrl = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(query)}&types=(cities)&components=${europeanCountries}&key=${googleApiKey}`;
+    // Don't use components parameter (Google limits to 5), filter results server-side instead
+    const autocompleteUrl = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(query)}&types=(cities)&key=${googleApiKey}`;
 
     const response = await axios.get(autocompleteUrl);
 
@@ -1637,10 +1638,12 @@ app.post('/api/geocode/autocomplete', async (req, res) => {
           (component) => component.types.includes('country')
         );
         const country = countryComponent?.long_name || 'Unknown';
+        const countryCode = countryComponent?.short_name || '';
 
         return {
           name: place.name,
           country: country,
+          countryCode: countryCode,
           coordinates: [
             place.geometry.location.lat,
             place.geometry.location.lng
@@ -1656,10 +1659,14 @@ app.post('/api/geocode/autocomplete', async (req, res) => {
     // Wait for all city details to resolve
     const cities = await Promise.all(cityPromises);
 
-    // Filter out nulls and return
-    const validCities = cities.filter(city => city !== null);
+    // Filter out nulls and non-European cities
+    const validCities = cities.filter(city => {
+      if (city === null) return false;
+      // Only include European cities
+      return europeanCountryCodes.includes(city.countryCode);
+    });
 
-    console.log(`✅ Returning ${validCities.length} cities for "${query}"`);
+    console.log(`✅ Returning ${validCities.length} European cities for "${query}"`);
     res.json({ cities: validCities });
 
   } catch (error) {
