@@ -12,6 +12,8 @@ const RoutePlanningAgent = require('./server/agents/RoutePlanningAgent');
 const GooglePlacesService = require('./server/services/googlePlacesService');
 const ReceiptScannerService = require('./server/services/ReceiptScannerService');
 const CurrencyService = require('./server/services/CurrencyService');
+const { authenticate: authMiddleware, optionalAuth } = require('./middleware/auth');
+const { generateToken } = require('./utils/jwt');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
