@@ -78,6 +78,12 @@ const agentThemes: Record<string, { color: string; icon: string }> = {
 }
 
 export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
+  // Helper function to extract city name from origin/destination (handles both string and object formats)
+  const getLocationName = (location: any): string => {
+    if (typeof location === 'string') return location
+    return location?.name || location?.city || 'Unknown'
+  }
+
   const [activeTab, setActiveTab] = useState(0)
   const [showSaveModal, setShowSaveModal] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
@@ -561,7 +567,7 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
     if (!savedRouteIdRef.current) {
       console.log('[DEBUG] Route not saved, saving now...')
       try {
-        const routeId = await handleSaveRoute(`${routeData.origin} to ${routeData.destination}`)
+        const routeId = await handleSaveRoute(`${getLocationName(routeData.origin)} to ${getLocationName(routeData.destination)}`)
         console.log('[DEBUG] Save completed, routeId:', routeId, 'ref after save:', savedRouteIdRef.current)
         // Both state and ref are updated in handleSaveRoute
       } catch (error) {
@@ -643,7 +649,7 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
             Your Perfect Route
           </h2>
           <p className="text-lg text-gray-600">
-            From {routeData.origin} to {routeData.destination}
+            From {getLocationName(routeData.origin)} to {getLocationName(routeData.destination)}
           </p>
         </motion.div>
 
@@ -1246,7 +1252,7 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
         <ShareRouteModal
           isOpen={showShareModal}
           onClose={() => setShowShareModal(false)}
-          routeName={`${routeData.origin} to ${routeData.destination}`}
+          routeName={`${getLocationName(routeData.origin)} to ${getLocationName(routeData.destination)}`}
           shareToken={shareToken}
           isPublic={isPublic}
           viewCount={viewCount}
