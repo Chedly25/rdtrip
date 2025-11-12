@@ -22,12 +22,30 @@ const EXPENSE_CATEGORIES = [
 
 class ReceiptScannerService {
   constructor() {
-    if (!process.env.OPENAI_API_KEY) {
+    this.apiKey = process.env.OPENAI_API_KEY;
+    this._openaiClient = null;
+
+    if (!this.apiKey) {
       console.warn('OPENAI_API_KEY not set - receipt scanning will not work');
     }
-    this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY
-    });
+  }
+
+  /**
+   * Lazy-load OpenAI client (only when needed)
+   * @returns {OpenAI} OpenAI client instance
+   */
+  get openai() {
+    if (!this.apiKey) {
+      throw new Error('OPENAI_API_KEY not configured - receipt scanning is disabled');
+    }
+
+    if (!this._openaiClient) {
+      this._openaiClient = new OpenAI({
+        apiKey: this.apiKey
+      });
+    }
+
+    return this._openaiClient;
   }
 
   /**
@@ -37,6 +55,11 @@ class ReceiptScannerService {
    * @returns {Promise<Object>} Extracted receipt data
    */
   async scanReceipt(imageBuffer, mimeType = 'image/jpeg') {
+    // Check if API key is configured
+    if (!this.apiKey) {
+      throw new Error('Receipt scanning is not available - OPENAI_API_KEY not configured');
+    }
+
     try {
       // Convert buffer to base64
       const base64Image = imageBuffer.toString('base64');
