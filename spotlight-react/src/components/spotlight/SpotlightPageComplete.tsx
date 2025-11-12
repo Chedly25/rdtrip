@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Navigation, Map as MapIcon, ArrowRight, Sparkles } from 'lucide-react'
+import { ArrowLeft, Navigation, Map as MapIcon, ArrowRight, Sparkles, Users } from 'lucide-react'
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
 import { Button } from '../ui/Button'
 import { RouteOverview } from './RouteOverview'
@@ -20,6 +20,8 @@ import { useRouteDataStore } from '../../stores/routeDataStore'
 import { getTheme } from '../../config/theme'
 import { extractCountry, getCountryFromGeocoding, formatCityWithCountry } from '../../utils/countryFlags'
 import { ItineraryGenerator } from '../itinerary/ItineraryGenerator'
+import { CollaborationPanel } from '../collaboration/CollaborationPanel'
+import { InviteCollaboratorModal } from '../collaboration/InviteCollaboratorModal'
 
 // Agent configuration
 const agentConfig = {
@@ -52,18 +54,42 @@ function SpotlightContent() {
   const { isSidebarCollapsed } = useLayout()
   const [showWazeModal, setShowWazeModal] = useState(false)
   const [showItineraryGenerator, setShowItineraryGenerator] = useState(false)
+  const [showCollaborationPanel, setShowCollaborationPanel] = useState(false)
+  const [showInviteModal, setShowInviteModal] = useState(false)
+  const [routeId, setRouteId] = useState<string | null>(null)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
 
   // Country data state
   const [originData, setOriginData] = useState<{ display: string; flag: string }>({ display: '', flag: '' })
   const [destinationData, setDestinationData] = useState<{ display: string; flag: string }>({ display: '', flag: '' })
 
-  // Check URL params on mount - auto-show itinerary if present
+  // Initialize routeId and userId from URL params and localStorage
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search)
+
+    // Check for itinerary ID
     const itineraryId = urlParams.get('itinerary')
     if (itineraryId) {
       console.log(`📌 Detected itinerary ID in URL: ${itineraryId}, auto-showing generator`)
       setShowItineraryGenerator(true)
+    }
+
+    // Check for route ID (jobId or routeId param)
+    const jobId = urlParams.get('jobId') || urlParams.get('routeId')
+    if (jobId) {
+      console.log(`📌 Detected route ID: ${jobId}`)
+      setRouteId(jobId)
+    }
+
+    // Get current user ID from auth token (simplified - in production, decode JWT properly)
+    try {
+      const userData = localStorage.getItem('user')
+      if (userData) {
+        const user = JSON.parse(userData)
+        setCurrentUserId(user.id || user.userId)
+      }
+    } catch (error) {
+      console.error('Error loading user data:', error)
     }
   }, [])
 
@@ -148,6 +174,18 @@ function SpotlightContent() {
 
           {/* Export Buttons - Absolute positioned on right */}
           <div className="absolute right-6 top-1/2 -translate-y-1/2 flex items-center gap-2">
+            {/* Collaboration button - only show if routeId and userId are available */}
+            {routeId && currentUserId && (
+              <Button
+                variant={showCollaborationPanel ? "default" : "outline"}
+                size="sm"
+                onClick={() => setShowCollaborationPanel(!showCollaborationPanel)}
+                className="gap-2"
+              >
+                <Users className="h-4 w-4" />
+                Collaborate
+              </Button>
+            )}
             <Button
               variant="default"
               size="sm"
@@ -329,6 +367,38 @@ function SpotlightContent() {
             onBack={() => setShowItineraryGenerator(false)}
           />
         </div>
+      )}
+
+      {/* Collaboration Panel - Floating on right side */}
+      <AnimatePresence>
+        {showCollaborationPanel && routeId && currentUserId && (
+          <motion.div
+            initial={{ x: 400, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: 400, opacity: 0 }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+            className="fixed right-0 top-0 bottom-0 w-96 z-40 shadow-2xl"
+          >
+            <CollaborationPanel
+              routeId={routeId}
+              currentUserId={currentUserId}
+              onInviteClick={() => setShowInviteModal(true)}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Invite Collaborator Modal */}
+      {routeId && (
+        <InviteCollaboratorModal
+          isOpen={showInviteModal}
+          onClose={() => setShowInviteModal(false)}
+          routeId={routeId}
+          onSuccess={() => {
+            // Refresh will be handled by CollaborationPanel via WebSocket
+            console.log('Collaborator invited successfully')
+          }}
+        />
       )}
     </div>
   )
