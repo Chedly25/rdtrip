@@ -1,374 +1,579 @@
-# 🧠 PHASE 2: AGENTIC COORDINATION - Implementation Plan
+# Phase 2: Collaborative Trip Planning - Implementation Plan
 
-## ✅ Completed So Far
-
-### **1. SharedContext** ✅ DONE
-**File:** `server/agents/core/SharedContext.js` (500+ lines)
-
-**What it does:**
-- Central "memory" for all agents
-- Knowledge base (constraints, validated places, invalid places, preferences, state)
-- Decision logging (every choice tracked with reasoning)
-- Agent communication log
-- Statistics tracking (activity types, energy levels, budget)
-- Diversification logic
-- Budget tracking
-- Performance reporting
-
-**Key Methods:**
-- `recordDecision(decision)` - Log every choice with reasoning
-- `logCommunication(from, to, message)` - Track agent interactions
-- `addValidatedPlace(place)` - Cache validated places
-- `markPlaceInvalid(placeName, reason)` - Learn from failures
-- `needsDiversification()` - Intelligent analysis for variety
-- `getScheduleStatistics()` - Context for strategic decisions
-
-### **2. StrategicDiscoveryAgent** ✅ DONE
-**File:** `server/agents/discovery/StrategicDiscoveryAgent.js` (450+ lines)
-
-**What it does:**
-- REASONS about what to discover (not just blindly queries)
-- Builds strategy based on SharedContext
-- Discovers 3-5 CANDIDATES (not final choices)
-- Context-aware prompts (budget, diversification, time-of-day, failures)
-- Tracks reasoning for every discovery
-
-**Key Innovations:**
-- **Strategy Building:** Analyzes 9 different factors:
-  1. Diversification (avoid over-represented activity types)
-  2. Budget awareness (free/cheap when budget low)
-  3. Time-of-day (morning vs evening activities)
-  4. Day of week (Monday museums often closed)
-  5. Energy level balancing (not all high-energy)
-  6. Travel style alignment
-  7. Learn from failures (avoid previously invalid places)
-  8. Location continuity (prefer nearby)
-  9. Window duration (quick vs immersive)
-
-- **Candidate Discovery:** Returns 3-5 options for selection (not just 1)
-- **Decision Logging:** Every discovery tracked with strategy reasoning
+**Feature**: Real-time collaborative workspace for trip planning  
+**Status**: Planning → Implementation  
+**Estimated Time**: 3-4 weeks  
+**Complexity**: High  
+**Priority**: Critical for social features
 
 ---
 
-## 🚧 Still To Build
+## 📋 Overview
 
-### **3. OrchestratorAgent v2** (Next!)
-**File:** `server/agents/core/OrchestratorAgent.js`
+Phase 2 transforms RDTrip from a single-user route planner into a **collaborative platform** where friends can plan trips together in real-time with chat, presence indicators, and role-based permissions.
 
-**Purpose:** Coordinate the complete Discovery → Validation → Selection loop with feedback
+### Key Capabilities
 
-**Flow:**
-```
-discoverAndSelectActivity(request, maxAttempts=3):
-  Attempt 1:
-    Discovery:  3-5 candidates from StrategicDiscoveryAgent
-    Validation: Validate each candidate
-    Selection:  Score & rank valid candidates, select best
-    Feedback:   If no valid → analyze failures, update strategy
-
-  Attempt 2 (if needed):
-    Discovery:  3-5 NEW candidates (learned from failures)
-    Validation: Validate each
-    Selection:  Select best
-    ...
-
-  Return: Best activity OR failure after 3 attempts
-```
-
-**Key Methods:**
-
-```javascript
-// Main coordination loop
-async discoverAndSelectActivity(request, maxAttempts = 3)
-
-// Phase 2: Validate all candidates
-async validateCandidates(candidates, request)
-
-// Phase 3: Score and select best
-async selectBestCandidate(validCandidates, request)
-
-// Phase 4: Analyze failures for feedback
-analyzeValidationFailures(candidates, validationResults)
-
-// Update request based on learnings
-updateRequestWithFeedback(request, failureAnalysis)
-
-// Helper: Calculate distance between coordinates
-calculateDistance(coord1, coord2)
-```
-
-**Scoring Algorithm:**
-```javascript
-score = 0
-+ qualityScore * 40        // Google Places quality (40 points)
-+ rating bonus (0-20)       // 4.5+ = 20pts, 4.0+ = 10pts
-+ strategic fit (0-20)      // How well matches strategy
-+ proximity bonus (0-15)    // Close to previous location
-+ availability (0-5)        // High confidence it's open
-= Total score (0-100)
-```
-
-**Feedback Loop Logic:**
-```
-Failures detected:
-  - Closed places → Emphasize opening hours in next discovery
-  - Not found → Require exact addresses, prefer well-known
-  - Ambiguous → Avoid similar names
-
-Update request constraints and try again
-```
+1. **Multi-user collaboration** - Invite friends as owner/editor/viewer
+2. **Real-time chat** - Context-aware trip messaging  
+3. **Live presence** - See who's online and what they're viewing
+4. **Activity feed** - Track all changes to the trip
+5. **Permission management** - Control who can edit vs view
+6. **Notifications** - Email alerts for invites and updates
 
 ---
 
-### **4. Refactor CityActivityAgent** (Integration)
-**File:** `server/agents/CityActivityAgent.js` (modify existing)
+## 🎯 Success Criteria
 
-**Current Flow:**
-```
-generate() →
-  Perplexity (final activities) →
-  Validation (optional) →
-  Return
-```
-
-**New Flow:**
-```
-generate(sharedContext) →
-  For each activity window:
-    OrchestratorAgent.discoverAndSelectActivity() →
-      Discovery (3-5 candidates) →
-      Validation (all candidates) →
-      Selection (best one) →
-      Feedback loop if needed
-  Return validated & selected activities
-```
-
-**Changes Required:**
-1. Accept `SharedContext` parameter
-2. Replace direct Perplexity calls with `OrchestratorAgent`
-3. Iterate through windows with feedback loops
-4. Log all decisions to SharedContext
-5. Update state after each activity
+- ✅ Users can invite collaborators by email
+- ✅ Real-time updates < 200ms latency
+- ✅ Chat messages appear instantly for all participants
+- ✅ Presence indicators show who's online
+- ✅ Permission system prevents unauthorized edits
+- ✅ 95% WebSocket connection uptime
 
 ---
 
-### **5. Update ItineraryAgentOrchestrator** (Integration)
-**File:** `server/agents/ItineraryAgentOrchestrator.js` (modify existing)
+## 🏗️ Architecture Overview
 
-**Changes:**
-1. Create `SharedContext` at start
-2. Pass to all agents
-3. Log high-level orchestration decisions
-4. Persist decisions to database at end
-5. Generate summary report
+### Technology Stack
 
-**New Flow:**
-```javascript
-async generateCompleteAsync() {
-  // Create shared context
-  const sharedContext = new SharedContext(
-    this.itineraryId,
-    this.routeData,
-    this.preferences,
-    this.db
-  );
+**Backend**:
+- WebSocket Server: \`ws\` npm package
+- Real-time service: CollaborationService.js
+- Database: PostgreSQL with 4 new tables
 
-  // Day Planning (no change)
-  this.results.dayStructure = await this.runDayPlannerAgent();
+**Frontend**:
+- WebSocket client: native WebSocket API  
+- State management: React hooks + context
+- UI components: Framer Motion animations
 
-  // Activities (NEW: with agentic coordination)
-  const activityAgent = new CityActivityAgent(
-    this.routeData,
-    this.results.dayStructure,
-    this.onProgress,
-    this.db,
-    this.itineraryId,
-    sharedContext  // NEW: Pass shared context
-  );
-  this.results.activities = await activityAgent.generate();
+### Data Flow
 
-  // Restaurants (can add later)
-  // ...
+\`\`\`
+User Action (Frontend)
+  ↓
+WebSocket Message
+  ↓
+CollaborationService (Backend)
+  ↓
+Broadcast to Room Participants
+  ↓
+Other Users Receive Update (Real-time)
+\`\`\`
 
-  // Save decisions to database
-  await sharedContext.persistDecisions();
+---
 
-  // Generate summary
-  const summary = sharedContext.generateSummary();
-  console.log('📊 Agentic System Summary:', summary);
+## 📊 Database Schema
 
-  return this.results;
+### New Tables (Migration: \`010_add_collaboration.sql\`)
+
+See [FEATURE_ROADMAP_2025.md](./FEATURE_ROADMAP_2025.md#feature-2-collaborative-trip-planning) for complete schema.
+
+**Tables to create**:
+1. \`route_collaborators\` - Who has access + permissions
+2. \`trip_messages\` - Chat messages  
+3. \`route_activity\` - Audit log
+4. \`user_presence\` - Real-time presence tracking
+
+---
+
+## 📝 Implementation Roadmap
+
+### STEP 1: Database Setup ⏱️ 2 hours
+
+**Goal**: Create collaboration tables
+
+**Tasks**:
+- [ ] Create migration file \`db/migrations/010_add_collaboration.sql\`
+- [ ] Copy schema from FEATURE_ROADMAP_2025.md
+- [ ] Run migration locally: \`node db/run-migration.js 010_add_collaboration.sql\`
+- [ ] Verify tables created: \`psql $DATABASE_URL -c "\\dt route_*"\`
+
+**Verification**:
+\`\`\`sql
+SELECT table_name FROM information_schema.tables 
+WHERE table_name IN ('route_collaborators', 'trip_messages', 'route_activity', 'user_presence');
+\`\`\`
+
+---
+
+### STEP 2: WebSocket Infrastructure ⏱️ 1 day
+
+**Goal**: Install WebSocket library and create CollaborationService
+
+**Tasks**:
+- [ ] Install ws package: \`npm install ws\`
+- [ ] Create \`server/services/CollaborationService.js\`
+- [ ] Implement WebSocket server setup
+- [ ] Add JWT authentication for WebSocket
+- [ ] Implement room management (join/leave)
+- [ ] Add heartbeat/ping-pong for connection health
+- [ ] Initialize service in server.js
+
+**Key Methods**:
+- \`setupWebSocketServer()\` - Initialize WSS
+- \`authenticateWebSocket(req)\` - Extract JWT token
+- \`joinRoute(ws, routeId)\` - Add user to route room
+- \`leaveRoute(ws, routeId)\` - Remove user from room
+- \`broadcast(routeId, message)\` - Send to all in room
+- \`handleMessage(ws, data)\` - Route incoming messages
+
+**Testing**:
+\`\`\`javascript
+// Test with wscat
+npm install -g wscat
+wscat -c "ws://localhost:3001/ws/collab?token=YOUR_JWT_TOKEN"
+// Send: {"type":"join_route","routeId":"uuid"}
+\`\`\`
+
+---
+
+### STEP 3: Collaboration API Endpoints ⏱️ 2 days
+
+**Goal**: Add REST endpoints for collaboration management
+
+**Endpoints to add** (in server.js):
+
+#### Collaborator Management
+- \`POST /api/routes/:id/collaborators\` - Invite user
+- \`GET /api/routes/:id/collaborators\` - List collaborators
+- \`PATCH /api/routes/:id/collaborators/:userId\` - Update role
+- \`DELETE /api/routes/:id/collaborators/:userId\` - Remove
+- \`POST /api/routes/:id/collaborators/:userId/accept\` - Accept invite
+
+#### Chat
+- \`POST /api/routes/:id/messages\` - Send message  
+- \`GET /api/routes/:id/messages\` - Get history
+
+#### Activity
+- \`GET /api/routes/:id/activity\` - Get activity log
+
+**Helper Functions**:
+\`\`\`javascript
+async function checkRoutePermission(routeId, userId) {
+  // Returns { role: 'owner'|'editor'|'viewer' } or null
 }
-```
+
+async function logRouteActivity(routeId, userId, action, metadata) {
+  // Insert into route_activity table
+}
+\`\`\`
+
+**Testing**:
+\`\`\`bash
+# Invite collaborator
+curl -X POST http://localhost:3001/api/routes/ROUTE_ID/collaborators \\
+  -H "Authorization: Bearer TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{"email":"friend@example.com","role":"editor"}'
+
+# List collaborators  
+curl http://localhost:3001/api/routes/ROUTE_ID/collaborators \\
+  -H "Authorization: Bearer TOKEN"
+\`\`\`
 
 ---
 
-### **6. Database Schema for Decision Logs** (New table)
-**File:** `server/migrations/010_decision_logs.sql`
+### STEP 4: Frontend WebSocket Hook ⏱️ 4 hours
 
-```sql
-CREATE TABLE IF NOT EXISTS decision_logs (
-  id SERIAL PRIMARY KEY,
-  itinerary_id UUID REFERENCES itineraries(id) ON DELETE CASCADE,
-  phase VARCHAR(50) NOT NULL,
-  agent_name VARCHAR(100),
-  decision_data JSONB NOT NULL,
-  timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+**Goal**: Create reusable WebSocket React hook
 
-CREATE INDEX idx_decision_logs_itinerary ON decision_logs(itinerary_id);
-CREATE INDEX idx_decision_logs_phase ON decision_logs(phase);
-CREATE INDEX idx_decision_logs_timestamp ON decision_logs(timestamp);
-```
+**File**: \`spotlight-react/src/hooks/useWebSocket.ts\`
 
-**Purpose:** Store all agent decisions for:
-- Debugging
-- Learning
-- Explainability
-- User transparency ("Why did you choose this?")
+**Features**:
+- Auto-reconnect with exponential backoff
+- JWT token injection
+- Message queue for offline messages
+- Connection state tracking
+- Heartbeat handling
 
----
+**Usage**:
+\`\`\`typescript
+const { send, readyState, lastMessage } = useWebSocket('/ws/collab');
 
-### **7. Testing Script**
-**File:** `server/scripts/testAgenticPipeline.js`
+// Send message
+send({ type: 'chat_message', routeId, text: 'Hello!' });
 
-**What it tests:**
-- SharedContext creation and state management
-- StrategicDiscoveryAgent strategy building
-- Discovery of 3-5 candidates
-- OrchestratorAgent coordination
-- Validation of candidates
-- Selection logic
-- Feedback loops when validation fails
-- Decision logging throughout
+// Receive message
+useEffect(() => {
+  if (lastMessage) {
+    const data = JSON.parse(lastMessage.data);
+    // Handle message
+  }
+}, [lastMessage]);
+\`\`\`
 
-**Test Scenarios:**
-1. **Happy Path:** All candidates validate, select best
-2. **Partial Validation:** Some candidates valid, some not
-3. **All Invalid:** Trigger feedback loop, regenerate
-4. **Budget Constraint:** Test budget-aware discovery
-5. **Diversification:** Test activity type balancing
-6. **Monday Test:** Test closed-on-Monday logic
+**Testing**:
+- Create test component that connects/disconnects
+- Verify reconnection works after server restart
+- Test token refresh on expiry
 
 ---
 
-## 🎯 Implementation Order
+### STEP 5: CollaborationPanel Component ⏱️ 2 days
 
-### **Phase 2.1** (Now):
-1. ✅ SharedContext
-2. ✅ StrategicDiscoveryAgent
-3. 🚧 OrchestratorAgent v2
-4. 🚧 Database migration for decision logs
+**Goal**: Build main collaboration UI
 
-### **Phase 2.2** (Next):
-5. Refactor CityActivityAgent to use OrchestratorAgent
-6. Update ItineraryAgentOrchestrator
-7. Create testing script
-8. Test end-to-end
+**File**: \`spotlight-react/src/components/collaboration/CollaborationPanel.tsx\`
 
-### **Phase 2.3** (Polish):
-9. Add RestaurantAgent integration (same pattern)
-10. Add decision explainability endpoint
-11. Add performance monitoring
-12. Deploy to production
+**Features**:
+- Tabbed interface (Chat / Collaborators)
+- Real-time message list with auto-scroll
+- Typing indicators
+- Presence indicators (green dot = online)
+- Message input with Enter-to-send
+- Collaborator avatars with status
 
----
+**UI Layout**:
+\`\`\`
+┌─────────────────────────────┐
+│ [Chat] [Collaborators (3)]  │ ← Tabs
+├─────────────────────────────┤
+│                             │
+│  Chat Messages              │ ← Scrollable
+│  or                         │
+│  Collaborator List          │
+│                             │
+├─────────────────────────────┤
+│ [Type message...] [Send]    │ ← Input
+└─────────────────────────────┘
+\`\`\`
 
-## 💡 Key Design Principles
-
-### **1. Candidate-Based Selection**
-- Discovery returns 3-5 options
-- Validation checks all
-- Selection picks best from valid ones
-- NOT: Discover 1 → Validate → Done
-
-### **2. Feedback Loops**
-- When validation fails, analyze WHY
-- Update discovery strategy
-- Try again with learned constraints
-- NOT: Give up after first failure
-
-### **3. Decision Transparency**
-- Every choice logged with reasoning
-- "Why X? Because high rating, close to hotel, fits budget"
-- "Why not Y? Because closed on Monday"
-- User can see reasoning chain
-
-### **4. Shared Memory**
-- All agents read/write to SharedContext
-- Learn from each other's discoveries
-- Don't retry known failures
-- Build cumulative knowledge
-
-### **5. Strategic Thinking**
-- NOT: "Find a museum"
-- YES: "Find a museum that's open Monday, under €10, near previous location, and we need relaxed activity for balance"
+**State Management**:
+\`\`\`typescript
+const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
+const [messages, setMessages] = useState<Message[]>([]);
+const [isTyping, setIsTyping] = useState<Set<string>>(new Set());
+\`\`\`
 
 ---
 
-## 📊 Expected Outcomes
+### STEP 6: InviteCollaboratorModal ⏱️ 1 day
 
-### **Before (Phase 1+2):**
-```
-40 activities discovered by Perplexity
-→ 27 validated (68%)
-→ 13 kept anyway (unvalidated)
-→ No feedback, no alternatives
-```
+**Goal**: Build invite modal UI
 
-### **After (Phase 2 Complete):**
-```
-40 activities needed
-→ Discover 3-5 candidates each (160-200 candidates total)
-→ Validate all candidates
-→ Select best valid candidate
-→ If none valid: Feedback loop → Discover new candidates → Validate
-→ Expected: 90-95% validation rate
-→ All activities have decision log with reasoning
-→ User sees "Why this place?" for every recommendation
-```
+**File**: \`spotlight-react/src/components/collaboration/InviteCollaboratorModal.tsx\`
 
-### **User Experience:**
-```
-Before:
-"Musée Granet" ⭐ 4.4
-[Selected because... ¯\_(ツ)_/¯]
+**Form Fields**:
+- Email input (required)
+- Role selector (Editor / Viewer)
+- Optional personal message
+- Submit button
 
-After:
-"Musée Granet" ⭐ 4.4 (Selected from 5 candidates)
-✅ Confidence: 92%
-📋 Why selected:
-  • Highest quality score (0.89)
-  • Open during scheduled time (10:00-18:00)
-  • 5-minute walk from previous location
-  • Matches culture travel style
-  • Balances energy level (3 high-energy activities scheduled)
+**Validation**:
+- Email format check
+- User exists check
+- Not already a collaborator
 
-❌ Alternatives considered:
-  • Atelier Cézanne - Closed on Monday
-  • Pavillon Vendôme - 20-minute walk (too far)
-  • Fondation Vasarely - Lower rating (3.9 vs 4.4)
-```
+**Success Flow**:
+1. User fills form
+2. POST to /api/routes/:id/collaborators
+3. Show success message
+4. Close modal
+5. Refresh collaborators list
 
 ---
 
-## 🚀 Next Steps
+### STEP 7: Integration with Spotlight Page ⏱️ 1 day
 
-**Immediate:**
-1. Build OrchestratorAgent v2 with full coordination logic
-2. Create decision_logs database table
-3. Test coordination loop in isolation
+**Goal**: Add CollaborationPanel to route detail page
 
-**Then:**
-4. Integrate into CityActivityAgent
-5. Update ItineraryAgentOrchestrator
-6. Test end-to-end on real itinerary
-7. Deploy
+**File**: \`spotlight-react/src/pages/SpotlightPage.tsx\`
 
-**Status:** 40% complete (2/5 core components done)
-**ETA:** Phase 2 can be complete in this session!
+**Layout Changes**:
+\`\`\`tsx
+// Add collaboration panel as sidebar or floating panel
+<div className="flex gap-4">
+  <div className="flex-1">
+    {/* Existing route content */}
+  </div>
+  <div className="w-96">
+    <CollaborationPanel routeId={routeId} />
+  </div>
+</div>
+\`\`\`
+
+**Mobile Responsiveness**:
+- Show as bottom sheet on mobile
+- Floating action button to open chat
+- Badge with unread count
 
 ---
 
-*This is where the system becomes truly agentic - not just validation, but intelligent reasoning, feedback loops, and transparent decision-making.*
+### STEP 8: Real-time Route Updates ⏱️ 1 day
+
+**Goal**: Broadcast route changes to all collaborators
+
+**When to broadcast**:
+- Stop added/removed
+- Itinerary regenerated
+- Route renamed
+- Budget changed
+
+**Implementation**:
+\`\`\`typescript
+// In route update handler
+const updateRoute = async (changes) => {
+  // Save to database
+  await saveChanges(changes);
+  
+  // Broadcast via WebSocket
+  collaborationService.broadcast(routeId, {
+    type: 'route_update',
+    updateType: 'stop_added',
+    data: changes
+  });
+};
+\`\`\`
+
+**Frontend handling**:
+\`\`\`typescript
+useEffect(() => {
+  if (lastMessage?.type === 'route_update') {
+    // Show toast notification
+    toast.info('Route updated by collaborator');
+    
+    // Refresh route data
+    refetchRoute();
+  }
+}, [lastMessage]);
+\`\`\`
+
+---
+
+### STEP 9: Presence Indicators ⏱️ 4 hours
+
+**Goal**: Show who's online
+
+**Implementation**:
+- Send presence updates every 30 seconds
+- Update \`user_presence\` table
+- Broadcast presence changes
+- Show colored dots next to avatars
+
+**Status Colors**:
+- 🟢 Green = Viewing/Editing (online)
+- 🟡 Yellow = Idle (5+ min inactive)  
+- ⚫ Gray = Offline
+
+**Presence Update Flow**:
+\`\`\`typescript
+// Every 30 seconds
+send({
+  type: 'presence_update',
+  routeId,
+  status: 'viewing',
+  section: 'itinerary'
+});
+\`\`\`
+
+---
+
+### STEP 10: Activity Feed (Optional for V1) ⏱️ 1 day
+
+**Goal**: Show audit log of changes
+
+**Display**:
+- Timeline view
+- User avatars
+- Action descriptions
+- Timestamps
+
+**Example Items**:
+- "Alice added stop: Lyon, France"
+- "Bob regenerated itinerary"
+- "Charlie invited David as editor"
+
+---
+
+### STEP 11: Email Notifications ⏱️ 1 day
+
+**Goal**: Send invitation emails
+
+**Email Templates**:
+1. Collaboration invite
+2. Message notification (optional)
+3. Route update digest (optional)
+
+**Implementation**:
+\`\`\`javascript
+const sendCollaborationInvite = async (email, inviterName, routeName, routeUrl) => {
+  // Use existing email service
+  await sendEmail({
+    to: email,
+    subject: \`\${inviterName} invited you to plan a trip together\`,
+    html: \`
+      <h2>You've been invited!</h2>
+      <p>\${inviterName} wants you to help plan: \${routeName}</p>
+      <a href="\${routeUrl}">View Trip</a>
+    \`
+  });
+};
+\`\`\`
+
+---
+
+### STEP 12: Testing & QA ⏱️ 2 days
+
+**Unit Tests**:
+- CollaborationService methods
+- Permission checking logic
+- Message broadcasting
+
+**Integration Tests**:
+\`\`\`javascript
+describe('Collaboration', () => {
+  test('User can invite collaborator', async () => {
+    const response = await request(app)
+      .post('/api/routes/ROUTE_ID/collaborators')
+      .send({ email: 'test@example.com', role: 'editor' })
+      .expect(200);
+  });
+  
+  test('Viewer cannot edit route', async () => {
+    // Test permission system
+  });
+});
+\`\`\`
+
+**Manual Testing Checklist**:
+- [ ] Invite flow works end-to-end
+- [ ] Chat messages appear instantly
+- [ ] Typing indicators work
+- [ ] Presence dots update correctly
+- [ ] Permission system enforced
+- [ ] Reconnection works after disconnect
+- [ ] Multiple users can edit simultaneously
+- [ ] Mobile responsive
+
+---
+
+### STEP 13: Deployment ⏱️ 1 day
+
+**Pre-deployment**:
+- [ ] Run migration on Heroku Postgres
+- [ ] Test WebSocket on Heroku
+- [ ] Configure environment variables
+- [ ] Update CORS settings
+
+**Migration Command**:
+\`\`\`bash
+# Connect to Heroku Postgres
+heroku pg:psql -a rdtrip
+
+# Run migration
+\\i db/migrations/010_add_collaboration.sql
+\`\`\`
+
+**Heroku WebSocket Config**:
+- Heroku supports WebSocket by default
+- No special dyno types needed
+- Verify with \`wscat -c wss://rdtrip.herokuapp.com/ws/collab?token=TOKEN\`
+
+**Deployment**:
+\`\`\`bash
+git add .
+git commit -m "Phase 2: Add collaborative trip planning"
+git push origin main
+git push heroku main
+\`\`\`
+
+**Post-deployment Monitoring**:
+- [ ] Check WebSocket connection count
+- [ ] Monitor latency in Heroku metrics
+- [ ] Test with real users
+- [ ] Monitor error logs
+
+---
+
+## 🧪 Testing Strategy
+
+### Manual Testing
+
+**Scenario 1: Basic Collaboration**
+1. User A creates route
+2. User A invites User B as editor
+3. User B accepts invitation
+4. Both users can see each other in collaborators list
+5. User A sends chat message → User B sees it instantly
+
+**Scenario 2: Real-time Updates**  
+1. User A adds stop
+2. User B sees update notification
+3. User B's route refreshes automatically
+
+**Scenario 3: Permission System**
+1. User A invites User C as viewer
+2. User C can see route but cannot edit
+3. API returns 403 when User C tries to edit
+
+### Load Testing
+
+\`\`\`bash
+# Test WebSocket connections
+npm install -g artillery
+artillery quick --count 100 --num 10 wss://localhost:3001/ws/collab
+\`\`\`
+
+---
+
+## 📈 Success Metrics
+
+**Technical**:
+- WebSocket uptime: > 95%
+- Message latency: < 200ms
+- Reconnection rate: > 98%
+
+**Product**:
+- % trips with 2+ collaborators: > 50%
+- Avg messages per trip: > 15
+- Invitation acceptance: > 70%
+
+---
+
+## 🚀 Launch Plan
+
+### Soft Launch (Week 1)
+- Enable for 10% of users
+- Monitor metrics closely
+- Collect feedback
+
+### Full Launch (Week 2)
+- Enable for all users
+- Announce via email
+- Blog post about collaboration
+
+### Post-Launch
+- Monitor adoption
+- Fix bugs quickly
+- Plan Phase 2.1 enhancements
+
+---
+
+## 🐛 Known Issues & Limitations
+
+**V1 Limitations**:
+- No message editing
+- No file attachments
+- No message search
+- No offline queue
+- Max 20 collaborators per route
+
+**Future** (Phase 2.1):
+- Video calls
+- Screen sharing
+- Voting system
+- Calendar integration
+
+---
+
+## 📚 Resources
+
+- [Feature Roadmap](./FEATURE_ROADMAP_2025.md#feature-2)
+- [WebSocket Docs](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket)
+- [\`ws\` npm package](https://github.com/websockets/ws)
+
+---
+
+**Ready to implement! Let's build collaborative trip planning! 🚀**
