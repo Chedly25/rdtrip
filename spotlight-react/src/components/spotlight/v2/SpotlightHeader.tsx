@@ -3,17 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { useSpotlightStoreV2 } from '../../../stores/spotlightStoreV2';
 import {
   ArrowLeft,
-  Download,
   Share2,
   MapPin,
   Navigation
 } from 'lucide-react';
-import { useState } from 'react';
+import ExportMenu from './ExportMenu';
 
 const SpotlightHeader = () => {
   const navigate = useNavigate();
   const { route, getCityName, getAgentColors } = useSpotlightStoreV2();
-  const [showExportMenu, setShowExportMenu] = useState(false);
   const agentColors = getAgentColors();
 
   if (!route) return null;
@@ -41,22 +39,6 @@ const SpotlightHeader = () => {
     // Waze only supports start and end, so use destination
     const url = `https://waze.com/ul?q=${encodeURIComponent(destinationName)}&navigate=yes`;
     window.open(url, '_blank');
-  };
-
-  const handleExportPDF = async () => {
-    // TODO: Implement PDF export in Phase 5
-    console.log('PDF export not yet implemented');
-  };
-
-  const handleExportJSON = () => {
-    const dataStr = JSON.stringify(route, null, 2);
-    const dataBlob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(dataBlob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `route-${originName}-to-${destinationName}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
   };
 
   const handleShare = async () => {
@@ -133,46 +115,7 @@ const SpotlightHeader = () => {
           </button>
 
           {/* Export Menu */}
-          <div className="relative">
-            <button
-              onClick={() => setShowExportMenu(!showExportMenu)}
-              className="px-4 py-2 rounded-lg text-white transition-colors flex items-center gap-2 text-sm"
-              style={{
-                background: `linear-gradient(135deg, ${agentColors.primary}, ${agentColors.secondary})`
-              }}
-            >
-              <Download className="w-4 h-4" />
-              Export
-            </button>
-
-            {showExportMenu && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 10 }}
-                className="absolute right-0 mt-2 w-48 bg-slate-800 rounded-lg shadow-xl border border-white/10 overflow-hidden"
-              >
-                <button
-                  onClick={() => {
-                    handleExportPDF();
-                    setShowExportMenu(false);
-                  }}
-                  className="w-full px-4 py-3 text-left text-white hover:bg-white/5 transition-colors text-sm"
-                >
-                  Export as PDF
-                </button>
-                <button
-                  onClick={() => {
-                    handleExportJSON();
-                    setShowExportMenu(false);
-                  }}
-                  className="w-full px-4 py-3 text-left text-white hover:bg-white/5 transition-colors text-sm"
-                >
-                  Export as JSON
-                </button>
-              </motion.div>
-            )}
-          </div>
+          <ExportMenu />
 
           {/* Share Button */}
           <button
