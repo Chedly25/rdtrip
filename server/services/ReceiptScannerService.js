@@ -1,7 +1,7 @@
 /**
  * ReceiptScannerService
  *
- * AI-powered receipt scanning using GPT-4 Vision for OCR and expense categorization.
+ * AI-powered receipt scanning using Deepseek Vision for OCR and expense categorization.
  * Extracts merchant, amount, date, items, and automatically categorizes expenses.
  */
 
@@ -22,30 +22,35 @@ const EXPENSE_CATEGORIES = [
 
 class ReceiptScannerService {
   constructor() {
-    this.apiKey = process.env.OPENAI_API_KEY;
-    this._openaiClient = null;
+    // Use Deepseek API key (OpenAI-compatible)
+    this.apiKey = process.env.DEEPSEEK_API_KEY || 'sk-d4bc11d58a654a428463c1c3b5252b37';
+    this.baseURL = 'https://api.deepseek.com';
+    this._client = null;
 
     if (!this.apiKey) {
-      console.warn('OPENAI_API_KEY not set - receipt scanning will not work');
+      console.warn('DEEPSEEK_API_KEY not set - receipt scanning will not work');
+    } else {
+      console.log('✓ Deepseek API configured for receipt scanning');
     }
   }
 
   /**
-   * Lazy-load OpenAI client (only when needed)
-   * @returns {OpenAI} OpenAI client instance
+   * Lazy-load Deepseek client (only when needed)
+   * @returns {OpenAI} OpenAI-compatible client instance
    */
   get openai() {
     if (!this.apiKey) {
-      throw new Error('OPENAI_API_KEY not configured - receipt scanning is disabled');
+      throw new Error('DEEPSEEK_API_KEY not configured - receipt scanning is disabled');
     }
 
-    if (!this._openaiClient) {
-      this._openaiClient = new OpenAI({
-        apiKey: this.apiKey
+    if (!this._client) {
+      this._client = new OpenAI({
+        apiKey: this.apiKey,
+        baseURL: this.baseURL
       });
     }
 
-    return this._openaiClient;
+    return this._client;
   }
 
   /**
@@ -65,11 +70,11 @@ class ReceiptScannerService {
       const base64Image = imageBuffer.toString('base64');
       const imageUrl = `data:${mimeType};base64,${base64Image}`;
 
-      console.log('Scanning receipt with GPT-4 Vision...');
+      console.log('Scanning receipt with Deepseek Vision...');
 
-      // Call GPT-4 Vision API
+      // Call Deepseek Vision API
       const response = await this.openai.chat.completions.create({
-        model: "gpt-4-vision-preview",
+        model: "DeepSeek-V3.2-Exp",
         max_tokens: 1000,
         messages: [
           {
@@ -94,7 +99,7 @@ class ReceiptScannerService {
 
       // Parse the response
       const content = response.choices[0].message.content;
-      console.log('GPT-4 Vision response:', content);
+      console.log('Deepseek Vision response:', content);
 
       // Extract JSON from response
       const receiptData = this._parseReceiptResponse(content);
@@ -143,7 +148,7 @@ Respond with ONLY a JSON object in this exact format:
 }`;
 
       const response = await this.openai.chat.completions.create({
-        model: "gpt-4-turbo-preview",
+        model: "DeepSeek-V3.2-Exp",
         messages: [{ role: "user", content: prompt }],
         temperature: 0.1,
         max_tokens: 150
@@ -337,10 +342,11 @@ If any field is not visible on the receipt, use null. Be as accurate as possible
   getHealthStatus() {
     return {
       serviceName: 'ReceiptScannerService',
-      status: process.env.OPENAI_API_KEY ? 'ready' : 'not_configured',
-      apiKeyConfigured: !!process.env.OPENAI_API_KEY,
+      status: this.apiKey ? 'ready' : 'not_configured',
+      apiKeyConfigured: !!this.apiKey,
       supportedFormats: this.getSupportedFormats(),
-      model: 'gpt-4-vision-preview'
+      model: 'DeepSeek-V3.2-Exp',
+      baseURL: this.baseURL
     };
   }
 }
