@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { useSpotlightStoreV2 } from '../../../stores/spotlightStoreV2';
 import { MapPin, Moon, Plus, GripVertical } from 'lucide-react';
 import { useState } from 'react';
+import AddCityLandmarkModal from './AddCityLandmarkModal';
 import {
   DndContext,
   closestCenter,
@@ -138,6 +139,7 @@ const FloatingCityCards = () => {
     route,
     selectedCityIndex,
     setSelectedCity,
+    isAddingLandmark,
     setIsAddingLandmark,
     getCityName,
     getAgentColors,
@@ -205,6 +207,12 @@ const FloatingCityCards = () => {
 
   return (
     <div className="absolute bottom-0 left-0 right-0 z-40 pb-8">
+      {/* Add City/Landmark Modal */}
+      <AddCityLandmarkModal
+        isOpen={isAddingLandmark}
+        onClose={() => setIsAddingLandmark(false)}
+      />
+
       {/* Floating Add Button (FAB) */}
       <motion.button
         initial={{ scale: 0, opacity: 0 }}
