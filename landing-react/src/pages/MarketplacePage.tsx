@@ -6,8 +6,6 @@ import {
   Loader2,
   AlertCircle,
   Map,
-  TrendingUp,
-  Star,
   Sparkles
 } from 'lucide-react'
 import PublishedRouteCard from '../components/marketplace/PublishedRouteCard'
