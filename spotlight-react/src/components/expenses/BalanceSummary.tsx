@@ -24,7 +24,8 @@ export function BalanceSummary({ routeId, userId }: BalanceSummaryProps) {
   const [error, setError] = useState<string | null>(null)
 
   // WebSocket for real-time updates
-  const { lastMessage } = useWebSocket('/ws/collab', {
+  // @ts-ignore - lastMessage not needed, using onMessage callback
+  const { lastMessage: _ } = useWebSocket('/ws/collab', {
     onMessage: (message) => {
       // Refresh balances when expenses or settlements change
       if (
@@ -233,7 +234,6 @@ export function BalanceSummary({ routeId, userId }: BalanceSummaryProps) {
                   {balances.map((balance, idx) => {
                     const isCurrentUser = balance.userId === userId
                     const owes = balance.balance < 0
-                    const isOwed = balance.balance > 0
                     const isSettled = Math.abs(balance.balance) < 0.01
 
                     return (

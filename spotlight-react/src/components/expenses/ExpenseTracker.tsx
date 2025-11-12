@@ -48,7 +48,7 @@ const CATEGORY_COLORS: Record<ExpenseCategory, string> = {
   other: 'bg-slate-100 text-slate-700'
 }
 
-export function ExpenseTracker({ routeId, userId, collaborators = [], onAddExpense }: ExpenseTrackerProps) {
+export function ExpenseTracker({ routeId, collaborators = [], onAddExpense }: ExpenseTrackerProps) {
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
