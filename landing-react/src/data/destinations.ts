@@ -5,6 +5,7 @@ export interface Destination {
   id: string
   name: string
   country: string
+  coordinates: [number, number] // [latitude, longitude]
   flag: string
   driveTime: string
   driveTimeHours: number
@@ -26,6 +27,7 @@ export const destinations: Destination[] = [
     id: 'barcelona',
     name: 'Barcelona',
     country: 'Spain',
+    coordinates: [41.3851, 2.1734],
     flag: '🇪🇸',
     driveTime: '8 hours',
     driveTimeHours: 8,
@@ -45,6 +47,7 @@ export const destinations: Destination[] = [
     id: 'milan',
     name: 'Milan',
     country: 'Italy',
+    coordinates: [45.4642, 9.1900],
     flag: '🇮🇹',
     driveTime: '6 hours',
     driveTimeHours: 6,
@@ -64,6 +67,7 @@ export const destinations: Destination[] = [
     id: 'geneva',
     name: 'Geneva',
     country: 'Switzerland',
+    coordinates: [46.2044, 6.1432],
     flag: '🇨🇭',
     driveTime: '5 hours',
     driveTimeHours: 5,
@@ -83,6 +87,7 @@ export const destinations: Destination[] = [
     id: 'munich',
     name: 'Munich',
     country: 'Germany',
+    coordinates: [48.1351, 11.5820],
     flag: '🇩🇪',
     driveTime: '9 hours',
     driveTimeHours: 9,
@@ -102,6 +107,7 @@ export const destinations: Destination[] = [
     id: 'cinque-terre',
     name: 'Cinque Terre',
     country: 'Italy',
+    coordinates: [44.1458, 9.6564],
     flag: '🇮🇹',
     driveTime: '5 hours',
     driveTimeHours: 5,
@@ -121,6 +127,7 @@ export const destinations: Destination[] = [
     id: 'lyon',
     name: 'Lyon',
     country: 'France',
+    coordinates: [45.7640, 4.8357],
     flag: '🇫🇷',
     driveTime: '3 hours',
     driveTimeHours: 3,

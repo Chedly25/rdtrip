@@ -1,10 +1,33 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { MapPin, Navigation, Calendar, Zap } from 'lucide-react'
+import { Calendar, Zap } from 'lucide-react'
 import { useFormStore } from '../stores/formStore'
 import { BudgetSelector } from './BudgetSelector'
 import { AgentSelector } from './AgentSelector'
 import { RouteGenerationLoading } from './RouteGenerationLoading'
+import { CitySelector } from './CitySelector'
+
+// Helper function for distance calculation (Haversine formula)
+function calculateDistance(coords1: [number, number], coords2: [number, number]): number {
+  const [lat1, lon1] = coords1
+  const [lat2, lon2] = coords2
+
+  const R = 6371 // Earth's radius in kilometers
+  const dLat = (lat2 - lat1) * (Math.PI / 180)
+  const dLon = (lon2 - lon1) * (Math.PI / 180)
+
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * (Math.PI / 180)) *
+      Math.cos(lat2 * (Math.PI / 180)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2)
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  const distance = R * c
+
+  return distance
+}
 
 interface RouteFormProps {
   onRouteGenerated?: (data: any) => void
@@ -20,8 +43,12 @@ export function RouteForm({ onRouteGenerated }: RouteFormProps) {
     tripPace,
     isLoading,
     error,
+    originError,
+    destinationError,
     setOrigin,
     setDestination,
+    setOriginError,
+    setDestinationError,
     setBudget,
     setAgents,
     setTotalNights,
@@ -45,8 +72,28 @@ export function RouteForm({ onRouteGenerated }: RouteFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!origin.trim() || !destination.trim()) {
-      setError('Please enter both origin and destination')
+    // Validate origin and destination are selected
+    if (!origin) {
+      setOriginError('Please select a starting city')
+      return
+    }
+
+    if (!destination) {
+      setDestinationError('Please select a destination city')
+      return
+    }
+
+    // Calculate distance
+    const distance = calculateDistance(origin.coordinates, destination.coordinates)
+
+    // Validate distance constraints
+    if (distance < 50) {
+      setDestinationError(`Destination too close to origin (${Math.round(distance)} km). Minimum distance is 50 km.`)
+      return
+    }
+
+    if (distance > 3000) {
+      setDestinationError(`Destination too far from origin (${Math.round(distance)} km). Maximum distance is 3,000 km for road trips.`)
       return
     }
 
@@ -55,6 +102,8 @@ export function RouteForm({ onRouteGenerated }: RouteFormProps) {
       return
     }
 
+    setOriginError(null)
+    setDestinationError(null)
     setError(null)
     setLoading(true)
     setIsSubmitting(true)
@@ -65,8 +114,16 @@ export function RouteForm({ onRouteGenerated }: RouteFormProps) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          origin,
-          destination,
+          origin: {
+            name: origin.name,
+            country: origin.country,
+            coordinates: origin.coordinates
+          },
+          destination: {
+            name: destination.name,
+            country: destination.country,
+            coordinates: destination.coordinates
+          },
           totalNights,
           tripPace,
           budget,
@@ -75,7 +132,8 @@ export function RouteForm({ onRouteGenerated }: RouteFormProps) {
       })
 
       if (!response.ok) {
-        throw new Error('Failed to start route generation')
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to start route generation')
       }
 
       const { jobId } = await response.json()
@@ -167,7 +225,7 @@ export function RouteForm({ onRouteGenerated }: RouteFormProps) {
         {isLoading && (
           <RouteGenerationLoading
             progress={progress}
-            destination={destination}
+            destination={destination?.name || ''}
             agents={agents}
           />
         )}
@@ -185,37 +243,39 @@ export function RouteForm({ onRouteGenerated }: RouteFormProps) {
           {/* Origin and Destination */}
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             {/* Origin */}
-            <div className="space-y-2">
-              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                <MapPin className="h-4 w-4 text-green-500" />
-                Starting Point
-              </label>
-              <input
-                type="text"
-                value={origin}
-                onChange={(e) => setOrigin(e.target.value)}
-                placeholder="e.g., Paris, France"
-                className="w-full rounded-lg border-2 border-gray-200 px-4 py-3 text-gray-900 placeholder-gray-400 transition-colors focus:border-purple-500 focus:outline-none"
-                required
-              />
-            </div>
+            <CitySelector
+              value={origin}
+              label="Starting From"
+              placeholder="Enter your starting city (e.g., Berlin, Paris, Rome)"
+              onCitySelect={setOrigin}
+              error={originError}
+            />
 
             {/* Destination */}
-            <div className="space-y-2">
-              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                <Navigation className="h-4 w-4 text-red-500" />
-                Destination
-              </label>
-              <input
-                type="text"
-                value={destination}
-                onChange={(e) => setDestination(e.target.value)}
-                placeholder="e.g., Barcelona, Spain"
-                className="w-full rounded-lg border-2 border-gray-200 px-4 py-3 text-gray-900 placeholder-gray-400 transition-colors focus:border-purple-500 focus:outline-none"
-                required
-              />
-            </div>
+            <CitySelector
+              value={destination}
+              label="Destination"
+              placeholder="Where do you want to go?"
+              onCitySelect={setDestination}
+              error={destinationError}
+            />
           </div>
+
+          {/* Distance indicator */}
+          {origin && destination && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              className="rounded-lg bg-blue-50 p-4 border border-blue-200"
+            >
+              <p className="text-sm text-blue-900">
+                <span className="font-medium">
+                  {calculateDistance(origin.coordinates, destination.coordinates).toFixed(0)} km
+                </span>
+                {' '}road trip from <span className="font-medium">{origin.name}</span> to <span className="font-medium">{destination.name}</span>
+              </p>
+            </motion.div>
+          )}
 
           {/* Trip Pace */}
           <div className="space-y-3">
