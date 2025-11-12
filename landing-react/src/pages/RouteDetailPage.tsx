@@ -12,11 +12,10 @@ import {
   AlertCircle,
   ArrowLeft,
   Award,
-  Globe,
   Mountain
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
-import type { RouteDetailResponse, RouteReview } from '../types'
+import type { RouteDetailResponse } from '../types'
 
 const DIFFICULTY_COLORS = {
   easy: 'bg-green-100 text-green-700 border-green-300',
