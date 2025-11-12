@@ -85,12 +85,6 @@ export function BudgetOverview({ routeId }: BudgetOverviewProps) {
     }).format(amount)
   }
 
-  function getStatusColor(percentage: number, threshold: number): string {
-    if (percentage >= 1) return 'red' // Over budget
-    if (percentage >= threshold) return 'orange' // Warning
-    return 'green' // Good
-  }
-
   function getProgressBarColor(percentage: number, threshold: number): string {
     if (percentage >= 1) return 'bg-red-500'
     if (percentage >= threshold) return 'bg-orange-500'
