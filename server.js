@@ -305,11 +305,10 @@ async function scrapeWithFallback(url, entityName, city) {
 
 // ==================== END WEB SCRAPING UTILITIES ====================
 
-// Auth utilities and middleware
+// Auth utilities
 const db = require('./db/connection');
 const { hashPassword, comparePassword, validatePasswordStrength } = require('./utils/password');
-const { generateToken } = require('./utils/jwt');
-const { authenticate, optionalAuth } = require('./middleware/auth');
+// Note: generateToken, authenticate, and optionalAuth are imported at the top of the file
 
 // City optimization utility
 const { selectOptimalCities } = require('./utils/cityOptimization');
