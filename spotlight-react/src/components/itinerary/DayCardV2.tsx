@@ -43,6 +43,11 @@ export function DayCardV2({
     const items: any[] = [];
     let currentTime = '08:00';
 
+    // SAFE array validation - critical for preventing crashes
+    const safeActivities = Array.isArray(activities) ? activities : [];
+    const safeRestaurants = Array.isArray(restaurants) ? restaurants : [];
+    const safeScenicStops = Array.isArray(scenicStops) ? scenicStops : [];
+
     // Helper to add time
     const addHours = (time: string, hours: number) => {
       const [h, m] = time.split(':').map(Number);
@@ -53,7 +58,7 @@ export function DayCardV2({
     };
 
     // Breakfast
-    const breakfast = restaurants.find((r: any) => r.meal === 'breakfast');
+    const breakfast = safeRestaurants.find((r: any) => r.meal === 'breakfast');
     if (breakfast) {
       items.push({
         type: 'restaurant',
@@ -74,7 +79,7 @@ export function DayCardV2({
           name: `${segment.from} → ${segment.to}`,
           duration: segment.estimatedTime,
           distance: `${segment.distance} km`,
-          stops: scenicStops.find(
+          stops: safeScenicStops.find(
             (ss: any) => ss.segment === `${segment.from} → ${segment.to}`
           )?.stops || []
         },
@@ -86,7 +91,7 @@ export function DayCardV2({
     }
 
     // Lunch
-    const lunch = restaurants.find((r: any) => r.meal === 'lunch');
+    const lunch = safeRestaurants.find((r: any) => r.meal === 'lunch');
     if (lunch && !day.driveSegments) {
       items.push({
         type: 'restaurant',
@@ -106,7 +111,7 @@ export function DayCardV2({
     }
 
     // Activities
-    activities.forEach((activity: any) => {
+    safeActivities.forEach((activity: any) => {
       items.push({
         type: 'activity',
         time: currentTime,
@@ -119,7 +124,7 @@ export function DayCardV2({
     });
 
     // Dinner
-    const dinner = restaurants.find((r: any) => r.meal === 'dinner');
+    const dinner = safeRestaurants.find((r: any) => r.meal === 'dinner');
     if (dinner) {
       items.push({
         type: 'restaurant',
@@ -282,11 +287,11 @@ export function DayCardV2({
                         <span className="text-gray-600">{practicalInfo.transportation.bestOption}</span>
                       </div>
                     )}
-                    {practicalInfo.localTips && practicalInfo.localTips.length > 0 && (
+                    {practicalInfo.localTips && Array.isArray(practicalInfo.localTips) && practicalInfo.localTips.length > 0 && (
                       <div>
                         <span className="font-medium text-gray-700">Local tips:</span>
                         <ul className="mt-1 space-y-1 pl-4">
-                          {practicalInfo.localTips.slice(0, 3).map((tip: string, i: number) => (
+                          {(Array.isArray(practicalInfo.localTips) ? practicalInfo.localTips : []).slice(0, 3).map((tip: string, i: number) => (
                             <li key={i} className="text-gray-600">• {tip}</li>
                           ))}
                         </ul>
@@ -297,11 +302,11 @@ export function DayCardV2({
               )}
 
               {/* Local Events */}
-              {events && events.length > 0 && (
+              {events && Array.isArray(events) && events.length > 0 && (
                 <div className="space-y-3">
                   <h4 className="font-semibold text-gray-900">Local Events</h4>
                   <div className="space-y-2">
-                    {events.map((event: any, index: number) => (
+                    {(Array.isArray(events) ? events : []).map((event: any, index: number) => (
                       <div key={index} className="rounded-lg border border-purple-200 bg-purple-50 p-3">
                         <div className="flex items-start gap-2">
                           <span className="text-xl">🎉</span>
