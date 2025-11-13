@@ -264,8 +264,10 @@ class GooglePlacesRestaurantAgent {
 
   /**
    * Calculate restaurant quality score
+   * NOW WITH AGENT PERSONALITY SCORING
    */
   calculateRestaurantScore(restaurant, preferences, mealType) {
+    const agentType = preferences?.agentType || preferences?.travelStyle || 'best-overall';
     let score = 0;
 
     // Rating (40 points)
@@ -273,9 +275,19 @@ class GooglePlacesRestaurantAgent {
       score += (restaurant.rating / 5.0) * 40;
     }
 
-    // Number of ratings (20 points)
+    // Number of ratings - AGENT-SPECIFIC LOGIC
     if (restaurant.ratingCount) {
-      score += Math.min(restaurant.ratingCount / 100, 1) * 20;
+      if (agentType === 'hidden-gems') {
+        // HIDDEN GEMS: Prefer fewer ratings (local secrets)
+        const hiddenScore = Math.max(0, 20 - Math.min(restaurant.ratingCount / 50, 1) * 20);
+        score += hiddenScore;
+        if (restaurant.ratingCount < 50) {
+          score += 10; // Bonus for truly hidden restaurants
+        }
+      } else {
+        // OTHER AGENTS: Prefer well-reviewed places
+        score += Math.min(restaurant.ratingCount / 100, 1) * 20;
+      }
     }
 
     // Has photos (15 points)
@@ -291,6 +303,27 @@ class GooglePlacesRestaurantAgent {
     // Price match (10 points)
     if (this.matchesBudget(restaurant.priceLevel, preferences.budget)) {
       score += 10;
+    }
+
+    // AGENT-SPECIFIC BONUSES
+    if (agentType === 'food') {
+      // FOOD AGENT: Big bonus for high-end dining
+      if (restaurant.priceLevel >= 3 && restaurant.rating >= 4.0) {
+        score += 25; // Fine dining bonus
+      }
+      if (restaurant.rating >= 4.5) {
+        score += 15; // Exceptional quality bonus
+      }
+    } else if (agentType === 'adventure') {
+      // ADVENTURE: Prefer casual, hearty meals
+      if (restaurant.priceLevel <= 2) {
+        score += 15; // Casual dining bonus
+      }
+    } else if (agentType === 'culture') {
+      // CULTURE: Prefer traditional/authentic venues
+      if (restaurant.priceLevel === 2 || restaurant.priceLevel === 3) {
+        score += 15; // Mid-range traditional bonus
+      }
     }
 
     return score;
@@ -342,14 +375,27 @@ class GooglePlacesRestaurantAgent {
   }
 
   getCuisineTypes(agentType, mealType) {
+    // AGENT-SPECIFIC RESTAURANT PREFERENCES
     const cuisineMap = {
-      culture: ['traditional', 'local cuisine', 'regional'],
-      food: ['fine dining', 'gourmet', 'michelin'],
-      adventure: ['casual dining', 'bistro'],
-      'best-overall': ['traditional', 'local cuisine']
+      // CULTURE: Traditional, authentic, historic venues
+      'culture': ['traditional', 'local cuisine', 'regional', 'authentic'],
+
+      // FOOD: Fine dining, gourmet, highly-rated
+      'food': ['fine dining', 'gourmet', 'michelin', 'chef', 'tasting menu'],
+
+      // ADVENTURE: Casual, hearty, local taverns
+      'adventure': ['casual dining', 'bistro', 'tavern', 'pub food', 'hearty meals'],
+
+      // HIDDEN GEMS: Local secrets, neighborhood spots, family-run
+      'hidden-gems': ['family-owned', 'neighborhood', 'local favorite', 'hole-in-the-wall'],
+
+      // BEST OVERALL: Mix of popular and traditional
+      'best-overall': ['traditional', 'local cuisine', 'popular', 'highly rated']
     };
 
-    return cuisineMap[agentType] || cuisineMap['best-overall'];
+    const types = cuisineMap[agentType] || cuisineMap['best-overall'];
+    console.log(`   🍽️  Cuisine preferences for ${agentType}: ${types.join(', ')}`);
+    return types;
   }
 
   inferCuisine(types, summary) {
