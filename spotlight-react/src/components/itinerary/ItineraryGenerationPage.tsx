@@ -51,7 +51,16 @@ export function ItineraryGenerationPage() {
   };
 
   const handleGenerate = async () => {
-    if (!route) return;
+    if (!route) {
+      console.error('❌ No route data available');
+      return;
+    }
+
+    // Validate route.cities exists and is an array
+    if (!route.cities || !Array.isArray(route.cities)) {
+      console.error('❌ Route cities is not an array:', route.cities);
+      return;
+    }
 
     setHasStarted(true);
     setGenerationStartTime(Date.now());
@@ -65,19 +74,19 @@ export function ItineraryGenerationPage() {
       return { name: cityData.name, country: cityData.country || '' };
     };
 
-    // Build routeData from spotlight route
+    // Build routeData from spotlight route with safe array access
     const routeData = {
       id: route.id,
       origin: route.origin,
       destination: route.destination,
-      waypoints: route.cities.map(city => {
+      waypoints: (route.cities || []).map(city => {
         const cityInfo = getCityInfo(city.city);
         return {
           city: cityInfo.name,
           name: cityInfo.name,
           country: cityInfo.country,
-          coordinates: [city.coordinates.lat, city.coordinates.lng],
-          nights: city.nights
+          coordinates: city.coordinates ? [city.coordinates.lat, city.coordinates.lng] : [0, 0],
+          nights: city.nights || 0
         };
       }),
       agent: route.agent,
@@ -108,6 +117,33 @@ export function ItineraryGenerationPage() {
       navigate(`/spotlight?itinerary=${itinerary.id}`);
     }
   };
+
+  // Show error if route is not available
+  if (!route) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50 flex items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="max-w-md mx-auto text-center p-8"
+        >
+          <div className="bg-red-50 border-2 border-red-200 rounded-3xl p-8">
+            <AlertCircle className="w-16 h-16 text-red-600 mx-auto mb-4" />
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">Route Data Missing</h3>
+            <p className="text-gray-600 mb-6">
+              Unable to load route data. Please return to the spotlight page and try again.
+            </p>
+            <button
+              onClick={handleBack}
+              className="px-8 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-semibold transition-colors"
+            >
+              Go Back
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50">
@@ -303,10 +339,10 @@ export function ItineraryGenerationPage() {
               {/* Stats Grid */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
                 {[
-                  { label: 'Days', value: itinerary.dayStructure?.length || 0, icon: Calendar, color: 'blue' },
-                  { label: 'Activities', value: itinerary.activities?.flat().length || 0, icon: Landmark, color: 'purple' },
-                  { label: 'Restaurants', value: itinerary.restaurants?.length || 0, icon: '🍽️', color: 'orange' },
-                  { label: 'Hotels', value: itinerary.accommodations?.length || 0, icon: '🏨', color: 'pink' }
+                  { label: 'Days', value: (Array.isArray(itinerary.dayStructure) ? itinerary.dayStructure.length : 0), icon: Calendar, color: 'blue' },
+                  { label: 'Activities', value: (Array.isArray(itinerary.activities) ? itinerary.activities.flat().length : 0), icon: Landmark, color: 'purple' },
+                  { label: 'Restaurants', value: (Array.isArray(itinerary.restaurants) ? itinerary.restaurants.length : 0), icon: '🍽️', color: 'orange' },
+                  { label: 'Hotels', value: (Array.isArray(itinerary.accommodations) ? itinerary.accommodations.length : 0), icon: '🏨', color: 'pink' }
                 ].map((stat, idx) => (
                   <motion.div
                     key={idx}
@@ -329,14 +365,14 @@ export function ItineraryGenerationPage() {
               {/* Preview Section */}
               <div className="bg-white rounded-3xl shadow-2xl p-8 mb-8 border border-gray-200">
                 {/* Days Preview */}
-                {itinerary.dayStructure && itinerary.dayStructure.length > 0 && (
+                {itinerary.dayStructure && Array.isArray(itinerary.dayStructure) && itinerary.dayStructure.length > 0 && (
                   <div className="mb-8">
                     <h4 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
                       <Calendar className="w-6 h-6 text-blue-600" />
                       Your Journey
                     </h4>
                     <div className="space-y-4 max-h-[400px] overflow-y-auto pr-4">
-                      {itinerary.dayStructure.map((day: any, index: number) => (
+                      {(itinerary.dayStructure || []).map((day: any, index: number) => (
                         <motion.div
                           key={index}
                           initial={{ opacity: 0, x: -20 }}
@@ -378,14 +414,14 @@ export function ItineraryGenerationPage() {
                 )}
 
                 {/* Activities Preview */}
-                {itinerary.activities && itinerary.activities.length > 0 && (
+                {itinerary.activities && Array.isArray(itinerary.activities) && itinerary.activities.length > 0 && (
                   <div>
                     <h4 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
                       <Landmark className="w-6 h-6 text-purple-600" />
                       Highlights
                     </h4>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      {itinerary.activities.flat().slice(0, 6).map((activity: any, idx: number) => {
+                      {(Array.isArray(itinerary.activities) ? itinerary.activities.flat() : []).slice(0, 6).map((activity: any, idx: number) => {
                         const photo = activity.photos?.[0];
                         const photoUrl = typeof photo === 'string' ? photo : photo?.url || photo?.thumbnail;
 
