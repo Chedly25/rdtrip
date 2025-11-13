@@ -309,11 +309,19 @@ export const useSpotlightStoreV2 = create<SpotlightStoreV2>((set, get) => ({
     if (state.route.id) {
       try {
         const apiUrl = import.meta.env.VITE_API_URL || '';
+
+        // Add authentication token
+        const token = localStorage.getItem('token');
+        const headers: HeadersInit = {
+          'Content-Type': 'application/json',
+        };
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+
         const response = await fetch(`${apiUrl}/api/routes/${state.route.id}/landmarks`, {
           method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers,
           body: JSON.stringify({
             landmarks: newLandmarks
           })
@@ -322,7 +330,7 @@ export const useSpotlightStoreV2 = create<SpotlightStoreV2>((set, get) => ({
         if (response.ok) {
           console.log('💾 Landmark removal saved to backend');
         } else {
-          console.warn('⚠️ Failed to save landmark removal to backend');
+          console.warn('⚠️ Failed to save landmark removal to backend:', response.status, response.statusText);
         }
       } catch (error) {
         console.warn('⚠️ Could not save landmark removal to backend:', error);
