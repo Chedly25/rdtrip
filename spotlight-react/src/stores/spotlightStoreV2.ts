@@ -219,13 +219,18 @@ export const useSpotlightStoreV2 = create<SpotlightStoreV2>((set, get) => ({
       console.log('📍 Best insertion point:', bestInsertIndex, 'with detour:', minDetour === Infinity ? 'N/A' : `${minDetour.toFixed(1)} km`);
 
       // Add landmark to route
-      set((state) => ({
-        route: state.route
+      set((state) => {
+        const newRoute = state.route
           ? { ...state.route, landmarks: [...state.route.landmarks, landmarkStop] }
-          : null
-      }));
+          : null;
+        console.log('📦 Updating store with new route. New landmarks count:', newRoute?.landmarks.length);
+        return { route: newRoute };
+      });
 
-      console.log(`✅ Added ${landmark.name} to route! Total landmarks:`, state.route.landmarks.length + 1);
+      // Read back from store to verify
+      const updatedState = get();
+      console.log(`✅ Added ${landmark.name} to route! Verified landmarks in store:`, updatedState.route?.landmarks.length);
+      console.log('Landmark IDs in store:', updatedState.route?.landmarks.map(l => l.id));
 
       // TODO: Call backend API to recalculate route with landmark
       // For now, we just add it to the store
