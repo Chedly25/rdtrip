@@ -534,6 +534,7 @@ class AgentOrchestratorV3 extends EventEmitter {
    */
   getCityCoordinates(cityName) {
     if (!cityName) {
+      console.warn('⚠️  getCityCoordinates called with empty city name');
       return { lat: 0, lng: 0 };
     }
 
@@ -587,6 +588,12 @@ class AgentOrchestratorV3 extends EventEmitter {
       'porto': { lat: 41.1579, lng: -8.6291 },
       'cologne': { lat: 50.9375, lng: 6.9603 },
       'frankfurt': { lat: 50.1109, lng: 8.6821 },
+      // Additional adventure/nature cities
+      'castellane': { lat: 43.8470, lng: 6.5142 },
+      'benasque': { lat: 42.6042, lng: 0.5236 },
+      'riglos': { lat: 42.3689, lng: -0.7892 },
+      'cazorla': { lat: 37.9122, lng: -3.0047 },
+      'sierra de cazorla': { lat: 37.9122, lng: -3.0047 },
       'hamburg': { lat: 53.5511, lng: 9.9937 },
       'edinburgh': { lat: 55.9533, lng: -3.1883 },
       'glasgow': { lat: 55.8642, lng: -4.2518 },
