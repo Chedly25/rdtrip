@@ -77,10 +77,10 @@ const SortableCityCard = ({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: isDragging ? 0.5 : 1, y: 0 }}
       transition={{ delay: index * 0.05 }}
-      className={`flex-shrink-0 w-64 p-4 rounded-xl cursor-pointer transition-all duration-300 ${
+      className={`flex-shrink-0 w-56 p-3 rounded-xl cursor-pointer transition-all duration-300 backdrop-blur-md ${
         isSelected
-          ? 'ring-2 shadow-lg scale-105 bg-white'
-          : 'bg-white/80 hover:bg-white hover:shadow-md'
+          ? 'ring-2 shadow-xl scale-105 bg-white/95'
+          : 'bg-white/75 hover:bg-white/85 hover:shadow-lg'
       } ${isDragging ? 'shadow-2xl' : ''}`}
       style={{
         ...style,
@@ -98,9 +98,9 @@ const SortableCityCard = ({
       </div>
 
       <div onClick={onCityClick}>
-        {/* City Image */}
+        {/* City Image - Smaller */}
         {cityImage && (
-          <div className="w-full h-32 mb-3 rounded-lg overflow-hidden bg-gray-100">
+          <div className="w-full h-20 mb-2 rounded-lg overflow-hidden bg-gray-100">
             <img
               src={cityImage}
               alt={cityName}
@@ -113,42 +113,42 @@ const SortableCityCard = ({
           </div>
         )}
 
-        {/* City header */}
-        <div className="flex items-center justify-between mb-3">
+        {/* City header - More compact */}
+        <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <div
-              className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm"
+              className="w-7 h-7 rounded-full flex items-center justify-center text-white font-bold text-xs"
               style={{
                 background: `linear-gradient(135deg, ${agentColors.primary}, ${agentColors.secondary})`
               }}
             >
               {index + 1}
             </div>
-            <h3 className="text-gray-900 font-semibold text-lg">{cityName}</h3>
+            <h3 className="text-gray-900 font-semibold text-base">{cityName}</h3>
           </div>
         </div>
 
-        {/* City info */}
-        <div className="flex items-center gap-4 text-sm text-gray-600">
+        {/* City info - More compact */}
+        <div className="flex items-center gap-3 text-xs text-gray-600">
           <div className="flex items-center gap-1">
-            <Moon className="w-4 h-4" />
+            <Moon className="w-3 h-3" />
             <span>{city.nights} {city.nights === 1 ? 'night' : 'nights'}</span>
           </div>
 
           {city.activities && city.activities.length > 0 && (
             <div className="flex items-center gap-1">
-              <MapPin className="w-4 h-4" />
+              <MapPin className="w-3 h-3" />
               <span>{city.activities.length} activities</span>
             </div>
           )}
         </div>
 
-        {/* Expand indicator */}
+        {/* Expand indicator - Hidden for more compact design */}
         {isSelected && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="mt-3 pt-3 border-t border-gray-200"
+            className="mt-2 pt-2 border-t border-gray-200"
           >
             <p className="text-gray-500 text-xs">Click to view details</p>
           </motion.div>
@@ -172,7 +172,6 @@ const FloatingCityCards = () => {
 
   const agentColors = getAgentColors();
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [scrollPosition] = useState(0);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -260,12 +259,12 @@ const FloatingCityCards = () => {
           transition={{ duration: 0.4, delay: 0.1 }}
           className="relative"
         >
-          {/* Glass morphism container */}
-          <div className="bg-white/90 backdrop-blur-xl rounded-2xl border border-gray-200 p-6 shadow-xl">
-            {/* Info text */}
-            <p className="text-gray-600 text-xs mb-4 flex items-center gap-2">
+          {/* Transparent minimal container */}
+          <div className="p-3">
+            {/* Info text - smaller and more subtle */}
+            <p className="text-white/80 text-xs mb-2 flex items-center gap-1 drop-shadow-lg">
               <GripVertical className="w-3 h-3" />
-              Drag cards to reorder cities
+              Drag to reorder
             </p>
 
             {/* Horizontal scrollable city cards with drag-and-drop */}
@@ -304,18 +303,18 @@ const FloatingCityCards = () => {
               <DragOverlay>
                 {activeId && activeCity && activeCityIndex !== null ? (
                   <div
-                    className="w-64 p-4 rounded-xl shadow-2xl cursor-grabbing bg-white"
+                    className="w-56 p-3 rounded-xl shadow-2xl cursor-grabbing bg-white/95 backdrop-blur-md"
                   >
                     <div className="flex items-center gap-2">
                       <div
-                        className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm"
+                        className="w-7 h-7 rounded-full flex items-center justify-center text-white font-bold text-xs"
                         style={{
                           background: `linear-gradient(135deg, ${agentColors.primary}, ${agentColors.secondary})`
                         }}
                       >
                         {activeCityIndex + 1}
                       </div>
-                      <h3 className="text-gray-900 font-semibold text-lg">
+                      <h3 className="text-gray-900 font-semibold text-base">
                         {getCityName(activeCity.city)}
                       </h3>
                     </div>
@@ -323,23 +322,6 @@ const FloatingCityCards = () => {
                 ) : null}
               </DragOverlay>
             </DndContext>
-
-            {/* Scroll indicator if needed */}
-            {route.cities.length > 4 && (
-              <div className="flex justify-center mt-4 gap-1">
-                {Array.from({ length: Math.ceil(route.cities.length / 4) }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="w-2 h-2 rounded-full transition-colors"
-                    style={{
-                      background: i === Math.floor(scrollPosition / 4)
-                        ? agentColors.accent
-                        : 'rgba(255, 255, 255, 0.2)'
-                    }}
-                  />
-                ))}
-              </div>
-            )}
           </div>
         </motion.div>
       </div>
