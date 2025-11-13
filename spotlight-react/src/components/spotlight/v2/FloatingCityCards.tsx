@@ -1,9 +1,10 @@
 import { motion } from 'framer-motion';
 import { useSpotlightStoreV2 } from '../../../stores/spotlightStoreV2';
-import { MapPin, Moon, Plus, GripVertical } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { MapPin, Moon, Plus, GripVertical, Star, X } from 'lucide-react';
+import { useState, useEffect, Fragment } from 'react';
 import AddCityLandmarkModal from './AddCityLandmarkModal';
 import { fetchCityImageCached } from '../../../services/wikipedia';
+import { getLandmarkImagePath } from '../../../services/landmarks';
 import {
   DndContext,
   closestCenter,
@@ -158,6 +159,71 @@ const SortableCityCard = ({
   );
 };
 
+// Landmark Card Component (smaller, non-draggable)
+interface LandmarkCardProps {
+  landmark: any;
+  agentColors: {
+    primary: string;
+    secondary: string;
+    accent: string;
+  };
+  onRemove: () => void;
+}
+
+const LandmarkCard = ({ landmark, agentColors, onRemove }: LandmarkCardProps) => {
+  const landmarkImagePath = getLandmarkImagePath(landmark.name);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.9 }}
+      className="flex-shrink-0 w-44 p-2 rounded-lg bg-white/60 backdrop-blur-sm shadow-md relative"
+    >
+      {/* Remove button */}
+      <button
+        onClick={onRemove}
+        className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center hover:bg-red-600 transition-colors z-10 shadow-md"
+      >
+        <X className="w-3 h-3 text-white" />
+      </button>
+
+      {/* Landmark Image */}
+      {landmarkImagePath && (
+        <div className="w-full h-16 mb-2 rounded overflow-hidden bg-gray-100">
+          <img
+            src={landmarkImagePath}
+            alt={landmark.name}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = 'none';
+            }}
+          />
+        </div>
+      )}
+
+      {/* Landmark info */}
+      <div className="flex items-start gap-2">
+        <Star
+          className="w-4 h-4 flex-shrink-0 mt-0.5"
+          style={{ color: agentColors.accent }}
+          fill={agentColors.accent}
+        />
+        <div className="flex-1 min-w-0">
+          <h4 className="text-gray-900 font-semibold text-sm truncate">
+            {landmark.name}
+          </h4>
+          {landmark.detourKm && landmark.detourMinutes && (
+            <p className="text-gray-500 text-xs">
+              +{landmark.detourKm.toFixed(0)} km • +{Math.round(landmark.detourMinutes)} min
+            </p>
+          )}
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
 const FloatingCityCards = () => {
   const {
     route,
@@ -167,7 +233,8 @@ const FloatingCityCards = () => {
     setIsAddingLandmark,
     getCityName,
     getAgentColors,
-    reorderCities
+    reorderCities,
+    removeLandmark
   } = useSpotlightStoreV2();
 
   const agentColors = getAgentColors();
@@ -280,20 +347,38 @@ const FloatingCityCards = () => {
                 strategy={horizontalListSortingStrategy}
               >
                 <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
-                  {route.cities.map((city, index) => {
+                  {route.cities.map((city, cityIndex) => {
                     const cityName = getCityName(city.city);
-                    const isSelected = selectedCityIndex === index;
+                    const isSelected = selectedCityIndex === cityIndex;
+
+                    // Find landmarks that should be inserted after this city
+                    const landmarksAfterCity = route.landmarks.filter(
+                      landmark => landmark.insertAfterCityIndex === cityIndex
+                    );
 
                     return (
-                      <SortableCityCard
-                        key={`city-${index}`}
-                        city={city}
-                        index={index}
-                        isSelected={isSelected}
-                        agentColors={agentColors}
-                        cityName={cityName}
-                        onCityClick={() => handleCityClick(index)}
-                      />
+                      <Fragment key={`city-group-${cityIndex}`}>
+                        {/* City Card */}
+                        <SortableCityCard
+                          key={`city-${cityIndex}`}
+                          city={city}
+                          index={cityIndex}
+                          isSelected={isSelected}
+                          agentColors={agentColors}
+                          cityName={cityName}
+                          onCityClick={() => handleCityClick(cityIndex)}
+                        />
+
+                        {/* Landmark Cards after this city */}
+                        {landmarksAfterCity.map((landmark) => (
+                          <LandmarkCard
+                            key={`landmark-${landmark.id}`}
+                            landmark={landmark}
+                            agentColors={agentColors}
+                            onRemove={() => removeLandmark(landmark.id)}
+                          />
+                        ))}
+                      </Fragment>
                     );
                   })}
                 </div>
