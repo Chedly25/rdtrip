@@ -95,10 +95,21 @@ export function ItineraryView({ itineraryId, routeData }: ItineraryViewProps) {
     country: '' // TODO: Extract from route data if available
   }));
 
-  // Group data by day with SAFE array operations
+  // Group data by day with SAFE array operations - handles NESTED structure
   const getDayData = (dayNumber: number) => {
-    const dayActivities = Array.isArray(activities) ? activities.filter((a: any) => a.day === dayNumber) : [];
-    const dayRestaurants = Array.isArray(restaurants) ? restaurants.filter((r: any) => r.day === dayNumber) : [];
+    // Activities are nested: [{day: 1, activities: [...]}, ...]
+    const dayActivitiesObj = Array.isArray(activities) ? activities.find((a: any) => a.day === dayNumber) : null;
+    const dayActivities = dayActivitiesObj?.activities && Array.isArray(dayActivitiesObj.activities) ? dayActivitiesObj.activities : [];
+
+    // Restaurants are nested: [{day: 1, meals: {breakfast: {}, lunch: {}, dinner: {}}}, ...]
+    const dayRestaurantsObj = Array.isArray(restaurants) ? restaurants.find((r: any) => r.day === dayNumber) : null;
+    const dayRestaurants = [];
+    if (dayRestaurantsObj?.meals) {
+      if (dayRestaurantsObj.meals.breakfast) dayRestaurants.push(dayRestaurantsObj.meals.breakfast);
+      if (dayRestaurantsObj.meals.lunch) dayRestaurants.push(dayRestaurantsObj.meals.lunch);
+      if (dayRestaurantsObj.meals.dinner) dayRestaurants.push(dayRestaurantsObj.meals.dinner);
+    }
+
     const dayAccommodation = Array.isArray(accommodations) ? accommodations.find((a: any) => a.day === dayNumber) : undefined;
     const dayScenicStops = Array.isArray(scenicStops) ? scenicStops.filter((s: any) => s.day === dayNumber) : [];
     const dayPracticalInfo = Array.isArray(practicalInfo) ? practicalInfo.find((p: any) => p.day === dayNumber) : undefined;
@@ -118,6 +129,21 @@ export function ItineraryView({ itineraryId, routeData }: ItineraryViewProps) {
 
   const totalDays = Array.isArray(dayStructure) ? dayStructure.length : 0;
   const totalNights = cities.reduce((sum: number, city: any) => sum + city.nights, 0);
+
+  // Calculate TOTAL counts (activities/restaurants are nested by day)
+  const totalActivities = Array.isArray(activities)
+    ? activities.reduce((sum, dayObj) => sum + (Array.isArray(dayObj?.activities) ? dayObj.activities.length : 0), 0)
+    : 0;
+  const totalRestaurants = Array.isArray(restaurants)
+    ? restaurants.reduce((sum, dayObj) => {
+        const meals = dayObj?.meals;
+        let count = 0;
+        if (meals?.breakfast) count++;
+        if (meals?.lunch) count++;
+        if (meals?.dinner) count++;
+        return sum + count;
+      }, 0)
+    : 0;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -155,11 +181,11 @@ export function ItineraryView({ itineraryId, routeData }: ItineraryViewProps) {
             <div className="hidden md:flex items-center gap-4 text-sm">
               <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 rounded-lg">
                 <MapPin className="w-4 h-4 text-blue-600" />
-                <span className="text-gray-700">{activities?.length || 0} activities</span>
+                <span className="text-gray-700">{totalActivities} activities</span>
               </div>
               <div className="flex items-center gap-2 px-3 py-1.5 bg-orange-50 rounded-lg">
                 <Users className="w-4 h-4 text-orange-600" />
-                <span className="text-gray-700">{restaurants?.length || 0} restaurants</span>
+                <span className="text-gray-700">{totalRestaurants} restaurants</span>
               </div>
               {budget && (
                 <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 rounded-lg">
@@ -191,7 +217,7 @@ export function ItineraryView({ itineraryId, routeData }: ItineraryViewProps) {
 
           {/* Day Cards */}
           <div className="space-y-6">
-            {dayStructure?.map((day: any) => {
+            {(Array.isArray(dayStructure) && dayStructure.length > 0) && (Array.isArray(dayStructure) ? dayStructure : []).map((day: any) => {
               const dayData = getDayData(day.day);
               return (
                 <DayCardV2
