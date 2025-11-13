@@ -5055,11 +5055,12 @@ function calculateDistance(point1, point2) {
 }
 
 // Helper function to calculate total route distance
+// NOTE: coordinates array format is [lat, lng] not [lng, lat]
 function calculateTotalDistance(coordinates) {
   let total = 0;
   for (let i = 0; i < coordinates.length - 1; i++) {
-    const point1 = { lat: coordinates[i][1], lng: coordinates[i][0] };
-    const point2 = { lat: coordinates[i+1][1], lng: coordinates[i+1][0] };
+    const point1 = { lat: coordinates[i][0], lng: coordinates[i][1] };
+    const point2 = { lat: coordinates[i+1][0], lng: coordinates[i+1][1] };
     total += calculateDistance(point1, point2);
   }
   return Math.round(total);
