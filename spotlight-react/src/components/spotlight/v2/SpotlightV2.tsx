@@ -44,7 +44,7 @@ const SpotlightV2 = () => {
         }
 
         console.log('🔐 Fetching route with authentication:', routeId);
-        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/routes/${routeId}`, {
+        const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/routes/${routeId}`, {
           headers
         });
 
