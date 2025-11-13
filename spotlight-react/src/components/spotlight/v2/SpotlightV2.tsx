@@ -256,8 +256,19 @@ const SpotlightV2 = () => {
     // Handle direct coordinates property
     const coords = city.coordinates || city;
 
+    // DEBUG: Log the actual coordinate format
+    if (city && city.city) {
+      console.log(`🔍 extractCoordinates for ${getCityName(city.city)}:`, {
+        isArray: Array.isArray(coords),
+        isObject: coords && typeof coords === 'object',
+        hasLatLng: coords && 'lat' in coords && 'lng' in coords,
+        rawValue: coords
+      });
+    }
+
     // If coordinates is an array [lat, lng]
     if (Array.isArray(coords)) {
+      console.log(`  → Treating as [lat, lng] array: [${coords[0]}, ${coords[1]}]`);
       return {
         lat: typeof coords[0] === 'number' ? coords[0] : 0,
         lng: typeof coords[1] === 'number' ? coords[1] : 0
@@ -266,6 +277,7 @@ const SpotlightV2 = () => {
 
     // If coordinates is an object {lat, lng}
     if (coords && typeof coords === 'object' && 'lat' in coords && 'lng' in coords) {
+      console.log(`  → Treating as {lat, lng} object: lat=${coords.lat}, lng=${coords.lng}`);
       return {
         lat: typeof coords.lat === 'number' ? coords.lat : 0,
         lng: typeof coords.lng === 'number' ? coords.lng : 0
