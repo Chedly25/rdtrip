@@ -176,16 +176,18 @@ const LandmarkCard = ({ landmark, agentColors, onRemove }: LandmarkCardProps) =>
   // Fetch Wikipedia image for the landmark
   useEffect(() => {
     const loadImage = async () => {
-      // First try the local landmark image path
-      const localImagePath = getLandmarkImagePath(landmark.name);
-      if (localImagePath) {
-        setLandmarkImage(localImagePath);
+      // First try to fetch from Wikipedia (real photos)
+      const imageUrl = await fetchCityImageCached(landmark.name);
+      if (imageUrl) {
+        setLandmarkImage(imageUrl);
         return;
       }
 
-      // If no local image, fetch from Wikipedia
-      const imageUrl = await fetchCityImageCached(landmark.name);
-      setLandmarkImage(imageUrl);
+      // If Wikipedia fails, fall back to local landmark icons
+      const localImagePath = getLandmarkImagePath(landmark.name);
+      if (localImagePath) {
+        setLandmarkImage(localImagePath);
+      }
     };
     loadImage();
   }, [landmark.name]);
