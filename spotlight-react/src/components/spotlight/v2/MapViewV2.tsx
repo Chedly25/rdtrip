@@ -264,24 +264,62 @@ const MapViewV2 = () => {
       console.log(`     Coordinates:`, landmark.coordinates);
       console.log(`     Mapbox LngLat: [${landmark.coordinates.lng}, ${landmark.coordinates.lat}]`);
 
-      // TESTING: Use simple HTML element instead of React component
+      const landmarkImagePath = getLandmarkImagePath(landmark.name);
+
+      // Create landmark marker with HTML (not React to avoid rendering issues)
       const el = document.createElement('div');
-      el.style.width = '48px';
-      el.style.height = '48px';
-      el.style.borderRadius = '50%';
-      el.style.background = `linear-gradient(135deg, ${agentColors.accent}, ${agentColors.secondary})`;
-      el.style.border = '3px solid white';
-      el.style.boxShadow = '0 4px 12px rgba(0,0,0,0.4)';
-      el.style.display = 'flex';
-      el.style.alignItems = 'center';
-      el.style.justifyContent = 'center';
-      el.style.fontSize = '24px';
+      el.style.position = 'relative';
       el.style.cursor = 'pointer';
-      el.innerHTML = '⭐';
+
+      // Main pin circle
+      const pin = document.createElement('div');
+      pin.style.width = '40px';
+      pin.style.height = '40px';
+      pin.style.borderRadius = '50%';
+      pin.style.border = '3px solid white';
+      pin.style.boxShadow = '0 4px 12px rgba(0,0,0,0.4)';
+      pin.style.display = 'flex';
+      pin.style.alignItems = 'center';
+      pin.style.justifyContent = 'center';
+      pin.style.overflow = 'hidden';
+      pin.style.position = 'relative';
+
+      if (landmarkImagePath) {
+        // Use landmark image if available
+        pin.style.background = 'white';
+        const img = document.createElement('img');
+        img.src = landmarkImagePath;
+        img.style.width = '100%';
+        img.style.height = '100%';
+        img.style.objectFit = 'cover';
+        pin.appendChild(img);
+      } else {
+        // Use gradient with star icon
+        pin.style.background = `linear-gradient(135deg, ${agentColors.accent}, ${agentColors.secondary})`;
+        pin.style.fontSize = '20px';
+        pin.textContent = '⭐';
+      }
+
+      // Pin pointer triangle
+      const pointer = document.createElement('div');
+      pointer.style.position = 'absolute';
+      pointer.style.left = '50%';
+      pointer.style.transform = 'translateX(-50%)';
+      pointer.style.width = '0';
+      pointer.style.height = '0';
+      pointer.style.borderLeft = '6px solid transparent';
+      pointer.style.borderRight = '6px solid transparent';
+      pointer.style.borderTop = `8px solid ${agentColors.secondary}`;
+      pointer.style.filter = 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))';
+
+      el.appendChild(pin);
+      el.appendChild(pointer);
+
+      // Add click handler
       el.onclick = () => {
         console.log('Clicked route landmark:', landmark.name);
+        // TODO: Show landmark details or allow removal
       };
-      console.log(`     🎨 Created simple HTML element with background: ${agentColors.accent}`);
 
       const marker = new mapboxgl.Marker({
         element: el,
