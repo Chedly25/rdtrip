@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 interface RouteData {
-  origin: string
-  destination: string
+  origin: string | { name: string; country?: string; coordinates?: [number, number] }
+  destination: string | { name: string; country?: string; coordinates?: [number, number] }
   totalStops?: number
   budget?: string
 }
@@ -13,6 +13,13 @@ interface SaveRouteModalProps {
   onClose: () => void
   onSave: (name: string) => Promise<void>
   routeData: RouteData | null
+}
+
+// Helper function to extract location name (handles both string and object formats)
+const getLocationName = (location: any): string => {
+  if (!location) return 'Unknown'
+  if (typeof location === 'string') return location
+  return location.name || location.city || 'Unknown'
 }
 
 export default function SaveRouteModal({ isOpen, onClose, onSave, routeData }: SaveRouteModalProps) {
@@ -38,8 +45,8 @@ export default function SaveRouteModal({ isOpen, onClose, onSave, routeData }: S
 
   const getDefaultName = () => {
     if (!routeData) return 'My Route'
-    const origin = routeData.origin || 'Start'
-    const destination = routeData.destination || 'End'
+    const origin = getLocationName(routeData.origin) || 'Start'
+    const destination = getLocationName(routeData.destination) || 'End'
     return `${origin} to ${destination}`
   }
 
@@ -98,11 +105,11 @@ export default function SaveRouteModal({ isOpen, onClose, onSave, routeData }: S
                   <div className="bg-slate-800/50 rounded-lg p-4 space-y-2">
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-slate-400">Origin:</span>
-                      <span className="text-white font-medium">{routeData.origin}</span>
+                      <span className="text-white font-medium">{getLocationName(routeData.origin)}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-slate-400">Destination:</span>
-                      <span className="text-white font-medium">{routeData.destination}</span>
+                      <span className="text-white font-medium">{getLocationName(routeData.destination)}</span>
                     </div>
                     {routeData.totalStops && (
                       <div className="flex items-center justify-between text-sm">
