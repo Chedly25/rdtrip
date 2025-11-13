@@ -325,15 +325,23 @@ class AgentOrchestratorV3 extends EventEmitter {
       // Track used place IDs to avoid duplicates within the same day
       const usedPlaceIds = new Set();
 
-      // Process activity windows SEQUENTIALLY to avoid duplicates
-      if (day.activityWindows && day.activityWindows.length > 0) {
-        for (const window of day.activityWindows) {
+      // SUPPORT BOTH OLD (activityWindows) AND NEW (blocks) FORMAT
+      const windows = day.blocks || day.activityWindows || [];
+
+      if (windows.length > 0) {
+        for (const window of windows) {
           try {
             const coordinates = await this.getCityCoordinates(city);
+
+            // Extract time window - handle both formats
+            const timeWindow = window.timeRange
+              ? this.parseTimeRange(window.timeRange) // New format: "14:00-18:00"
+              : { start: window.start, end: window.end }; // Old format
+
             const request = {
               city: { name: city, coordinates },
-              category: window.purpose || 'general',
-              timeWindow: { start: window.start, end: window.end },
+              category: window.theme || window.purpose || 'general',
+              timeWindow,
               preferences: this.preferences,
               date: day.date,
               excludePlaceIds: Array.from(usedPlaceIds) // Exclude already-selected places
@@ -342,19 +350,34 @@ class AgentOrchestratorV3 extends EventEmitter {
             const result = await this.agents.googleActivities.discoverActivities(request);
 
             if (result.success && result.candidates && result.candidates.length > 0) {
-              // Find first candidate that hasn't been used
-              const candidate = result.candidates.find(c => !usedPlaceIds.has(c.place_id));
+              // For new block format, get multiple activities based on activitySlots
+              const slotsToFill = window.activitySlots || 1;
 
-              if (candidate) {
-                usedPlaceIds.add(candidate.place_id);
-                dayActivities.activities.push(candidate);
-                console.log(`      ✓ Selected: ${candidate.name} (avoiding ${usedPlaceIds.size - 1} duplicates)`);
+              for (let i = 0; i < slotsToFill && i < result.candidates.length; i++) {
+                const candidate = result.candidates.find(c => !usedPlaceIds.has(c.place_id));
+
+                if (candidate) {
+                  usedPlaceIds.add(candidate.place_id);
+                  dayActivities.activities.push({
+                    ...candidate,
+                    block: window.period, // Tag with period: morning/afternoon/evening
+                    zoneFocus: window.zoneFocus
+                  });
+                  console.log(`      ✓ Selected: ${candidate.name} (${window.period} block)`);
+                }
               }
             }
 
           } catch (error) {
-            console.warn(`      ⚠️  Activity window failed:`, error.message);
+            console.warn(`      ⚠️  Activity block failed:`, error.message);
           }
+        }
+
+        // APPLY GEOGRAPHICAL CLUSTERING TO THE DAY'S ACTIVITIES
+        if (dayActivities.activities.length > 0) {
+          const clusters = this.clusterActivitiesByProximity(dayActivities.activities, 2); // 2km max
+          dayActivities.activityClusters = clusters;
+          console.log(`      📍 Organized ${dayActivities.activities.length} activities into ${clusters.length} geographic zones`);
         }
       }
 
@@ -833,6 +856,144 @@ class AgentOrchestratorV3 extends EventEmitter {
       console.error('Failed to finalize itinerary:', error);
       throw error;
     }
+  }
+
+  /**
+   * Parse time range string into start/end object
+   * @param {string} timeRange - e.g., "14:00-18:00"
+   * @returns {Object} {start: "14:00", end: "18:00"}
+   */
+  parseTimeRange(timeRange) {
+    const [start, end] = timeRange.split('-');
+    return { start: start.trim(), end: end.trim() };
+  }
+
+  /**
+   * Calculate Haversine distance between two coordinates in kilometers
+   * @param {Object} coord1 - {lat, lng}
+   * @param {Object} coord2 - {lat, lng}
+   * @returns {number} Distance in kilometers
+   */
+  calculateDistance(coord1, coord2) {
+    const R = 6371; // Earth's radius in km
+    const dLat = this.toRadians(coord2.lat - coord1.lat);
+    const dLng = this.toRadians(coord2.lng - coord1.lng);
+
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(this.toRadians(coord1.lat)) *
+      Math.cos(this.toRadians(coord2.lat)) *
+      Math.sin(dLng / 2) * Math.sin(dLng / 2);
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const distance = R * c;
+
+    return distance;
+  }
+
+  toRadians(degrees) {
+    return degrees * (Math.PI / 180);
+  }
+
+  /**
+   * Cluster activities by geographical proximity
+   * Groups activities that are close to each other (within maxDistanceKm)
+   * @param {Array} activities - Array of activity objects with coordinates
+   * @param {number} maxDistanceKm - Maximum distance for clustering (default 2km)
+   * @returns {Array} Array of activity clusters (zones)
+   */
+  clusterActivitiesByProximity(activities, maxDistanceKm = 2) {
+    if (!activities || activities.length === 0) {
+      return [];
+    }
+
+    console.log(`\n📍 Clustering ${activities.length} activities (max distance: ${maxDistanceKm}km)`);
+
+    const clusters = [];
+    const visited = new Set();
+
+    // Simple greedy clustering algorithm
+    for (let i = 0; i < activities.length; i++) {
+      if (visited.has(i)) continue;
+
+      const cluster = {
+        activities: [activities[i]],
+        centerPoint: { ...activities[i].coordinates },
+        indices: [i]
+      };
+
+      visited.add(i);
+
+      // Find nearby activities
+      for (let j = i + 1; j < activities.length; j++) {
+        if (visited.has(j)) continue;
+
+        const distance = this.calculateDistance(
+          cluster.centerPoint,
+          activities[j].coordinates
+        );
+
+        if (distance <= maxDistanceKm) {
+          cluster.activities.push(activities[j]);
+          cluster.indices.push(j);
+          visited.add(j);
+
+          // Update cluster center (average of all points)
+          const allLats = cluster.activities.map(a => a.coordinates.lat);
+          const allLngs = cluster.activities.map(a => a.coordinates.lng);
+          cluster.centerPoint = {
+            lat: allLats.reduce((sum, lat) => sum + lat, 0) / allLats.length,
+            lng: allLngs.reduce((sum, lng) => sum + lng, 0) / allLngs.length
+          };
+        }
+      }
+
+      // Calculate cluster radius (max distance from center)
+      const distances = cluster.activities.map(a =>
+        this.calculateDistance(cluster.centerPoint, a.coordinates)
+      );
+      cluster.radius = Math.max(...distances, 0.1); // Min 100m radius
+
+      // Infer zone name from activity names
+      cluster.zoneName = this.inferZoneName(cluster.activities);
+
+      clusters.push(cluster);
+    }
+
+    console.log(`   ✓ Created ${clusters.length} geographic zones`);
+    clusters.forEach((cluster, idx) => {
+      console.log(`      Zone ${idx + 1}: "${cluster.zoneName}" - ${cluster.activities.length} activities (${cluster.radius.toFixed(2)}km radius)`);
+    });
+
+    return clusters;
+  }
+
+  /**
+   * Infer a zone name from the activities in the cluster
+   */
+  inferZoneName(activities) {
+    if (activities.length === 0) return 'Cluster';
+
+    // Try to extract common location words
+    const allNames = activities.map(a => a.name || '').join(' ');
+
+    // Check for common area markers
+    if (allNames.toLowerCase().includes('old town') || allNames.toLowerCase().includes('historic')) {
+      return 'Old Town Historic Center';
+    }
+    if (allNames.toLowerCase().includes('waterfront') || allNames.toLowerCase().includes('port')) {
+      return 'Waterfront & Marina';
+    }
+    if (allNames.toLowerCase().includes('park') || allNames.toLowerCase().includes('garden')) {
+      return 'Parks & Gardens Area';
+    }
+    if (allNames.toLowerCase().includes('museum')) {
+      return 'Museum District';
+    }
+
+    // Default: Use first activity name + "Area"
+    const firstName = activities[0].name || 'Central';
+    return `${firstName.split(' ').slice(0, 2).join(' ')} Area`;
   }
 }
 
