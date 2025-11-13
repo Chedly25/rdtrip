@@ -53,36 +53,44 @@ export function DayCardV2({
     // If no block tags, put all activities in afternoon
     const untaggedActivities = safeActivities.filter((a: any) => !a.block);
 
+    // Filter restaurants by meal type
+    const breakfastRestaurants = safeRestaurants.filter((r: any) => r.meal === 'breakfast');
+    const lunchRestaurants = safeRestaurants.filter((r: any) => r.meal === 'lunch');
+    const dinnerRestaurants = safeRestaurants.filter((r: any) => r.meal === 'dinner');
+
     // Morning block
-    if (morningActivities.length > 0 || day.driveSegments) {
+    if (morningActivities.length > 0 || day.driveSegments || breakfastRestaurants.length > 0) {
       blocks.push({
         period: 'morning',
         icon: '🌅',
         timeRange: '8:00 - 13:00',
         activities: morningActivities,
+        restaurants: breakfastRestaurants,
         hasDrive: day.driveSegments && day.driveSegments.length > 0,
         driveSegment: day.driveSegments?.[0]
       });
     }
 
     // Afternoon block
-    if (afternoonActivities.length > 0 || untaggedActivities.length > 0) {
+    if (afternoonActivities.length > 0 || untaggedActivities.length > 0 || lunchRestaurants.length > 0) {
       blocks.push({
         period: 'afternoon',
         icon: '☀️',
         timeRange: '13:00 - 18:00',
         activities: [...afternoonActivities, ...untaggedActivities],
+        restaurants: lunchRestaurants,
         hasDrive: false
       });
     }
 
-    // Evening block (usually just dinner)
-    if (eveningActivities.length > 0 || safeRestaurants.length > 0) {
+    // Evening block (dinner)
+    if (eveningActivities.length > 0 || dinnerRestaurants.length > 0) {
       blocks.push({
         period: 'evening',
         icon: '🌙',
         timeRange: '18:00 - 22:00',
         activities: eveningActivities,
+        restaurants: dinnerRestaurants,
         hasDrive: false
       });
     }
@@ -208,52 +216,140 @@ export function DayCardV2({
 
                     {/* Activities in this block */}
                     {block.activities && block.activities.length > 0 && (
-                      <div className="space-y-2">
-                        {block.activities.map((activity: any, idx: number) => (
-                          <div key={idx} className="bg-white rounded-lg p-4 border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all">
-                            <div className="flex items-start gap-3">
-                              <MapPin className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                              <div className="flex-1">
-                                <h5 className="font-medium text-gray-900">{activity.name}</h5>
-                                {activity.address && (
-                                  <p className="text-sm text-gray-600 mt-1">{activity.address}</p>
-                                )}
-                                <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
-                                  {activity.rating && (
-                                    <span className="flex items-center gap-1">
-                                      ⭐ {activity.rating} {activity.ratingCount && `(${activity.ratingCount})`}
-                                    </span>
-                                  )}
-                                  {activity.estimatedDuration && (
-                                    <span>🕐 {activity.estimatedDuration}</span>
-                                  )}
+                      <div className="space-y-3">
+                        {block.activities.map((activity: any, idx: number) => {
+                          // Get activity image
+                          const photo = activity.photos?.[0];
+                          const photoUrl = typeof photo === 'string' ? photo :
+                            photo?.url || activity.primaryPhoto?.url || activity.primaryPhoto || null;
+
+                          // Get activity type for badge
+                          const activityType = activity.type ||
+                            (activity.place_types?.includes('museum') ? 'Museum' :
+                             activity.place_types?.includes('park') ? 'Park' :
+                             activity.place_types?.includes('church') ? 'Historical' :
+                             activity.place_types?.includes('art_gallery') ? 'Art Gallery' :
+                             activity.place_types?.includes('natural_feature') ? 'Nature' :
+                             activity.place_types?.includes('tourist_attraction') ? 'Attraction' :
+                             'Activity');
+
+                          return (
+                            <div key={idx} className="bg-white rounded-xl overflow-hidden border-2 border-gray-200 hover:border-blue-300 hover:shadow-lg transition-all">
+                              {/* Activity Image */}
+                              {photoUrl && (
+                                <div className="relative h-40 w-full overflow-hidden bg-gray-100">
+                                  <img
+                                    src={photoUrl}
+                                    alt={activity.name}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                      // Hide image if load fails
+                                      (e.target as HTMLImageElement).style.display = 'none';
+                                    }}
+                                  />
+                                  {/* Activity Type Badge */}
+                                  <div className="absolute top-3 left-3 px-3 py-1 bg-white/90 backdrop-blur-sm rounded-full text-xs font-semibold text-gray-700 border border-gray-200">
+                                    {activityType}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Activity Details */}
+                              <div className="p-4">
+                                <div className="flex items-start gap-3">
+                                  <MapPin className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                                  <div className="flex-1">
+                                    <h5 className="font-bold text-gray-900 text-lg">{activity.name}</h5>
+
+                                    {/* Place Types as Tags */}
+                                    {activity.place_types && activity.place_types.length > 0 && (
+                                      <div className="flex flex-wrap gap-1.5 mt-2">
+                                        {activity.place_types.slice(0, 3).map((type: string, typeIdx: number) => (
+                                          <span key={typeIdx} className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded-full">
+                                            {type.replace(/_/g, ' ')}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    )}
+
+                                    {activity.address && (
+                                      <p className="text-sm text-gray-600 mt-2">{activity.address}</p>
+                                    )}
+
+                                    <div className="flex items-center gap-4 mt-3 text-sm">
+                                      {activity.rating && (
+                                        <span className="flex items-center gap-1 font-medium text-gray-700">
+                                          ⭐ {activity.rating} {activity.ratingCount && <span className="text-gray-500">({activity.ratingCount})</span>}
+                                        </span>
+                                      )}
+                                      {activity.estimatedDuration && (
+                                        <span className="text-gray-600">🕐 {activity.estimatedDuration}</span>
+                                      )}
+                                      {activity.estimatedCost && (
+                                        <span className="text-gray-600">💰 {activity.estimatedCost}</span>
+                                      )}
+                                    </div>
+                                  </div>
                                 </div>
                               </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
 
                     {/* Restaurants in this block */}
-                    {block.period === 'evening' && restaurants && restaurants.length > 0 && (
-                      <div className="space-y-2">
-                        {restaurants.map((restaurant: any, idx: number) => (
-                          <div key={idx} className="bg-orange-50 rounded-lg p-4 border border-orange-200">
-                            <div className="flex items-start gap-3">
-                              <span className="text-xl">🍽️</span>
-                              <div className="flex-1">
-                                <h5 className="font-medium text-gray-900">{restaurant.name}</h5>
-                                <p className="text-sm text-gray-600">{restaurant.cuisine} • {restaurant.meal}</p>
-                                {restaurant.rating && (
-                                  <p className="text-sm text-gray-500 mt-1">
-                                    ⭐ {restaurant.rating} ({restaurant.ratingCount} reviews)
-                                  </p>
-                                )}
+                    {block.restaurants && block.restaurants.length > 0 && (
+                      <div className="space-y-3">
+                        {block.restaurants.map((restaurant: any, idx: number) => {
+                          // Get restaurant image
+                          const photo = restaurant.photos?.[0];
+                          const photoUrl = typeof photo === 'string' ? photo :
+                            photo?.url || restaurant.primaryPhoto?.url || restaurant.primaryPhoto || null;
+
+                          return (
+                            <div key={idx} className="bg-orange-50/50 rounded-xl overflow-hidden border-2 border-orange-200 hover:border-orange-300 hover:shadow-lg transition-all">
+                              {/* Restaurant Image */}
+                              {photoUrl && (
+                                <div className="relative h-32 w-full overflow-hidden bg-gray-100">
+                                  <img
+                                    src={photoUrl}
+                                    alt={restaurant.name}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                      (e.target as HTMLImageElement).style.display = 'none';
+                                    }}
+                                  />
+                                  {/* Meal Badge */}
+                                  <div className="absolute top-3 right-3 px-3 py-1 bg-white/90 backdrop-blur-sm rounded-full text-xs font-semibold text-gray-700 border border-gray-200 capitalize">
+                                    {restaurant.meal}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Restaurant Details */}
+                              <div className="p-4">
+                                <div className="flex items-start gap-3">
+                                  <span className="text-2xl">🍽️</span>
+                                  <div className="flex-1">
+                                    <h5 className="font-bold text-gray-900 text-lg">{restaurant.name}</h5>
+                                    <p className="text-sm text-gray-700 mt-1">{restaurant.cuisine}</p>
+                                    <div className="flex items-center gap-4 mt-2 text-sm">
+                                      {restaurant.rating && (
+                                        <span className="font-medium text-gray-700">
+                                          ⭐ {restaurant.rating} {restaurant.ratingCount && <span className="text-gray-500">({restaurant.ratingCount} reviews)</span>}
+                                        </span>
+                                      )}
+                                      {restaurant.priceRange && (
+                                        <span className="text-gray-600">{restaurant.priceRange}</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </div>
