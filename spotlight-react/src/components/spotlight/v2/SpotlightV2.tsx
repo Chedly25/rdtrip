@@ -256,7 +256,7 @@ const SpotlightV2 = () => {
       budget: data.budget,
       agent: data.agent || 'best-overall',
       cities,
-      landmarks: [],
+      landmarks: data.landmarks || [],  // Load landmarks from localStorage if they exist
       nightAllocations: data.nightAllocations || {},
       agentResults: data.agentResults || []
     };
