@@ -88,22 +88,22 @@ export function ItineraryView({ itineraryId, routeData }: ItineraryViewProps) {
 
   const { dayStructure, activities, restaurants, accommodations, scenicStops, practicalInfo, weather, events, budget } = itinerary;
 
-  // Extract city information for TripDurationPanel
-  const cities = dayStructure?.map((day: any) => ({
+  // Extract city information for TripDurationPanel with SAFE array validation
+  const cities = (Array.isArray(dayStructure) ? dayStructure : []).map((day: any) => ({
     name: day.location,
     nights: day.overnight ? 1 : 0,
     country: '' // TODO: Extract from route data if available
-  })) || [];
+  }));
 
-  // Group data by day
+  // Group data by day with SAFE array operations
   const getDayData = (dayNumber: number) => {
-    const dayActivities = activities?.filter((a: any) => a.day === dayNumber) || [];
-    const dayRestaurants = restaurants?.filter((r: any) => r.day === dayNumber) || [];
-    const dayAccommodation = accommodations?.find((a: any) => a.day === dayNumber);
-    const dayScenicStops = scenicStops?.filter((s: any) => s.day === dayNumber) || [];
-    const dayPracticalInfo = practicalInfo?.find((p: any) => p.day === dayNumber);
-    const dayWeather = weather?.find((w: any) => w.day === dayNumber);
-    const dayEvents = events?.filter((e: any) => e.day === dayNumber) || [];
+    const dayActivities = Array.isArray(activities) ? activities.filter((a: any) => a.day === dayNumber) : [];
+    const dayRestaurants = Array.isArray(restaurants) ? restaurants.filter((r: any) => r.day === dayNumber) : [];
+    const dayAccommodation = Array.isArray(accommodations) ? accommodations.find((a: any) => a.day === dayNumber) : undefined;
+    const dayScenicStops = Array.isArray(scenicStops) ? scenicStops.filter((s: any) => s.day === dayNumber) : [];
+    const dayPracticalInfo = Array.isArray(practicalInfo) ? practicalInfo.find((p: any) => p.day === dayNumber) : undefined;
+    const dayWeather = Array.isArray(weather) ? weather.find((w: any) => w.day === dayNumber) : undefined;
+    const dayEvents = Array.isArray(events) ? events.filter((e: any) => e.day === dayNumber) : [];
 
     return {
       activities: dayActivities,
@@ -116,7 +116,7 @@ export function ItineraryView({ itineraryId, routeData }: ItineraryViewProps) {
     };
   };
 
-  const totalDays = dayStructure?.length || 0;
+  const totalDays = Array.isArray(dayStructure) ? dayStructure.length : 0;
   const totalNights = cities.reduce((sum: number, city: any) => sum + city.nights, 0);
 
   return (

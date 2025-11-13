@@ -39,6 +39,18 @@ export function ItineraryGenerationPage() {
     }
   }, [isGenerating, generationStartTime]);
 
+  // Auto-navigate to full itinerary view when generation completes
+  useEffect(() => {
+    if (itinerary && !isGenerating && !error && itinerary.id) {
+      console.log('✅ Generation complete! Auto-navigating to itinerary view:', itinerary.id);
+      // Small delay to show success state briefly
+      const timer = setTimeout(() => {
+        navigate(`/spotlight?itinerary=${itinerary.id}`);
+      }, 2000); // 2 second delay to show celebration
+      return () => clearTimeout(timer);
+    }
+  }, [itinerary, isGenerating, error, navigate]);
+
   // Calculate progress
   const totalAgents = agentNodes.length;
   const completedAgents = agentNodes.filter(a => a.status === 'completed').length;
