@@ -5,11 +5,16 @@ import {
   ArrowLeft,
   Share2,
   MapPin,
-  Navigation
+  Navigation,
+  Calendar
 } from 'lucide-react';
 import ExportMenu from './ExportMenu';
 
-const SpotlightHeader = () => {
+interface SpotlightHeaderProps {
+  onGenerateItinerary?: () => void;
+}
+
+const SpotlightHeader = ({ onGenerateItinerary }: SpotlightHeaderProps) => {
   const navigate = useNavigate();
   const { route, getCityName, getAgentColors } = useSpotlightStoreV2();
   const agentColors = getAgentColors();
@@ -113,6 +118,18 @@ const SpotlightHeader = () => {
             <Navigation className="w-4 h-4" />
             Waze
           </button>
+
+          {/* Generate Itinerary Button */}
+          {onGenerateItinerary && (
+            <button
+              onClick={onGenerateItinerary}
+              className="px-4 py-2 rounded-lg border-2 border-blue-500 bg-blue-500 hover:bg-blue-600 hover:border-blue-600 text-white transition-colors flex items-center gap-2 text-sm font-medium"
+              title="Generate detailed day-by-day itinerary with 9 AI agents"
+            >
+              <Calendar className="w-4 h-4" />
+              Generate Itinerary
+            </button>
+          )}
 
           {/* Export Menu */}
           <ExportMenu />
