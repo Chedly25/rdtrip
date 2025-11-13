@@ -168,6 +168,15 @@ const MapViewV2 = () => {
     const mapboxRoute = await fetchMapboxRoute(waypoints);
 
     if (mapboxRoute && mapboxRoute.geometry) {
+      // Double-check and remove existing route source/layer before adding
+      // (in case another render started during the async fetch)
+      if (map.current!.getLayer('route')) {
+        map.current!.removeLayer('route');
+      }
+      if (map.current!.getSource('route')) {
+        map.current!.removeSource('route');
+      }
+
       // Add route as a source
       map.current!.addSource('route', {
         type: 'geojson',

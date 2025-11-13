@@ -258,6 +258,7 @@ export const useSpotlightStoreV2 = create<SpotlightStoreV2>((set, get) => ({
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
+          console.log(`💾 Saving landmarks to backend for route ${updatedState.route.id}...`);
           const response = await fetch(`${apiUrl}/api/routes/${updatedState.route.id}/landmarks`, {
             method: 'PUT',
             headers,
@@ -270,7 +271,7 @@ export const useSpotlightStoreV2 = create<SpotlightStoreV2>((set, get) => ({
           clearTimeout(timeoutId);
 
           if (response.ok) {
-            console.log('💾 Landmarks saved to backend');
+            console.log('✅ Landmarks saved to backend successfully');
           } else {
             console.warn('⚠️ Failed to save landmarks to backend:', response.status, response.statusText);
           }
@@ -282,6 +283,9 @@ export const useSpotlightStoreV2 = create<SpotlightStoreV2>((set, get) => ({
           }
           // Don't throw - landmark is still in local state
         }
+      } else {
+        console.warn('⚠️ Cannot save landmarks: Route has no ID. Landmarks will be lost on page refresh.');
+        console.warn('   💡 Tip: Save the route first by using the "Save Route" button to persist landmarks.');
       }
 
     } catch (error) {
