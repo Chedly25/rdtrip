@@ -141,13 +141,20 @@ export const useSpotlightStoreV2 = create<SpotlightStoreV2>((set, get) => ({
 
   addLandmarkToRoute: async (landmark) => {
     const state = get();
-    if (!state.route) return;
+    if (!state.route) {
+      console.error('No route available');
+      return;
+    }
 
     set({ isCalculatingDetour: true });
 
     try {
+      console.log('🎯 Adding landmark to route:', landmark.name);
+
       // Find optimal insertion point (between which two cities)
       const cities = state.route.cities;
+      console.log('Cities in route:', cities.length);
+
       let bestInsertIndex = 0;
       let minDetour = Infinity;
 
@@ -167,19 +174,30 @@ export const useSpotlightStoreV2 = create<SpotlightStoreV2>((set, get) => ({
 
       // Calculate detour for each possible insertion point
       for (let i = 0; i < cities.length - 1; i++) {
-        const city1 = cities[i].coordinates;
-        const city2 = cities[i + 1].coordinates;
+        // Use the existing coordinates directly from city data
+        const city1Coords = cities[i].coordinates;
+        const city2Coords = cities[i + 1].coordinates;
+
+        console.log(`Checking between city ${i} and ${i+1}:`, city1Coords, city2Coords);
+
+        // Validate coordinates
+        if (!city1Coords || !city2Coords) {
+          console.warn(`Missing coordinates for cities ${i} or ${i+1}`);
+          continue;
+        }
+
         const landmarkCoords = { lat: landmark.lat, lng: landmark.lng };
 
         // Calculate direct distance between cities
-        const directDistance = calculateDistance(city1, city2);
+        const directDistance = calculateDistance(city1Coords, city2Coords);
 
         // Calculate detour: city1 -> landmark -> city2
         const detourDistance =
-          calculateDistance(city1, landmarkCoords) +
-          calculateDistance(landmarkCoords, city2);
+          calculateDistance(city1Coords, landmarkCoords) +
+          calculateDistance(landmarkCoords, city2Coords);
 
         const detourKm = detourDistance - directDistance;
+        console.log(`Detour between cities ${i}-${i+1}: ${detourKm.toFixed(1)} km`);
 
         if (detourKm < minDetour) {
           minDetour = detourKm;
@@ -193,10 +211,12 @@ export const useSpotlightStoreV2 = create<SpotlightStoreV2>((set, get) => ({
         name: landmark.name,
         coordinates: { lat: landmark.lat, lng: landmark.lng },
         description: landmark.description,
-        detourKm: minDetour,
-        detourMinutes: Math.round(minDetour / 80 * 60), // Assume 80 km/h average
+        detourKm: minDetour === Infinity ? 0 : minDetour,
+        detourMinutes: minDetour === Infinity ? 0 : Math.round(minDetour / 80 * 60),
         insertAfterCityIndex: bestInsertIndex
       };
+
+      console.log('📍 Best insertion point:', bestInsertIndex, 'with detour:', minDetour === Infinity ? 'N/A' : `${minDetour.toFixed(1)} km`);
 
       // Add landmark to route
       set((state) => ({
@@ -205,14 +225,16 @@ export const useSpotlightStoreV2 = create<SpotlightStoreV2>((set, get) => ({
           : null
       }));
 
+      console.log(`✅ Added ${landmark.name} to route! Total landmarks:`, state.route.landmarks.length + 1);
+
       // TODO: Call backend API to recalculate route with landmark
       // For now, we just add it to the store
-      console.log(`✅ Added ${landmark.name} to route (${minDetour.toFixed(1)} km detour)`);
 
     } catch (error) {
-      console.error('Failed to add landmark to route:', error);
+      console.error('❌ Failed to add landmark to route:', error);
       throw error;
     } finally {
+      console.log('🏁 Finished addLandmarkToRoute');
       set({ isCalculatingDetour: false });
     }
   },
