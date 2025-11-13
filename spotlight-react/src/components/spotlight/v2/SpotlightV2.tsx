@@ -46,13 +46,29 @@ const SpotlightV2 = () => {
 
       // If no localStorage data and we have a routeId, fetch from backend
       if (routeId) {
-        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/routes/${routeId}`);
+        // Get auth token from localStorage
+        const token = localStorage.getItem('token');
+        const headers: HeadersInit = {
+          'Content-Type': 'application/json',
+        };
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        console.log('🔐 Fetching route with authentication:', routeId);
+        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/routes/${routeId}`, {
+          headers
+        });
 
         if (!response.ok) {
-          throw new Error('Failed to load route');
+          if (response.status === 401 || response.status === 403) {
+            throw new Error('Authentication required. Please log in again.');
+          }
+          throw new Error(`Failed to load route: ${response.status} ${response.statusText}`);
         }
 
         const routeData = await response.json();
+        console.log('📦 Fetched route data:', routeData);
         const transformedRoute = transformBackendDataToRoute(routeData);
         setRoute(transformedRoute);
       } else {
