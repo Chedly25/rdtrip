@@ -26,8 +26,14 @@ const SpotlightV2 = () => {
   } = useSpotlightStoreV2();
 
   useEffect(() => {
-    loadRouteData();
-  }, [routeId]);
+    // Skip loading route data if we're viewing an itinerary
+    // ItineraryView loads its own data independently
+    if (!itineraryId) {
+      loadRouteData();
+    } else {
+      setIsLoading(false);
+    }
+  }, [routeId, itineraryId]);
 
   const loadRouteData = async () => {
     try {
@@ -344,6 +350,12 @@ const SpotlightV2 = () => {
     navigate(`/spotlight/generate?routeId=${routeId}`);
   };
 
+  // If itinerary param exists, show ItineraryView instead of normal spotlight
+  // Check this FIRST before loading/error states - ItineraryView loads its own data
+  if (itineraryId) {
+    return <ItineraryView itineraryId={itineraryId} routeData={route} />;
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen bg-white">
@@ -379,11 +391,6 @@ const SpotlightV2 = () => {
         </motion.div>
       </div>
     );
-  }
-
-  // If itinerary param exists, show ItineraryView instead of normal spotlight
-  if (itineraryId) {
-    return <ItineraryView itineraryId={itineraryId} routeData={route} />;
   }
 
   if (!route) {
