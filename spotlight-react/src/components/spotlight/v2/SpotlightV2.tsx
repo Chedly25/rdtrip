@@ -69,70 +69,129 @@ const SpotlightV2 = () => {
 
   // Transform landing page data to SpotlightRoute format
   const transformLandingDataToRoute = (data: any): SpotlightRoute => {
+    console.log('🔍 Transforming data:', data);
     const cities: CityData[] = [];
+    const cityDataMap = new Map<string, any>();
 
-    // Add origin if it has data
-    if (data.origin) {
-      cities.push({
-        city: data.origin,
-        coordinates: extractCoordinates(data.origin),
-        nights: data.nightAllocations?.[getCityName(data.origin)] || 0,
-        agentData: {}
-      });
-    }
-
-    // Add intermediate cities from agentResults
+    // Build a map of city data from agentResults for easy lookup
     if (data.agentResults && Array.isArray(data.agentResults)) {
       data.agentResults.forEach((result: any) => {
+        console.log('📊 Agent result:', result.agent, result);
         if (result.cities && Array.isArray(result.cities)) {
           result.cities.forEach((cityData: any) => {
-            const cityName = getCityName(cityData.city || cityData.name);
-
-            // Skip if it's origin or destination
-            if (cityName === getCityName(data.origin) || cityName === getCityName(data.destination)) {
-              return;
-            }
-
-            // Check if city already exists
-            const existingCity = cities.find(c => getCityName(c.city) === cityName);
-
-            if (!existingCity) {
-              cities.push({
-                city: cityData.city || cityData.name,
-                coordinates: extractCoordinates(cityData.city || cityData),
-                nights: data.nightAllocations?.[cityName] || cityData.nights || 0,
-                activities: cityData.activities || [],
-                restaurants: cityData.restaurants || [],
-                accommodation: cityData.accommodation || [],
-                practicalInfo: cityData.practicalInfo,
-                weather: cityData.weather,
-                events: cityData.events || [],
-                agentData: {
-                  [result.agent]: result
-                }
-              });
-            } else {
-              // Merge agent data
-              existingCity.agentData = {
-                ...existingCity.agentData,
-                [result.agent]: result
-              };
+            const cityName = getCityName(cityData.city || cityData.name || cityData);
+            console.log('  City from agentResults:', cityName, cityData);
+            if (!cityDataMap.has(cityName)) {
+              cityDataMap.set(cityName, cityData);
             }
           });
         }
       });
     }
 
-    // Add destination if it has data
-    if (data.destination) {
-      const destName = getCityName(data.destination);
-      const existingDest = cities.find(c => getCityName(c.city) === destName);
+    // Also check waypoints for city data
+    if (data.waypoints && Array.isArray(data.waypoints)) {
+      console.log('🛣️ Waypoints:', data.waypoints);
+      data.waypoints.forEach((waypoint: any) => {
+        const cityName = getCityName(waypoint.name || waypoint.city || waypoint);
+        console.log('  Waypoint:', cityName, waypoint);
+        if (!cityDataMap.has(cityName)) {
+          cityDataMap.set(cityName, waypoint);
+        }
+      });
+    }
 
-      if (!existingDest) {
+    console.log('📍 City data map size:', cityDataMap.size, 'entries:', Array.from(cityDataMap.keys()));
+
+    // Use nightAllocations as the source of truth for which cities to include
+    if (data.nightAllocations) {
+      // Get all city names from nightAllocations
+      const allCityNames = Object.keys(data.nightAllocations);
+
+      // Try to get ordering from routePlan, but include ALL cities from nightAllocations
+      let orderedCities: string[] = [];
+      if (data.routePlan?.cities && Array.isArray(data.routePlan.cities)) {
+        const routePlanCities = data.routePlan.cities.map((c: any) => getCityName(c.name || c));
+        // Start with routePlan order
+        orderedCities = [...routePlanCities];
+        // Add any cities from nightAllocations that aren't in routePlan
+        allCityNames.forEach(cityName => {
+          if (!orderedCities.includes(cityName)) {
+            orderedCities.push(cityName);
+          }
+        });
+      } else {
+        orderedCities = allCityNames;
+      }
+
+      console.log('🏙️ Processing cities in order:', orderedCities);
+
+      orderedCities.forEach((cityName: string) => {
+        const nights = data.nightAllocations[cityName];
+        console.log(`  🌆 ${cityName}: ${nights} nights`);
+
+        if (nights && nights > 0) {
+          const cityData = cityDataMap.get(cityName);
+          console.log(`    Data found:`, cityData ? 'YES' : 'NO', cityData);
+
+          const coordinates = cityData ? extractCoordinates(cityData.city || cityData) : { lat: 0, lng: 0 };
+          console.log(`    Coordinates:`, coordinates);
+
+          cities.push({
+            city: cityData || { name: cityName, country: '', coordinates: { lat: 0, lng: 0 } },
+            coordinates,
+            nights: nights,
+            activities: cityData?.activities || [],
+            restaurants: cityData?.restaurants || [],
+            accommodation: cityData?.accommodation || [],
+            practicalInfo: cityData?.practicalInfo,
+            weather: cityData?.weather,
+            events: cityData?.events || [],
+            agentData: {}
+          });
+        }
+      });
+
+      console.log('✅ Final cities array:', cities.length, 'cities');
+      cities.forEach((city, i) => {
+        console.log(`  ${i + 1}. ${getCityName(city.city)} - ${city.nights} nights - coords: ${city.coordinates.lat}, ${city.coordinates.lng}`);
+      });
+    }
+
+    // If we didn't get cities from nightAllocations, fall back to the old method
+    if (cities.length === 0) {
+      // Add origin
+      if (data.origin) {
+        cities.push({
+          city: data.origin,
+          coordinates: extractCoordinates(data.origin),
+          nights: 0,
+          agentData: {}
+        });
+      }
+
+      // Add waypoints
+      if (data.waypoints && Array.isArray(data.waypoints)) {
+        data.waypoints.forEach((waypoint: any) => {
+          const cityName = getCityName(waypoint.name || waypoint.city || waypoint);
+          cities.push({
+            city: waypoint,
+            coordinates: extractCoordinates(waypoint),
+            nights: data.nightAllocations?.[cityName] || 1,
+            activities: waypoint.activities || [],
+            restaurants: waypoint.restaurants || [],
+            accommodation: waypoint.accommodation || [],
+            agentData: {}
+          });
+        });
+      }
+
+      // Add destination
+      if (data.destination) {
         cities.push({
           city: data.destination,
           coordinates: extractCoordinates(data.destination),
-          nights: data.nightAllocations?.[destName] || 0,
+          nights: 0,
           agentData: {}
         });
       }
