@@ -41,7 +41,7 @@ const LandmarkMarker = ({
     >
       {/* Marker star */}
       <motion.div
-        initial={{ scale: 0, rotate: -180 }}
+        initial={false}
         animate={{
           scale: isHovered ? 1.15 : 1,
           rotate: 0
