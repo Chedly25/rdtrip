@@ -49,20 +49,25 @@ const SpotlightV2 = () => {
         });
 
         if (!response.ok) {
-          if (response.status === 401 || response.status === 403) {
-            throw new Error('Authentication required. Please log in again.');
+          // If route not found or unauthorized, fall back to localStorage
+          // This handles cases where routeId is a timestamp (not a real DB ID)
+          if (response.status === 404 || response.status === 401 || response.status === 403) {
+            console.warn(`⚠️ Backend fetch failed (${response.status}), falling back to localStorage`);
+            // Don't throw - let it fall through to localStorage fallback
+          } else {
+            throw new Error(`Failed to load route: ${response.status} ${response.statusText}`);
           }
-          throw new Error(`Failed to load route: ${response.status} ${response.statusText}`);
+        } else {
+          // Success - route found in database
+          const routeData = await response.json();
+          console.log('📦 Fetched route data from backend:', routeData);
+          const transformedRoute = transformBackendDataToRoute(routeData);
+          setRoute(transformedRoute);
+          return;
         }
-
-        const routeData = await response.json();
-        console.log('📦 Fetched route data:', routeData);
-        const transformedRoute = transformBackendDataToRoute(routeData);
-        setRoute(transformedRoute);
-        return;
       }
 
-      // PRIORITY 2: No routeId - fallback to localStorage (from landing page navigation)
+      // PRIORITY 2: No routeId OR backend fetch failed - fallback to localStorage (from landing page navigation)
       const spotlightDataStr = localStorage.getItem('spotlightData');
       if (spotlightDataStr) {
         const spotlightData = JSON.parse(spotlightDataStr);
