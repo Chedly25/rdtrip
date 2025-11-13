@@ -110,6 +110,7 @@ const MapViewV2 = () => {
   useEffect(() => {
     if (!map.current || !isMapLoaded || !route) return;
 
+    console.log('🔄 MapViewV2 useEffect triggered! Landmarks in route:', route.landmarks.length);
     renderRouteAndMarkers();
   }, [isMapLoaded, route, selectedCityIndex, agentColors, nearbyLandmarks]); // Added nearbyLandmarks to re-render when landmarks load
 
@@ -248,7 +249,9 @@ const MapViewV2 = () => {
     });
 
     // Add markers for landmarks already added to route (with remove button)
+    console.log('📍 Rendering route landmarks:', route.landmarks.length);
     route.landmarks.forEach((landmark, index) => {
+      console.log(`  → Adding marker for route landmark ${index}: ${landmark.name}`);
       const markerId = `route-landmark-${index}`;
       const landmarkImagePath = getLandmarkImagePath(landmark.name);
 
