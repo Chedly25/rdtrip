@@ -46,16 +46,11 @@ const LandmarkDetailsModal = ({ landmark, onClose }: LandmarkDetailsModalProps) 
           images.push(landmark.image_url);
         }
 
-        // For demo: Add placeholder images based on landmark type
-        // In production, these would be real additional photos from various APIs
-        if (images.length > 0) {
-          // Add 2-3 more placeholder variations (in real app, fetch from multiple sources)
-          const baseImage = images[0];
-          // For now, we'll just show the main image multiple times
-          // In production, fetch from: Unsplash, Pexels, or Google Places Photos API
-          images.push(baseImage); // Placeholder for second angle
-          images.push(baseImage); // Placeholder for interior/detail shot
-        }
+        // TODO: In production, fetch additional images from:
+        // - Unsplash API
+        // - Pexels API
+        // - Google Places Photos API
+        // For now, we just show the single Wikipedia/fallback image
       } catch (error) {
         console.error('Failed to load landmark images:', error);
         // Use landmark's image_url as fallback
@@ -302,7 +297,7 @@ const LandmarkDetailsModal = ({ landmark, onClose }: LandmarkDetailsModalProps) 
           </button>
 
           {/* Hero Image Section with Gallery */}
-          <div className="relative w-full h-64 bg-gradient-to-br from-gray-100 to-gray-200 flex-shrink-0">
+          <div className="relative w-full h-48 bg-gradient-to-br from-gray-100 to-gray-200 flex-shrink-0">
             {imageLoading ? (
               // Loading skeleton
               <div className="absolute inset-0 bg-gray-200 animate-pulse" />
