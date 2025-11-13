@@ -100,7 +100,7 @@ class GooglePlacesDiscoveryAgent {
           rankby: 'prominence'
         });
 
-        allCandidates.push(...results.slice(0, 5)); // Top 5 per type
+        allCandidates.push(...results.slice(0, 10)); // Top 10 per type (more options for filtering)
 
       } catch (error) {
         console.warn(`   ⚠️  Search failed for type "${type}":`, error.message);
@@ -140,7 +140,7 @@ class GooglePlacesDiscoveryAgent {
     }
 
     console.log(`   Found ${unique.length} unique non-lodging places`);
-    return unique.slice(0, 10); // Return top 10
+    return unique.slice(0, 20); // Return top 20 for better filtering options
   }
 
   /**
@@ -240,6 +240,8 @@ class GooglePlacesDiscoveryAgent {
    * Filter and rank candidates
    */
   filterAndRank(candidates, timeWindow, preferences) {
+    const agentType = preferences?.agentType || preferences?.travelStyle || 'best-overall';
+
     // 1. Filter by opening hours (if scheduled time provided)
     let filtered = candidates.filter(candidate => {
       if (candidate.openingHours && candidate.openingHours.periods) {
@@ -250,13 +252,44 @@ class GooglePlacesDiscoveryAgent {
       return true; // Accept if no hours data
     });
 
-    // 2. Rank by quality score
+    // 2. QUALITY FILTERING: Exclude vague/generic/poor quality places
+    filtered = filtered.filter(candidate => {
+      // Exclude places with very few reviews AND low rating (likely not interesting)
+      if (candidate.ratingCount && candidate.rating) {
+        if (candidate.ratingCount < 10 && candidate.rating < 3.5) {
+          console.log(`      🚫 Filtered out low-quality: ${candidate.name} (${candidate.ratingCount} reviews, ${candidate.rating} rating)`);
+          return false;
+        }
+      }
+
+      // For adventure agent: Require minimum rating for tourist_attraction to avoid generic spots
+      if (agentType === 'adventure') {
+        if (candidate.place_types?.includes('tourist_attraction')) {
+          if (!candidate.rating || candidate.rating < 4.0) {
+            console.log(`      🚫 Filtered out generic attraction: ${candidate.name} (rating too low for adventure)`);
+            return false;
+          }
+        }
+      }
+
+      // Exclude generic "point_of_interest" unless it has exceptional ratings
+      if (candidate.place_types?.includes('point_of_interest') && !candidate.place_types?.includes('park') && !candidate.place_types?.includes('museum')) {
+        if (!candidate.rating || candidate.rating < 4.3 || (candidate.ratingCount && candidate.ratingCount < 50)) {
+          console.log(`      🚫 Filtered out generic POI: ${candidate.name}`);
+          return false;
+        }
+      }
+
+      return true;
+    });
+
+    // 3. Rank by quality score
     filtered = filtered.map(candidate => ({
       ...candidate,
       qualityScore: this.calculateQualityScore(candidate, preferences)
     }));
 
-    // 3. Sort by quality score
+    // 4. Sort by quality score
     filtered.sort((a, b) => b.qualityScore - a.qualityScore);
 
     return filtered.slice(0, 5); // Return top 5
@@ -355,11 +388,16 @@ class GooglePlacesDiscoveryAgent {
         'park',
         'natural_feature',
         'hiking_area',
-        'campground',
         'tourist_attraction', // Viewpoints, scenic spots
         'amusement_park',
         'zoo',
-        'aquarium'
+        'aquarium',
+        'national_park',
+        'ski_resort',
+        'campground',
+        'rv_park',
+        'stadium',
+        'tourist_destination'
       ],
 
       // HIDDEN GEMS: Local spots, lesser-known places, unique experiences
@@ -424,7 +462,15 @@ class GooglePlacesDiscoveryAgent {
    */
   getSearchRadius(preferences) {
     // Search radius in meters
+    const agentType = preferences?.agentType || preferences?.travelStyle || 'best-overall';
     const budget = preferences?.budget || 'mid';
+
+    // Adventure agent needs larger radius for nature/outdoor spots
+    if (agentType === 'adventure') {
+      return 8000; // 8km for adventure (nature spots are further from city center)
+    }
+
+    // Standard radius based on budget
     return budget === 'budget' ? 2000 : budget === 'luxury' ? 5000 : 3000;
   }
 
