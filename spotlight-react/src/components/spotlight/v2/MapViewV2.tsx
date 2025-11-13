@@ -130,33 +130,42 @@ const MapViewV2 = () => {
     }
 
     // Get all coordinates for the route (cities + landmarks in order)
-    console.log('🗺️ MapViewV2: Building cityCoords array from', route.cities.length, 'cities');
-    const cityCoords: [number, number][] = route.cities
-      .map((city, index) => {
-        console.log(`  City ${index}:`, {
-          cityObject: city.city,
-          topLevelCoords: city.coordinates
-        });
-        // Use top-level coordinates directly instead of getCityCoordinates
-        // since we already store normalized coordinates there
-        const coords = city.coordinates;
-        console.log(`  → Using top-level coords:`, coords);
-        return coords;
-      })
-      .filter((coord): coord is { lat: number; lng: number } => coord !== null)
-      .map((coord, index) => {
-        const mapboxCoord: [number, number] = [coord.lng, coord.lat];
-        console.log(`  Mapbox coord ${index}: [${mapboxCoord[0]}, ${mapboxCoord[1]}]`);
-        return mapboxCoord;
-      });
+    console.log('🗺️ MapViewV2: Building route waypoints from', route.cities.length, 'cities and', route.landmarks.length, 'landmarks');
 
-    if (cityCoords.length < 2) {
-      console.warn('Not enough coordinates to render route');
+    // Build route waypoints by inserting landmarks at their optimal positions
+    const waypoints: [number, number][] = [];
+
+    route.cities.forEach((city, cityIndex) => {
+      const coords = city.coordinates;
+      if (!coords) {
+        console.warn(`  ⚠️ No coordinates for city ${cityIndex}`);
+        return;
+      }
+
+      // Add city coordinate
+      waypoints.push([coords.lng, coords.lat]);
+      console.log(`  📍 Added city ${cityIndex} at [${coords.lng}, ${coords.lat}]`);
+
+      // Add any landmarks that should be inserted after this city
+      const landmarksAfterThisCity = route.landmarks.filter(
+        landmark => landmark.insertAfterCityIndex === cityIndex
+      );
+
+      landmarksAfterThisCity.forEach(landmark => {
+        waypoints.push([landmark.coordinates.lng, landmark.coordinates.lat]);
+        console.log(`  ⭐ Added landmark "${landmark.name}" at [${landmark.coordinates.lng}, ${landmark.coordinates.lat}]`);
+      });
+    });
+
+    console.log(`🛣️ Total waypoints for route: ${waypoints.length} (${route.cities.length} cities + ${route.landmarks.length} landmarks)`);
+
+    if (waypoints.length < 2) {
+      console.warn('Not enough waypoints to render route');
       return;
     }
 
-    // Fetch route from Mapbox
-    const mapboxRoute = await fetchMapboxRoute(cityCoords);
+    // Fetch route from Mapbox with all waypoints (cities + landmarks)
+    const mapboxRoute = await fetchMapboxRoute(waypoints);
 
     if (mapboxRoute && mapboxRoute.geometry) {
       // Add route as a source
@@ -322,16 +331,12 @@ const MapViewV2 = () => {
       markersRef.current.push(marker);
     });
 
-    // Fit bounds to show all points
-    if (cityCoords.length > 0) {
+    // Fit bounds to show all waypoints
+    if (waypoints.length > 0) {
       const bounds = new mapboxgl.LngLatBounds();
 
-      cityCoords.forEach(coord => {
+      waypoints.forEach(coord => {
         bounds.extend(coord);
-      });
-
-      route.landmarks.forEach(landmark => {
-        bounds.extend([landmark.coordinates.lng, landmark.coordinates.lat]);
       });
 
       if (!bounds.isEmpty()) {
