@@ -259,28 +259,24 @@ const MapViewV2 = () => {
       const markerId = `route-landmark-${index}`;
       const landmarkImagePath = getLandmarkImagePath(landmark.name);
 
+      // TESTING: Use simple HTML element instead of React component
       const el = document.createElement('div');
-      const root = createRoot(el);
-
-      root.render(
-        <LandmarkMarker
-          landmarkName={landmark.name}
-          landmarkImage={landmarkImagePath}
-          isHovered={hoveredMarkerId === markerId}
-          detourInfo={
-            landmark.detourKm && landmark.detourMinutes
-              ? { km: landmark.detourKm, minutes: landmark.detourMinutes }
-              : undefined
-          }
-          agentColors={agentColors}
-          onClick={() => {
-            console.log('Clicked route landmark:', landmark.name);
-          }}
-          onRemove={() => removeLandmark(landmark.id)}
-          onMouseEnter={() => setHoveredMarkerId(markerId)}
-          onMouseLeave={() => setHoveredMarkerId(null)}
-        />
-      );
+      el.style.width = '48px';
+      el.style.height = '48px';
+      el.style.borderRadius = '50%';
+      el.style.background = `linear-gradient(135deg, ${agentColors.accent}, ${agentColors.secondary})`;
+      el.style.border = '3px solid white';
+      el.style.boxShadow = '0 4px 12px rgba(0,0,0,0.4)';
+      el.style.display = 'flex';
+      el.style.alignItems = 'center';
+      el.style.justifyContent = 'center';
+      el.style.fontSize = '24px';
+      el.style.cursor = 'pointer';
+      el.innerHTML = '⭐';
+      el.onclick = () => {
+        console.log('Clicked route landmark:', landmark.name);
+      };
+      console.log(`     🎨 Created simple HTML element with background: ${agentColors.accent}`);
 
       const marker = new mapboxgl.Marker({
         element: el,
