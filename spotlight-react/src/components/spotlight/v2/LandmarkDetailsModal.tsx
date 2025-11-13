@@ -297,7 +297,7 @@ const LandmarkDetailsModal = ({ landmark, onClose }: LandmarkDetailsModalProps) 
           </button>
 
           {/* Hero Image Section with Gallery */}
-          <div className="relative w-full h-18 bg-gradient-to-br from-gray-100 to-gray-200 flex-shrink-0">
+          <div className="relative w-full h-20 bg-gradient-to-br from-gray-100 to-gray-200 flex-shrink-0">
             {imageLoading ? (
               // Loading skeleton
               <div className="absolute inset-0 bg-gray-200 animate-pulse" />
