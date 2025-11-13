@@ -83,7 +83,7 @@ const MapViewV2 = () => {
     if (!map.current || !isMapLoaded || !route) return;
 
     renderRouteAndMarkers();
-  }, [isMapLoaded, route, selectedCityIndex, hoveredMarkerId, agentColors]);
+  }, [isMapLoaded, route, selectedCityIndex, agentColors]); // Keep selectedCityIndex for selection updates, removed hoveredMarkerId to reduce re-renders
 
   const renderRouteAndMarkers = async () => {
     if (!map.current || !route) return;
