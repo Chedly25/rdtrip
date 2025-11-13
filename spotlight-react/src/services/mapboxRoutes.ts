@@ -41,12 +41,17 @@ export async function fetchMapboxRoute(
 
   try {
     // Build coordinates string for Mapbox API
+    console.log('🗺️ fetchMapboxRoute: Input coordinates:', coordinates);
     const coordsString = coordinates
-      .map(coord => `${coord[0]},${coord[1]}`)
+      .map(coord => {
+        console.log(`  → Converting [${coord[0]}, ${coord[1]}] to "${coord[0]},${coord[1]}"`);
+        return `${coord[0]},${coord[1]}`;
+      })
       .join(';');
 
     // Fetch route from Mapbox Directions API
     const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${coordsString}?geometries=geojson&overview=full&steps=true&access_token=${MAPBOX_TOKEN}`;
+    console.log('🗺️ Mapbox API URL (without token):', url.replace(MAPBOX_TOKEN, 'TOKEN'));
 
     const response = await fetch(url);
 
