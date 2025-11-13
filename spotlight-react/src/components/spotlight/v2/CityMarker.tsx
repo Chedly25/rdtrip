@@ -31,9 +31,7 @@ const CityMarker = ({
       onClick={onClick}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
-      style={{
-        transform: 'translate(-50%, -100%)',
-      }}
+      // Removed transform - Mapbox anchor handles positioning
     >
       {/* Marker pin */}
       <motion.div
