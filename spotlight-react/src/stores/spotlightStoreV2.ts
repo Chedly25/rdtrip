@@ -244,23 +244,42 @@ export const useSpotlightStoreV2 = create<SpotlightStoreV2>((set, get) => ({
       if (updatedState.route?.id) {
         try {
           const apiUrl = import.meta.env.VITE_API_URL || '';
+
+          // Add authentication token
+          const token = localStorage.getItem('token');
+          const headers: HeadersInit = {
+            'Content-Type': 'application/json',
+          };
+          if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+          }
+
+          // Add timeout to prevent hanging
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
           const response = await fetch(`${apiUrl}/api/routes/${updatedState.route.id}/landmarks`, {
             method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-            },
+            headers,
             body: JSON.stringify({
               landmarks: updatedState.route.landmarks
-            })
+            }),
+            signal: controller.signal
           });
+
+          clearTimeout(timeoutId);
 
           if (response.ok) {
             console.log('💾 Landmarks saved to backend');
           } else {
-            console.warn('⚠️ Failed to save landmarks to backend:', response.statusText);
+            console.warn('⚠️ Failed to save landmarks to backend:', response.status, response.statusText);
           }
         } catch (apiError) {
-          console.warn('⚠️ Could not save landmarks to backend:', apiError);
+          if ((apiError as Error).name === 'AbortError') {
+            console.warn('⚠️ Landmark save timed out after 10 seconds');
+          } else {
+            console.warn('⚠️ Could not save landmarks to backend:', apiError);
+          }
           // Don't throw - landmark is still in local state
         }
       }
