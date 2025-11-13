@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Star, Clock, MapPin, Plus, Navigation, TrendingUp, Sparkles } from 'lucide-react';
+import { X, Star, Clock, MapPin, Plus, Navigation, TrendingUp, Sparkles, DollarSign, Calendar, Users, Info } from 'lucide-react';
 import type { Landmark } from '../../../services/landmarks';
 import { useSpotlightStoreV2 } from '../../../stores/spotlightStoreV2';
 import { useState, useEffect } from 'react';
@@ -140,6 +140,67 @@ const LandmarkDetailsModal = ({ landmark, onClose }: LandmarkDetailsModalProps) 
     '📸 Perfect for photography'
   ].filter(Boolean);
 
+  // Generate "Why Visit" reasons based on landmark properties
+  const whyVisitReasons = [
+    landmark.type === 'historic' && {
+      icon: '🏛️',
+      title: 'Rich Historical Significance',
+      description: 'Immerse yourself in centuries of history and architectural grandeur.'
+    },
+    landmark.type === 'natural' && {
+      icon: '🌿',
+      title: 'Stunning Natural Beauty',
+      description: 'Experience breathtaking landscapes and pristine natural environments.'
+    },
+    landmark.rating >= 4.5 && {
+      icon: '⭐',
+      title: 'Highly Rated Experience',
+      description: 'Join thousands of satisfied visitors who gave this attraction top ratings.'
+    },
+    landmark.type === 'museum' && {
+      icon: '🎨',
+      title: 'World-Class Collections',
+      description: 'Discover extraordinary art, artifacts, and cultural treasures.'
+    },
+    {
+      icon: '📸',
+      title: 'Instagram-Worthy Moments',
+      description: 'Capture unforgettable photos that will make your friends jealous.'
+    }
+  ].filter((reason): reason is { icon: string; title: string; description: string } => Boolean(reason)).slice(0, 3); // Show top 3 reasons
+
+  // Quick facts data
+  const quickFacts = [
+    {
+      icon: Clock,
+      label: 'Visit Duration',
+      value: landmark.visit_duration > 0
+        ? landmark.visit_duration < 60
+          ? `${landmark.visit_duration} min`
+          : `${Math.round(landmark.visit_duration / 60)} ${Math.round(landmark.visit_duration / 60) === 1 ? 'hour' : 'hours'}`
+        : 'Flexible',
+      color: agentColors.primary
+    },
+    {
+      icon: DollarSign,
+      label: 'Entry',
+      value: landmark.type === 'natural' ? 'Free' : landmark.type === 'historic' ? '€10-20' : 'Varies',
+      color: agentColors.secondary
+    },
+    {
+      icon: Calendar,
+      label: 'Best Time',
+      value: landmark.type === 'natural' ? 'Spring/Fall' : 'Morning',
+      color: agentColors.accent
+    },
+    {
+      icon: Users,
+      label: 'Crowd Level',
+      value: landmark.rating >= 4.5 ? 'Popular' : 'Moderate',
+      color: agentColors.primary
+    }
+  ];
+
   return createPortal(
     <AnimatePresence>
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -158,7 +219,10 @@ const LandmarkDetailsModal = ({ landmark, onClose }: LandmarkDetailsModalProps) 
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 20 }}
           transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-          className="relative w-full max-w-2xl max-h-[90vh] bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+          className="relative w-full max-w-2xl max-h-[90vh] bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col"
+          style={{
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05)'
+          }}
         >
           {/* Close button */}
           <button
@@ -259,40 +323,99 @@ const LandmarkDetailsModal = ({ landmark, onClose }: LandmarkDetailsModalProps) 
                 )}
               </div>
 
+              {/* Quick Facts Grid */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15 }}
+                className="mb-6"
+              >
+                <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <Info className="w-5 h-5" style={{ color: agentColors.accent }} />
+                  Quick Facts
+                </h3>
+                <div className="grid grid-cols-2 gap-3">
+                  {quickFacts.map((fact, index) => {
+                    const IconComponent = fact.icon;
+                    return (
+                      <motion.div
+                        key={index}
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 0.2 + index * 0.05 }}
+                        className="p-4 rounded-xl border-2 border-gray-100 bg-gradient-to-br from-white to-gray-50 hover:shadow-md transition-shadow"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div
+                            className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                            style={{
+                              background: `linear-gradient(135deg, ${fact.color}15, ${fact.color}25)`
+                            }}
+                          >
+                            <IconComponent className="w-5 h-5" style={{ color: fact.color }} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-gray-500 mb-0.5">{fact.label}</p>
+                            <p className="text-sm font-semibold text-gray-900 truncate">{fact.value}</p>
+                          </div>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              </motion.div>
+
               {/* Detour Impact Card */}
               {detourInfo && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.2 }}
-                  className="mb-6 p-4 rounded-xl border-2"
+                  className="mb-6 p-5 rounded-2xl border-2 shadow-lg relative overflow-hidden"
                   style={{
-                    borderColor: `${agentColors.accent}40`,
-                    background: `linear-gradient(135deg, ${agentColors.primary}05, ${agentColors.secondary}05)`
+                    borderColor: `${agentColors.accent}30`,
+                    background: `linear-gradient(135deg, ${agentColors.primary}08, ${agentColors.secondary}08)`
                   }}
                 >
-                  <div className="flex items-start gap-3">
+                  {/* Decorative gradient overlay */}
+                  <div
+                    className="absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl opacity-20 pointer-events-none"
+                    style={{
+                      background: `radial-gradient(circle, ${agentColors.accent}, transparent)`
+                    }}
+                  />
+
+                  <div className="flex items-start gap-4 relative">
                     <div
-                      className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+                      className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md"
                       style={{
                         background: `linear-gradient(135deg, ${agentColors.primary}, ${agentColors.secondary})`
                       }}
                     >
-                      <TrendingUp className="w-5 h-5 text-white" />
+                      <TrendingUp className="w-6 h-6 text-white" />
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900 mb-1">Route Impact</h3>
-                      <div className="flex items-center gap-3 text-sm">
-                        <span className="font-bold text-lg" style={{ color: agentColors.accent }}>
-                          +{detourInfo.km.toFixed(0)} km
-                        </span>
-                        <span className="text-gray-400">•</span>
-                        <span className="font-bold text-lg" style={{ color: agentColors.accent }}>
-                          +{detourInfo.minutes} min
-                        </span>
+                      <h3 className="font-bold text-gray-900 mb-2 text-base">Route Impact</h3>
+                      <div className="flex items-center gap-4 mb-2">
+                        <div className="flex items-baseline gap-1">
+                          <span className="font-bold text-2xl" style={{ color: agentColors.accent }}>
+                            +{detourInfo.km.toFixed(0)}
+                          </span>
+                          <span className="text-sm font-medium text-gray-600">km</span>
+                        </div>
+                        <span className="text-gray-300">•</span>
+                        <div className="flex items-baseline gap-1">
+                          <span className="font-bold text-2xl" style={{ color: agentColors.accent }}>
+                            +{detourInfo.minutes}
+                          </span>
+                          <span className="text-sm font-medium text-gray-600">min</span>
+                        </div>
                       </div>
-                      <p className="text-xs text-gray-600 mt-1">
-                        Between <span className="font-medium">{detourInfo.fromCity}</span> → <span className="font-medium">{detourInfo.toCity}</span>
+                      <p className="text-xs text-gray-600 flex items-center gap-1">
+                        <span className="opacity-75">Between</span>
+                        <span className="font-semibold text-gray-800">{detourInfo.fromCity}</span>
+                        <span className="opacity-50">→</span>
+                        <span className="font-semibold text-gray-800">{detourInfo.toCity}</span>
                       </p>
                     </div>
                   </div>
@@ -306,6 +429,35 @@ const LandmarkDetailsModal = ({ landmark, onClose }: LandmarkDetailsModalProps) 
                   {landmark.description || 'A must-see attraction on your European road trip! This landmark offers a unique glimpse into the region\'s history, culture, and natural beauty.'}
                 </p>
               </div>
+
+              {/* Why Visit Section */}
+              {whyVisitReasons.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.25 }}
+                  className="mb-6"
+                >
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Why Visit</h3>
+                  <div className="space-y-3">
+                    {whyVisitReasons.map((reason, index) => (
+                      <motion.div
+                        key={index}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.3 + index * 0.1 }}
+                        className="flex items-start gap-3 p-3 rounded-lg bg-gradient-to-r from-gray-50 to-white border border-gray-100"
+                      >
+                        <div className="text-2xl flex-shrink-0">{reason.icon}</div>
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-gray-900 mb-1">{reason.title}</h4>
+                          <p className="text-sm text-gray-600 leading-relaxed">{reason.description}</p>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
 
               {/* Highlights */}
               {highlights.length > 0 && (
@@ -341,16 +493,16 @@ const LandmarkDetailsModal = ({ landmark, onClose }: LandmarkDetailsModalProps) 
           </div>
 
           {/* Sticky Footer with Action Buttons */}
-          <div className="flex-shrink-0 p-6 bg-gray-50 border-t border-gray-200">
+          <div className="flex-shrink-0 p-6 bg-gradient-to-b from-gray-50 to-white border-t border-gray-200">
             <div className="flex items-center gap-3">
               {/* Add to Route Button */}
               <button
                 onClick={handleAddToRoute}
                 disabled={isAdding || addSuccess}
-                className="flex-1 px-6 py-3 rounded-xl font-semibold text-white shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="flex-1 px-6 py-3.5 rounded-xl font-semibold text-white shadow-lg hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2"
                 style={{
                   background: addSuccess
-                    ? '#10b981' // Green on success
+                    ? 'linear-gradient(135deg, #10b981, #059669)' // Green gradient on success
                     : `linear-gradient(135deg, ${agentColors.primary}, ${agentColors.secondary})`
                 }}
               >
@@ -389,7 +541,7 @@ const LandmarkDetailsModal = ({ landmark, onClose }: LandmarkDetailsModalProps) 
                   // Zoom to landmark location (TODO: implement map zoom)
                   onClose();
                 }}
-                className="px-6 py-3 rounded-xl font-semibold text-gray-700 bg-white hover:bg-gray-100 border border-gray-300 transition-colors flex items-center gap-2 shadow-sm"
+                className="px-6 py-3.5 rounded-xl font-semibold text-gray-700 bg-white hover:bg-gray-50 border-2 border-gray-200 hover:border-gray-300 transition-all flex items-center gap-2 shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
               >
                 <MapPin className="w-5 h-5" />
                 View on Map
