@@ -355,7 +355,7 @@ class AgentOrchestratorV3 extends EventEmitter {
 
             if (result.success && result.candidates && result.candidates.length > 0) {
               // For new block format, get multiple activities based on activitySlots
-              const slotsToFill = window.activitySlots || 1;
+              const slotsToFill = 6; // Always return 6 options per time block for user choice
 
               for (let i = 0; i < slotsToFill && i < result.candidates.length; i++) {
                 // Check BOTH global and day-specific exclusions
