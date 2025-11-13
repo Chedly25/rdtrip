@@ -158,25 +158,45 @@ const SpotlightV2 = () => {
   };
 
   // Helper to extract coordinates from city data
-  const extractCoordinates = (city: any) => {
+  const extractCoordinates = (city: any): { lat: number; lng: number } => {
     if (typeof city === 'string') {
       return { lat: 0, lng: 0 }; // Will need to geocode
     }
-    return city.coordinates || { lat: 0, lng: 0 };
+
+    // Handle direct coordinates property
+    const coords = city.coordinates || city;
+
+    // If coordinates is an array [lat, lng]
+    if (Array.isArray(coords)) {
+      return {
+        lat: typeof coords[0] === 'number' ? coords[0] : 0,
+        lng: typeof coords[1] === 'number' ? coords[1] : 0
+      };
+    }
+
+    // If coordinates is an object {lat, lng}
+    if (coords && typeof coords === 'object' && 'lat' in coords && 'lng' in coords) {
+      return {
+        lat: typeof coords.lat === 'number' ? coords.lat : 0,
+        lng: typeof coords.lng === 'number' ? coords.lng : 0
+      };
+    }
+
+    return { lat: 0, lng: 0 };
   };
 
   const agentColors = getAgentColors();
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+      <div className="flex items-center justify-center h-screen bg-white">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           className="text-center"
         >
           <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4" style={{ color: agentColors.accent }} />
-          <p className="text-white text-lg">Loading your route...</p>
+          <p className="text-gray-900 text-lg">Loading your route...</p>
         </motion.div>
       </div>
     );
@@ -184,14 +204,14 @@ const SpotlightV2 = () => {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+      <div className="flex items-center justify-center h-screen bg-gray-50">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="text-center max-w-md mx-auto p-8"
         >
-          <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-6 mb-4">
-            <p className="text-red-400 text-lg mb-4">{error}</p>
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6 mb-4">
+            <p className="text-red-600 text-lg mb-4">{error}</p>
             <button
               onClick={() => navigate('/')}
               className="px-6 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
@@ -209,7 +229,7 @@ const SpotlightV2 = () => {
   }
 
   return (
-    <div className="h-screen w-screen overflow-hidden bg-slate-900 relative">
+    <div className="h-screen w-screen overflow-hidden bg-gray-50 relative">
       {/* Header */}
       <SpotlightHeader />
 
@@ -223,7 +243,7 @@ const SpotlightV2 = () => {
       <div
         className="absolute inset-0 pointer-events-none z-0"
         style={{
-          background: `radial-gradient(circle at 50% 0%, ${agentColors.primary}08 0%, transparent 50%)`
+          background: `radial-gradient(circle at 50% 0%, ${agentColors.primary}05 0%, transparent 50%)`
         }}
       />
     </div>

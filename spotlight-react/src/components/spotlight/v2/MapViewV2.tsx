@@ -43,7 +43,7 @@ const MapViewV2 = () => {
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/dark-v11',
+      style: 'mapbox://styles/mapbox/streets-v12',
       center: initialCenter,
       zoom: initialZoom,
       pitch: 0,
@@ -292,10 +292,10 @@ const MapViewV2 = () => {
 
   if (!MAPBOX_TOKEN) {
     return (
-      <div className="absolute inset-0 flex items-center justify-center bg-slate-800">
+      <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
         <div className="text-center p-8">
-          <p className="text-white text-lg mb-2">Map unavailable</p>
-          <p className="text-gray-400 text-sm">
+          <p className="text-gray-900 text-lg mb-2">Map unavailable</p>
+          <p className="text-gray-600 text-sm">
             Mapbox token not configured. Set VITE_MAPBOX_TOKEN in your environment.
           </p>
         </div>

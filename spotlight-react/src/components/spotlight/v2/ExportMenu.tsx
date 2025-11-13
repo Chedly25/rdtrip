@@ -156,7 +156,7 @@ const ExportMenu = () => {
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 rounded-lg border border-white/20 bg-white/80 backdrop-blur-sm px-4 py-2 text-sm font-medium transition-all hover:bg-white hover:shadow-md"
+        className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 transition-all hover:bg-gray-200 hover:shadow-md"
       >
         <Download className="h-4 w-4" />
         <span>Export</span>
@@ -178,7 +178,7 @@ const ExportMenu = () => {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -10, scale: 0.95 }}
               transition={{ duration: 0.15 }}
-              className="absolute right-0 top-full mt-2 w-48 rounded-lg border border-white/20 bg-white shadow-xl z-50 overflow-hidden"
+              className="absolute right-0 top-full mt-2 w-48 rounded-lg border border-gray-200 bg-white shadow-xl z-50 overflow-hidden"
             >
               <div className="p-2">
                 <button
