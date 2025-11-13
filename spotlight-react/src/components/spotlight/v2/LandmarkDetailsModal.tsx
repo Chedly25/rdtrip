@@ -297,7 +297,7 @@ const LandmarkDetailsModal = ({ landmark, onClose }: LandmarkDetailsModalProps) 
           </button>
 
           {/* Hero Image Section with Gallery */}
-          <div className="relative w-full bg-gradient-to-br from-gray-100 to-gray-200 flex-shrink-0" style={{ height: '60px' }}>
+          <div className="relative w-full bg-gradient-to-br from-gray-100 to-gray-200 flex-shrink-0" style={{ height: '60px', maxHeight: '60px', minHeight: '60px', overflow: 'hidden' }}>
             {imageLoading ? (
               // Loading skeleton
               <div className="absolute inset-0 bg-gray-200 animate-pulse" />
@@ -309,7 +309,8 @@ const LandmarkDetailsModal = ({ landmark, onClose }: LandmarkDetailsModalProps) 
                     key={currentImageIndex}
                     src={landmarkImages[currentImageIndex]}
                     alt={`${landmark.name} - Photo ${currentImageIndex + 1}`}
-                    className="w-full h-full object-cover"
+                    className="w-full object-cover"
+                    style={{ height: '60px', maxHeight: '60px' }}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
