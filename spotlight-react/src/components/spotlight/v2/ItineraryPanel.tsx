@@ -340,23 +340,94 @@ export const ItineraryPanel = ({ isOpen, onClose }: ItineraryPanelProps) => {
                       </div>
                     </div>
 
-                    {/* Data Preview - For now showing raw data, can be replaced with proper components later */}
+                    {/* Itinerary Content Preview */}
                     <div className="space-y-4">
-                      <details className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-                        <summary className="px-4 py-3 cursor-pointer hover:bg-gray-50 font-semibold text-gray-900">
-                          View Raw Data (Developer Mode)
+                      {/* Day Structure */}
+                      {itinerary.dayStructure && itinerary.dayStructure.length > 0 && (
+                        <div className="space-y-3">
+                          <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                            📅 Day-by-Day Breakdown
+                          </h4>
+                          <div className="space-y-2">
+                            {itinerary.dayStructure.map((day: any, index: number) => (
+                              <div key={index} className="bg-white border border-gray-200 rounded-lg p-4">
+                                <div className="font-medium text-gray-900 mb-1">
+                                  Day {day.day || index + 1}: {day.city || 'Unknown City'}
+                                </div>
+                                <div className="text-sm text-gray-600">
+                                  {day.theme && <span className="mr-2">🎯 {day.theme}</span>}
+                                  {day.description && <span>{day.description}</span>}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Activities Preview */}
+                      {itinerary.activities && itinerary.activities.length > 0 && (
+                        <div className="space-y-2">
+                          <h4 className="font-semibold text-gray-900">🎯 Top Activities</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            {itinerary.activities.flat().slice(0, 4).map((activity: any, idx: number) => (
+                              <div key={idx} className="bg-white border border-gray-200 rounded p-3 text-sm">
+                                <div className="font-medium text-gray-900">{activity.name || activity.title}</div>
+                                {activity.city && <div className="text-xs text-gray-500">{activity.city}</div>}
+                              </div>
+                            ))}
+                          </div>
+                          {itinerary.activities.flat().length > 4 && (
+                            <p className="text-xs text-gray-500">+ {itinerary.activities.flat().length - 4} more activities</p>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Action Buttons */}
+                      <div className="flex gap-3 pt-4 border-t border-gray-200">
+                        <button
+                          onClick={() => {
+                            // Copy itinerary ID to clipboard
+                            navigator.clipboard.writeText(itinerary.id);
+                            alert('Itinerary ID copied to clipboard!');
+                          }}
+                          className="flex-1 px-4 py-3 bg-white border-2 border-gray-300 hover:border-blue-500 text-gray-700 rounded-lg font-medium transition-colors"
+                        >
+                          📋 Copy Itinerary ID
+                        </button>
+                        <button
+                          onClick={() => {
+                            // Navigate to view full itinerary
+                            window.location.href = `/spotlight?itinerary=${itinerary.id}`;
+                          }}
+                          className="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors"
+                        >
+                          👁️ View Full Itinerary
+                        </button>
+                      </div>
+
+                      {/* Developer info */}
+                      <details className="bg-gray-100 rounded-lg overflow-hidden">
+                        <summary className="px-4 py-2 cursor-pointer hover:bg-gray-200 text-sm font-medium text-gray-700">
+                          🔧 Developer Info
                         </summary>
-                        <div className="p-4 bg-gray-50 border-t border-gray-200">
-                          <pre className="text-xs overflow-auto max-h-96 bg-white p-4 rounded border border-gray-200">
-                            {JSON.stringify(itinerary, null, 2)}
-                          </pre>
+                        <div className="p-3 bg-white border-t border-gray-200 text-xs space-y-2">
+                          <div>
+                            <strong>Itinerary ID:</strong> <code className="bg-gray-100 px-2 py-1 rounded">{itinerary.id}</code>
+                          </div>
+                          <div>
+                            <strong>Database:</strong> Saved to <code>itineraries</code> table
+                          </div>
+                          <div>
+                            <strong>API Endpoint:</strong> <code className="bg-gray-100 px-1 rounded">/api/itinerary/{itinerary.id}</code>
+                          </div>
+                          <details className="mt-2">
+                            <summary className="cursor-pointer text-blue-600 hover:text-blue-700">View Raw JSON</summary>
+                            <pre className="mt-2 text-xs overflow-auto max-h-64 bg-gray-50 p-2 rounded border border-gray-200">
+                              {JSON.stringify(itinerary, null, 2)}
+                            </pre>
+                          </details>
                         </div>
                       </details>
-
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
-                        <strong>Next Steps:</strong> The itinerary has been saved to the database with ID: <code className="bg-blue-100 px-2 py-1 rounded">{itinerary.id}</code>.
-                        You can now view it in the dedicated itinerary view or export it to various formats.
-                      </div>
                     </div>
                   </div>
                 </motion.div>
