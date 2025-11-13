@@ -253,6 +253,9 @@ const MapViewV2 = () => {
     console.log('📍 Rendering route landmarks:', route.landmarks.length);
     route.landmarks.forEach((landmark, index) => {
       console.log(`  → Adding marker for route landmark ${index}: ${landmark.name}`);
+      console.log(`     Coordinates:`, landmark.coordinates);
+      console.log(`     Mapbox LngLat: [${landmark.coordinates.lng}, ${landmark.coordinates.lat}]`);
+
       const markerId = `route-landmark-${index}`;
       const landmarkImagePath = getLandmarkImagePath(landmark.name);
 
@@ -286,6 +289,7 @@ const MapViewV2 = () => {
         .setLngLat([landmark.coordinates.lng, landmark.coordinates.lat])
         .addTo(map.current!);
 
+      console.log(`     ✅ Marker created and added to map!`);
       markersRef.current.push(marker);
     });
 
