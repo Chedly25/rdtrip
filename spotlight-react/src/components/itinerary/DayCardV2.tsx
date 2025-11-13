@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronDown, ChevronUp, MapPin, Cloud, DollarSign, Car } from 'lucide-react';
+import { ChevronDown, ChevronUp, MapPin, Cloud, DollarSign, Car, ExternalLink, Navigation, Globe, Hotel } from 'lucide-react';
 import { EmptyState } from './EmptyState';
 import { getTheme } from '../../config/theme';
 
@@ -21,7 +21,7 @@ export function DayCardV2({
   day,
   activities,
   restaurants,
-  accommodation: _accommodation,
+  accommodation,
   scenicStops: _scenicStops,
   practicalInfo,
   weather,
@@ -31,6 +31,18 @@ export function DayCardV2({
 }: DayCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const theme = getTheme(agentType as any);
+
+  // Helper to generate Google Maps link
+  const getGoogleMapsLink = (place: any) => {
+    if (place.place_id) {
+      return `https://www.google.com/maps/place/?q=place_id:${place.place_id}`;
+    } else if (place.coordinates?.lat && place.coordinates?.lng) {
+      return `https://www.google.com/maps/search/?api=1&query=${place.coordinates.lat},${place.coordinates.lng}`;
+    } else if (place.name) {
+      return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.name)}`;
+    }
+    return null;
+  };
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -233,39 +245,47 @@ export function DayCardV2({
                              activity.place_types?.includes('tourist_attraction') ? 'Attraction' :
                              'Activity');
 
+                          const mapsLink = getGoogleMapsLink(activity);
+
                           return (
-                            <div key={idx} className="bg-white rounded-xl overflow-hidden border-2 border-gray-200 hover:border-blue-300 hover:shadow-lg transition-all">
-                              {/* Activity Image */}
+                            <div key={idx} className="bg-white rounded-xl overflow-hidden border-2 border-gray-200 hover:border-blue-400 hover:shadow-2xl transition-all">
+                              {/* Activity Image - MUCH LARGER */}
                               {photoUrl && (
-                                <div className="relative h-40 w-full overflow-hidden bg-gray-100">
+                                <div className="relative h-80 w-full overflow-hidden bg-gray-100">
                                   <img
                                     src={photoUrl}
                                     alt={activity.name}
-                                    className="w-full h-full object-cover"
+                                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                                     onError={(e) => {
                                       // Hide image if load fails
                                       (e.target as HTMLImageElement).style.display = 'none';
                                     }}
                                   />
                                   {/* Activity Type Badge */}
-                                  <div className="absolute top-3 left-3 px-3 py-1 bg-white/90 backdrop-blur-sm rounded-full text-xs font-semibold text-gray-700 border border-gray-200">
+                                  <div className="absolute top-4 left-4 px-4 py-2 bg-white/95 backdrop-blur-sm rounded-full text-sm font-bold text-gray-800 shadow-lg">
                                     {activityType}
                                   </div>
+                                  {/* Rating Badge */}
+                                  {activity.rating && (
+                                    <div className="absolute top-4 right-4 px-4 py-2 bg-white/95 backdrop-blur-sm rounded-full text-sm font-bold text-gray-800 shadow-lg">
+                                      ⭐ {activity.rating}
+                                    </div>
+                                  )}
                                 </div>
                               )}
 
                               {/* Activity Details */}
-                              <div className="p-4">
-                                <div className="flex items-start gap-3">
-                                  <MapPin className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                              <div className="p-6">
+                                <div className="flex items-start gap-4">
+                                  <MapPin className="w-6 h-6 text-blue-600 flex-shrink-0 mt-1" />
                                   <div className="flex-1">
-                                    <h5 className="font-bold text-gray-900 text-lg">{activity.name}</h5>
+                                    <h5 className="font-bold text-gray-900 text-2xl mb-2">{activity.name}</h5>
 
                                     {/* Place Types as Tags */}
                                     {activity.place_types && activity.place_types.length > 0 && (
-                                      <div className="flex flex-wrap gap-1.5 mt-2">
+                                      <div className="flex flex-wrap gap-2 mb-3">
                                         {activity.place_types.slice(0, 3).map((type: string, typeIdx: number) => (
-                                          <span key={typeIdx} className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded-full">
+                                          <span key={typeIdx} className="px-3 py-1 bg-blue-100 text-blue-700 text-sm font-medium rounded-full">
                                             {type.replace(/_/g, ' ')}
                                           </span>
                                         ))}
@@ -273,13 +293,14 @@ export function DayCardV2({
                                     )}
 
                                     {activity.address && (
-                                      <p className="text-sm text-gray-600 mt-2">{activity.address}</p>
+                                      <p className="text-sm text-gray-600 mb-4">{activity.address}</p>
                                     )}
 
-                                    <div className="flex items-center gap-4 mt-3 text-sm">
-                                      {activity.rating && (
-                                        <span className="flex items-center gap-1 font-medium text-gray-700">
-                                          ⭐ {activity.rating} {activity.ratingCount && <span className="text-gray-500">({activity.ratingCount})</span>}
+                                    {/* Stats Row */}
+                                    <div className="flex flex-wrap items-center gap-4 mb-4 text-sm">
+                                      {activity.rating && activity.ratingCount && (
+                                        <span className="flex items-center gap-1.5 font-medium text-gray-700">
+                                          ⭐ {activity.rating} <span className="text-gray-500">({activity.ratingCount} reviews)</span>
                                         </span>
                                       )}
                                       {activity.estimatedDuration && (
@@ -287,6 +308,40 @@ export function DayCardV2({
                                       )}
                                       {activity.estimatedCost && (
                                         <span className="text-gray-600">💰 {activity.estimatedCost}</span>
+                                      )}
+                                    </div>
+
+                                    {/* Action Buttons */}
+                                    <div className="flex flex-wrap gap-3">
+                                      {mapsLink && (
+                                        <a
+                                          href={mapsLink}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors shadow-md hover:shadow-lg"
+                                        >
+                                          <Navigation className="w-4 h-4" />
+                                          Get Directions
+                                        </a>
+                                      )}
+                                      {activity.website && (
+                                        <a
+                                          href={activity.website}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="inline-flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-gray-50 text-gray-700 font-medium rounded-lg border-2 border-gray-300 hover:border-gray-400 transition-colors"
+                                        >
+                                          <Globe className="w-4 h-4" />
+                                          Website
+                                        </a>
+                                      )}
+                                      {activity.phone && (
+                                        <a
+                                          href={`tel:${activity.phone}`}
+                                          className="inline-flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-gray-50 text-gray-700 font-medium rounded-lg border-2 border-gray-300 hover:border-gray-400 transition-colors"
+                                        >
+                                          📞 Call
+                                        </a>
                                       )}
                                     </div>
                                   </div>
@@ -300,48 +355,99 @@ export function DayCardV2({
 
                     {/* Restaurants in this block */}
                     {block.restaurants && block.restaurants.length > 0 && (
-                      <div className="space-y-3">
+                      <div className="space-y-4">
                         {block.restaurants.map((restaurant: any, idx: number) => {
                           // Get restaurant image
                           const photo = restaurant.photos?.[0];
                           const photoUrl = typeof photo === 'string' ? photo :
                             photo?.url || restaurant.primaryPhoto?.url || restaurant.primaryPhoto || null;
 
+                          const mapsLink = getGoogleMapsLink(restaurant);
+
                           return (
-                            <div key={idx} className="bg-orange-50/50 rounded-xl overflow-hidden border-2 border-orange-200 hover:border-orange-300 hover:shadow-lg transition-all">
-                              {/* Restaurant Image */}
+                            <div key={idx} className="bg-orange-50/50 rounded-xl overflow-hidden border-2 border-orange-200 hover:border-orange-400 hover:shadow-2xl transition-all">
+                              {/* Restaurant Image - LARGER */}
                               {photoUrl && (
-                                <div className="relative h-32 w-full overflow-hidden bg-gray-100">
+                                <div className="relative h-60 w-full overflow-hidden bg-gray-100">
                                   <img
                                     src={photoUrl}
                                     alt={restaurant.name}
-                                    className="w-full h-full object-cover"
+                                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                                     onError={(e) => {
                                       (e.target as HTMLImageElement).style.display = 'none';
                                     }}
                                   />
                                   {/* Meal Badge */}
-                                  <div className="absolute top-3 right-3 px-3 py-1 bg-white/90 backdrop-blur-sm rounded-full text-xs font-semibold text-gray-700 border border-gray-200 capitalize">
+                                  <div className="absolute top-4 left-4 px-4 py-2 bg-white/95 backdrop-blur-sm rounded-full text-sm font-bold text-gray-800 shadow-lg capitalize">
                                     {restaurant.meal}
                                   </div>
+                                  {/* Rating Badge */}
+                                  {restaurant.rating && (
+                                    <div className="absolute top-4 right-4 px-4 py-2 bg-white/95 backdrop-blur-sm rounded-full text-sm font-bold text-gray-800 shadow-lg">
+                                      ⭐ {restaurant.rating}
+                                    </div>
+                                  )}
                                 </div>
                               )}
 
                               {/* Restaurant Details */}
-                              <div className="p-4">
-                                <div className="flex items-start gap-3">
-                                  <span className="text-2xl">🍽️</span>
+                              <div className="p-6">
+                                <div className="flex items-start gap-4">
+                                  <span className="text-3xl">🍽️</span>
                                   <div className="flex-1">
-                                    <h5 className="font-bold text-gray-900 text-lg">{restaurant.name}</h5>
-                                    <p className="text-sm text-gray-700 mt-1">{restaurant.cuisine}</p>
-                                    <div className="flex items-center gap-4 mt-2 text-sm">
-                                      {restaurant.rating && (
+                                    <h5 className="font-bold text-gray-900 text-2xl mb-2">{restaurant.name}</h5>
+                                    <p className="text-base text-gray-700 mb-3">{restaurant.cuisine}</p>
+
+                                    {restaurant.address && (
+                                      <p className="text-sm text-gray-600 mb-4">{restaurant.address}</p>
+                                    )}
+
+                                    {/* Stats Row */}
+                                    <div className="flex flex-wrap items-center gap-4 mb-4 text-sm">
+                                      {restaurant.rating && restaurant.ratingCount && (
                                         <span className="font-medium text-gray-700">
-                                          ⭐ {restaurant.rating} {restaurant.ratingCount && <span className="text-gray-500">({restaurant.ratingCount} reviews)</span>}
+                                          ⭐ {restaurant.rating} <span className="text-gray-500">({restaurant.ratingCount} reviews)</span>
                                         </span>
                                       )}
                                       {restaurant.priceRange && (
-                                        <span className="text-gray-600">{restaurant.priceRange}</span>
+                                        <span className="text-gray-600">💰 {restaurant.priceRange}</span>
+                                      )}
+                                      {restaurant.priceLevel && (
+                                        <span className="text-gray-600">{'€'.repeat(restaurant.priceLevel)}</span>
+                                      )}
+                                    </div>
+
+                                    {/* Action Buttons */}
+                                    <div className="flex flex-wrap gap-3">
+                                      {mapsLink && (
+                                        <a
+                                          href={mapsLink}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="inline-flex items-center gap-2 px-4 py-2.5 bg-orange-600 hover:bg-orange-700 text-white font-medium rounded-lg transition-colors shadow-md hover:shadow-lg"
+                                        >
+                                          <Navigation className="w-4 h-4" />
+                                          Get Directions
+                                        </a>
+                                      )}
+                                      {restaurant.website && (
+                                        <a
+                                          href={restaurant.website}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="inline-flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-gray-50 text-gray-700 font-medium rounded-lg border-2 border-gray-300 hover:border-gray-400 transition-colors"
+                                        >
+                                          <Globe className="w-4 h-4" />
+                                          Website
+                                        </a>
+                                      )}
+                                      {restaurant.phone && (
+                                        <a
+                                          href={`tel:${restaurant.phone}`}
+                                          className="inline-flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-gray-50 text-gray-700 font-medium rounded-lg border-2 border-gray-300 hover:border-gray-400 transition-colors"
+                                        >
+                                          📞 Call
+                                        </a>
                                       )}
                                     </div>
                                   </div>
@@ -356,6 +462,116 @@ export function DayCardV2({
                 ))
               ) : (
                 <EmptyState type="activities" cityName={day.location} />
+              )}
+
+              {/* Accommodation Section */}
+              {accommodation && day.overnight && (
+                <div className="mt-6 pt-6 border-t-2 border-gray-200">
+                  <div className="flex items-center gap-3 mb-4">
+                    <Hotel className="w-6 h-6 text-purple-600" />
+                    <h4 className="font-semibold text-gray-900 text-lg">Tonight's Accommodation</h4>
+                  </div>
+
+                  <div className="bg-purple-50/50 rounded-xl overflow-hidden border-2 border-purple-200 hover:border-purple-400 hover:shadow-2xl transition-all">
+                    {/* Hotel Image */}
+                    {accommodation.photos && accommodation.photos[0] && (
+                      <div className="relative h-60 w-full overflow-hidden bg-gray-100">
+                        <img
+                          src={typeof accommodation.photos[0] === 'string' ? accommodation.photos[0] : accommodation.photos[0]?.url}
+                          alt={accommodation.name}
+                          className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
+                        />
+                        {/* Hotel Badge */}
+                        <div className="absolute top-4 left-4 px-4 py-2 bg-white/95 backdrop-blur-sm rounded-full text-sm font-bold text-gray-800 shadow-lg">
+                          Hotel
+                        </div>
+                        {/* Rating Badge */}
+                        {accommodation.rating && (
+                          <div className="absolute top-4 right-4 px-4 py-2 bg-white/95 backdrop-blur-sm rounded-full text-sm font-bold text-gray-800 shadow-lg">
+                            ⭐ {accommodation.rating}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Hotel Details */}
+                    <div className="p-6">
+                      <div className="flex items-start gap-4">
+                        <Hotel className="w-8 h-8 text-purple-600 flex-shrink-0 mt-1" />
+                        <div className="flex-1">
+                          <h5 className="font-bold text-gray-900 text-2xl mb-2">{accommodation.name}</h5>
+
+                          {accommodation.address && (
+                            <p className="text-sm text-gray-600 mb-4">{accommodation.address}</p>
+                          )}
+
+                          {/* Stats Row */}
+                          <div className="flex flex-wrap items-center gap-4 mb-4 text-sm">
+                            {accommodation.rating && accommodation.ratingCount && (
+                              <span className="font-medium text-gray-700">
+                                ⭐ {accommodation.rating} <span className="text-gray-500">({accommodation.ratingCount} reviews)</span>
+                              </span>
+                            )}
+                            {accommodation.priceRange && (
+                              <span className="text-gray-600">💰 {accommodation.priceRange}</span>
+                            )}
+                            {accommodation.priceLevel && (
+                              <span className="text-gray-600">{'€'.repeat(accommodation.priceLevel)}</span>
+                            )}
+                          </div>
+
+                          {/* Action Buttons */}
+                          <div className="flex flex-wrap gap-3">
+                            {getGoogleMapsLink(accommodation) && (
+                              <a
+                                href={getGoogleMapsLink(accommodation)!}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition-colors shadow-md hover:shadow-lg"
+                              >
+                                <Navigation className="w-4 h-4" />
+                                Get Directions
+                              </a>
+                            )}
+                            {accommodation.website && (
+                              <a
+                                href={accommodation.website}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-gray-50 text-gray-700 font-medium rounded-lg border-2 border-gray-300 hover:border-gray-400 transition-colors"
+                              >
+                                <Globe className="w-4 h-4" />
+                                Website
+                              </a>
+                            )}
+                            {accommodation.phone && (
+                              <a
+                                href={`tel:${accommodation.phone}`}
+                                className="inline-flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-gray-50 text-gray-700 font-medium rounded-lg border-2 border-gray-300 hover:border-gray-400 transition-colors"
+                              >
+                                📞 Call
+                              </a>
+                            )}
+                            {accommodation.bookingUrl && (
+                              <a
+                                href={accommodation.bookingUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors shadow-md hover:shadow-lg"
+                              >
+                                <ExternalLink className="w-4 h-4" />
+                                Book Now
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
           ) : (
