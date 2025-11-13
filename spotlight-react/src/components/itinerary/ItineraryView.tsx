@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Loader2, ArrowLeft, Calendar, MapPin, Users, DollarSign } from 'lucide-react';
 import { DayCardV2 } from './DayCardV2';
-import { TripDurationPanel } from './TripDurationPanel';
 import { BudgetSummary } from './BudgetSummary';
 import { useNavigate } from 'react-router-dom';
 
@@ -42,11 +41,6 @@ export function ItineraryView({ itineraryId, routeData }: ItineraryViewProps) {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleRegenerateItinerary = async (nightAllocations: Record<string, number>) => {
-    // TODO: Implement regeneration with new night allocations
-    console.log('🔄 Regenerating itinerary with:', nightAllocations);
   };
 
   if (loading) {
@@ -204,15 +198,6 @@ export function ItineraryView({ itineraryId, routeData }: ItineraryViewProps) {
       {/* Main Content */}
       <div className="max-w-screen-xl mx-auto px-6 py-8">
         <div className="space-y-8">
-          {/* Trip Duration Panel */}
-          {cities.length > 0 && (
-            <TripDurationPanel
-              cities={cities}
-              onRegenerateItinerary={handleRegenerateItinerary}
-              themeColor="#3B82F6"
-            />
-          )}
-
           {/* Budget Summary */}
           {budget && (
             <BudgetSummary budget={budget} />

@@ -107,18 +107,39 @@ class GooglePlacesDiscoveryAgent {
       }
     }
 
-    // Remove duplicates by place_id
+    // Define lodging types to EXCLUDE from activities
+    const LODGING_TYPES = new Set([
+      'lodging',
+      'hotel',
+      'campground',
+      'rv_park',
+      'motel',
+      'hostel',
+      'resort',
+      'guest_house',
+      'bed_and_breakfast'
+    ]);
+
+    // Remove duplicates and EXCLUDE lodging
     const unique = [];
     const seenIds = new Set();
 
     for (const place of allCandidates) {
-      if (!seenIds.has(place.place_id)) {
-        seenIds.add(place.place_id);
-        unique.push(place);
+      // Skip if duplicate
+      if (seenIds.has(place.place_id)) continue;
+
+      // Skip if it's lodging (check if ANY type matches lodging types)
+      const isLodging = place.types?.some(type => LODGING_TYPES.has(type));
+      if (isLodging) {
+        console.log(`   🚫 Excluded lodging: ${place.name}`);
+        continue;
       }
+
+      seenIds.add(place.place_id);
+      unique.push(place);
     }
 
-    console.log(`   Found ${unique.length} unique places`);
+    console.log(`   Found ${unique.length} unique non-lodging places`);
     return unique.slice(0, 10); // Return top 10
   }
 
@@ -289,7 +310,7 @@ class GooglePlacesDiscoveryAgent {
     const typeMap = {
       cultural: ['museum', 'art_gallery', 'church', 'synagogue', 'hindu_temple', 'mosque'],
       historical: ['museum', 'tourist_attraction', 'church', 'landmark'],
-      outdoor: ['park', 'natural_feature', 'campground', 'hiking_area'],
+      outdoor: ['park', 'natural_feature', 'hiking_area', 'tourist_attraction'],
       adventure: ['amusement_park', 'zoo', 'aquarium', 'bowling_alley', 'gym'],
       entertainment: ['movie_theater', 'night_club', 'bar', 'casino', 'stadium'],
       shopping: ['shopping_mall', 'store', 'clothing_store', 'book_store'],
