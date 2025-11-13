@@ -73,28 +73,47 @@ const SpotlightV2 = () => {
     const cities: CityData[] = [];
     const cityDataMap = new Map<string, any>();
 
-    // Build a map of city data from agentResults for easy lookup
+    // Find the specific agent's recommendations
+    let agentWaypoints: any[] = [];
+    const selectedAgent = data.agent || 'best-overall';
+    console.log('🎯 Selected agent:', selectedAgent);
+
     if (data.agentResults && Array.isArray(data.agentResults)) {
-      data.agentResults.forEach((result: any) => {
-        console.log('📊 Agent result:', result.agent, result);
-        if (result.cities && Array.isArray(result.cities)) {
-          result.cities.forEach((cityData: any) => {
-            const cityName = getCityName(cityData.city || cityData.name || cityData);
-            console.log('  City from agentResults:', cityName, cityData);
-            if (!cityDataMap.has(cityName)) {
-              cityDataMap.set(cityName, cityData);
-            }
-          });
+      const agentResult = data.agentResults.find((result: any) => result.agent === selectedAgent);
+      console.log('📊 Agent result found:', agentResult?.agent);
+
+      if (agentResult && agentResult.recommendations) {
+        try {
+          const recommendations = typeof agentResult.recommendations === 'string'
+            ? JSON.parse(agentResult.recommendations)
+            : agentResult.recommendations;
+
+          console.log('📦 Parsed recommendations:', recommendations);
+
+          if (recommendations.waypoints && Array.isArray(recommendations.waypoints)) {
+            agentWaypoints = recommendations.waypoints;
+            console.log('✅ Found agent waypoints:', agentWaypoints.map((w: any) => w.city));
+
+            // Build cityDataMap from agent's waypoints
+            agentWaypoints.forEach((waypoint: any) => {
+              const cityName = getCityName(waypoint.city || waypoint.name || waypoint);
+              if (!cityDataMap.has(cityName)) {
+                cityDataMap.set(cityName, waypoint);
+              }
+            });
+          }
+        } catch (err) {
+          console.error('❌ Failed to parse agent recommendations:', err);
         }
-      });
+      }
     }
 
-    // Also check waypoints for city data
-    if (data.waypoints && Array.isArray(data.waypoints)) {
-      console.log('🛣️ Waypoints:', data.waypoints);
-      data.waypoints.forEach((waypoint: any) => {
+    // Fallback: check global waypoints if agent waypoints not found
+    if (agentWaypoints.length === 0 && data.waypoints && Array.isArray(data.waypoints)) {
+      console.log('⚠️ Using global waypoints as fallback');
+      agentWaypoints = data.waypoints;
+      agentWaypoints.forEach((waypoint: any) => {
         const cityName = getCityName(waypoint.name || waypoint.city || waypoint);
-        console.log('  Waypoint:', cityName, waypoint);
         if (!cityDataMap.has(cityName)) {
           cityDataMap.set(cityName, waypoint);
         }
@@ -103,22 +122,17 @@ const SpotlightV2 = () => {
 
     console.log('📍 City data map size:', cityDataMap.size, 'entries:', Array.from(cityDataMap.keys()));
 
-    // ONLY use cities from routePlan.cities (the validated route)
-    // Do NOT use all cities from nightAllocations (which contains cities from ALL agents)
+    // Build ordered cities from agent's waypoints
     let orderedCities: string[] = [];
 
-    if (data.routePlan?.cities && Array.isArray(data.routePlan.cities)) {
-      // Use ONLY the validated cities from routePlan
-      orderedCities = data.routePlan.cities.map((c: any) => getCityName(c.name || c));
-      console.log('✅ Using validated cities from routePlan:', orderedCities);
-    } else if (data.waypoints && Array.isArray(data.waypoints)) {
-      // Fallback: use waypoints
+    if (agentWaypoints.length > 0) {
+      // Use agent-specific waypoints
       orderedCities = [
         getCityName(data.origin),
-        ...data.waypoints.map((w: any) => getCityName(w.name || w.city || w)),
+        ...agentWaypoints.map((w: any) => getCityName(w.city || w.name || w)),
         getCityName(data.destination)
       ];
-      console.log('⚠️ Using waypoints as fallback:', orderedCities);
+      console.log('✅ Using agent waypoints:', orderedCities);
     } else {
       // Last fallback: just origin and destination
       orderedCities = [getCityName(data.origin), getCityName(data.destination)];
@@ -131,39 +145,50 @@ const SpotlightV2 = () => {
       orderedCities.forEach((cityName: string) => {
         console.log(`  🌆 ${cityName}`);
 
-        // Get city data from multiple sources
+        // Get city data from cityDataMap (built from agent's waypoints)
         let cityData = cityDataMap.get(cityName);
         let coordinates = { lat: 0, lng: 0 };
 
         // Try to get coordinates from origin/destination first
         if (cityName === getCityName(data.origin)) {
           coordinates = extractCoordinates(data.origin);
-          console.log(`    Using origin coordinates:`, coordinates);
+          console.log(`    ✅ Using origin coordinates:`, coordinates);
         } else if (cityName === getCityName(data.destination)) {
           coordinates = extractCoordinates(data.destination);
-          console.log(`    Using destination coordinates:`, coordinates);
+          console.log(`    ✅ Using destination coordinates:`, coordinates);
         } else if (cityData) {
-          coordinates = extractCoordinates(cityData.city || cityData);
-          console.log(`    Using cityData coordinates:`, coordinates);
-        } else if (data.waypoints) {
-          // Try to find in waypoints
-          const waypoint = data.waypoints.find((w: any) =>
-            getCityName(w.name || w.city || w) === cityName
-          );
-          if (waypoint) {
-            coordinates = extractCoordinates(waypoint);
-            cityData = waypoint;
-            console.log(`    Using waypoint coordinates:`, coordinates);
+          // Check if cityData has coordinates directly (from agent recommendations)
+          if (cityData.coordinates) {
+            coordinates = extractCoordinates(cityData);
+            console.log(`    ✅ Using agent waypoint coordinates:`, coordinates);
+          } else {
+            coordinates = extractCoordinates(cityData.city || cityData);
+            console.log(`    ✅ Using cityData coordinates:`, coordinates);
           }
+        } else {
+          console.log(`    ⚠️ No coordinates found for ${cityName}`);
         }
 
-        // Get nights from nightAllocations or routePlan
+        // Get nights from nightAllocations or agent's waypoint data
         let nights = data.nightAllocations?.[cityName] || 0;
-        if (!nights && data.routePlan?.cities) {
-          const routePlanCity = data.routePlan.cities.find((c: any) =>
-            getCityName(c.name || c) === cityName
-          );
-          nights = routePlanCity?.nights || 0;
+
+        // If not in nightAllocations, check the agent's waypoint data
+        if (!nights && cityData?.nights) {
+          nights = cityData.nights;
+        }
+
+        // Fallback to recommended_min_nights or default to 1
+        if (!nights && cityData?.recommended_min_nights) {
+          nights = cityData.recommended_min_nights;
+        }
+
+        // Default to 1 night for waypoints, 0 for origin/destination
+        if (!nights) {
+          if (cityName === getCityName(data.origin) || cityName === getCityName(data.destination)) {
+            nights = 0;
+          } else {
+            nights = 1; // Default for waypoints
+          }
         }
 
         console.log(`    Nights: ${nights}, Coordinates: [${coordinates.lat}, ${coordinates.lng}]`);
