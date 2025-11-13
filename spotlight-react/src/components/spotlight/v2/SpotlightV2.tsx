@@ -243,8 +243,34 @@ const SpotlightV2 = () => {
 
   // Transform backend saved route to SpotlightRoute format
   const transformBackendDataToRoute = (data: any): SpotlightRoute => {
-    // Similar transformation logic for backend data
-    return transformLandingDataToRoute(data);
+    console.log('🔄 transformBackendDataToRoute received:', data);
+
+    // Backend returns { route: { id, routeData, ... } }
+    // Extract the route object and merge routeData into it
+    const backendRoute = data.route || data;
+    const routeData = backendRoute.routeData || {};
+
+    console.log('📦 Extracted routeData:', routeData);
+    console.log('📦 Landmarks in routeData:', routeData.landmarks?.length || 0);
+
+    // Merge routeData fields into the main data for transformation
+    const mergedData = {
+      ...routeData,
+      ...backendRoute,
+      id: backendRoute.id,
+      agent: backendRoute.selectedAgents || routeData.agent || 'best-overall'
+    };
+
+    // Call the transformation with the merged data
+    const transformed = transformLandingDataToRoute(mergedData);
+
+    // Preserve routeData for the store's setRoute to load landmarks
+    transformed.routeData = routeData;
+
+    console.log('✅ Transformed route with', transformed.landmarks?.length || 0, 'landmarks from initial transform');
+    console.log('✅ RouteData attached with', transformed.routeData?.landmarks?.length || 0, 'landmarks for store loading');
+
+    return transformed;
   };
 
   // Helper to extract coordinates from city data
