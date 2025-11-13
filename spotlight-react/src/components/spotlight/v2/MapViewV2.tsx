@@ -24,7 +24,6 @@ const MapViewV2 = () => {
     mapCenter,
     mapZoom,
     setMapCenter,
-    getCityCoordinates,
     getCityName,
     getAgentColors,
     removeLandmark
@@ -47,12 +46,23 @@ const MapViewV2 = () => {
       center: initialCenter,
       zoom: initialZoom,
       pitch: 0,
-      bearing: 0
+      bearing: 0,
+      // Disable 3D features for strictly 2D map
+      projection: { name: 'mercator' },
+      minPitch: 0,
+      maxPitch: 0
     });
 
     map.current.on('load', () => {
-      console.log('✅ Map loaded');
+      console.log('✅ Map loaded (2D mode)');
       setIsMapLoaded(true);
+
+      // Disable 3D buildings layer if it exists
+      const layers = map.current!.getStyle().layers;
+      const buildingLayer = layers?.find(l => l.id === 'building');
+      if (buildingLayer) {
+        map.current!.removeLayer('building');
+      }
     });
 
     map.current.on('move', () => {
@@ -91,10 +101,25 @@ const MapViewV2 = () => {
     }
 
     // Get all coordinates for the route (cities + landmarks in order)
+    console.log('🗺️ MapViewV2: Building cityCoords array from', route.cities.length, 'cities');
     const cityCoords: [number, number][] = route.cities
-      .map(city => getCityCoordinates(city.city))
+      .map((city, index) => {
+        console.log(`  City ${index}:`, {
+          cityObject: city.city,
+          topLevelCoords: city.coordinates
+        });
+        // Use top-level coordinates directly instead of getCityCoordinates
+        // since we already store normalized coordinates there
+        const coords = city.coordinates;
+        console.log(`  → Using top-level coords:`, coords);
+        return coords;
+      })
       .filter((coord): coord is { lat: number; lng: number } => coord !== null)
-      .map(coord => [coord.lng, coord.lat]);
+      .map((coord, index) => {
+        const mapboxCoord: [number, number] = [coord.lng, coord.lat];
+        console.log(`  Mapbox coord ${index}: [${mapboxCoord[0]}, ${mapboxCoord[1]}]`);
+        return mapboxCoord;
+      });
 
     if (cityCoords.length < 2) {
       console.warn('Not enough coordinates to render route');
@@ -137,11 +162,21 @@ const MapViewV2 = () => {
 
     // Add city markers
     route.cities.forEach((city, index) => {
-      const coords = getCityCoordinates(city.city);
-      if (!coords) return;
+      console.log(`🎯 Adding marker for city ${index}:`, {
+        cityObject: city.city,
+        topLevelCoords: city.coordinates
+      });
+      // Use top-level coordinates directly
+      const coords = city.coordinates;
+      console.log(`  → Using coords:`, coords);
+      if (!coords) {
+        console.warn(`  ⚠️ No coordinates for city ${index}`);
+        return;
+      }
 
       const cityName = getCityName(city.city);
       const markerId = `city-${index}`;
+      console.log(`  📍 Placing marker at [${coords.lng}, ${coords.lat}]`);
 
       // Create a div for the marker
       const el = document.createElement('div');
