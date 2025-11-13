@@ -510,12 +510,21 @@ class AgentOrchestratorV3 extends EventEmitter {
     for (const waypoint of waypoints) {
       const cityName = waypoint.city || waypoint.name || waypoint.location;
 
-      // Handle both formats: waypoint.lat or waypoint.coordinates.lat
+      // Handle multiple coordinate formats
       let lat, lng;
-      if (waypoint.coordinates && waypoint.coordinates.lat && waypoint.coordinates.lng) {
+
+      // Format 1: Array [lat, lng]
+      if (waypoint.coordinates && Array.isArray(waypoint.coordinates) && waypoint.coordinates.length === 2) {
+        lat = waypoint.coordinates[0];
+        lng = waypoint.coordinates[1];
+      }
+      // Format 2: Object {lat, lng}
+      else if (waypoint.coordinates && waypoint.coordinates.lat && waypoint.coordinates.lng) {
         lat = waypoint.coordinates.lat;
         lng = waypoint.coordinates.lng;
-      } else if (waypoint.lat && waypoint.lng) {
+      }
+      // Format 3: Direct properties
+      else if (waypoint.lat && waypoint.lng) {
         lat = waypoint.lat;
         lng = waypoint.lng;
       }
