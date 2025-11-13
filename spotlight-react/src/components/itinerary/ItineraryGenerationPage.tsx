@@ -351,9 +351,31 @@ export function ItineraryGenerationPage() {
               {/* Stats Grid */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
                 {[
-                  { label: 'Days', value: (Array.isArray(itinerary.dayStructure) ? itinerary.dayStructure.length : 0), icon: Calendar, color: 'blue' },
-                  { label: 'Activities', value: (Array.isArray(itinerary.activities) ? itinerary.activities.flat().length : 0), icon: Landmark, color: 'purple' },
-                  { label: 'Restaurants', value: (Array.isArray(itinerary.restaurants) ? itinerary.restaurants.length : 0), icon: '🍽️', color: 'orange' },
+                  {
+                    label: 'Days',
+                    value: Array.isArray(itinerary.dayStructure) ? itinerary.dayStructure.length : (itinerary.dayStructure && typeof itinerary.dayStructure === 'object' && 'days' in itinerary.dayStructure && Array.isArray((itinerary.dayStructure as any).days) ? (itinerary.dayStructure as any).days.length : 0),
+                    icon: Calendar,
+                    color: 'blue'
+                  },
+                  {
+                    label: 'Activities',
+                    value: Array.isArray(itinerary.activities) ? itinerary.activities.reduce((sum, dayObj) => sum + (Array.isArray(dayObj?.activities) ? dayObj.activities.length : 0), 0) : 0,
+                    icon: Landmark,
+                    color: 'purple'
+                  },
+                  {
+                    label: 'Restaurants',
+                    value: Array.isArray(itinerary.restaurants) ? itinerary.restaurants.reduce((sum, dayObj) => {
+                      const meals = dayObj?.meals;
+                      let count = 0;
+                      if (meals?.breakfast) count++;
+                      if (meals?.lunch) count++;
+                      if (meals?.dinner) count++;
+                      return sum + count;
+                    }, 0) : 0,
+                    icon: '🍽️',
+                    color: 'orange'
+                  },
                   { label: 'Hotels', value: (Array.isArray(itinerary.accommodations) ? itinerary.accommodations.length : 0), icon: '🏨', color: 'pink' }
                 ].map((stat, idx) => (
                   <motion.div
@@ -377,14 +399,16 @@ export function ItineraryGenerationPage() {
               {/* Preview Section */}
               <div className="bg-white rounded-3xl shadow-2xl p-8 mb-8 border border-gray-200">
                 {/* Days Preview */}
-                {itinerary.dayStructure && Array.isArray(itinerary.dayStructure) && itinerary.dayStructure.length > 0 && (
-                  <div className="mb-8">
-                    <h4 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
-                      <Calendar className="w-6 h-6 text-blue-600" />
-                      Your Journey
-                    </h4>
-                    <div className="space-y-4 max-h-[400px] overflow-y-auto pr-4">
-                      {(itinerary.dayStructure || []).map((day: any, index: number) => (
+                {(() => {
+                  const daysArray = Array.isArray(itinerary.dayStructure) ? itinerary.dayStructure : (itinerary.dayStructure && typeof itinerary.dayStructure === 'object' && 'days' in itinerary.dayStructure && Array.isArray((itinerary.dayStructure as any).days) ? (itinerary.dayStructure as any).days : []);
+                  return daysArray.length > 0 && (
+                    <div className="mb-8">
+                      <h4 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+                        <Calendar className="w-6 h-6 text-blue-600" />
+                        Your Journey
+                      </h4>
+                      <div className="space-y-4 max-h-[400px] overflow-y-auto pr-4">
+                        {daysArray.map((day: any, index: number) => (
                         <motion.div
                           key={index}
                           initial={{ opacity: 0, x: -20 }}
@@ -420,10 +444,11 @@ export function ItineraryGenerationPage() {
                             </div>
                           </div>
                         </motion.div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
 
                 {/* Activities Preview */}
                 {itinerary.activities && Array.isArray(itinerary.activities) && itinerary.activities.length > 0 && (
@@ -433,7 +458,7 @@ export function ItineraryGenerationPage() {
                       Highlights
                     </h4>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      {(Array.isArray(itinerary.activities) ? itinerary.activities.flat() : []).slice(0, 6).map((activity: any, idx: number) => {
+                      {(Array.isArray(itinerary.activities) ? itinerary.activities.flatMap(dayObj => Array.isArray(dayObj?.activities) ? dayObj.activities : []) : []).slice(0, 6).map((activity: any, idx: number) => {
                         const photo = activity.photos?.[0];
                         const photoUrl = typeof photo === 'string' ? photo : photo?.url || photo?.thumbnail;
 
