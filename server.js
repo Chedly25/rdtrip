@@ -4203,16 +4203,143 @@ function getAgentColor(agent) {
 // Fallback image service - returns placeholder images
 app.get('/api/placeholder-image', (req, res) => {
   const { type = 'location', width = 400, height = 300 } = req.query;
-  
+
   // Use a reliable placeholder service
   const placeholderUrl = `https://picsum.photos/${width}/${height}?random=${Math.floor(Math.random() * 1000)}`;
-  
+
   res.json({
     url: placeholderUrl,
     type: type,
     width: parseInt(width),
     height: parseInt(height)
   });
+});
+
+// City Image Service with Database + Google Places Caching
+app.get('/api/places/city-image', async (req, res) => {
+  try {
+    const { city, country } = req.query;
+
+    if (!city) {
+      return res.status(400).json({ error: 'City name is required' });
+    }
+
+    console.log(`🖼️ Fetching image for city: ${city}${country ? `, ${country}` : ''}`);
+
+    // Step 1: Check database cache first
+    const cacheQuery = `
+      SELECT image_url, source, created_at
+      FROM city_images
+      WHERE LOWER(city_name) = LOWER($1)
+      ${country ? 'AND LOWER(country) = LOWER($2)' : ''}
+      LIMIT 1
+    `;
+    const cacheParams = country ? [city, country] : [city];
+
+    const cacheResult = await pool.query(cacheQuery, cacheParams);
+
+    // Check if cache exists and is not expired (30 days)
+    if (cacheResult.rows.length > 0) {
+      const cached = cacheResult.rows[0];
+      const cacheAge = Date.now() - new Date(cached.created_at).getTime();
+      const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+
+      if (cacheAge < thirtyDaysMs) {
+        console.log(`✅ Cache hit for ${city} (source: ${cached.source}, age: ${Math.round(cacheAge / (24 * 60 * 60 * 1000))} days)`);
+        return res.json({
+          imageUrl: cached.image_url,
+          source: cached.source,
+          cached: true
+        });
+      } else {
+        console.log(`⏰ Cache expired for ${city} (age: ${Math.round(cacheAge / (24 * 60 * 60 * 1000))} days)`);
+      }
+    }
+
+    // Step 2: Cache miss or expired - fetch from Google Places API
+    console.log(`🌐 Fetching from Google Places API for ${city}`);
+
+    const GOOGLE_PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY;
+    if (!GOOGLE_PLACES_API_KEY) {
+      console.warn('⚠️ Google Places API key not configured');
+      return res.status(500).json({ error: 'Google Places API not configured' });
+    }
+
+    // Text Search to get place_id
+    const searchQuery = country ? `${city}, ${country}` : city;
+    const textSearchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(searchQuery)}&type=locality&key=${GOOGLE_PLACES_API_KEY}`;
+
+    const searchResponse = await axios.get(textSearchUrl);
+
+    if (!searchResponse.data.results || searchResponse.data.results.length === 0) {
+      console.log(`❌ No results from Google Places for ${city}`);
+      return res.json({ imageUrl: null, source: null, cached: false });
+    }
+
+    const place = searchResponse.data.results[0];
+
+    // Check if place has photos
+    if (!place.photos || place.photos.length === 0) {
+      console.log(`📷 No photos available for ${city}`);
+      return res.json({ imageUrl: null, source: null, cached: false });
+    }
+
+    // Get the first photo reference
+    const photo = place.photos[0];
+    const photoReference = photo.photo_reference;
+    const photoWidth = photo.width || 400;
+    const photoHeight = photo.height || 300;
+
+    // Construct Google Places Photo URL (maxwidth=400 for performance)
+    const photoUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${photoReference}&key=${GOOGLE_PLACES_API_KEY}`;
+
+    console.log(`✅ Found image for ${city} from Google Places`);
+
+    // Step 3: Save to database cache
+    try {
+      const insertQuery = `
+        INSERT INTO city_images (city_name, country, image_url, photo_reference, source, width, height)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        ON CONFLICT (city_name, country)
+        DO UPDATE SET
+          image_url = EXCLUDED.image_url,
+          photo_reference = EXCLUDED.photo_reference,
+          source = EXCLUDED.source,
+          width = EXCLUDED.width,
+          height = EXCLUDED.height,
+          updated_at = CURRENT_TIMESTAMP
+      `;
+
+      await pool.query(insertQuery, [
+        city,
+        country || null,
+        photoUrl,
+        photoReference,
+        'google-places',
+        photoWidth,
+        photoHeight
+      ]);
+
+      console.log(`💾 Cached image for ${city} in database`);
+    } catch (dbError) {
+      console.error('⚠️ Failed to cache image in database:', dbError.message);
+      // Continue anyway - we have the image URL
+    }
+
+    // Return the photo URL
+    res.json({
+      imageUrl: photoUrl,
+      source: 'google-places',
+      cached: false
+    });
+
+  } catch (error) {
+    console.error('❌ City image error:', error.message);
+    res.status(500).json({
+      error: 'Failed to fetch city image',
+      message: error.message
+    });
+  }
 });
 
 // European Landmarks Database
