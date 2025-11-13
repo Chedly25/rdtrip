@@ -3,6 +3,7 @@ import { X, Star, Clock, MapPin, Plus, Navigation } from 'lucide-react';
 import type { Landmark } from '../../../services/landmarks';
 import { useSpotlightStoreV2 } from '../../../stores/spotlightStoreV2';
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 
 interface LandmarkDetailsModalProps {
   landmark: Landmark | null;
@@ -36,7 +37,7 @@ const LandmarkDetailsModal = ({ landmark, onClose }: LandmarkDetailsModalProps) 
     }
   };
 
-  return (
+  return createPortal(
     <AnimatePresence>
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
         {/* Backdrop */}
@@ -206,7 +207,8 @@ const LandmarkDetailsModal = ({ landmark, onClose }: LandmarkDetailsModalProps) 
           </div>
         </motion.div>
       </div>
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 };
 
