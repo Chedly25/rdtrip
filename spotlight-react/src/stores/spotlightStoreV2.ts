@@ -274,12 +274,43 @@ export const useSpotlightStoreV2 = create<SpotlightStoreV2>((set, get) => ({
             console.log('✅ Landmarks saved to backend successfully');
           } else {
             console.warn('⚠️ Failed to save landmarks to backend:', response.status, response.statusText);
+
+            // If backend save failed with 401/403/404, route doesn't exist in DB - save to localStorage instead
+            if (response.status === 401 || response.status === 403 || response.status === 404) {
+              console.warn('   → Falling back to localStorage (route not in database)');
+              try {
+                const spotlightDataStr = localStorage.getItem('spotlightData');
+                if (spotlightDataStr) {
+                  const spotlightData = JSON.parse(spotlightDataStr);
+                  spotlightData.landmarks = updatedState.route!.landmarks;
+                  localStorage.setItem('spotlightData', JSON.stringify(spotlightData));
+                  console.log('   ✅ Landmarks saved to localStorage as fallback');
+                } else {
+                  console.warn('   ⚠️ No spotlightData in localStorage to update');
+                }
+              } catch (err) {
+                console.error('   ❌ Failed to save landmarks to localStorage:', err);
+              }
+            }
           }
         } catch (apiError) {
           if ((apiError as Error).name === 'AbortError') {
             console.warn('⚠️ Landmark save timed out after 10 seconds');
           } else {
             console.warn('⚠️ Could not save landmarks to backend:', apiError);
+          }
+          // Fallback to localStorage for any network errors
+          console.warn('   → Falling back to localStorage (network error)');
+          try {
+            const spotlightDataStr = localStorage.getItem('spotlightData');
+            if (spotlightDataStr) {
+              const spotlightData = JSON.parse(spotlightDataStr);
+              spotlightData.landmarks = updatedState.route!.landmarks;
+              localStorage.setItem('spotlightData', JSON.stringify(spotlightData));
+              console.log('   ✅ Landmarks saved to localStorage as fallback');
+            }
+          } catch (err) {
+            console.error('   ❌ Failed to save landmarks to localStorage:', err);
           }
           // Don't throw - landmark is still in local state
         }
@@ -352,9 +383,38 @@ export const useSpotlightStoreV2 = create<SpotlightStoreV2>((set, get) => ({
           console.log('💾 Landmark removal saved to backend');
         } else {
           console.warn('⚠️ Failed to save landmark removal to backend:', response.status, response.statusText);
+
+          // If backend save failed with 401/403/404, route doesn't exist in DB - save to localStorage instead
+          if (response.status === 401 || response.status === 403 || response.status === 404) {
+            console.warn('   → Falling back to localStorage (route not in database)');
+            try {
+              const spotlightDataStr = localStorage.getItem('spotlightData');
+              if (spotlightDataStr) {
+                const spotlightData = JSON.parse(spotlightDataStr);
+                spotlightData.landmarks = newLandmarks;
+                localStorage.setItem('spotlightData', JSON.stringify(spotlightData));
+                console.log('   ✅ Landmark removal saved to localStorage as fallback');
+              }
+            } catch (err) {
+              console.error('   ❌ Failed to save landmark removal to localStorage:', err);
+            }
+          }
         }
       } catch (error) {
         console.warn('⚠️ Could not save landmark removal to backend:', error);
+        // Fallback to localStorage for any network errors
+        console.warn('   → Falling back to localStorage (network error)');
+        try {
+          const spotlightDataStr = localStorage.getItem('spotlightData');
+          if (spotlightDataStr) {
+            const spotlightData = JSON.parse(spotlightDataStr);
+            spotlightData.landmarks = newLandmarks;
+            localStorage.setItem('spotlightData', JSON.stringify(spotlightData));
+            console.log('   ✅ Landmark removal saved to localStorage as fallback');
+          }
+        } catch (err) {
+          console.error('   ❌ Failed to save landmark removal to localStorage:', err);
+        }
       }
     } else {
       // Route has no database ID - save to localStorage instead
