@@ -302,7 +302,7 @@ class AgentOrchestratorV3 extends EventEmitter {
   }
 
   /**
-   * Run Google Places activity discovery (PARALLEL per day)
+   * Run Google Places activity discovery (SEQUENTIAL per day to avoid duplicates)
    */
   async runActivitiesDiscovery() {
     const dayStructure = this.results.dayPlanner;
@@ -312,8 +312,11 @@ class AgentOrchestratorV3 extends EventEmitter {
 
     const allActivities = [];
 
-    // Process each day's activities IN PARALLEL
-    const dayPromises = dayStructure.days.map(async (day) => {
+    // GLOBAL deduplication: Track used place IDs across ALL days
+    const globalUsedPlaceIds = new Set();
+
+    // Process each day SEQUENTIALLY to prevent duplicate activities across days
+    for (const day of dayStructure.days) {
       const city = this.extractMainCity(day.location);
       const dayActivities = {
         day: day.day,
@@ -322,8 +325,8 @@ class AgentOrchestratorV3 extends EventEmitter {
         activities: []
       };
 
-      // Track used place IDs to avoid duplicates within the same day
-      const usedPlaceIds = new Set();
+      // Track used place IDs within this day (in addition to global)
+      const dayUsedPlaceIds = new Set();
 
       // SUPPORT BOTH OLD (activityWindows) AND NEW (blocks) FORMAT
       const windows = day.blocks || day.activityWindows || [];
@@ -344,7 +347,8 @@ class AgentOrchestratorV3 extends EventEmitter {
               timeWindow,
               preferences: this.preferences,
               date: day.date,
-              excludePlaceIds: Array.from(usedPlaceIds) // Exclude already-selected places
+              // GLOBAL DEDUPLICATION: Exclude places used in ANY day + this day
+              excludePlaceIds: [...Array.from(globalUsedPlaceIds), ...Array.from(dayUsedPlaceIds)]
             };
 
             const result = await this.agents.googleActivities.discoverActivities(request);
@@ -354,16 +358,22 @@ class AgentOrchestratorV3 extends EventEmitter {
               const slotsToFill = window.activitySlots || 1;
 
               for (let i = 0; i < slotsToFill && i < result.candidates.length; i++) {
-                const candidate = result.candidates.find(c => !usedPlaceIds.has(c.place_id));
+                // Check BOTH global and day-specific exclusions
+                const candidate = result.candidates.find(c =>
+                  !globalUsedPlaceIds.has(c.place_id) && !dayUsedPlaceIds.has(c.place_id)
+                );
 
                 if (candidate) {
-                  usedPlaceIds.add(candidate.place_id);
+                  // Add to BOTH sets
+                  dayUsedPlaceIds.add(candidate.place_id);
+                  globalUsedPlaceIds.add(candidate.place_id);
+
                   dayActivities.activities.push({
                     ...candidate,
                     block: window.period, // Tag with period: morning/afternoon/evening
                     zoneFocus: window.zoneFocus
                   });
-                  console.log(`      ✓ Selected: ${candidate.name} (${window.period} block)`);
+                  console.log(`      ✓ Selected: ${candidate.name} (${window.period} block, avoiding ${globalUsedPlaceIds.size - 1} global duplicates)`);
                 }
               }
             }
@@ -381,13 +391,13 @@ class AgentOrchestratorV3 extends EventEmitter {
         }
       }
 
-      return dayActivities;
-    });
+      // Add this day's activities to the complete list
+      allActivities.push(dayActivities);
+    }
 
-    const results = await Promise.all(dayPromises);
-    allActivities.push(...results);
-
-    console.log(`   📍 Discovered ${allActivities.reduce((sum, d) => sum + d.activities.length, 0)} activities`);
+    // Summary
+    const totalActivities = allActivities.reduce((sum, d) => sum + d.activities.length, 0);
+    console.log(`   📍 Discovered ${totalActivities} unique activities (avoided duplicates across ${dayStructure.days.length} days)`);
 
     return allActivities;
   }
