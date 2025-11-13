@@ -504,6 +504,9 @@ class AgentOrchestratorV3 extends EventEmitter {
   buildCityCoordinatesMap(waypoints) {
     const coordMap = {};
 
+    console.log(`   🔍 buildCityCoordinatesMap received ${waypoints?.length || 0} waypoints`);
+    console.log(`   🔍 Sample waypoint:`, JSON.stringify(waypoints?.[0], null, 2));
+
     for (const waypoint of waypoints) {
       const cityName = waypoint.city || waypoint.name || waypoint.location;
 
@@ -523,6 +526,8 @@ class AgentOrchestratorV3 extends EventEmitter {
         coordMap[normalizedName] = { lat, lng };
 
         console.log(`   📍 Mapped: ${cityName} → (${lat}, ${lng})`);
+      } else {
+        console.warn(`   ⚠️  Skipped waypoint - cityName: ${cityName}, lat: ${lat}, lng: ${lng}, raw:`, JSON.stringify(waypoint));
       }
     }
 
