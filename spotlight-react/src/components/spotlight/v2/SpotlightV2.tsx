@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useSpotlightStoreV2, type SpotlightRoute, type CityData } from '../../../stores/spotlightStoreV2';
 import MapViewV2 from './MapViewV2';
@@ -8,7 +8,9 @@ import SpotlightHeader from './SpotlightHeader';
 import { Loader2 } from 'lucide-react';
 
 const SpotlightV2 = () => {
-  const { routeId } = useParams();
+  // Get routeId from query params (?routeId=123) not path params
+  const [searchParams] = useSearchParams();
+  const routeId = searchParams.get('routeId');
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
