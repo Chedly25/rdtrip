@@ -127,7 +127,14 @@ export const useSpotlightStoreV2 = create<SpotlightStoreV2>((set, get) => ({
   isLoadingRoute: false,
 
   // Core actions
-  setRoute: (route) => set({ route, isLoadingRoute: false }),
+  setRoute: (route) => {
+    // If route has routeData with landmarks, merge them into the route object
+    if (route && route.routeData && route.routeData.landmarks) {
+      route.landmarks = route.routeData.landmarks;
+      console.log(`📥 Loaded ${route.landmarks.length} landmarks from database`);
+    }
+    set({ route, isLoadingRoute: false });
+  },
 
   updateCities: (cities) => set((state) => ({
     route: state.route ? { ...state.route, cities } : null
@@ -232,8 +239,30 @@ export const useSpotlightStoreV2 = create<SpotlightStoreV2>((set, get) => ({
       console.log(`✅ Added ${landmark.name} to route! Verified landmarks in store:`, updatedState.route?.landmarks.length);
       console.log('Landmark IDs in store:', updatedState.route?.landmarks.map(l => l.id));
 
-      // TODO: Call backend API to recalculate route with landmark
-      // For now, we just add it to the store
+      // Save landmarks to backend if route has an ID
+      if (updatedState.route?.id) {
+        try {
+          const apiUrl = import.meta.env.VITE_API_URL || '';
+          const response = await fetch(`${apiUrl}/api/routes/${updatedState.route.id}/landmarks`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              landmarks: updatedState.route.landmarks
+            })
+          });
+
+          if (response.ok) {
+            console.log('💾 Landmarks saved to backend');
+          } else {
+            console.warn('⚠️ Failed to save landmarks to backend:', response.statusText);
+          }
+        } catch (apiError) {
+          console.warn('⚠️ Could not save landmarks to backend:', apiError);
+          // Don't throw - landmark is still in local state
+        }
+      }
 
     } catch (error) {
       console.error('❌ Failed to add landmark to route:', error);
@@ -244,14 +273,42 @@ export const useSpotlightStoreV2 = create<SpotlightStoreV2>((set, get) => ({
     }
   },
 
-  removeLandmark: (landmarkId) => set((state) => ({
-    route: state.route
-      ? {
-          ...state.route,
-          landmarks: state.route.landmarks.filter(l => l.id !== landmarkId)
+  removeLandmark: async (landmarkId) => {
+    const state = get();
+    if (!state.route) return;
+
+    // Remove from local state
+    const newLandmarks = state.route.landmarks.filter(l => l.id !== landmarkId);
+    set((state) => ({
+      route: state.route
+        ? { ...state.route, landmarks: newLandmarks }
+        : null
+    }));
+
+    // Save to backend if route has an ID
+    if (state.route.id) {
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL || '';
+        const response = await fetch(`${apiUrl}/api/routes/${state.route.id}/landmarks`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            landmarks: newLandmarks
+          })
+        });
+
+        if (response.ok) {
+          console.log('💾 Landmark removal saved to backend');
+        } else {
+          console.warn('⚠️ Failed to save landmark removal to backend');
         }
-      : null
-  })),
+      } catch (error) {
+        console.warn('⚠️ Could not save landmark removal to backend:', error);
+      }
+    }
+  },
 
   updateLandmark: (landmarkId, updates) => set((state) => ({
     route: state.route

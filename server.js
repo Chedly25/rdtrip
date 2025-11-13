@@ -998,6 +998,50 @@ app.patch('/api/routes/:id', authenticate, async (req, res) => {
   }
 });
 
+// PUT /api/routes/:id/landmarks - Update landmarks for a route
+app.put('/api/routes/:id/landmarks', authenticate, async (req, res) => {
+  try {
+    const { landmarks } = req.body;
+
+    if (!Array.isArray(landmarks)) {
+      return res.status(400).json({ error: 'Landmarks must be an array' });
+    }
+
+    // Get current route_data
+    const currentRoute = await db.query(
+      `SELECT route_data FROM routes WHERE id = $1 AND user_id = $2`,
+      [req.params.id, req.user.id]
+    );
+
+    if (currentRoute.rows.length === 0) {
+      return res.status(404).json({ error: 'Route not found' });
+    }
+
+    // Merge landmarks into route_data
+    const routeData = currentRoute.rows[0].route_data || {};
+    routeData.landmarks = landmarks;
+
+    // Update route with new landmarks
+    const result = await db.query(
+      `UPDATE routes
+       SET route_data = $1, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $2 AND user_id = $3
+       RETURNING id, route_data`,
+      [JSON.stringify(routeData), req.params.id, req.user.id]
+    );
+
+    console.log(`✅ Updated landmarks for route ${req.params.id}: ${landmarks.length} landmarks`);
+
+    res.json({
+      message: 'Landmarks updated successfully',
+      landmarks: result.rows[0].route_data.landmarks
+    });
+  } catch (error) {
+    console.error('Error updating landmarks:', error);
+    res.status(500).json({ error: 'Failed to update landmarks' });
+  }
+});
+
 // =====================================================
 // ROUTE SHARING ENDPOINTS
 // =====================================================
