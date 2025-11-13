@@ -27,7 +27,8 @@ export interface LandmarkRegionParams {
  * Fetch landmarks within a geographic bounding box
  */
 export async function fetchLandmarksInRegion(params: LandmarkRegionParams): Promise<Landmark[]> {
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+  // Use relative URL for API calls (works both in dev and prod)
+  const apiUrl = import.meta.env.VITE_API_URL || '';
 
   const queryParams = new URLSearchParams({
     north: params.north.toString(),
@@ -56,7 +57,8 @@ export async function fetchLandmarksInRegion(params: LandmarkRegionParams): Prom
  * Get all available landmark types
  */
 export async function fetchLandmarkTypes(): Promise<string[]> {
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+  // Use relative URL for API calls (works both in dev and prod)
+  const apiUrl = import.meta.env.VITE_API_URL || '';
 
   try {
     const response = await fetch(`${apiUrl}/api/landmarks/types`);
