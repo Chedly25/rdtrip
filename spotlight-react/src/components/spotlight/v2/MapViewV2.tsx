@@ -30,7 +30,6 @@ const MapViewV2 = () => {
   const setMapCenter = useSpotlightStoreV2((state) => state.setMapCenter);
   const getCityName = useSpotlightStoreV2((state) => state.getCityName);
   const getAgentColors = useSpotlightStoreV2((state) => state.getAgentColors);
-  const removeLandmark = useSpotlightStoreV2((state) => state.removeLandmark);
 
   const agentColors = getAgentColors();
 
@@ -255,9 +254,6 @@ const MapViewV2 = () => {
       console.log(`  → Adding marker for route landmark ${index}: ${landmark.name}`);
       console.log(`     Coordinates:`, landmark.coordinates);
       console.log(`     Mapbox LngLat: [${landmark.coordinates.lng}, ${landmark.coordinates.lat}]`);
-
-      const markerId = `route-landmark-${index}`;
-      const landmarkImagePath = getLandmarkImagePath(landmark.name);
 
       // TESTING: Use simple HTML element instead of React component
       const el = document.createElement('div');
