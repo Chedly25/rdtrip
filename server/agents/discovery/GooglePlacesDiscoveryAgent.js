@@ -207,6 +207,7 @@ class GooglePlacesDiscoveryAgent {
 
       // Google Places data
       place_id: place.place_id,
+      place_types: place.types || [], // Store raw types for agent scoring
       rating: place.rating,
       ratingCount: place.user_ratings_total,
       priceLevel: place.price_level,
@@ -263,8 +264,10 @@ class GooglePlacesDiscoveryAgent {
 
   /**
    * Calculate quality score for ranking
+   * NOW WITH AGENT PERSONALITY SCORING
    */
   calculateQualityScore(candidate, preferences) {
+    const agentType = preferences?.agentType || preferences?.travelStyle || 'best-overall';
     let score = 0;
 
     // Rating (40 points max)
@@ -272,10 +275,21 @@ class GooglePlacesDiscoveryAgent {
       score += (candidate.rating / 5.0) * 40;
     }
 
-    // Number of ratings (20 points max)
+    // Number of ratings - AGENT-SPECIFIC LOGIC
     if (candidate.ratingCount) {
-      const ratingPoints = Math.min(candidate.ratingCount / 100, 1) * 20;
-      score += ratingPoints;
+      if (agentType === 'hidden-gems') {
+        // HIDDEN GEMS: Prefer LOWER rating counts (undiscovered places)
+        // Inverse scoring: fewer ratings = higher score
+        const hiddenGemScore = Math.max(0, 20 - Math.min(candidate.ratingCount / 50, 1) * 20);
+        score += hiddenGemScore;
+        if (candidate.ratingCount < 100) {
+          score += 10; // Bonus for truly hidden spots
+        }
+      } else {
+        // OTHER AGENTS: Prefer popular, well-reviewed places
+        const ratingPoints = Math.min(candidate.ratingCount / 100, 1) * 20;
+        score += ratingPoints;
+      }
     }
 
     // Has photos (15 points)
@@ -298,50 +312,111 @@ class GooglePlacesDiscoveryAgent {
       score += 5;
     }
 
+    // AGENT-SPECIFIC BONUSES
+    const place_types = candidate.place_types || [];
+
+    if (agentType === 'adventure') {
+      // Bonus for nature/outdoor types
+      if (place_types.includes('park') || place_types.includes('natural_feature') || place_types.includes('hiking_area')) {
+        score += 20;
+      }
+    } else if (agentType === 'culture') {
+      // Bonus for museums and historical sites
+      if (place_types.includes('museum') || place_types.includes('art_gallery') || place_types.includes('library')) {
+        score += 20;
+      }
+    } else if (agentType === 'food') {
+      // Bonus for high-rated restaurants
+      if (place_types.includes('restaurant') && candidate.rating >= 4.0) {
+        score += 20;
+      }
+    } else if (agentType === 'hidden-gems') {
+      // Bonus for unique types (not generic tourist_attraction)
+      if (!place_types.includes('tourist_attraction') && place_types.length > 0) {
+        score += 15;
+      }
+    }
+
     return score;
   }
 
   /**
    * Map activity category to Google Places types
+   * NOW WITH AGENT PERSONALITY AWARENESS
    */
   mapCategoryToGoogleTypes(category, preferences) {
     const agentType = preferences?.agentType || preferences?.travelStyle || 'best-overall';
+    console.log(`   🎯 Agent type: ${agentType}`);
 
-    const typeMap = {
-      cultural: ['museum', 'art_gallery', 'church', 'synagogue', 'hindu_temple', 'mosque'],
-      historical: ['museum', 'tourist_attraction', 'church', 'landmark'],
-      outdoor: ['park', 'natural_feature', 'hiking_area', 'tourist_attraction'],
-      adventure: ['amusement_park', 'zoo', 'aquarium', 'bowling_alley', 'gym'],
-      entertainment: ['movie_theater', 'night_club', 'bar', 'casino', 'stadium'],
-      shopping: ['shopping_mall', 'store', 'clothing_store', 'book_store'],
-      food: ['restaurant', 'cafe', 'bakery', 'meal_takeaway'],
-      relaxation: ['spa', 'beauty_salon', 'park', 'library']
+    // AGENT-SPECIFIC TYPE MAPPINGS
+    const agentTypeMap = {
+      // ADVENTURE: Outdoor activities, nature, physical experiences
+      'adventure': [
+        'park',
+        'natural_feature',
+        'hiking_area',
+        'campground',
+        'tourist_attraction', // Viewpoints, scenic spots
+        'amusement_park',
+        'zoo',
+        'aquarium'
+      ],
+
+      // HIDDEN GEMS: Local spots, lesser-known places, unique experiences
+      'hidden-gems': [
+        'tourist_attraction', // Will filter by lower rating counts
+        'museum', // Smaller, local museums
+        'art_gallery',
+        'park',
+        'church', // Historic but less touristy
+        'store', // Local artisan shops
+        'cafe', // Local coffee spots
+        'point_of_interest'
+      ],
+
+      // FOOD: All food-related experiences
+      'food': [
+        'restaurant',
+        'cafe',
+        'bakery',
+        'meal_takeaway',
+        'meal_delivery',
+        'food'
+      ],
+
+      // CULTURE: Museums, historical sites, art, education
+      'culture': [
+        'museum',
+        'art_gallery',
+        'library',
+        'church',
+        'synagogue',
+        'hindu_temple',
+        'mosque',
+        'tourist_attraction', // Historical landmarks
+        'landmark',
+        'university'
+      ],
+
+      // BEST OVERALL: Balanced mix of top attractions
+      'best-overall': [
+        'tourist_attraction',
+        'museum',
+        'park',
+        'landmark',
+        'art_gallery',
+        'amusement_park',
+        'zoo',
+        'aquarium'
+      ]
     };
 
-    // Agent-specific preferences
-    const agentPreferences = {
-      culture: ['cultural', 'historical'],
-      adventure: ['outdoor', 'adventure'],
-      food: ['food', 'shopping'],
-      'best-overall': ['cultural', 'outdoor', 'entertainment']
-    };
+    // Get agent-specific types
+    let types = agentTypeMap[agentType] || agentTypeMap['best-overall'];
 
-    const preferredCategories = agentPreferences[agentType] || agentPreferences['best-overall'];
+    console.log(`   📋 Selected types for ${agentType}: ${types.slice(0, 3).join(', ')}... (${types.length} total)`);
 
-    let types = [];
-    for (const cat of preferredCategories) {
-      if (typeMap[cat]) {
-        types.push(...typeMap[cat]);
-      }
-    }
-
-    // Fallback: tourist attractions
-    if (types.length === 0) {
-      types = ['tourist_attraction', 'point_of_interest'];
-    }
-
-    // Remove duplicates
-    return [...new Set(types)];
+    return [...new Set(types)]; // Remove duplicates
   }
 
   /**
