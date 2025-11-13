@@ -292,7 +292,7 @@ class GooglePlacesDiscoveryAgent {
     // 4. Sort by quality score
     filtered.sort((a, b) => b.qualityScore - a.qualityScore);
 
-    return filtered.slice(0, 5); // Return top 5
+    return filtered.slice(0, 6); // Return top 6 per time window for choice grid
   }
 
   /**
