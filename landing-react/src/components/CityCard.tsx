@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { MapPin, Calendar } from 'lucide-react'
-import { getWikipediaImage } from '../utils/wikipedia'
+import { fetchCityImage } from '../services/cityImages'
 
 interface Activity {
   name?: string
@@ -71,11 +71,11 @@ export function CityCard({ city, index, themeColor, showThemeBadges = false, the
   })
 
   useEffect(() => {
-    // If we don't have an image, fetch from Wikipedia
+    // If we don't have an image, fetch using smart fallback chain
     if (!city.image && !city.imageUrl && cityName && cityName !== 'Unknown') {
       let mounted = true
 
-      getWikipediaImage(cityName, 800).then((url) => {
+      fetchCityImage(cityName, city.country).then((url) => {
         if (mounted) {
           if (url) {
             setImageUrl(url)
@@ -90,7 +90,7 @@ export function CityCard({ city, index, themeColor, showThemeBadges = false, the
         mounted = false
       }
     }
-  }, [cityName, city.image, city.imageUrl])
+  }, [cityName, city.image, city.imageUrl, city.country])
 
   return (
     <motion.div
