@@ -106,28 +106,36 @@ Return ONLY valid JSON (no markdown, no code blocks):
       "location": "Aix-en-Provence",
       "theme": "Arrival & Historic Center Discovery",
       "driveSegments": [],
-      "activityWindows": [
+      "blocks": [
         {
-          "start": "14:00",
-          "end": "18:00",
-          "purpose": "afternoon exploration",
+          "period": "afternoon",
+          "timeRange": "14:00-18:00",
+          "zoneFocus": "Old Town",
+          "theme": "Historic center exploration",
+          "activitySlots": 3,
+          "transportWithinZone": "walking",
+          "maxRadius": "1km",
           "energyLevel": "moderate"
         },
         {
-          "start": "19:30",
-          "end": "22:00",
-          "purpose": "evening dining",
+          "period": "evening",
+          "timeRange": "19:00-22:00",
+          "zoneFocus": "Dining district",
+          "theme": "Local cuisine experience",
+          "activitySlots": 1,
+          "transportWithinZone": "walking",
+          "maxRadius": "500m",
           "energyLevel": "relaxed"
         }
       ],
       "overnight": "Aix-en-Provence",
-      "notes": "Late arrival day - keep it light"
+      "notes": "Late arrival day - keep activities clustered in walking distance"
     },
     {
       "day": 2,
       "date": "2025-11-16",
-      "location": "Aix-en-Provence → Montpellier",
-      "theme": "Scenic Coastal Drive",
+      "location": "Montpellier",
+      "theme": "Coastal City Discovery",
       "driveSegments": [
         {
           "from": "Aix-en-Provence",
@@ -139,25 +147,40 @@ Return ONLY valid JSON (no markdown, no code blocks):
           "restStops": 0
         }
       ],
-      "activityWindows": [
+      "blocks": [
         {
-          "start": "11:00",
-          "end": "13:00",
-          "purpose": "late morning activities",
+          "period": "morning",
+          "timeRange": "11:00-13:00",
+          "zoneFocus": "Arrival area",
+          "theme": "First impressions & lunch",
+          "activitySlots": 2,
+          "transportWithinZone": "walking",
+          "maxRadius": "1km",
           "energyLevel": "moderate"
         },
         {
-          "start": "15:00",
-          "end": "19:00",
-          "purpose": "afternoon/evening exploration",
+          "period": "afternoon",
+          "timeRange": "14:00-18:00",
+          "zoneFocus": "Main attractions",
+          "theme": "City highlights tour",
+          "activitySlots": 4,
+          "transportWithinZone": "walking + short metro",
+          "maxRadius": "2km",
           "energyLevel": "active"
         }
       ],
       "overnight": "Montpellier",
-      "notes": "Allow time to settle into new city"
+      "notes": "Group activities geographically - minimize transport time"
     }
   ]
 }
+
+IMPORTANT ABOUT BLOCKS:
+- Use "morning" (8:00-13:00), "afternoon" (13:00-18:00), "evening" (18:00-22:00)
+- zoneFocus: Geographic area where activities should be clustered
+- activitySlots: Number of activities to fit in this block
+- maxRadius: Maximum distance between activities in the block
+- Theme activities geographically so travelers explore ONE area at a time
 
 IMPORTANT: Return ONLY the JSON object, no other text.`;
   }
