@@ -30,21 +30,7 @@ const SpotlightV2 = () => {
       setIsLoadingRoute(true);
       setIsLoading(true);
 
-      // First check localStorage for spotlight data (from landing page)
-      const spotlightDataStr = localStorage.getItem('spotlightData');
-
-      if (spotlightDataStr) {
-        const spotlightData = JSON.parse(spotlightDataStr);
-        console.log('📍 Loading Spotlight data from localStorage:', spotlightData);
-
-        // Transform the data into our SpotlightRoute format
-        const transformedRoute = transformLandingDataToRoute(spotlightData);
-        setRoute(transformedRoute);
-        setIsLoading(false);
-        return;
-      }
-
-      // If no localStorage data and we have a routeId, fetch from backend
+      // PRIORITY 1: If we have a routeId in URL, fetch from backend (saved route with landmarks)
       if (routeId) {
         // Get auth token from localStorage
         const token = localStorage.getItem('token');
@@ -71,9 +57,21 @@ const SpotlightV2 = () => {
         console.log('📦 Fetched route data:', routeData);
         const transformedRoute = transformBackendDataToRoute(routeData);
         setRoute(transformedRoute);
-      } else {
-        setError('No route data found. Please generate a route from the landing page first.');
+        return;
       }
+
+      // PRIORITY 2: No routeId - fallback to localStorage (from landing page navigation)
+      const spotlightDataStr = localStorage.getItem('spotlightData');
+      if (spotlightDataStr) {
+        const spotlightData = JSON.parse(spotlightDataStr);
+        console.log('📍 Loading Spotlight data from localStorage:', spotlightData);
+        const transformedRoute = transformLandingDataToRoute(spotlightData);
+        setRoute(transformedRoute);
+        return;
+      }
+
+      // No data found anywhere
+      setError('No route data found. Please generate a route from the landing page first.');
     } catch (err) {
       console.error('Error loading route:', err);
       setError(err instanceof Error ? err.message : 'Failed to load route data');
