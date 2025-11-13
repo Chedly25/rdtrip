@@ -58,6 +58,7 @@ export interface SpotlightRoute {
   totalDistance?: number;
   totalDuration?: number;
   routeGeometry?: any;
+  routeData?: any; // JSONB data from backend including persisted landmarks
   agentResults?: Array<{
     agent: string;
     recommendations: string;
