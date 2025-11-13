@@ -21,19 +21,20 @@ const MapViewV2 = () => {
   const [nearbyLandmarks, setNearbyLandmarks] = useState<Landmark[]>([]);
   const [selectedLandmark, setSelectedLandmark] = useState<Landmark | null>(null);
 
-  const {
-    route,
-    selectedCityIndex,
-    setSelectedCity,
-    mapCenter,
-    mapZoom,
-    setMapCenter,
-    getCityName,
-    getAgentColors,
-    removeLandmark
-  } = useSpotlightStoreV2();
+  // Use explicit selectors to ensure proper reactivity
+  const route = useSpotlightStoreV2((state) => state.route);
+  const selectedCityIndex = useSpotlightStoreV2((state) => state.selectedCityIndex);
+  const setSelectedCity = useSpotlightStoreV2((state) => state.setSelectedCity);
+  const mapCenter = useSpotlightStoreV2((state) => state.mapCenter);
+  const mapZoom = useSpotlightStoreV2((state) => state.mapZoom);
+  const setMapCenter = useSpotlightStoreV2((state) => state.setMapCenter);
+  const getCityName = useSpotlightStoreV2((state) => state.getCityName);
+  const getAgentColors = useSpotlightStoreV2((state) => state.getAgentColors);
+  const removeLandmark = useSpotlightStoreV2((state) => state.removeLandmark);
 
   const agentColors = getAgentColors();
+
+  console.log('🔍 MapViewV2 render - Landmarks in route:', route?.landmarks.length || 0);
 
   // Initialize map
   useEffect(() => {
