@@ -41,7 +41,16 @@ export const ItineraryPanel = ({ isOpen, onClose }: ItineraryPanelProps) => {
   }, [isGenerating, generationStartTime]);
 
   const handleGenerate = async () => {
-    if (!route) return;
+    if (!route) {
+      console.error('❌ No route data available');
+      return;
+    }
+
+    // Validate route.cities exists and is an array
+    if (!route.cities || !Array.isArray(route.cities)) {
+      console.error('❌ Route cities is not an array:', route.cities);
+      return;
+    }
 
     setHasStarted(true);
     setGenerationStartTime(Date.now());
@@ -55,19 +64,19 @@ export const ItineraryPanel = ({ isOpen, onClose }: ItineraryPanelProps) => {
       return { name: cityData.name, country: cityData.country || '' };
     };
 
-    // Build routeData from spotlight route
+    // Build routeData from spotlight route with safe array access
     const routeData = {
       id: route.id,
       origin: route.origin,
       destination: route.destination,
-      waypoints: route.cities.map(city => {
+      waypoints: (route.cities || []).map(city => {
         const cityInfo = getCityInfo(city.city);
         return {
           city: cityInfo.name,
           name: cityInfo.name,
           country: cityInfo.country,
-          coordinates: [city.coordinates.lat, city.coordinates.lng],
-          nights: city.nights
+          coordinates: city.coordinates ? [city.coordinates.lat, city.coordinates.lng] : [0, 0],
+          nights: city.nights || 0
         };
       }),
       agent: route.agent,
@@ -316,25 +325,25 @@ export const ItineraryPanel = ({ isOpen, onClose }: ItineraryPanelProps) => {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                       <div className="bg-white rounded-lg p-4 border-2 border-gray-200 hover:border-blue-200 transition-colors">
                         <div className="text-2xl font-bold text-gray-900">
-                          {itinerary.dayStructure?.length || 0}
+                          {Array.isArray(itinerary.dayStructure) ? itinerary.dayStructure.length : 0}
                         </div>
                         <div className="text-sm text-gray-600">Days Planned</div>
                       </div>
                       <div className="bg-white rounded-lg p-4 border-2 border-gray-200 hover:border-blue-200 transition-colors">
                         <div className="text-2xl font-bold text-gray-900">
-                          {itinerary.activities?.flat().length || 0}
+                          {Array.isArray(itinerary.activities) ? itinerary.activities.flat().length : 0}
                         </div>
                         <div className="text-sm text-gray-600">Activities</div>
                       </div>
                       <div className="bg-white rounded-lg p-4 border-2 border-gray-200 hover:border-blue-200 transition-colors">
                         <div className="text-2xl font-bold text-gray-900">
-                          {itinerary.restaurants?.length || 0}
+                          {Array.isArray(itinerary.restaurants) ? itinerary.restaurants.length : 0}
                         </div>
                         <div className="text-sm text-gray-600">Restaurants</div>
                       </div>
                       <div className="bg-white rounded-lg p-4 border-2 border-gray-200 hover:border-blue-200 transition-colors">
                         <div className="text-2xl font-bold text-gray-900">
-                          {itinerary.accommodations?.length || 0}
+                          {Array.isArray(itinerary.accommodations) ? itinerary.accommodations.length : 0}
                         </div>
                         <div className="text-sm text-gray-600">Hotels</div>
                       </div>
@@ -343,14 +352,14 @@ export const ItineraryPanel = ({ isOpen, onClose }: ItineraryPanelProps) => {
                     {/* Itinerary Content Preview */}
                     <div className="space-y-6">
                       {/* Day Structure */}
-                      {itinerary.dayStructure && itinerary.dayStructure.length > 0 && (
+                      {itinerary.dayStructure && Array.isArray(itinerary.dayStructure) && itinerary.dayStructure.length > 0 && (
                         <div className="space-y-3">
                           <h4 className="font-bold text-lg text-gray-900 flex items-center gap-2">
                             <Calendar className="w-5 h-5 text-blue-600" />
                             Day-by-Day Breakdown
                           </h4>
                           <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
-                            {itinerary.dayStructure.map((day: any, index: number) => (
+                            {(itinerary.dayStructure || []).map((day: any, index: number) => (
                               <div
                                 key={index}
                                 className="bg-white border-2 border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition-all"
@@ -387,14 +396,14 @@ export const ItineraryPanel = ({ isOpen, onClose }: ItineraryPanelProps) => {
                       )}
 
                       {/* Activities Preview */}
-                      {itinerary.activities && itinerary.activities.length > 0 && (
+                      {itinerary.activities && Array.isArray(itinerary.activities) && itinerary.activities.length > 0 && (
                         <div className="space-y-3">
                           <h4 className="font-bold text-lg text-gray-900 flex items-center gap-2">
                             <Landmark className="w-5 h-5 text-blue-600" />
                             Top Activities
                           </h4>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            {itinerary.activities.flat().slice(0, 4).map((activity: any, idx: number) => {
+                            {(Array.isArray(itinerary.activities) ? itinerary.activities.flat() : []).slice(0, 4).map((activity: any, idx: number) => {
                               const photo = activity.photos?.[0];
                               const photoUrl = typeof photo === 'string' ? photo : photo?.url || photo?.thumbnail;
 
@@ -432,7 +441,7 @@ export const ItineraryPanel = ({ isOpen, onClose }: ItineraryPanelProps) => {
                               );
                             })}
                           </div>
-                          {itinerary.activities.flat().length > 4 && (
+                          {Array.isArray(itinerary.activities) && itinerary.activities.flat().length > 4 && (
                             <p className="text-sm text-gray-600 text-center">
                               +{itinerary.activities.flat().length - 4} more activities
                             </p>
