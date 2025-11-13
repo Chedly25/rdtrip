@@ -270,11 +270,19 @@ const MapViewV2 = () => {
       const el = document.createElement('div');
       el.style.position = 'relative';
       el.style.cursor = 'pointer';
+      el.style.width = '40px';
+      el.style.height = '50px'; // Include space for pointer
 
-      // Main pin circle
+      // Main pin circle container
+      const pinContainer = document.createElement('div');
+      pinContainer.style.position = 'relative';
+      pinContainer.style.width = '40px';
+      pinContainer.style.height = '40px';
+
+      // Pin circle
       const pin = document.createElement('div');
-      pin.style.width = '40px';
-      pin.style.height = '40px';
+      pin.style.width = '100%';
+      pin.style.height = '100%';
       pin.style.borderRadius = '50%';
       pin.style.border = '3px solid white';
       pin.style.boxShadow = '0 4px 12px rgba(0,0,0,0.4)';
@@ -282,11 +290,10 @@ const MapViewV2 = () => {
       pin.style.alignItems = 'center';
       pin.style.justifyContent = 'center';
       pin.style.overflow = 'hidden';
-      pin.style.position = 'relative';
+      pin.style.background = 'white';
 
       if (landmarkImagePath) {
         // Use landmark image if available
-        pin.style.background = 'white';
         const img = document.createElement('img');
         img.src = landmarkImagePath;
         img.style.width = '100%';
@@ -297,29 +304,35 @@ const MapViewV2 = () => {
         // Use gradient with star icon
         pin.style.background = `linear-gradient(135deg, ${agentColors.accent}, ${agentColors.secondary})`;
         pin.style.fontSize = '20px';
+        pin.style.color = 'white';
         pin.textContent = '⭐';
       }
 
-      // Pin pointer triangle
+      pinContainer.appendChild(pin);
+
+      // Pin pointer triangle (positioned below the circle)
       const pointer = document.createElement('div');
       pointer.style.position = 'absolute';
+      pointer.style.bottom = '-8px';
       pointer.style.left = '50%';
       pointer.style.transform = 'translateX(-50%)';
       pointer.style.width = '0';
       pointer.style.height = '0';
       pointer.style.borderLeft = '6px solid transparent';
       pointer.style.borderRight = '6px solid transparent';
-      pointer.style.borderTop = `8px solid ${agentColors.secondary}`;
+      pointer.style.borderTop = `8px solid white`;
       pointer.style.filter = 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))';
 
-      el.appendChild(pin);
-      el.appendChild(pointer);
+      pinContainer.appendChild(pointer);
+      el.appendChild(pinContainer);
 
       // Add click handler
       el.onclick = () => {
         console.log('Clicked route landmark:', landmark.name);
         // TODO: Show landmark details or allow removal
       };
+
+      console.log(`     🎨 Created landmark pin with ${landmarkImagePath ? 'image' : 'star icon'}`);
 
       const marker = new mapboxgl.Marker({
         element: el,

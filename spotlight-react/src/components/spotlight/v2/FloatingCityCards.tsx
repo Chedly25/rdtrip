@@ -171,7 +171,24 @@ interface LandmarkCardProps {
 }
 
 const LandmarkCard = ({ landmark, agentColors, onRemove }: LandmarkCardProps) => {
-  const landmarkImagePath = getLandmarkImagePath(landmark.name);
+  const [landmarkImage, setLandmarkImage] = useState<string | null>(null);
+
+  // Fetch Wikipedia image for the landmark
+  useEffect(() => {
+    const loadImage = async () => {
+      // First try the local landmark image path
+      const localImagePath = getLandmarkImagePath(landmark.name);
+      if (localImagePath) {
+        setLandmarkImage(localImagePath);
+        return;
+      }
+
+      // If no local image, fetch from Wikipedia
+      const imageUrl = await fetchCityImageCached(landmark.name);
+      setLandmarkImage(imageUrl);
+    };
+    loadImage();
+  }, [landmark.name]);
 
   return (
     <motion.div
@@ -189,10 +206,10 @@ const LandmarkCard = ({ landmark, agentColors, onRemove }: LandmarkCardProps) =>
       </button>
 
       {/* Landmark Image */}
-      {landmarkImagePath && (
+      {landmarkImage && (
         <div className="w-full h-16 mb-2 rounded overflow-hidden bg-gray-100">
           <img
-            src={landmarkImagePath}
+            src={landmarkImage}
             alt={landmark.name}
             className="w-full h-full object-cover"
             onError={(e) => {
