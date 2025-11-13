@@ -103,98 +103,94 @@ const SpotlightV2 = () => {
 
     console.log('📍 City data map size:', cityDataMap.size, 'entries:', Array.from(cityDataMap.keys()));
 
-    // Use nightAllocations as the source of truth for which cities to include
-    if (data.nightAllocations) {
-      // Get all city names from nightAllocations
-      const allCityNames = Object.keys(data.nightAllocations);
+    // ONLY use cities from routePlan.cities (the validated route)
+    // Do NOT use all cities from nightAllocations (which contains cities from ALL agents)
+    let orderedCities: string[] = [];
 
-      // Try to get ordering from routePlan, but include ALL cities from nightAllocations
-      let orderedCities: string[] = [];
-      if (data.routePlan?.cities && Array.isArray(data.routePlan.cities)) {
-        const routePlanCities = data.routePlan.cities.map((c: any) => getCityName(c.name || c));
-        // Start with routePlan order
-        orderedCities = [...routePlanCities];
-        // Add any cities from nightAllocations that aren't in routePlan
-        allCityNames.forEach(cityName => {
-          if (!orderedCities.includes(cityName)) {
-            orderedCities.push(cityName);
-          }
-        });
-      } else {
-        orderedCities = allCityNames;
-      }
+    if (data.routePlan?.cities && Array.isArray(data.routePlan.cities)) {
+      // Use ONLY the validated cities from routePlan
+      orderedCities = data.routePlan.cities.map((c: any) => getCityName(c.name || c));
+      console.log('✅ Using validated cities from routePlan:', orderedCities);
+    } else if (data.waypoints && Array.isArray(data.waypoints)) {
+      // Fallback: use waypoints
+      orderedCities = [
+        getCityName(data.origin),
+        ...data.waypoints.map((w: any) => getCityName(w.name || w.city || w)),
+        getCityName(data.destination)
+      ];
+      console.log('⚠️ Using waypoints as fallback:', orderedCities);
+    } else {
+      // Last fallback: just origin and destination
+      orderedCities = [getCityName(data.origin), getCityName(data.destination)];
+      console.log('⚠️ Using origin/destination only:', orderedCities);
+    }
 
-      console.log('🏙️ Processing cities in order:', orderedCities);
+    console.log('🏙️ Processing cities in order:', orderedCities);
 
+    if (orderedCities.length > 0) {
       orderedCities.forEach((cityName: string) => {
-        const nights = data.nightAllocations[cityName];
-        console.log(`  🌆 ${cityName}: ${nights} nights`);
+        console.log(`  🌆 ${cityName}`);
 
-        if (nights && nights > 0) {
-          const cityData = cityDataMap.get(cityName);
-          console.log(`    Data found:`, cityData ? 'YES' : 'NO', cityData);
+        // Get city data from multiple sources
+        let cityData = cityDataMap.get(cityName);
+        let coordinates = { lat: 0, lng: 0 };
 
-          const coordinates = cityData ? extractCoordinates(cityData.city || cityData) : { lat: 0, lng: 0 };
-          console.log(`    Coordinates:`, coordinates);
-
-          cities.push({
-            city: cityData || { name: cityName, country: '', coordinates: { lat: 0, lng: 0 } },
-            coordinates,
-            nights: nights,
-            activities: cityData?.activities || [],
-            restaurants: cityData?.restaurants || [],
-            accommodation: cityData?.accommodation || [],
-            practicalInfo: cityData?.practicalInfo,
-            weather: cityData?.weather,
-            events: cityData?.events || [],
-            agentData: {}
-          });
+        // Try to get coordinates from origin/destination first
+        if (cityName === getCityName(data.origin)) {
+          coordinates = extractCoordinates(data.origin);
+          console.log(`    Using origin coordinates:`, coordinates);
+        } else if (cityName === getCityName(data.destination)) {
+          coordinates = extractCoordinates(data.destination);
+          console.log(`    Using destination coordinates:`, coordinates);
+        } else if (cityData) {
+          coordinates = extractCoordinates(cityData.city || cityData);
+          console.log(`    Using cityData coordinates:`, coordinates);
+        } else if (data.waypoints) {
+          // Try to find in waypoints
+          const waypoint = data.waypoints.find((w: any) =>
+            getCityName(w.name || w.city || w) === cityName
+          );
+          if (waypoint) {
+            coordinates = extractCoordinates(waypoint);
+            cityData = waypoint;
+            console.log(`    Using waypoint coordinates:`, coordinates);
+          }
         }
+
+        // Get nights from nightAllocations or routePlan
+        let nights = data.nightAllocations?.[cityName] || 0;
+        if (!nights && data.routePlan?.cities) {
+          const routePlanCity = data.routePlan.cities.find((c: any) =>
+            getCityName(c.name || c) === cityName
+          );
+          nights = routePlanCity?.nights || 0;
+        }
+
+        console.log(`    Nights: ${nights}, Coordinates: [${coordinates.lat}, ${coordinates.lng}]`);
+
+        cities.push({
+          city: cityData || { name: cityName, country: '', coordinates },
+          coordinates,
+          nights: nights,
+          activities: cityData?.activities || [],
+          restaurants: cityData?.restaurants || [],
+          accommodation: cityData?.accommodation || [],
+          practicalInfo: cityData?.practicalInfo,
+          weather: cityData?.weather,
+          events: cityData?.events || [],
+          agentData: {}
+        });
       });
 
       console.log('✅ Final cities array:', cities.length, 'cities');
       cities.forEach((city, i) => {
-        console.log(`  ${i + 1}. ${getCityName(city.city)} - ${city.nights} nights - coords: ${city.coordinates.lat}, ${city.coordinates.lng}`);
+        console.log(`  ${i + 1}. ${getCityName(city.city)} - ${city.nights} nights - coords: [${city.coordinates.lat}, ${city.coordinates.lng}]`);
       });
     }
 
-    // If we didn't get cities from nightAllocations, fall back to the old method
+    // Validation: ensure we have at least some cities
     if (cities.length === 0) {
-      // Add origin
-      if (data.origin) {
-        cities.push({
-          city: data.origin,
-          coordinates: extractCoordinates(data.origin),
-          nights: 0,
-          agentData: {}
-        });
-      }
-
-      // Add waypoints
-      if (data.waypoints && Array.isArray(data.waypoints)) {
-        data.waypoints.forEach((waypoint: any) => {
-          const cityName = getCityName(waypoint.name || waypoint.city || waypoint);
-          cities.push({
-            city: waypoint,
-            coordinates: extractCoordinates(waypoint),
-            nights: data.nightAllocations?.[cityName] || 1,
-            activities: waypoint.activities || [],
-            restaurants: waypoint.restaurants || [],
-            accommodation: waypoint.accommodation || [],
-            agentData: {}
-          });
-        });
-      }
-
-      // Add destination
-      if (data.destination) {
-        cities.push({
-          city: data.destination,
-          coordinates: extractCoordinates(data.destination),
-          nights: 0,
-          agentData: {}
-        });
-      }
+      console.error('❌ No cities found! Check routePlan.cities, waypoints, and origin/destination');
     }
 
     return {
