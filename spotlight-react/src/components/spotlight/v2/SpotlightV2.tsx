@@ -5,6 +5,7 @@ import { useSpotlightStoreV2, type SpotlightRoute, type CityData } from '../../.
 import MapViewV2 from './MapViewV2';
 import FloatingCityCards from './FloatingCityCards';
 import SpotlightHeader from './SpotlightHeader';
+import { ItineraryPanel } from './ItineraryPanel';
 import { Loader2 } from 'lucide-react';
 
 const SpotlightV2 = () => {
@@ -14,6 +15,7 @@ const SpotlightV2 = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isItineraryPanelOpen, setIsItineraryPanelOpen] = useState(false);
 
   const {
     route,
@@ -336,6 +338,12 @@ const SpotlightV2 = () => {
 
   const agentColors = getAgentColors();
 
+  // Handler for Generate Itinerary button
+  const handleGenerateItinerary = () => {
+    console.log('🎯 Opening itinerary panel');
+    setIsItineraryPanelOpen(true);
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen bg-white">
@@ -380,7 +388,7 @@ const SpotlightV2 = () => {
   return (
     <div className="h-screen w-screen overflow-hidden bg-gray-50 relative">
       {/* Header */}
-      <SpotlightHeader />
+      <SpotlightHeader onGenerateItinerary={handleGenerateItinerary} />
 
       {/* Map - Fullscreen hero element */}
       <MapViewV2 />
@@ -394,6 +402,12 @@ const SpotlightV2 = () => {
         style={{
           background: `radial-gradient(circle at 50% 0%, ${agentColors.primary}05 0%, transparent 50%)`
         }}
+      />
+
+      {/* Itinerary Generation Panel */}
+      <ItineraryPanel
+        isOpen={isItineraryPanelOpen}
+        onClose={() => setIsItineraryPanelOpen(false)}
       />
     </div>
   );
