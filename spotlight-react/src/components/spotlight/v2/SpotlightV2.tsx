@@ -195,15 +195,17 @@ const SpotlightV2 = () => {
 
         // Normalize city data structure - waypoints have `city` property, but we need `name`
         const normalizedCityData = cityData ? {
-          name: cityData.city || cityData.name || cityName,
+          ...cityData,  // Spread first to get all properties
+          name: cityData.city || cityData.name || cityName,  // Then override with correct values
           country: cityData.country || '',
-          coordinates: cityData.coordinates || coordinates,
-          ...cityData
+          coordinates  // Use the extracted coordinates object (always {lat, lng})
         } : { name: cityName, country: '', coordinates };
+
+        console.log(`    Normalized city data for ${cityName}:`, { name: normalizedCityData.name, coordinates: normalizedCityData.coordinates });
 
         cities.push({
           city: normalizedCityData,
-          coordinates,
+          coordinates,  // Store coordinates at top level too
           nights: nights,
           activities: cityData?.activities || [],
           restaurants: cityData?.restaurants || [],
