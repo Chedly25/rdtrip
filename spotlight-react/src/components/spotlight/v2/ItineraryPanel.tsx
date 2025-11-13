@@ -325,19 +325,26 @@ export const ItineraryPanel = ({ isOpen, onClose }: ItineraryPanelProps) => {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                       <div className="bg-white rounded-lg p-4 border-2 border-gray-200 hover:border-blue-200 transition-colors">
                         <div className="text-2xl font-bold text-gray-900">
-                          {Array.isArray(itinerary.dayStructure) ? itinerary.dayStructure.length : 0}
+                          {Array.isArray(itinerary.dayStructure) ? itinerary.dayStructure.length : (itinerary.dayStructure && typeof itinerary.dayStructure === 'object' && 'days' in itinerary.dayStructure && Array.isArray((itinerary.dayStructure as any).days) ? (itinerary.dayStructure as any).days.length : 0)}
                         </div>
                         <div className="text-sm text-gray-600">Days Planned</div>
                       </div>
                       <div className="bg-white rounded-lg p-4 border-2 border-gray-200 hover:border-blue-200 transition-colors">
                         <div className="text-2xl font-bold text-gray-900">
-                          {Array.isArray(itinerary.activities) ? itinerary.activities.flat().length : 0}
+                          {Array.isArray(itinerary.activities) ? itinerary.activities.reduce((sum, dayObj) => sum + (Array.isArray(dayObj?.activities) ? dayObj.activities.length : 0), 0) : 0}
                         </div>
                         <div className="text-sm text-gray-600">Activities</div>
                       </div>
                       <div className="bg-white rounded-lg p-4 border-2 border-gray-200 hover:border-blue-200 transition-colors">
                         <div className="text-2xl font-bold text-gray-900">
-                          {Array.isArray(itinerary.restaurants) ? itinerary.restaurants.length : 0}
+                          {Array.isArray(itinerary.restaurants) ? itinerary.restaurants.reduce((sum, dayObj) => {
+                            const meals = dayObj?.meals;
+                            let count = 0;
+                            if (meals?.breakfast) count++;
+                            if (meals?.lunch) count++;
+                            if (meals?.dinner) count++;
+                            return sum + count;
+                          }, 0) : 0}
                         </div>
                         <div className="text-sm text-gray-600">Restaurants</div>
                       </div>
@@ -352,14 +359,16 @@ export const ItineraryPanel = ({ isOpen, onClose }: ItineraryPanelProps) => {
                     {/* Itinerary Content Preview */}
                     <div className="space-y-6">
                       {/* Day Structure */}
-                      {itinerary.dayStructure && Array.isArray(itinerary.dayStructure) && itinerary.dayStructure.length > 0 && (
-                        <div className="space-y-3">
-                          <h4 className="font-bold text-lg text-gray-900 flex items-center gap-2">
-                            <Calendar className="w-5 h-5 text-blue-600" />
-                            Day-by-Day Breakdown
-                          </h4>
-                          <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
-                            {(itinerary.dayStructure || []).map((day: any, index: number) => (
+                      {(() => {
+                        const daysArray = Array.isArray(itinerary.dayStructure) ? itinerary.dayStructure : (itinerary.dayStructure && typeof itinerary.dayStructure === 'object' && 'days' in itinerary.dayStructure && Array.isArray((itinerary.dayStructure as any).days) ? (itinerary.dayStructure as any).days : []);
+                        return daysArray.length > 0 && (
+                          <div className="space-y-3">
+                            <h4 className="font-bold text-lg text-gray-900 flex items-center gap-2">
+                              <Calendar className="w-5 h-5 text-blue-600" />
+                              Day-by-Day Breakdown
+                            </h4>
+                            <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
+                              {daysArray.map((day: any, index: number) => (
                               <div
                                 key={index}
                                 className="bg-white border-2 border-gray-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition-all"
@@ -390,10 +399,11 @@ export const ItineraryPanel = ({ isOpen, onClose }: ItineraryPanelProps) => {
                                   </div>
                                 )}
                               </div>
-                            ))}
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        );
+                      })()}
 
                       {/* Activities Preview */}
                       {itinerary.activities && Array.isArray(itinerary.activities) && itinerary.activities.length > 0 && (
@@ -403,7 +413,7 @@ export const ItineraryPanel = ({ isOpen, onClose }: ItineraryPanelProps) => {
                             Top Activities
                           </h4>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            {(Array.isArray(itinerary.activities) ? itinerary.activities.flat() : []).slice(0, 4).map((activity: any, idx: number) => {
+                            {(Array.isArray(itinerary.activities) ? itinerary.activities.flatMap(dayObj => Array.isArray(dayObj?.activities) ? dayObj.activities : []) : []).slice(0, 4).map((activity: any, idx: number) => {
                               const photo = activity.photos?.[0];
                               const photoUrl = typeof photo === 'string' ? photo : photo?.url || photo?.thumbnail;
 
@@ -441,11 +451,14 @@ export const ItineraryPanel = ({ isOpen, onClose }: ItineraryPanelProps) => {
                               );
                             })}
                           </div>
-                          {Array.isArray(itinerary.activities) && itinerary.activities.flat().length > 4 && (
-                            <p className="text-sm text-gray-600 text-center">
-                              +{itinerary.activities.flat().length - 4} more activities
-                            </p>
-                          )}
+                          {(() => {
+                            const totalActivities = Array.isArray(itinerary.activities) ? itinerary.activities.reduce((sum, dayObj) => sum + (Array.isArray(dayObj?.activities) ? dayObj.activities.length : 0), 0) : 0;
+                            return totalActivities > 4 && (
+                              <p className="text-sm text-gray-600 text-center">
+                                +{totalActivities - 4} more activities
+                              </p>
+                            );
+                          })()}
                         </div>
                       )}
 

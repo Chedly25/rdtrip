@@ -88,8 +88,11 @@ export function ItineraryView({ itineraryId, routeData }: ItineraryViewProps) {
 
   const { dayStructure, activities, restaurants, accommodations, scenicStops, practicalInfo, weather, events, budget } = itinerary;
 
+  // dayStructure can be EITHER an array OR an object with .days property
+  const daysArray = Array.isArray(dayStructure) ? dayStructure : (Array.isArray(dayStructure?.days) ? dayStructure.days : []);
+
   // Extract city information for TripDurationPanel with SAFE array validation
-  const cities = (Array.isArray(dayStructure) ? dayStructure : []).map((day: any) => ({
+  const cities = daysArray.map((day: any) => ({
     name: day.location,
     nights: day.overnight ? 1 : 0,
     country: '' // TODO: Extract from route data if available
@@ -127,7 +130,7 @@ export function ItineraryView({ itineraryId, routeData }: ItineraryViewProps) {
     };
   };
 
-  const totalDays = Array.isArray(dayStructure) ? dayStructure.length : 0;
+  const totalDays = daysArray.length;
   const totalNights = cities.reduce((sum: number, city: any) => sum + city.nights, 0);
 
   // Calculate TOTAL counts (activities/restaurants are nested by day)
@@ -217,7 +220,7 @@ export function ItineraryView({ itineraryId, routeData }: ItineraryViewProps) {
 
           {/* Day Cards */}
           <div className="space-y-6">
-            {(Array.isArray(dayStructure) && dayStructure.length > 0) && (Array.isArray(dayStructure) ? dayStructure : []).map((day: any) => {
+            {daysArray.map((day: any) => {
               const dayData = getDayData(day.day);
               return (
                 <DayCardV2
@@ -238,7 +241,7 @@ export function ItineraryView({ itineraryId, routeData }: ItineraryViewProps) {
           </div>
 
           {/* Empty State */}
-          {(!dayStructure || dayStructure.length === 0) && (
+          {daysArray.length === 0 && (
             <div className="text-center py-12">
               <p className="text-gray-600">No itinerary data available.</p>
             </div>
