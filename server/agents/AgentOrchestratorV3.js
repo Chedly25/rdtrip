@@ -329,7 +329,7 @@ class AgentOrchestratorV3 extends EventEmitter {
       if (day.activityWindows && day.activityWindows.length > 0) {
         for (const window of day.activityWindows) {
           try {
-            const coordinates = this.getCityCoordinates(city);
+            const coordinates = await this.getCityCoordinates(city);
             const request = {
               city: { name: city, coordinates },
               category: window.purpose || 'general',
@@ -397,7 +397,7 @@ class AgentOrchestratorV3 extends EventEmitter {
       const meals = ['breakfast', 'lunch', 'dinner'];
       for (const meal of meals) {
         try {
-          const coordinates = this.getCityCoordinates(city);
+          const coordinates = await this.getCityCoordinates(city);
           const request = {
             city: { name: city, coordinates },
             mealType: meal,
@@ -454,7 +454,7 @@ class AgentOrchestratorV3 extends EventEmitter {
     const accommodationPromises = overnightDays.map(async (day) => {
       try {
         const city = day.overnight;
-        const coordinates = this.getCityCoordinates(city);
+        const coordinates = await this.getCityCoordinates(city);
         const request = {
           city: { name: city, coordinates },
           date: day.date,
@@ -530,15 +530,52 @@ class AgentOrchestratorV3 extends EventEmitter {
   }
 
   /**
-   * Get coordinates for a city by name (fuzzy matching)
+   * Geocode a city name using Google Geocoding API
    */
-  getCityCoordinates(cityName) {
+  async geocodeCity(cityName) {
+    const axios = require('axios');
+    const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+
+    if (!apiKey) {
+      throw new Error('Google API key not configured');
+    }
+
+    const url = 'https://maps.googleapis.com/maps/api/geocode/json';
+    const params = {
+      address: `${cityName}, Europe`,  // Add "Europe" to bias results
+      key: apiKey
+    };
+
+    const response = await axios.get(url, { params, timeout: 5000 });
+
+    if (response.data.status !== 'OK' || !response.data.results || response.data.results.length === 0) {
+      throw new Error(`Geocoding failed: ${response.data.status}`);
+    }
+
+    const location = response.data.results[0].geometry.location;
+    console.log(`   ✅ Geocoded "${cityName}" → (${location.lat}, ${location.lng})`);
+
+    return {
+      lat: location.lat,
+      lng: location.lng
+    };
+  }
+
+  /**
+   * Get coordinates for a city by name (dynamic geocoding)
+   */
+  async getCityCoordinates(cityName) {
     if (!cityName) {
       console.warn('⚠️  getCityCoordinates called with empty city name');
       return { lat: 0, lng: 0 };
     }
 
     const normalizedQuery = cityName.toLowerCase().trim();
+
+    // Check cache first
+    if (this.geocodeCache && this.geocodeCache[normalizedQuery]) {
+      return this.geocodeCache[normalizedQuery];
+    }
 
     // Exact match in waypoint map
     if (this.cityCoordinates[normalizedQuery]) {
@@ -553,7 +590,22 @@ class AgentOrchestratorV3 extends EventEmitter {
       }
     }
 
-    // Fallback: Major European cities database
+    // Use Google Geocoding API for ANY city not in waypoints
+    try {
+      console.log(`   🌍 Geocoding "${cityName}" with Google API...`);
+      const coords = await this.geocodeCity(cityName);
+
+      // Cache the result
+      if (!this.geocodeCache) this.geocodeCache = {};
+      this.geocodeCache[normalizedQuery] = coords;
+
+      return coords;
+    } catch (error) {
+      console.warn(`   ❌ Geocoding failed for "${cityName}":`, error.message);
+      // Still try static fallback as last resort
+    }
+
+    // Fallback: Major European cities database (last resort)
     const europeanCities = {
       'paris': { lat: 48.8566, lng: 2.3522 },
       'london': { lat: 51.5074, lng: -0.1278 },
