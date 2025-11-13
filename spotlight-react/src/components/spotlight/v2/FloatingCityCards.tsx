@@ -1,8 +1,9 @@
 import { motion } from 'framer-motion';
 import { useSpotlightStoreV2 } from '../../../stores/spotlightStoreV2';
 import { MapPin, Moon, Plus, GripVertical } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import AddCityLandmarkModal from './AddCityLandmarkModal';
+import { fetchCityImageCached } from '../../../services/wikipedia';
 import {
   DndContext,
   closestCenter,
@@ -44,6 +45,8 @@ const SortableCityCard = ({
   cityName,
   onCityClick
 }: SortableCityCardProps) => {
+  const [cityImage, setCityImage] = useState<string | null>(null);
+
   const {
     attributes,
     listeners,
@@ -52,6 +55,15 @@ const SortableCityCard = ({
     transition,
     isDragging
   } = useSortable({ id: `city-${index}` });
+
+  // Fetch Wikipedia image for the city
+  useEffect(() => {
+    const loadImage = async () => {
+      const imageUrl = await fetchCityImageCached(cityName);
+      setCityImage(imageUrl);
+    };
+    loadImage();
+  }, [cityName]);
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -67,14 +79,11 @@ const SortableCityCard = ({
       transition={{ delay: index * 0.05 }}
       className={`flex-shrink-0 w-64 p-4 rounded-xl cursor-pointer transition-all duration-300 ${
         isSelected
-          ? 'ring-2 shadow-lg scale-105'
-          : 'hover:bg-white/5'
+          ? 'ring-2 shadow-lg scale-105 bg-white'
+          : 'bg-white/80 hover:bg-white hover:shadow-md'
       } ${isDragging ? 'shadow-2xl' : ''}`}
       style={{
         ...style,
-        background: isSelected
-          ? `linear-gradient(135deg, ${agentColors.primary}40, ${agentColors.secondary}40)`
-          : 'transparent',
         ...(isSelected ? { '--tw-ring-color': agentColors.accent } as any : {})
       }}
     >
@@ -82,15 +91,30 @@ const SortableCityCard = ({
       <div
         {...attributes}
         {...listeners}
-        className="absolute top-2 left-2 cursor-grab active:cursor-grabbing p-1 rounded hover:bg-white/10 transition-colors"
+        className="absolute top-2 left-2 z-10 cursor-grab active:cursor-grabbing p-1 rounded bg-white/80 hover:bg-white transition-colors shadow-sm"
         onClick={(e) => e.stopPropagation()}
       >
-        <GripVertical className="w-4 h-4 text-gray-400" />
+        <GripVertical className="w-4 h-4 text-gray-600" />
       </div>
 
       <div onClick={onCityClick}>
+        {/* City Image */}
+        {cityImage && (
+          <div className="w-full h-32 mb-3 rounded-lg overflow-hidden bg-gray-100">
+            <img
+              src={cityImage}
+              alt={cityName}
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                // Hide image if it fails to load
+                (e.target as HTMLImageElement).style.display = 'none';
+              }}
+            />
+          </div>
+        )}
+
         {/* City header */}
-        <div className="flex items-center justify-between mb-3 pl-6">
+        <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <div
               className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm"
@@ -100,12 +124,12 @@ const SortableCityCard = ({
             >
               {index + 1}
             </div>
-            <h3 className="text-white font-semibold text-lg">{cityName}</h3>
+            <h3 className="text-gray-900 font-semibold text-lg">{cityName}</h3>
           </div>
         </div>
 
         {/* City info */}
-        <div className="flex items-center gap-4 text-sm text-gray-300 pl-6">
+        <div className="flex items-center gap-4 text-sm text-gray-600">
           <div className="flex items-center gap-1">
             <Moon className="w-4 h-4" />
             <span>{city.nights} {city.nights === 1 ? 'night' : 'nights'}</span>
@@ -124,9 +148,9 @@ const SortableCityCard = ({
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="mt-3 pt-3 border-t border-white/10 pl-6"
+            className="mt-3 pt-3 border-t border-gray-200"
           >
-            <p className="text-gray-400 text-xs">Click to view details</p>
+            <p className="text-gray-500 text-xs">Click to view details</p>
           </motion.div>
         )}
       </div>
@@ -237,9 +261,9 @@ const FloatingCityCards = () => {
           className="relative"
         >
           {/* Glass morphism container */}
-          <div className="bg-slate-900/60 backdrop-blur-xl rounded-2xl border border-white/10 p-6 shadow-2xl">
+          <div className="bg-white/90 backdrop-blur-xl rounded-2xl border border-gray-200 p-6 shadow-xl">
             {/* Info text */}
-            <p className="text-gray-400 text-xs mb-4 flex items-center gap-2">
+            <p className="text-gray-600 text-xs mb-4 flex items-center gap-2">
               <GripVertical className="w-3 h-3" />
               Drag cards to reorder cities
             </p>
@@ -280,11 +304,7 @@ const FloatingCityCards = () => {
               <DragOverlay>
                 {activeId && activeCity && activeCityIndex !== null ? (
                   <div
-                    className="w-64 p-4 rounded-xl shadow-2xl cursor-grabbing"
-                    style={{
-                      background: `linear-gradient(135deg, ${agentColors.primary}60, ${agentColors.secondary}60)`,
-                      backdropFilter: 'blur(12px)'
-                    }}
+                    className="w-64 p-4 rounded-xl shadow-2xl cursor-grabbing bg-white"
                   >
                     <div className="flex items-center gap-2">
                       <div
@@ -295,7 +315,7 @@ const FloatingCityCards = () => {
                       >
                         {activeCityIndex + 1}
                       </div>
-                      <h3 className="text-white font-semibold text-lg">
+                      <h3 className="text-gray-900 font-semibold text-lg">
                         {getCityName(activeCity.city)}
                       </h3>
                     </div>

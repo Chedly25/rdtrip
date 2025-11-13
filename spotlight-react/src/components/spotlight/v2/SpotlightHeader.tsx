@@ -67,25 +67,25 @@ const SpotlightHeader = () => {
       initial={{ y: -100, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.3 }}
-      className="absolute top-0 left-0 right-0 z-50 bg-slate-900/80 backdrop-blur-md border-b border-white/10"
+      className="absolute top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm"
     >
       <div className="max-w-screen-2xl mx-auto px-6 py-4 flex items-center justify-between">
         {/* Left: Back button and route info */}
         <div className="flex items-center gap-4">
           <button
             onClick={() => navigate('/')}
-            className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-white transition-colors"
+            className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors"
             aria-label="Back to home"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
 
           <div>
-            <h1 className="text-lg font-semibold text-white flex items-center gap-2">
+            <h1 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
               <MapPin className="w-5 h-5" style={{ color: agentColors.accent }} />
               {originName} → {destinationName}
             </h1>
-            <p className="text-sm text-gray-400">
+            <p className="text-sm text-gray-600">
               {route.cities.length} {route.cities.length === 1 ? 'city' : 'cities'} •{' '}
               {route.landmarks.length} {route.landmarks.length === 1 ? 'landmark' : 'landmarks'}
             </p>
@@ -97,7 +97,7 @@ const SpotlightHeader = () => {
           {/* Google Maps Export */}
           <button
             onClick={handleExportGoogleMaps}
-            className="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-white transition-colors flex items-center gap-2 text-sm"
+            className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors flex items-center gap-2 text-sm"
             title="Open in Google Maps"
           >
             <Navigation className="w-4 h-4" />
@@ -107,7 +107,7 @@ const SpotlightHeader = () => {
           {/* Waze Export */}
           <button
             onClick={handleExportWaze}
-            className="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-white transition-colors flex items-center gap-2 text-sm"
+            className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors flex items-center gap-2 text-sm"
             title="Open in Waze"
           >
             <Navigation className="w-4 h-4" />
@@ -120,7 +120,7 @@ const SpotlightHeader = () => {
           {/* Share Button */}
           <button
             onClick={handleShare}
-            className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-white transition-colors"
+            className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors"
             aria-label="Share route"
           >
             <Share2 className="w-5 h-5" />

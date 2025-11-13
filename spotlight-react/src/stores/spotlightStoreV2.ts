@@ -211,7 +211,24 @@ export const useSpotlightStoreV2 = create<SpotlightStoreV2>((set, get) => ({
 
   getCityCoordinates: (city) => {
     if (typeof city === 'string') return null;
-    return city?.coordinates || null;
+
+    const coords = city?.coordinates;
+    if (!coords) return null;
+
+    // If coordinates is an array [lat, lng]
+    if (Array.isArray(coords)) {
+      return {
+        lat: typeof coords[0] === 'number' ? coords[0] : 0,
+        lng: typeof coords[1] === 'number' ? coords[1] : 0
+      };
+    }
+
+    // If coordinates is already an object {lat, lng}
+    if (typeof coords === 'object' && 'lat' in coords && 'lng' in coords) {
+      return coords;
+    }
+
+    return null;
   },
 
   getAgentColors: () => {
