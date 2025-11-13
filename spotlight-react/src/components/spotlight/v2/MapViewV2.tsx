@@ -169,6 +169,13 @@ const MapViewV2 = () => {
       // Use top-level coordinates directly
       const coords = city.coordinates;
       console.log(`  → Using coords:`, coords);
+      console.log(`  → coords type check:`, {
+        isArray: Array.isArray(coords),
+        hasLat: coords && 'lat' in coords,
+        hasLng: coords && 'lng' in coords,
+        latValue: coords?.lat,
+        lngValue: coords?.lng
+      });
       if (!coords) {
         console.warn(`  ⚠️ No coordinates for city ${index}`);
         return;
@@ -176,7 +183,13 @@ const MapViewV2 = () => {
 
       const cityName = getCityName(city.city);
       const markerId = `city-${index}`;
-      console.log(`  📍 Placing marker at [${coords.lng}, ${coords.lat}]`);
+      console.log(`  📍 Placing marker at [lng=${coords.lng}, lat=${coords.lat}]`);
+      console.log(`  📍 Geographic check: ${cityName} should be at latitude ${coords.lat}° (positive = north of equator)`);
+      console.log(`  📍 Geographic check: ${cityName} should be at longitude ${coords.lng}° (negative = west, positive = east)`);
+
+      // VERIFY: Mapbox uses [lng, lat] format, not [lat, lng]
+      const mapboxCoords: [number, number] = [coords.lng, coords.lat];
+      console.log(`  📍 Final Mapbox coords for ${cityName}: [${mapboxCoords[0]}, ${mapboxCoords[1]}]`);
 
       // Create a div for the marker
       const el = document.createElement('div');
@@ -200,7 +213,7 @@ const MapViewV2 = () => {
         element: el,
         anchor: 'bottom'
       })
-        .setLngLat([coords.lng, coords.lat])
+        .setLngLat(mapboxCoords)
         .addTo(map.current!);
 
       markersRef.current.push(marker);
