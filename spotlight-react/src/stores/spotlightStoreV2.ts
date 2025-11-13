@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { Landmark } from '../services/landmarks';
 
 // Agent theme colors (NO VIOLET!)
 export const AGENT_COLORS = {
@@ -87,6 +88,7 @@ interface SpotlightStoreV2 {
   setRoute: (route: SpotlightRoute) => void;
   updateCities: (cities: CityData[]) => void;
   addLandmark: (landmark: LandmarkStop) => void;
+  addLandmarkToRoute: (landmark: Landmark) => Promise<void>;
   removeLandmark: (landmarkId: string) => void;
   updateLandmark: (landmarkId: string, updates: Partial<LandmarkStop>) => void;
   reorderCities: (oldIndex: number, newIndex: number) => void;
@@ -136,6 +138,84 @@ export const useSpotlightStoreV2 = create<SpotlightStoreV2>((set, get) => ({
       ? { ...state.route, landmarks: [...state.route.landmarks, landmark] }
       : null
   })),
+
+  addLandmarkToRoute: async (landmark) => {
+    const state = get();
+    if (!state.route) return;
+
+    set({ isCalculatingDetour: true });
+
+    try {
+      // Find optimal insertion point (between which two cities)
+      const cities = state.route.cities;
+      let bestInsertIndex = 0;
+      let minDetour = Infinity;
+
+      // Helper function to calculate Haversine distance
+      const calculateDistance = (coord1: CityCoordinates, coord2: CityCoordinates): number => {
+        const R = 6371; // Earth's radius in km
+        const dLat = (coord2.lat - coord1.lat) * Math.PI / 180;
+        const dLng = (coord2.lng - coord1.lng) * Math.PI / 180;
+        const a =
+          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+          Math.cos(coord1.lat * Math.PI / 180) *
+          Math.cos(coord2.lat * Math.PI / 180) *
+          Math.sin(dLng / 2) * Math.sin(dLng / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+      };
+
+      // Calculate detour for each possible insertion point
+      for (let i = 0; i < cities.length - 1; i++) {
+        const city1 = cities[i].coordinates;
+        const city2 = cities[i + 1].coordinates;
+        const landmarkCoords = { lat: landmark.lat, lng: landmark.lng };
+
+        // Calculate direct distance between cities
+        const directDistance = calculateDistance(city1, city2);
+
+        // Calculate detour: city1 -> landmark -> city2
+        const detourDistance =
+          calculateDistance(city1, landmarkCoords) +
+          calculateDistance(landmarkCoords, city2);
+
+        const detourKm = detourDistance - directDistance;
+
+        if (detourKm < minDetour) {
+          minDetour = detourKm;
+          bestInsertIndex = i;
+        }
+      }
+
+      // Create landmark stop with detour info
+      const landmarkStop: LandmarkStop = {
+        id: `landmark-${Date.now()}`,
+        name: landmark.name,
+        coordinates: { lat: landmark.lat, lng: landmark.lng },
+        description: landmark.description,
+        detourKm: minDetour,
+        detourMinutes: Math.round(minDetour / 80 * 60), // Assume 80 km/h average
+        insertAfterCityIndex: bestInsertIndex
+      };
+
+      // Add landmark to route
+      set((state) => ({
+        route: state.route
+          ? { ...state.route, landmarks: [...state.route.landmarks, landmarkStop] }
+          : null
+      }));
+
+      // TODO: Call backend API to recalculate route with landmark
+      // For now, we just add it to the store
+      console.log(`✅ Added ${landmark.name} to route (${minDetour.toFixed(1)} km detour)`);
+
+    } catch (error) {
+      console.error('Failed to add landmark to route:', error);
+      throw error;
+    } finally {
+      set({ isCalculatingDetour: false });
+    }
+  },
 
   removeLandmark: (landmarkId) => set((state) => ({
     route: state.route

@@ -2,8 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { useSpotlightStoreV2 } from '../../../stores/spotlightStoreV2';
 import { fetchMapboxRoute, formatDistance, formatDuration } from '../../../services/mapboxRoutes';
+import { fetchLandmarksInRegion, calculateBoundingBox, getLandmarkImagePath, type Landmark } from '../../../services/landmarks';
 import CityMarker from './CityMarker';
 import LandmarkMarker from './LandmarkMarker';
+import LandmarkDetailsModal from './LandmarkDetailsModal';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
@@ -16,6 +18,8 @@ const MapViewV2 = () => {
   const markersRef = useRef<mapboxgl.Marker[]>([]);
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [hoveredMarkerId, setHoveredMarkerId] = useState<string | null>(null);
+  const [nearbyLandmarks, setNearbyLandmarks] = useState<Landmark[]>([]);
+  const [selectedLandmark, setSelectedLandmark] = useState<Landmark | null>(null);
 
   const {
     route,
@@ -78,12 +82,36 @@ const MapViewV2 = () => {
     };
   }, []);
 
+  // Fetch nearby landmarks when route changes
+  useEffect(() => {
+    if (!route) return;
+
+    const fetchLandmarks = async () => {
+      // Get all city coordinates
+      const cityCoords = route.cities
+        .map(city => city.coordinates)
+        .filter((coord): coord is { lat: number; lng: number } => coord !== null);
+
+      if (cityCoords.length === 0) return;
+
+      // Calculate bounding box with 30% padding
+      const bounds = calculateBoundingBox(cityCoords, 30);
+
+      // Fetch landmarks in the region
+      const landmarks = await fetchLandmarksInRegion(bounds);
+      console.log(`🏛️ Loaded ${landmarks.length} nearby landmarks`);
+      setNearbyLandmarks(landmarks);
+    };
+
+    fetchLandmarks();
+  }, [route]);
+
   // Render route and markers when data changes
   useEffect(() => {
     if (!map.current || !isMapLoaded || !route) return;
 
     renderRouteAndMarkers();
-  }, [isMapLoaded, route, selectedCityIndex, agentColors]); // Keep selectedCityIndex for selection updates, removed hoveredMarkerId to reduce re-renders
+  }, [isMapLoaded, route, selectedCityIndex, agentColors, nearbyLandmarks]); // Added nearbyLandmarks to re-render when landmarks load
 
   const renderRouteAndMarkers = async () => {
     if (!map.current || !route) return;
@@ -219,18 +247,14 @@ const MapViewV2 = () => {
       markersRef.current.push(marker);
     });
 
-    // Add landmark markers
+    // Add markers for landmarks already added to route (with remove button)
     route.landmarks.forEach((landmark, index) => {
-      const markerId = `landmark-${index}`;
+      const markerId = `route-landmark-${index}`;
+      const landmarkImagePath = getLandmarkImagePath(landmark.name);
 
-      // Try to find matching landmark image
-      const landmarkImagePath = getLandmarkImage(landmark.name);
-
-      // Create a div for the marker
       const el = document.createElement('div');
       const root = createRoot(el);
 
-      // Render LandmarkMarker component
       root.render(
         <LandmarkMarker
           landmarkName={landmark.name}
@@ -243,8 +267,7 @@ const MapViewV2 = () => {
           }
           agentColors={agentColors}
           onClick={() => {
-            // TODO: Show landmark details modal
-            console.log('Clicked landmark:', landmark.name);
+            console.log('Clicked route landmark:', landmark.name);
           }}
           onRemove={() => removeLandmark(landmark.id)}
           onMouseEnter={() => setHoveredMarkerId(markerId)}
@@ -257,6 +280,43 @@ const MapViewV2 = () => {
         anchor: 'bottom'
       })
         .setLngLat([landmark.coordinates.lng, landmark.coordinates.lat])
+        .addTo(map.current!);
+
+      markersRef.current.push(marker);
+    });
+
+    // Add markers for nearby landmarks (clickable to view details and add to route)
+    nearbyLandmarks.forEach((landmark, index) => {
+      // Don't show landmarks already in route
+      const isInRoute = route.landmarks.some(rl => rl.name === landmark.name);
+      if (isInRoute) return;
+
+      const markerId = `nearby-landmark-${index}`;
+      const landmarkImagePath = getLandmarkImagePath(landmark.name);
+
+      const el = document.createElement('div');
+      const root = createRoot(el);
+
+      root.render(
+        <LandmarkMarker
+          landmarkName={landmark.name}
+          landmarkImage={landmarkImagePath}
+          isHovered={hoveredMarkerId === markerId}
+          agentColors={agentColors}
+          onClick={() => {
+            console.log('Clicked nearby landmark:', landmark.name);
+            setSelectedLandmark(landmark);
+          }}
+          onMouseEnter={() => setHoveredMarkerId(markerId)}
+          onMouseLeave={() => setHoveredMarkerId(null)}
+        />
+      );
+
+      const marker = new mapboxgl.Marker({
+        element: el,
+        anchor: 'bottom'
+      })
+        .setLngLat([landmark.lng, landmark.lat])
         .addTo(map.current!);
 
       markersRef.current.push(marker);
@@ -284,60 +344,6 @@ const MapViewV2 = () => {
     }
   };
 
-  // Helper to get landmark image path
-  const getLandmarkImage = (landmarkName: string): string | undefined => {
-    // Map landmark names to image filenames
-    const landmarkMap: Record<string, string> = {
-      'Eiffel Tower': '/images/landmarks/eiffel_tower.png',
-      'Colosseum': '/images/landmarks/colosseum.png',
-      'Big Ben': '/images/landmarks/big_ben.png',
-      'Sagrada Familia': '/images/landmarks/sagrada_familia.png',
-      'Arc de Triomphe': '/images/landmarks/arc_de_triomphe.png',
-      'Notre Dame': '/images/landmarks/notre_dame.png',
-      'Acropolis': '/images/landmarks/acropolis_athens.png',
-      'Parthenon': '/images/landmarks/parthenon.png',
-      'Leaning Tower of Pisa': '/images/landmarks/pisa.png',
-      'Trevi Fountain': '/images/landmarks/trevi_fountain.png',
-      'Brandenburg Gate': '/images/landmarks/brandenburg_gate.png',
-      'Neuschwanstein Castle': '/images/landmarks/neuschwanstein_castle.png',
-      'Stonehenge': '/images/landmarks/stonehenge.png',
-      'Tower Bridge': '/images/landmarks/tower_bridge.png',
-      'Edinburgh Castle': '/images/landmarks/edinburgh_castle.png',
-      'Mont Saint-Michel': '/images/landmarks/mont_saint_michel.png',
-      'Versailles': '/images/landmarks/versailles.png',
-      'Charles Bridge': '/images/landmarks/charles_bridge_prague.png',
-      'St. Peter\'s Basilica': '/images/landmarks/st_peter.png',
-      'Alhambra': '/images/landmarks/alhambra_granada.png',
-      'Atomium': '/images/landmarks/atomium_brussels.png',
-      'Cologne Cathedral': '/images/landmarks/cologne_cathedral.png',
-      'Duomo di Milano': '/images/landmarks/duomo_milano.png',
-      'Cliffs of Moher': '/images/landmarks/cliffs_of_moher.png',
-      'Geirangerfjord': '/images/landmarks/geirangerfjord_norway.png',
-      'Hallstatt': '/images/landmarks/hallstatt_village_austria.png',
-      'Kinderdijk Windmills': '/images/landmarks/kinderdijk_windmills.png',
-      'Little Mermaid': '/images/landmarks/little_mermaid_copenhagen.png',
-      'Matterhorn': '/images/landmarks/matterhorn.png',
-      'Pena Palace': '/images/landmarks/pena_palace.png',
-      'Jerónimos Monastery': '/images/landmarks/jeronimo-monestary.png',
-      'Schönbrunn Palace': '/images/landmarks/schonnbrun_vienna.png',
-      'St. Basil\'s Cathedral': '/images/landmarks/st_basils_moscow.png',
-      'St. Mark\'s Basilica': '/images/landmarks/st_mark_venice.png'
-    };
-
-    // Try exact match first
-    if (landmarkMap[landmarkName]) {
-      return landmarkMap[landmarkName];
-    }
-
-    // Try partial match
-    const partialMatch = Object.keys(landmarkMap).find(key =>
-      landmarkName.toLowerCase().includes(key.toLowerCase()) ||
-      key.toLowerCase().includes(landmarkName.toLowerCase())
-    );
-
-    return partialMatch ? landmarkMap[partialMatch] : undefined;
-  };
-
   if (!MAPBOX_TOKEN) {
     return (
       <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
@@ -354,6 +360,12 @@ const MapViewV2 = () => {
   return (
     <div className="absolute inset-0 z-0">
       <div ref={mapContainer} className="w-full h-full" />
+
+      {/* Landmark Details Modal */}
+      <LandmarkDetailsModal
+        landmark={selectedLandmark}
+        onClose={() => setSelectedLandmark(null)}
+      />
     </div>
   );
 };
