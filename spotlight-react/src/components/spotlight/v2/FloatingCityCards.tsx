@@ -3,7 +3,7 @@ import { useSpotlightStoreV2 } from '../../../stores/spotlightStoreV2';
 import { MapPin, Moon, Plus, GripVertical, Star, X } from 'lucide-react';
 import { useState, useEffect, Fragment } from 'react';
 import AddCityLandmarkModal from './AddCityLandmarkModal';
-import { fetchCityImageCached } from '../../../services/wikipedia';
+import { fetchCityImage } from '../../../services/cityImages';
 import { getLandmarkImagePath } from '../../../services/landmarks';
 import {
   DndContext,
@@ -57,10 +57,10 @@ const SortableCityCard = ({
     isDragging
   } = useSortable({ id: `city-${index}` });
 
-  // Fetch Wikipedia image for the city
+  // Fetch city image with smart fallback (localStorage → Wikipedia → Google Places)
   useEffect(() => {
     const loadImage = async () => {
-      const imageUrl = await fetchCityImageCached(cityName);
+      const imageUrl = await fetchCityImage(cityName);
       setCityImage(imageUrl);
     };
     loadImage();
@@ -173,17 +173,17 @@ interface LandmarkCardProps {
 const LandmarkCard = ({ landmark, agentColors, onRemove }: LandmarkCardProps) => {
   const [landmarkImage, setLandmarkImage] = useState<string | null>(null);
 
-  // Fetch Wikipedia image for the landmark
+  // Fetch landmark image with smart fallback
   useEffect(() => {
     const loadImage = async () => {
-      // First try to fetch from Wikipedia (real photos)
-      const imageUrl = await fetchCityImageCached(landmark.name);
+      // First try smart image service (localStorage → Wikipedia → Google Places)
+      const imageUrl = await fetchCityImage(landmark.name);
       if (imageUrl) {
         setLandmarkImage(imageUrl);
         return;
       }
 
-      // If Wikipedia fails, fall back to local landmark icons
+      // If all APIs fail, fall back to local landmark icons
       const localImagePath = getLandmarkImagePath(landmark.name);
       if (localImagePath) {
         setLandmarkImage(localImagePath);
