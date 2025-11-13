@@ -6,12 +6,14 @@ import MapViewV2 from './MapViewV2';
 import FloatingCityCards from './FloatingCityCards';
 import SpotlightHeader from './SpotlightHeader';
 import { ItineraryPanel } from './ItineraryPanel';
+import { ItineraryView } from '../../itinerary/ItineraryView';
 import { Loader2 } from 'lucide-react';
 
 const SpotlightV2 = () => {
   // Get routeId from query params (?routeId=123) not path params
   const [searchParams] = useSearchParams();
   const routeId = searchParams.get('routeId');
+  const itineraryId = searchParams.get('itinerary');
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -379,6 +381,11 @@ const SpotlightV2 = () => {
         </motion.div>
       </div>
     );
+  }
+
+  // If itinerary param exists, show ItineraryView instead of normal spotlight
+  if (itineraryId) {
+    return <ItineraryView itineraryId={itineraryId} routeData={route} />;
   }
 
   if (!route) {
