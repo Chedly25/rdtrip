@@ -4,6 +4,7 @@ import SpotlightV2 from './components/spotlight/v2/SpotlightV2'
 import { ItineraryGenerationPage } from './components/itinerary/ItineraryGenerationPage'
 import { AgentProvider } from './contexts/AgentProvider'
 import { AgentChatBubble } from './components/agent/AgentChatBubble'
+import { AgentModal } from './components/agent/AgentModal'
 
 // Create a client
 const queryClient = new QueryClient({
@@ -27,6 +28,7 @@ function App() {
 
           {/* AI Agent - Available everywhere */}
           <AgentChatBubble />
+          <AgentModal />
         </AgentProvider>
       </Router>
     </QueryClientProvider>
