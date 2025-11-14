@@ -4158,6 +4158,12 @@ app.post('/api/agent/query', optionalAuth, async (req, res) => {
     res.setHeader('Connection', 'keep-alive');
     res.setHeader('X-Accel-Buffering', 'no'); // Disable buffering on Nginx
 
+    // Disable any socket timeout to keep connection alive
+    if (req.socket) {
+      req.socket.setTimeout(0);
+      console.log('📡 [BACKEND] Socket timeout disabled');
+    }
+
     // Flush headers immediately to establish SSE connection
     res.flushHeaders();
 
@@ -4169,15 +4175,44 @@ app.post('/api/agent/query', optionalAuth, async (req, res) => {
     if (typeof res.flush === 'function') res.flush();
     console.log('📤 [BACKEND] Sent and flushed "connected" event');
 
-    // Handle client disconnect
+    // Track if client is still connected
+    let clientConnected = true;
+
+    // Keep connection alive with heartbeat
+    let heartbeatInterval = setInterval(() => {
+      if (!clientConnected) {
+        clearInterval(heartbeatInterval);
+        return;
+      }
+      try {
+        // Send SSE comment to keep connection alive
+        res.write(': heartbeat\n\n');
+        if (typeof res.flush === 'function') res.flush();
+        console.log('💓 [BACKEND] Sent heartbeat');
+      } catch (error) {
+        console.log('❌ [BACKEND] Heartbeat failed, clearing interval');
+        clientConnected = false;
+        clearInterval(heartbeatInterval);
+      }
+    }, 15000); // Every 15 seconds
+
+    // Handle client disconnect - DON'T end response yet, let orchestrator finish
     req.on('close', () => {
       console.log('🔌 [BACKEND] Client disconnected from agent stream');
-      res.end();
+      clientConnected = false;
+      clearInterval(heartbeatInterval);
+      // Don't call res.end() here - let the orchestrator finish naturally
     });
 
     // Stream handler - send tokens to client in real-time
     let streamEventCount = 0;
     const streamHandler = (event) => {
+      // Skip if client already disconnected
+      if (!clientConnected) {
+        console.log(`⏭️  [BACKEND] Skipping event #${streamEventCount + 1} (client disconnected):`, event.type);
+        return;
+      }
+
       try {
         streamEventCount++;
         console.log(`📤 [BACKEND] Streaming event #${streamEventCount}:`, event.type);
@@ -4186,6 +4221,7 @@ app.post('/api/agent/query', optionalAuth, async (req, res) => {
         if (typeof res.flush === 'function') res.flush();
       } catch (error) {
         console.error('❌ [BACKEND] Error writing to stream:', error.message);
+        clientConnected = false; // Mark as disconnected on write error
       }
     };
 
