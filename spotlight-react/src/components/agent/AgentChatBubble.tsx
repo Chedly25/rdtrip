@@ -13,6 +13,7 @@ import { WeatherCard } from './WeatherCard';
 import { ActivityGrid } from './ActivityCard';
 import { DirectionsCard } from './DirectionsCard';
 import { CityInfoCard } from './CityInfoCard';
+import { WebSearchCard } from './WebSearchCard';
 import { ToolExecutionStatus } from './ToolExecutionStatus';
 
 export function AgentChatBubble() {
@@ -145,6 +146,11 @@ export function AgentChatBubble() {
         // Check for getCityInfo tool
         if (toolResult.name === 'getCityInfo' && result.success) {
           return <div key={index} className="mt-4"><CityInfoCard data={result} /></div>;
+        }
+
+        // Check for webSearch tool
+        if (toolResult.name === 'webSearch') {
+          return <div key={index} className="mt-4"><WebSearchCard data={result} /></div>;
         }
 
         return null;

@@ -4,15 +4,39 @@
  * Displays navigation directions with distance, duration, and mode
  */
 
-import { Navigation, Clock, MapPin, Car, } from 'lucide-react';
+import { Navigation, Clock, MapPin, Car, AlertTriangle } from 'lucide-react';
+
+interface RouteDetails {
+  distance: {
+    text: string;
+    meters: number;
+    km: number;
+  };
+  duration: {
+    text: string;
+    seconds: number;
+    hours: number;
+  };
+  startAddress: string;
+  endAddress: string;
+  overview: string;
+  warnings?: string[];
+}
 
 interface DirectionsData {
+  success: boolean;
   from: string;
   to: string;
-  distance: number; // in km
-  duration: number; // in minutes
-  mode: 'driving' | 'walking' | 'cycling' | 'transit';
+  mode: string;
+  primaryRoute: RouteDetails;
+  alternatives?: Array<{
+    distance: { text: string; km: number };
+    duration: { text: string; hours: number };
+    overview: string;
+  }>;
+  totalRoutes?: number;
   summary?: string;
+  error?: string;
 }
 
 interface DirectionsCardProps {
@@ -20,7 +44,23 @@ interface DirectionsCardProps {
 }
 
 export function DirectionsCard({ data }: DirectionsCardProps) {
-  const { from, to, distance, duration, mode, summary } = data;
+  if (!data.success) {
+    return (
+      <div className="bg-red-50 border-2 border-red-200 rounded-2xl p-6 max-w-md">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+            <Navigation className="w-5 h-5 text-red-600" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-gray-900">Directions Failed</h3>
+            <p className="text-sm text-red-600">{data.error || 'Unknown error'}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const { from, to, mode, primaryRoute, alternatives = [] } = data;
 
   return (
     <div className="bg-white border-2 border-gray-200 rounded-2xl p-6 max-w-md">
@@ -76,7 +116,7 @@ export function DirectionsCard({ data }: DirectionsCardProps) {
             <span className="text-xs">Distance</span>
           </div>
           <div className="text-sm font-semibold text-gray-900">
-            {distance < 1 ? `${Math.round(distance * 1000)}m` : `${distance.toFixed(1)} km`}
+            {primaryRoute.distance.text}
           </div>
         </div>
 
@@ -86,15 +126,46 @@ export function DirectionsCard({ data }: DirectionsCardProps) {
             <span className="text-xs">Duration</span>
           </div>
           <div className="text-sm font-semibold text-gray-900">
-            {duration < 60 ? `${duration} min` : `${Math.round(duration / 60)}h ${duration % 60}min`}
+            {primaryRoute.duration.text}
           </div>
         </div>
       </div>
 
-      {/* Summary/Notes */}
-      {summary && (
-        <div className="text-sm text-gray-600 bg-blue-50 p-4 rounded-xl">
-          {summary}
+      {/* Route Overview */}
+      {primaryRoute.overview && (
+        <div className="mb-4 p-3 bg-teal-50 rounded-xl">
+          <p className="text-xs font-semibold text-teal-700 mb-1">Recommended Route</p>
+          <p className="text-sm text-gray-700">{primaryRoute.overview}</p>
+        </div>
+      )}
+
+      {/* Warnings */}
+      {primaryRoute.warnings && primaryRoute.warnings.length > 0 && (
+        <div className="mb-4 p-3 bg-yellow-50 rounded-xl border border-yellow-200">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="w-4 h-4 text-yellow-600 mt-0.5" />
+            <div>
+              <p className="text-xs font-semibold text-yellow-700 mb-1">Warnings</p>
+              {primaryRoute.warnings.map((warning, index) => (
+                <p key={index} className="text-sm text-gray-700">{warning}</p>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Alternative Routes */}
+      {alternatives.length > 0 && (
+        <div className="mb-4 p-3 bg-gray-50 rounded-xl">
+          <p className="text-xs font-semibold text-gray-700 mb-2">Alternative Routes</p>
+          <div className="space-y-2">
+            {alternatives.map((alt, index) => (
+              <div key={index} className="flex items-center justify-between text-sm">
+                <span className="text-gray-700">{alt.overview}</span>
+                <span className="text-gray-600">{alt.distance.text} • {alt.duration.text}</span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
