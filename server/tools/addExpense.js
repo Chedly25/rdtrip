@@ -5,7 +5,7 @@
  * Integrates with the expense tracking system.
  */
 
-const db = require('../db');
+const db = require('../../db');
 
 /**
  * @param {Object} args
