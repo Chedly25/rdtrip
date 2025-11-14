@@ -196,7 +196,7 @@ class AgentOrchestrator {
 
       // Execute tool calls
       console.log(`   🔧 Executing ${toolUses.length} tool call(s)...`);
-      const toolResults = await this.executeTools(toolUses, context);
+      const toolResults = await this.executeTools(toolUses, context, onStream);
 
       allToolCalls.push(...toolUses);
       allToolResults.push(...toolResults);
@@ -252,18 +252,41 @@ class AgentOrchestrator {
   }
 
   /**
-   * Execute tool calls in parallel
+   * Execute tool calls in parallel with real-time streaming
    */
-  async executeTools(toolUses, context) {
+  async executeTools(toolUses, context, onStream) {
     const results = await Promise.all(
       toolUses.map(async (use) => {
         try {
           console.log(`      → ${use.name}(...)`);
 
+          // Stream tool_start event
+          if (onStream) {
+            onStream({
+              type: 'tool_start',
+              tool: {
+                name: use.name,
+                input: use.input
+              }
+            });
+          }
+
           const tool = this.toolRegistry.getTool(use.name);
           const result = await tool.execute(use.input, context);
 
           console.log(`      ✅ ${use.name} completed`);
+
+          // Stream tool_complete event
+          if (onStream) {
+            onStream({
+              type: 'tool_complete',
+              tool: {
+                name: use.name,
+                input: use.input,
+                result: result
+              }
+            });
+          }
 
           return {
             tool_use_id: use.id,
@@ -271,6 +294,17 @@ class AgentOrchestrator {
           };
         } catch (error) {
           console.error(`      ❌ ${use.name} failed:`, error.message);
+
+          // Stream tool_error event
+          if (onStream) {
+            onStream({
+              type: 'tool_error',
+              tool: {
+                name: use.name,
+                error: error.message
+              }
+            });
+          }
 
           return {
             tool_use_id: use.id,

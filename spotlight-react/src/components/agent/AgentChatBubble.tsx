@@ -13,6 +13,7 @@ import { WeatherCard } from './WeatherCard';
 import { ActivityGrid } from './ActivityCard';
 import { DirectionsCard } from './DirectionsCard';
 import { CityInfoCard } from './CityInfoCard';
+import { ToolActivityIndicator } from './ToolActivityIndicator';
 
 export function AgentChatBubble() {
   const {
@@ -20,6 +21,7 @@ export function AgentChatBubble() {
     messages,
     isLoading,
     pageContext,
+    activeTools,
     openAgent,
     closeAgent,
     sendMessage,
@@ -326,11 +328,14 @@ export function AgentChatBubble() {
                   animate={{ opacity: 1, y: 0 }}
                   className="flex justify-start"
                 >
-                  <div className="bg-white border-2 border-gray-200 rounded-2xl px-4 py-3 shadow-sm">
+                  <div className="bg-white border-2 border-gray-200 rounded-2xl px-4 py-3 shadow-sm max-w-[85%]">
                     <div className="flex items-center gap-2.5">
                       <Loader className="w-4 h-4 text-teal-600 animate-spin" />
                       <p className="text-sm text-gray-600">Thinking...</p>
                     </div>
+
+                    {/* Tool Activity Indicators */}
+                    <ToolActivityIndicator activeTools={activeTools} />
                   </div>
                 </motion.div>
               )}

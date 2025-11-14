@@ -21,6 +21,12 @@ export interface AgentMessage {
   isStreaming?: boolean;
 }
 
+export interface ActiveTool {
+  name: string;
+  status: 'running' | 'complete' | 'error';
+  input?: any;
+}
+
 export interface RouteContext {
   routeId: string | null;
   origin: string | null;
@@ -43,6 +49,7 @@ export interface AgentContextValue {
   isLoading: boolean;
   sessionId: string;
   pageContext: PageContext;
+  activeTools: ActiveTool[];
 
   // Actions
   openAgent: () => void;
@@ -72,6 +79,7 @@ export function AgentProvider({ children }: AgentProviderProps) {
   const [messages, setMessages] = useState<AgentMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [sessionId] = useState(() => uuidv4()); // Persistent session ID
+  const [activeTools, setActiveTools] = useState<ActiveTool[]>([]);
 
   // Refs
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -149,6 +157,7 @@ export function AgentProvider({ children }: AgentProviderProps) {
 
     setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
+    setActiveTools([]); // Clear active tools from previous request
 
     // Create assistant message placeholder for streaming
     const assistantMessageId = uuidv4();
@@ -232,6 +241,42 @@ export function AgentProvider({ children }: AgentProviderProps) {
                       : msg
                   )
                 );
+              } else if (event.type === 'tool_start') {
+                // Tool started executing
+                console.log('🔧 Tool started:', event.tool.name);
+                setActiveTools(prev => [...prev, {
+                  name: event.tool.name,
+                  status: 'running',
+                  input: event.tool.input
+                }]);
+              } else if (event.type === 'tool_complete') {
+                // Tool completed successfully
+                console.log('✅ Tool completed:', event.tool.name);
+                setActiveTools(prev =>
+                  prev.map(tool =>
+                    tool.name === event.tool.name && tool.status === 'running'
+                      ? { ...tool, status: 'complete' as const }
+                      : tool
+                  )
+                );
+                // Remove completed tool after 1 second
+                setTimeout(() => {
+                  setActiveTools(prev => prev.filter(t => !(t.name === event.tool.name && t.status === 'complete')));
+                }, 1000);
+              } else if (event.type === 'tool_error') {
+                // Tool failed
+                console.error('❌ Tool error:', event.tool.name, event.tool.error);
+                setActiveTools(prev =>
+                  prev.map(tool =>
+                    tool.name === event.tool.name && tool.status === 'running'
+                      ? { ...tool, status: 'error' as const }
+                      : tool
+                  )
+                );
+                // Remove errored tool after 2 seconds
+                setTimeout(() => {
+                  setActiveTools(prev => prev.filter(t => !(t.name === event.tool.name && t.status === 'error')));
+                }, 2000);
               } else if (event.type === 'tool_execution') {
                 // Tool execution results - store them for rich rendering
                 console.log('🔧 Tool execution:', event.tools);
@@ -313,6 +358,7 @@ export function AgentProvider({ children }: AgentProviderProps) {
     isLoading,
     sessionId,
     pageContext,
+    activeTools,
     openAgent,
     closeAgent,
     toggleAgent,
