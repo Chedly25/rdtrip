@@ -738,6 +738,78 @@ router.post('/:itineraryId/items', async (req, res) => {
 });
 
 /**
+ * POST /api/itinerary/:itineraryId/days/:dayNumber/activities
+ * Add activity directly to a specific day
+ */
+router.post('/:itineraryId/days/:dayNumber/activities', async (req, res) => {
+  try {
+    const { itineraryId, dayNumber } = req.params;
+    const { activity, block, userId } = req.body;
+
+    console.log(`➕ Adding activity "${activity.name}" to day ${dayNumber} (${block || 'afternoon'}) of itinerary ${itineraryId}`);
+
+    // Fetch current itinerary
+    const result = await pool.query(
+      'SELECT activities FROM itineraries WHERE id = $1',
+      [itineraryId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Itinerary not found' });
+    }
+
+    // Parse activities (format: [{day: 1, activities: [...]}, {day: 2, activities: [...]}, ...])
+    let activities = result.rows[0].activities || [];
+
+    // Find or create the day object
+    const dayNum = parseInt(dayNumber);
+    let dayObj = activities.find(d => d.day === dayNum);
+
+    if (!dayObj) {
+      // Create new day object if it doesn't exist
+      dayObj = { day: dayNum, activities: [] };
+      activities.push(dayObj);
+      activities.sort((a, b) => a.day - b.day); // Keep sorted by day
+    }
+
+    // Add activity with block tag (morning/afternoon/evening)
+    const activityWithMeta = {
+      ...activity,
+      block: block || 'afternoon', // Default to afternoon if not specified
+      addedAt: new Date().toISOString(),
+      addedBy: userId || 'user'
+    };
+
+    dayObj.activities.push(activityWithMeta);
+
+    // Update database
+    await pool.query(
+      `UPDATE itineraries
+       SET activities = $1,
+           modification_count = COALESCE(modification_count, 0) + 1,
+           last_modified_at = CURRENT_TIMESTAMP,
+           last_modified_by = $2,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $3`,
+      [JSON.stringify(activities), userId || null, itineraryId]
+    );
+
+    console.log(`✅ Activity added successfully to day ${dayNumber}`);
+
+    res.json({
+      success: true,
+      activity: activityWithMeta,
+      day: dayNum,
+      block: activityWithMeta.block
+    });
+
+  } catch (error) {
+    console.error('Add activity to day error:', error);
+    res.status(500).json({ error: 'Failed to add activity to day' });
+  }
+});
+
+/**
  * Background async itinerary generation
  */
 async function generateItineraryAsync(jobId, route_id, routeData, preferences) {

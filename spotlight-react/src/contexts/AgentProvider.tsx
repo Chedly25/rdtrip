@@ -83,6 +83,7 @@ export interface AgentContextValue {
   sessionId: string;
   pageContext: PageContext;
   activeTools: ActiveTool[];
+  itineraryId: string | null;           // Current itinerary ID (from URL params)
 
   // Artifact State
   currentArtifact: Artifact | null;     // Currently displayed artifact
@@ -100,6 +101,9 @@ export interface AgentContextValue {
   setCurrentArtifact: (artifact: Artifact | null) => void;
   clearArtifacts: () => void;
   toggleMinimize: () => void;
+
+  // Itinerary Actions
+  addActivityToDay: (activity: any, dayNumber: number, block?: 'morning' | 'afternoon' | 'evening') => Promise<{ success: boolean; error?: string }>;
 }
 
 // ==================== CONTEXT ====================
@@ -128,6 +132,9 @@ export function AgentProvider({ children }: AgentProviderProps) {
   const [currentArtifact, setCurrentArtifact] = useState<Artifact | null>(null);
   const [artifactHistory, setArtifactHistory] = useState<Artifact[]>([]);
   const [isMinimized, setIsMinimized] = useState(false);
+
+  // Itinerary Context - get from URL params
+  const itineraryId = searchParams.get('itinerary') || null;
 
   // Refs
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -205,6 +212,50 @@ export function AgentProvider({ children }: AgentProviderProps) {
   const toggleMinimize = useCallback(() => {
     setIsMinimized(prev => !prev);
   }, []);
+
+  /**
+   * Add activity to a specific day in the itinerary
+   */
+  const addActivityToDay = useCallback(async (
+    activity: any,
+    dayNumber: number,
+    block: 'morning' | 'afternoon' | 'evening' = 'afternoon'
+  ): Promise<{ success: boolean; error?: string }> => {
+    if (!itineraryId) {
+      console.error('❌ Cannot add activity: No itinerary ID');
+      return { success: false, error: 'No itinerary available' };
+    }
+
+    try {
+      console.log(`➕ Adding "${activity.name}" to day ${dayNumber} (${block}) of itinerary ${itineraryId}`);
+
+      const response = await fetch(`/api/itinerary/${itineraryId}/days/${dayNumber}/activities`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          activity,
+          block,
+          userId: localStorage.getItem('userId') || null
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error('❌ Failed to add activity:', data.error);
+        return { success: false, error: data.error || 'Failed to add activity' };
+      }
+
+      console.log('✅ Activity added successfully');
+      return { success: true };
+
+    } catch (error) {
+      console.error('❌ Error adding activity:', error);
+      return { success: false, error: 'Network error' };
+    }
+  }, [itineraryId]);
 
   /**
    * Detect if tool results contain artifact-worthy data
@@ -586,6 +637,7 @@ export function AgentProvider({ children }: AgentProviderProps) {
     sessionId,
     pageContext,
     activeTools,
+    itineraryId,
 
     // Artifact State
     currentArtifact,
@@ -602,7 +654,10 @@ export function AgentProvider({ children }: AgentProviderProps) {
     // Artifact Actions
     setCurrentArtifact,
     clearArtifacts,
-    toggleMinimize
+    toggleMinimize,
+
+    // Itinerary Actions
+    addActivityToDay
   };
 
   return (
