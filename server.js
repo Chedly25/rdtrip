@@ -4108,6 +4108,166 @@ Provide a helpful, concise response (2-3 paragraphs maximum) that directly addre
   }
 });
 
+// ==================== AI AGENT ENDPOINT ====================
+
+// Initialize Agent Orchestrator
+const AgentOrchestrator = require('./server/services/AgentOrchestrator');
+const agentOrchestrator = new AgentOrchestrator();
+
+/**
+ * POST /api/agent/query
+ * Main endpoint for AI agent queries
+ * Handles streaming responses with Server-Sent Events (SSE)
+ */
+app.post('/api/agent/query', optionalAuth, async (req, res) => {
+  try {
+    const { message, sessionId, pageContext, routeId } = req.body;
+    const userId = req.user?.id || null;
+
+    // Validation
+    if (!message || typeof message !== 'string' || message.trim().length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Message is required and must be a non-empty string'
+      });
+    }
+
+    if (!sessionId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Session ID is required'
+      });
+    }
+
+    console.log(`🤖 Agent query from ${userId || 'anonymous'}: "${message.slice(0, 50)}..."`);
+
+    // Set up Server-Sent Events (SSE) for streaming
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no'); // Disable buffering on Nginx
+
+    // Send initial connection confirmation
+    res.write(`data: ${JSON.stringify({ type: 'connected', timestamp: new Date().toISOString() })}\n\n`);
+
+    // Handle client disconnect
+    req.on('close', () => {
+      console.log('🔌 Client disconnected from agent stream');
+      res.end();
+    });
+
+    // Stream handler - send tokens to client in real-time
+    const streamHandler = (event) => {
+      try {
+        res.write(`data: ${JSON.stringify(event)}\n\n`);
+      } catch (error) {
+        console.error('Error writing to stream:', error.message);
+      }
+    };
+
+    // Call agent orchestrator with streaming
+    const response = await agentOrchestrator.handleQuery({
+      userId: userId,
+      routeId: routeId || null,
+      message: message.trim(),
+      sessionId: sessionId,
+      pageContext: pageContext || 'unknown',
+      onStream: streamHandler
+    });
+
+    // Send final response
+    res.write(`data: ${JSON.stringify({
+      type: 'complete',
+      content: response.content,
+      toolCalls: response.toolCalls?.length || 0,
+      timestamp: new Date().toISOString()
+    })}\n\n`);
+
+    res.end();
+
+  } catch (error) {
+    console.error('❌ Agent query error:', error.message);
+    console.error(error.stack);
+
+    // Try to send error via SSE if connection still open
+    try {
+      res.write(`data: ${JSON.stringify({
+        type: 'error',
+        error: 'An error occurred processing your request. Please try again.',
+        timestamp: new Date().toISOString()
+      })}\n\n`);
+      res.end();
+    } catch {
+      // If SSE not set up yet, send JSON error
+      if (!res.headersSent) {
+        res.status(500).json({
+          success: false,
+          error: 'Failed to process agent query',
+          message: error.message
+        });
+      }
+    }
+  }
+});
+
+/**
+ * GET /api/agent/history/:sessionId
+ * Get conversation history for a session
+ */
+app.get('/api/agent/history/:sessionId', optionalAuth, async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const userId = req.user?.id || null;
+
+    if (!sessionId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Session ID is required'
+      });
+    }
+
+    // Get conversation history
+    const history = await pool.query(
+      `SELECT
+        am.id,
+        am.role,
+        am.content,
+        am.tool_calls,
+        am.tool_results,
+        am.created_at
+       FROM agent_messages am
+       INNER JOIN agent_conversations ac ON am.conversation_id = ac.id
+       WHERE ac.session_id = $1
+       AND (ac.user_id = $2 OR $2 IS NULL)
+       ORDER BY am.created_at ASC`,
+      [sessionId, userId]
+    );
+
+    res.json({
+      success: true,
+      sessionId: sessionId,
+      messageCount: history.rows.length,
+      messages: history.rows.map(row => ({
+        id: row.id,
+        role: row.role,
+        content: row.content,
+        toolCalls: row.tool_calls,
+        toolResults: row.tool_results,
+        timestamp: row.created_at
+      }))
+    });
+
+  } catch (error) {
+    console.error('Error fetching agent history:', error.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch conversation history'
+    });
+  }
+});
+
+// ==================== END AI AGENT ENDPOINT ====================
+
 // Simplified image endpoint - no external validation
 app.get('/api/image-info', (req, res) => {
   const { url } = req.query;
