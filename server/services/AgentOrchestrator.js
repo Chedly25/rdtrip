@@ -218,7 +218,7 @@ class AgentOrchestrator {
             toolUses.push({
               id: event.content_block.id,
               name: event.content_block.name,
-              input: {}
+              input: '' // Initialize as empty string for concatenation
             });
           }
         } else if (event.type === 'content_block_delta') {
@@ -232,10 +232,11 @@ class AgentOrchestrator {
               });
             }
           } else if (event.delta.type === 'input_json_delta') {
-            // Tool input delta
+            // Tool input delta - concatenate chunks to build complete JSON
             if (toolUses.length > 0) {
               const currentTool = toolUses[toolUses.length - 1];
-              currentTool.input = event.delta.partial_json;
+              // Concatenate partial JSON chunks (like we do with text)
+              currentTool.input = (currentTool.input || '') + event.delta.partial_json;
             }
           }
         }
@@ -258,10 +259,18 @@ class AgentOrchestrator {
 
       console.log('🔧 [LOOP] Tool calls detected, parsing inputs...');
       // Parse tool inputs
-      toolUses = toolUses.map(use => ({
-        ...use,
-        input: typeof use.input === 'string' ? JSON.parse(use.input) : use.input
-      }));
+      toolUses = toolUses.map((use, idx) => {
+        try {
+          console.log(`   Tool #${idx + 1} "${use.name}" raw input (${typeof use.input}):`, use.input.slice(0, 200));
+          const parsedInput = typeof use.input === 'string' ? JSON.parse(use.input) : use.input;
+          console.log(`   Tool #${idx + 1} parsed successfully`);
+          return { ...use, input: parsedInput };
+        } catch (error) {
+          console.error(`   ❌ Failed to parse tool #${idx + 1} "${use.name}" input:`, error.message);
+          console.error(`   Raw input was:`, use.input);
+          throw error;
+        }
+      });
 
       console.log('🔧 [LOOP] Tools to execute:');
       toolUses.forEach((use, idx) => {
