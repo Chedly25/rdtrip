@@ -232,6 +232,16 @@ export function AgentProvider({ children }: AgentProviderProps) {
                       : msg
                   )
                 );
+              } else if (event.type === 'tool_execution') {
+                // Tool execution results - store them for rich rendering
+                console.log('🔧 Tool execution:', event.tools);
+                setMessages(prev =>
+                  prev.map(msg =>
+                    msg.id === assistantMessageId
+                      ? { ...msg, toolResults: event.tools }
+                      : msg
+                  )
+                );
               } else if (event.type === 'complete') {
                 // Final response
                 setMessages(prev =>
