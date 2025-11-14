@@ -42,6 +42,39 @@ export interface PageContext {
   route: RouteContext | null;
 }
 
+// ==================== ARTIFACT SYSTEM ====================
+
+/**
+ * Artifact types - structured data that can be richly rendered
+ * Each type corresponds to a specific tool's output format
+ */
+export type ArtifactType =
+  | 'activity_grid'      // searchActivities results
+  | 'hotel_list'         // searchHotels results
+  | 'weather_display'    // checkWeather results
+  | 'directions_map'     // getDirections results
+  | 'city_info'          // getCityInfo results
+  | 'restaurant_list'    // searchRestaurants results (future)
+  | 'none';              // No artifact, just chat
+
+/**
+ * Artifact - A structured data object that can be rendered as an interactive card/grid
+ */
+export interface Artifact {
+  id: string;                // Unique ID for tracking (UUID)
+  type: ArtifactType;         // What kind of artifact this is
+  title: string;              // Display title ("Amsterdam Museums", "Hotels in Paris")
+  subtitle?: string;          // Optional subtitle ("5 results found")
+  data: any;                  // The actual tool result data (typed based on tool)
+  metadata?: {
+    city?: string;            // City name if relevant
+    category?: string;        // Category (museums, parks, etc)
+    toolName?: string;        // Which tool generated this
+    timestamp?: Date;         // When it was created
+    [key: string]: any;       // Allow additional metadata
+  };
+}
+
 export interface AgentContextValue {
   // State
   isOpen: boolean;
@@ -51,12 +84,22 @@ export interface AgentContextValue {
   pageContext: PageContext;
   activeTools: ActiveTool[];
 
+  // Artifact State
+  currentArtifact: Artifact | null;     // Currently displayed artifact
+  artifactHistory: Artifact[];          // All artifacts from this session
+  isMinimized: boolean;                 // Whether modal is minimized to button
+
   // Actions
   openAgent: () => void;
   closeAgent: () => void;
   toggleAgent: () => void;
   sendMessage: (message: string) => Promise<void>;
   clearHistory: () => void;
+
+  // Artifact Actions
+  setCurrentArtifact: (artifact: Artifact | null) => void;
+  clearArtifacts: () => void;
+  toggleMinimize: () => void;
 }
 
 // ==================== CONTEXT ====================
@@ -80,6 +123,11 @@ export function AgentProvider({ children }: AgentProviderProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [sessionId] = useState(() => uuidv4()); // Persistent session ID
   const [activeTools, setActiveTools] = useState<ActiveTool[]>([]);
+
+  // Artifact State
+  const [currentArtifact, setCurrentArtifact] = useState<Artifact | null>(null);
+  const [artifactHistory, setArtifactHistory] = useState<Artifact[]>([]);
+  const [isMinimized, setIsMinimized] = useState(false);
 
   // Refs
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -146,6 +194,132 @@ export function AgentProvider({ children }: AgentProviderProps) {
 
   const clearHistory = useCallback(() => {
     setMessages([]);
+  }, []);
+
+  // Artifact Actions
+  const clearArtifacts = useCallback(() => {
+    setCurrentArtifact(null);
+    setArtifactHistory([]);
+  }, []);
+
+  const toggleMinimize = useCallback(() => {
+    setIsMinimized(prev => !prev);
+  }, []);
+
+  /**
+   * Detect if tool results contain artifact-worthy data
+   * Returns an Artifact object if detected, null otherwise
+   */
+  const detectArtifact = useCallback((toolResults: any[]): Artifact | null => {
+    console.log('🔍 [ARTIFACT] Detecting artifacts from', toolResults.length, 'tool results');
+
+    for (const result of toolResults) {
+      try {
+        // Parse content if it's a string
+        const content = typeof result.content === 'string'
+          ? JSON.parse(result.content)
+          : result.content;
+
+        console.log('🔍 [ARTIFACT] Checking tool:', result.name, 'success:', content.success);
+
+        // ========== searchActivities ==========
+        if (result.name === 'searchActivities' && content.success && content.activities && content.activities.length > 0) {
+          const artifact: Artifact = {
+            id: uuidv4(),
+            type: 'activity_grid',
+            title: `${content.category || 'Activities'} in ${content.city}`,
+            subtitle: `${content.activities.length} result${content.activities.length !== 1 ? 's' : ''} found`,
+            data: content.activities,
+            metadata: {
+              city: content.city,
+              category: content.category,
+              toolName: 'searchActivities',
+              timestamp: new Date()
+            }
+          };
+          console.log('✨ [ARTIFACT] Created activity_grid:', artifact.title);
+          return artifact;
+        }
+
+        // ========== searchHotels ==========
+        if (result.name === 'searchHotels' && content.success && content.hotels && content.hotels.length > 0) {
+          const artifact: Artifact = {
+            id: uuidv4(),
+            type: 'hotel_list',
+            title: `Hotels in ${content.city}`,
+            subtitle: `${content.hotels.length} option${content.hotels.length !== 1 ? 's' : ''} available`,
+            data: content.hotels,
+            metadata: {
+              city: content.city,
+              toolName: 'searchHotels',
+              timestamp: new Date()
+            }
+          };
+          console.log('✨ [ARTIFACT] Created hotel_list:', artifact.title);
+          return artifact;
+        }
+
+        // ========== checkWeather ==========
+        if (result.name === 'checkWeather' && content.success && content.current) {
+          const artifact: Artifact = {
+            id: uuidv4(),
+            type: 'weather_display',
+            title: `Weather in ${content.city}`,
+            subtitle: content.current.condition || 'Current conditions',
+            data: content,
+            metadata: {
+              city: content.city,
+              toolName: 'checkWeather',
+              timestamp: new Date()
+            }
+          };
+          console.log('✨ [ARTIFACT] Created weather_display:', artifact.title);
+          return artifact;
+        }
+
+        // ========== getDirections ==========
+        if (result.name === 'getDirections' && content.success && content.distance && content.duration) {
+          const artifact: Artifact = {
+            id: uuidv4(),
+            type: 'directions_map',
+            title: `${content.from} → ${content.to}`,
+            subtitle: `${content.distance} · ${content.duration}`,
+            data: content,
+            metadata: {
+              toolName: 'getDirections',
+              timestamp: new Date()
+            }
+          };
+          console.log('✨ [ARTIFACT] Created directions_map:', artifact.title);
+          return artifact;
+        }
+
+        // ========== getCityInfo ==========
+        if (result.name === 'getCityInfo' && content.success && content.name) {
+          const artifact: Artifact = {
+            id: uuidv4(),
+            type: 'city_info',
+            title: content.name,
+            subtitle: content.country || 'City Information',
+            data: content,
+            metadata: {
+              city: content.name,
+              toolName: 'getCityInfo',
+              timestamp: new Date()
+            }
+          };
+          console.log('✨ [ARTIFACT] Created city_info:', artifact.title);
+          return artifact;
+        }
+
+      } catch (error) {
+        console.warn('⚠️ [ARTIFACT] Error parsing tool result:', error);
+        continue;
+      }
+    }
+
+    console.log('❌ [ARTIFACT] No artifacts detected');
+    return null;
   }, []);
 
   /**
@@ -316,6 +490,18 @@ export function AgentProvider({ children }: AgentProviderProps) {
               } else if (event.type === 'tool_execution') {
                 // Tool execution results - store them for rich rendering
                 console.log('🔧 Tool execution:', event.tools);
+
+                // Detect and set artifact
+                const artifact = detectArtifact(event.tools);
+                if (artifact) {
+                  console.log('✨ [AGENT] Artifact detected and set:', artifact.type, artifact.title);
+                  setCurrentArtifact(artifact);
+                  setArtifactHistory(prev => [...prev, artifact]);
+                } else {
+                  console.log('ℹ️ [AGENT] No artifact detected from tool results');
+                }
+
+                // Store tool results for backward compatibility with existing renderRichContent
                 setMessages(prev =>
                   prev.map(msg =>
                     msg.id === assistantMessageId
@@ -380,7 +566,7 @@ export function AgentProvider({ children }: AgentProviderProps) {
       setIsLoading(false);
       abortControllerRef.current = null;
     }
-  }, [sessionId, pageContext]);
+  }, [sessionId, pageContext, detectArtifact]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -393,17 +579,30 @@ export function AgentProvider({ children }: AgentProviderProps) {
 
   // Context value
   const value: AgentContextValue = {
+    // State
     isOpen,
     messages,
     isLoading,
     sessionId,
     pageContext,
     activeTools,
+
+    // Artifact State
+    currentArtifact,
+    artifactHistory,
+    isMinimized,
+
+    // Actions
     openAgent,
     closeAgent,
     toggleAgent,
     sendMessage,
-    clearHistory
+    clearHistory,
+
+    // Artifact Actions
+    setCurrentArtifact,
+    clearArtifacts,
+    toggleMinimize
   };
 
   return (
