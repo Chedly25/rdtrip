@@ -21,7 +21,7 @@ export function LoadingSkeleton() {
             className="bg-white rounded-xl border-2 border-gray-200 overflow-hidden"
           >
             {/* Image skeleton */}
-            <div className="h-48 bg-gradient-to-br from-gray-100 to-gray-200 animate-pulse" />
+            <div className="h-32 bg-gradient-to-br from-gray-100 to-gray-200 animate-pulse" />
 
             {/* Content skeleton */}
             <div className="p-4 space-y-3">
