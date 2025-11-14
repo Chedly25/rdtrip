@@ -64,7 +64,13 @@ async function searchActivities(params, context) {
     const placeType = category ? categoryTypeMap[category] || 'tourist_attraction' : 'tourist_attraction';
 
     // Step 3: Search for places nearby
-    const searchUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=10000&type=${placeType}&rankby=prominence&key=${GOOGLE_PLACES_API_KEY}`;
+    // For restaurants, add keyword to avoid getting hotels with restaurants
+    let searchUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=10000&type=${placeType}&key=${GOOGLE_PLACES_API_KEY}`;
+
+    if (category === 'restaurant') {
+      // Use keyword to ensure we get actual restaurants, not hotels
+      searchUrl += '&keyword=restaurant';
+    }
 
     const searchResponse = await axios.get(searchUrl, { timeout: 15000 });
 
