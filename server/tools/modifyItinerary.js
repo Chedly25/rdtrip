@@ -5,7 +5,7 @@
  * in the user's itinerary based on their requests.
  */
 
-const db = require('../db');
+const db = require('../../db');
 
 /**
  * @param {Object} args
