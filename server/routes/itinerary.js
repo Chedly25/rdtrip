@@ -24,6 +24,30 @@ function initializeRoutes(jobStorage, dbPool) {
 }
 
 /**
+ * GET /api/itinerary/by-route/:routeId
+ * Get itinerary ID by route ID
+ */
+router.get('/by-route/:routeId', async (req, res) => {
+  try {
+    const { routeId } = req.params;
+
+    const result = await pool.query(
+      'SELECT id FROM itineraries WHERE route_id = $1 ORDER BY created_at DESC LIMIT 1',
+      [routeId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'No itinerary found for this route' });
+    }
+
+    res.json({ itinerary_id: result.rows[0].id });
+  } catch (error) {
+    console.error('Get itinerary by route error:', error);
+    res.status(500).json({ error: 'Failed to fetch itinerary' });
+  }
+});
+
+/**
  * POST /api/itinerary/generate
  * Start itinerary generation and return itinerary ID immediately
  */

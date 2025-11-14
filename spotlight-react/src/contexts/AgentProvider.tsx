@@ -133,11 +133,53 @@ export function AgentProvider({ children }: AgentProviderProps) {
   const [artifactHistory, setArtifactHistory] = useState<Artifact[]>([]);
   const [isMinimized, setIsMinimized] = useState(false);
 
-  // Itinerary Context - get from URL params
-  const itineraryId = searchParams.get('itinerary') || null;
+  // Itinerary Context - get from URL params or fetch from route
+  const [itineraryId, setItineraryId] = useState<string | null>(null);
 
   // Refs
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Fetch or determine itinerary ID
+  useEffect(() => {
+    const fetchItineraryId = async () => {
+      // First priority: itinerary param in URL
+      const itineraryParam = searchParams.get('itinerary');
+      if (itineraryParam) {
+        console.log('📋 Using itinerary from URL:', itineraryParam);
+        setItineraryId(itineraryParam);
+        return;
+      }
+
+      // Second priority: routeId param - fetch associated itinerary
+      const routeId = searchParams.get('routeId');
+      if (routeId) {
+        console.log('🔍 RouteId found, fetching associated itinerary:', routeId);
+        try {
+          // Fetch itinerary by route ID
+          const response = await fetch(`/api/itinerary/by-route/${routeId}`);
+          if (response.ok) {
+            const data = await response.json();
+            console.log('✅ Found itinerary for route:', data.itinerary_id);
+            setItineraryId(data.itinerary_id);
+          } else if (response.status === 404) {
+            console.log('⚠️ No itinerary found for this route yet');
+            setItineraryId(null);
+          } else {
+            console.warn('⚠️ Could not fetch itinerary:', response.status);
+            setItineraryId(null);
+          }
+        } catch (error) {
+          console.error('❌ Error fetching itinerary for route:', error);
+          setItineraryId(null);
+        }
+      } else {
+        // No itinerary or routeId in URL
+        setItineraryId(null);
+      }
+    };
+
+    fetchItineraryId();
+  }, [searchParams]);
 
   // Detect page context
   const getPageContext = useCallback((): PageContext => {
