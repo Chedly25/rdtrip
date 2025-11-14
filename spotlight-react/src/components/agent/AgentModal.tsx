@@ -17,8 +17,11 @@ import { ArtifactsPanel } from './ArtifactsPanel';
 import { ModalInput } from './ModalInput';
 
 export function AgentModal() {
-  const { isOpen, closeAgent, currentArtifact, isMinimized, toggleMinimize } = useAgent();
+  const { isOpen, closeAgent, currentArtifact, isMinimized, toggleMinimize, isLoading, activeTools } = useAgent();
   const modalRef = useRef<HTMLDivElement>(null);
+
+  // Show results panel when there's an artifact or when generating one
+  const showResultsPanel = currentArtifact || (isLoading && activeTools.length > 0);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -133,22 +136,29 @@ export function AgentModal() {
 
           {/* Split View Content */}
           <div className="flex-1 flex overflow-hidden">
-            {/* Desktop: Split View (40% | 60%) */}
+            {/* Desktop: Conditional Layout */}
             <div className="hidden md:flex w-full">
-              {/* Left: Chat History */}
-              <div className="w-[40%] border-r border-gray-200 flex flex-col overflow-hidden">
-                <ChatHistoryPanel />
-              </div>
-
-              {/* Right: Artifacts */}
-              <div className="w-[60%] flex flex-col overflow-hidden">
-                <ArtifactsPanel />
-              </div>
+              {showResultsPanel ? (
+                <>
+                  {/* Split View: Chat (40%) | Results (60%) */}
+                  <div className="w-[40%] border-r border-gray-200 flex flex-col overflow-hidden">
+                    <ChatHistoryPanel />
+                  </div>
+                  <div className="w-[60%] flex flex-col overflow-hidden">
+                    <ArtifactsPanel />
+                  </div>
+                </>
+              ) : (
+                /* Full Width: Chat only (100%) */
+                <div className="w-full flex flex-col overflow-hidden">
+                  <ChatHistoryPanel />
+                </div>
+              )}
             </div>
 
-            {/* Mobile: Tabbed View (TODO: Implement tabs in Phase 5) */}
+            {/* Mobile: Tabbed View */}
             <div className="md:hidden w-full flex flex-col overflow-hidden">
-              {currentArtifact ? (
+              {showResultsPanel ? (
                 <ArtifactsPanel />
               ) : (
                 <ChatHistoryPanel />
