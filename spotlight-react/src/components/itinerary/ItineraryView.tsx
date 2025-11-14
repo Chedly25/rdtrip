@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Loader2, ArrowLeft, Calendar, MapPin, Users, DollarSign } from 'lucide-react';
 import { DayCardV2 } from './DayCardV2';
 import { BudgetSummary } from './BudgetSummary';
+import { ChatSidebar } from '../agent/ChatSidebar';
 import { useNavigate } from 'react-router-dom';
 
 interface ItineraryViewProps {
@@ -144,14 +145,14 @@ export function ItineraryView({ itineraryId, routeData }: ItineraryViewProps) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
+      {/* Header - Full Width */}
       <motion.header
         initial={{ y: -100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.3 }}
         className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-50"
       >
-        <div className="max-w-screen-xl mx-auto px-6 py-4">
+        <div className="max-w-screen-2xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             {/* Left: Back button and title */}
             <div className="flex items-center gap-4">
@@ -195,42 +196,50 @@ export function ItineraryView({ itineraryId, routeData }: ItineraryViewProps) {
         </div>
       </motion.header>
 
-      {/* Main Content */}
-      <div className="max-w-screen-xl mx-auto px-6 py-8">
-        <div className="space-y-8">
-          {/* Budget Summary */}
-          {budget && (
-            <BudgetSummary budget={budget} />
-          )}
+      {/* Main Content - 70/30 Split Layout */}
+      <div className="flex max-w-screen-2xl mx-auto">
+        {/* Left: Itinerary Content (70%) */}
+        <div className="flex-1 px-6 py-8 overflow-y-auto">
+          <div className="space-y-8">
+            {/* Budget Summary */}
+            {budget && (
+              <BudgetSummary budget={budget} />
+            )}
 
-          {/* Day Cards */}
-          <div className="space-y-6">
-            {daysArray.map((day: any) => {
-              const dayData = getDayData(day.day);
-              return (
-                <DayCardV2
-                  key={day.day}
-                  day={day}
-                  activities={dayData.activities}
-                  restaurants={dayData.restaurants}
-                  accommodation={dayData.accommodation}
-                  scenicStops={dayData.scenicStops}
-                  practicalInfo={dayData.practicalInfo}
-                  weather={dayData.weather}
-                  events={dayData.events}
-                  agentType="best-overall" // TODO: Get from route data if available
-                  density="compact"
-                />
-              );
-            })}
-          </div>
-
-          {/* Empty State */}
-          {daysArray.length === 0 && (
-            <div className="text-center py-12">
-              <p className="text-gray-600">No itinerary data available.</p>
+            {/* Day Cards */}
+            <div className="space-y-6">
+              {daysArray.map((day: any) => {
+                const dayData = getDayData(day.day);
+                return (
+                  <DayCardV2
+                    key={day.day}
+                    day={day}
+                    activities={dayData.activities}
+                    restaurants={dayData.restaurants}
+                    accommodation={dayData.accommodation}
+                    scenicStops={dayData.scenicStops}
+                    practicalInfo={dayData.practicalInfo}
+                    weather={dayData.weather}
+                    events={dayData.events}
+                    agentType="best-overall" // TODO: Get from route data if available
+                    density="compact"
+                  />
+                );
+              })}
             </div>
-          )}
+
+            {/* Empty State */}
+            {daysArray.length === 0 && (
+              <div className="text-center py-12">
+                <p className="text-gray-600">No itinerary data available.</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right: AI Assistant Sidebar (30%) */}
+        <div className="w-[30%] min-w-[400px]">
+          <ChatSidebar />
         </div>
       </div>
     </div>
