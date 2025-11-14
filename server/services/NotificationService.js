@@ -11,7 +11,7 @@
  * - Query notification statistics
  */
 
-const pool = require('../db');
+const pool = require('../../db/connection');
 
 class NotificationService {
   /**
