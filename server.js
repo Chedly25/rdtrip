@@ -4180,28 +4180,25 @@ app.post('/api/agent/query', optionalAuth, async (req, res) => {
 
     // Keep connection alive with heartbeat
     let heartbeatInterval = setInterval(() => {
-      if (!clientConnected) {
-        clearInterval(heartbeatInterval);
-        return;
-      }
       try {
         // Send SSE comment to keep connection alive
         res.write(': heartbeat\n\n');
         if (typeof res.flush === 'function') res.flush();
         console.log('💓 [BACKEND] Sent heartbeat');
       } catch (error) {
-        console.log('❌ [BACKEND] Heartbeat failed, clearing interval');
-        clientConnected = false;
+        console.log('❌ [BACKEND] Heartbeat failed (client truly disconnected), clearing interval');
         clearInterval(heartbeatInterval);
       }
     }, 15000); // Every 15 seconds
 
     // Handle client disconnect - DON'T end response yet, let orchestrator finish
+    // NOTE: req.on('close') fires prematurely on Heroku due to proxy behavior
+    // We rely on write errors (in streamHandler) to detect real disconnects
     req.on('close', () => {
-      console.log('🔌 [BACKEND] Client disconnected from agent stream');
-      clientConnected = false;
+      console.log('🔌 [BACKEND] Client close event fired (may be false positive from proxy)');
       clearInterval(heartbeatInterval);
-      // Don't call res.end() here - let the orchestrator finish naturally
+      // DON'T set clientConnected = false here - causes premature event skipping
+      // Let write errors in streamHandler detect real disconnects
     });
 
     // Stream handler - send tokens to client in real-time
