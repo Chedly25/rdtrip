@@ -4158,11 +4158,16 @@ app.post('/api/agent/query', optionalAuth, async (req, res) => {
     res.setHeader('Connection', 'keep-alive');
     res.setHeader('X-Accel-Buffering', 'no'); // Disable buffering on Nginx
 
-    console.log('📡 [BACKEND] SSE headers set');
+    // Flush headers immediately to establish SSE connection
+    res.flushHeaders();
+
+    console.log('📡 [BACKEND] SSE headers set and flushed');
 
     // Send initial connection confirmation
     res.write(`data: ${JSON.stringify({ type: 'connected', timestamp: new Date().toISOString() })}\n\n`);
-    console.log('📤 [BACKEND] Sent "connected" event');
+    // Flush immediately after write to ensure client receives it
+    if (typeof res.flush === 'function') res.flush();
+    console.log('📤 [BACKEND] Sent and flushed "connected" event');
 
     // Handle client disconnect
     req.on('close', () => {
@@ -4177,6 +4182,8 @@ app.post('/api/agent/query', optionalAuth, async (req, res) => {
         streamEventCount++;
         console.log(`📤 [BACKEND] Streaming event #${streamEventCount}:`, event.type);
         res.write(`data: ${JSON.stringify(event)}\n\n`);
+        // Flush immediately to prevent buffering
+        if (typeof res.flush === 'function') res.flush();
       } catch (error) {
         console.error('❌ [BACKEND] Error writing to stream:', error.message);
       }
@@ -4205,8 +4212,10 @@ app.post('/api/agent/query', optionalAuth, async (req, res) => {
       toolCalls: response.toolCalls?.length || 0,
       timestamp: new Date().toISOString()
     })}\n\n`);
+    // Flush the final event
+    if (typeof res.flush === 'function') res.flush();
 
-    console.log('📤 [BACKEND] Sent "complete" event');
+    console.log('📤 [BACKEND] Sent and flushed "complete" event');
 
     res.end();
     console.log('🏁 [BACKEND] SSE stream ended');
