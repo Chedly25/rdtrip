@@ -127,7 +127,7 @@ export function ArtifactsPanel() {
       </div>
 
       {/* Artifact content */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 min-h-0 overflow-y-auto">
         <motion.div
           key={currentArtifact.id}
           initial={{ opacity: 0, x: 20 }}
