@@ -40,13 +40,18 @@ interface ActivityGridArtifactProps {
 export function ActivityGridArtifact({ activities }: ActivityGridArtifactProps) {
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
 
+  // Debug logging
+  console.log('🔍 [ActivityGridArtifact] Received activities:', activities);
+  console.log('🔍 [ActivityGridArtifact] First activity:', activities[0]);
+  console.log('🔍 [ActivityGridArtifact] First activity keys:', activities[0] ? Object.keys(activities[0]) : 'none');
+
   return (
     <div>
       {/* Grid of activity cards - 1 col on mobile, 2 cols on desktop */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         {activities.map((activity, index) => (
           <motion.div
-            key={activity.name}
+            key={activity.name || `activity-${index}`}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.05, duration: 0.3 }}
