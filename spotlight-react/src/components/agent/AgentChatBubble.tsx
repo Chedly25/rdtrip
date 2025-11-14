@@ -15,6 +15,7 @@ export function AgentChatBubble() {
     isOpen,
     messages,
     isLoading,
+    pageContext,
     openAgent,
     closeAgent,
     sendMessage,
@@ -24,6 +25,79 @@ export function AgentChatBubble() {
   const [inputValue, setInputValue] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Context-aware welcome messages
+  const getWelcomeMessage = () => {
+    const { name, route } = pageContext;
+
+    if (name === 'landing') {
+      return {
+        title: "Hi! Ready to plan your road trip?",
+        subtitle: "I can help you find the perfect route, check weather, and discover amazing destinations!"
+      };
+    }
+
+    if (name === 'spotlight' && route) {
+      const destination = route.destination || 'your destination';
+      return {
+        title: `Planning your trip to ${destination}!`,
+        subtitle: "Ask me about weather, activities, directions, or travel tips for your route."
+      };
+    }
+
+    if (name === 'itinerary') {
+      return {
+        title: "Building your perfect itinerary!",
+        subtitle: "Need help with activities, restaurants, or timing? Just ask!"
+      };
+    }
+
+    return {
+      title: "Hi! I'm your travel assistant",
+      subtitle: "Ask me about weather, activities, directions, or any travel tips you need!"
+    };
+  };
+
+  // Context-aware quick actions
+  const getQuickActions = () => {
+    const { name, route } = pageContext;
+
+    if (name === 'landing') {
+      return [
+        { label: "Find a route", query: "Help me plan a road trip route" },
+        { label: "Check weather", query: "What's the weather like for travel?" },
+        { label: "Travel tips", query: "What should I know about planning a road trip?" }
+      ];
+    }
+
+    if (name === 'spotlight' && route) {
+      const actions = [];
+
+      if (route.destination) {
+        actions.push({ label: `Weather in ${route.destination}`, query: `What's the weather in ${route.destination}?` });
+        actions.push({ label: `Activities in ${route.destination}`, query: `Find activities in ${route.destination}` });
+      }
+
+      if (route.origin && route.destination) {
+        actions.push({ label: "Get directions", query: `Get directions from ${route.origin} to ${route.destination}` });
+      }
+
+      return actions.slice(0, 3); // Max 3 quick actions
+    }
+
+    if (name === 'itinerary') {
+      return [
+        { label: "Find restaurants", query: "Recommend good restaurants for my itinerary" },
+        { label: "Check weather", query: "What's the weather forecast?" },
+        { label: "Travel tips", query: "Give me tips for my trip" }
+      ];
+    }
+
+    return [];
+  };
+
+  const welcome = getWelcomeMessage();
+  const quickActions = getQuickActions();
 
   // Auto-scroll to latest message
   useEffect(() => {
@@ -106,16 +180,34 @@ export function AgentChatBubble() {
             {/* Messages - Light gray background like app pages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50">
               {messages.length === 0 && (
-                <div className="text-center py-12 px-4">
+                <div className="text-center py-8 px-4">
                   <div className="w-16 h-16 bg-teal-50 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Sparkles className="w-8 h-8 text-teal-600" />
                   </div>
                   <p className="text-lg font-semibold text-gray-900 mb-2">
-                    Hi! I'm your travel assistant
+                    {welcome.title}
                   </p>
-                  <p className="text-sm text-gray-600 leading-relaxed">
-                    Ask me about weather, activities, directions, or any travel tips you need!
+                  <p className="text-sm text-gray-600 leading-relaxed mb-4">
+                    {welcome.subtitle}
                   </p>
+
+                  {/* Quick action buttons */}
+                  {quickActions.length > 0 && (
+                    <div className="space-y-2 mt-4">
+                      {quickActions.map((action, index) => (
+                        <button
+                          key={index}
+                          onClick={() => {
+                            setInputValue(action.query);
+                            inputRef.current?.focus();
+                          }}
+                          className="w-full px-4 py-2.5 bg-white border-2 border-gray-200 hover:border-teal-300 rounded-xl text-sm text-gray-700 hover:text-teal-700 font-medium transition-colors text-left"
+                        >
+                          {action.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 
