@@ -1,7 +1,7 @@
 /**
  * ProactiveAgentService - Background orchestrator for proactive AI features
  *
- * STEP 4 Phase 1: Core with Weather Monitoring
+ * STEP 4 Phase 2: Complete with Weather, Events, and Budget Monitoring
  *
  * Responsibilities:
  * - Schedules and runs background monitoring jobs
@@ -18,6 +18,8 @@
 
 const pool = require('../db');
 const WeatherMonitor = require('./WeatherMonitor');
+const EventMonitor = require('./EventMonitor');
+const BudgetMonitor = require('./BudgetMonitor');
 const NotificationService = require('./NotificationService');
 
 class ProactiveAgentService {
@@ -28,6 +30,8 @@ class ProactiveAgentService {
 
     // Initialize monitor services
     this.weatherMonitor = new WeatherMonitor();
+    this.eventMonitor = new EventMonitor();
+    this.budgetMonitor = new BudgetMonitor();
     this.notificationService = new NotificationService();
 
     console.log(`[ProactiveAgent] 🤖 Initialized with ${this.checkIntervalHours}h check interval`);
@@ -86,6 +90,8 @@ class ProactiveAgentService {
     const stats = {
       itinerariesChecked: 0,
       weatherNotifications: 0,
+      eventNotifications: 0,
+      budgetNotifications: 0,
       errors: 0
     };
 
@@ -94,7 +100,7 @@ class ProactiveAgentService {
       const activeItineraries = await this.getActiveItineraries();
       console.log(`[ProactiveAgent] 📋 Found ${activeItineraries.length} active itineraries`);
 
-      // Run weather monitoring for each itinerary
+      // Run all monitors for each itinerary
       for (const itinerary of activeItineraries) {
         try {
           stats.itinerariesChecked++;
@@ -103,13 +109,15 @@ class ProactiveAgentService {
           const weatherNotifications = await this.weatherMonitor.checkItinerary(itinerary);
           stats.weatherNotifications += weatherNotifications;
 
-          // TODO Phase 2: Event discovery
-          // const eventNotifications = await this.eventMonitor.checkItinerary(itinerary);
+          // Event discovery (Phase 2)
+          const eventNotifications = await this.eventMonitor.checkItinerary(itinerary);
+          stats.eventNotifications += eventNotifications;
 
-          // TODO Phase 2: Budget monitoring
-          // const budgetNotifications = await this.budgetMonitor.checkItinerary(itinerary);
+          // Budget monitoring (Phase 2)
+          const budgetNotifications = await this.budgetMonitor.checkItinerary(itinerary);
+          stats.budgetNotifications += budgetNotifications;
 
-          // TODO Phase 2: Traffic monitoring
+          // TODO Phase 3: Traffic monitoring
           // const trafficNotifications = await this.trafficMonitor.checkItinerary(itinerary);
 
         } catch (error) {
@@ -174,15 +182,24 @@ class ProactiveAgentService {
         ) VALUES ($1, $2, $3, $4, $5, $6)
       `;
 
-      const totalNotifications = stats.weatherNotifications || 0;
+      const totalNotifications =
+        (stats.weatherNotifications || 0) +
+        (stats.eventNotifications || 0) +
+        (stats.budgetNotifications || 0);
+
       const errorDetails = error ? {
         message: error.message,
         stack: error.stack,
-        status
+        status,
+        breakdown: {
+          weather: stats.weatherNotifications || 0,
+          events: stats.eventNotifications || 0,
+          budget: stats.budgetNotifications || 0
+        }
       } : null;
 
       await pool.query(query, [
-        'weather', // For now, only weather monitoring in Phase 1
+        'all_monitors', // Phase 2: Weather + Events + Budget
         stats.itinerariesChecked || 0,
         totalNotifications,
         stats.errors || 0,
@@ -213,11 +230,19 @@ class ProactiveAgentService {
       }
 
       const itinerary = result.rows[0];
-      const notifications = await this.weatherMonitor.checkItinerary(itinerary);
+
+      const weatherNotifications = await this.weatherMonitor.checkItinerary(itinerary);
+      const eventNotifications = await this.eventMonitor.checkItinerary(itinerary);
+      const budgetNotifications = await this.budgetMonitor.checkItinerary(itinerary);
 
       return {
         itineraryId,
-        notificationsCreated: notifications,
+        notificationsCreated: {
+          weather: weatherNotifications,
+          events: eventNotifications,
+          budget: budgetNotifications,
+          total: weatherNotifications + eventNotifications + budgetNotifications
+        },
         status: 'success'
       };
 
@@ -238,8 +263,8 @@ class ProactiveAgentService {
       nextCheckIn: this.intervalHandle ? `${this.checkIntervalHours} hours` : 'N/A',
       monitors: {
         weather: 'active',
-        events: 'planned',
-        budget: 'planned',
+        events: 'active',
+        budget: 'active',
         traffic: 'planned'
       }
     };
