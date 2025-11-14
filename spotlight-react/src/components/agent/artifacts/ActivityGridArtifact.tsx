@@ -42,8 +42,8 @@ export function ActivityGridArtifact({ activities }: ActivityGridArtifactProps) 
 
   return (
     <div>
-      {/* Grid of activity cards */}
-      <div className="grid grid-cols-2 gap-4 mb-4">
+      {/* Grid of activity cards - 1 col on mobile, 2 cols on desktop */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         {activities.map((activity, index) => (
           <motion.div
             key={activity.name}

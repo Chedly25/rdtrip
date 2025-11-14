@@ -8,6 +8,7 @@
  * Mobile: Tabs instead of split-view
  */
 
+import { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Minimize2 } from 'lucide-react';
 import { useAgent } from '../../contexts/AgentProvider';
@@ -17,6 +18,45 @@ import { ModalInput } from './ModalInput';
 
 export function AgentModal() {
   const { isOpen, closeAgent, currentArtifact, isMinimized, toggleMinimize } = useAgent();
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    if (!isOpen || isMinimized) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // ESC to close
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        closeAgent();
+      }
+
+      // Ctrl/Cmd + M to minimize
+      if ((e.ctrlKey || e.metaKey) && e.key === 'm') {
+        e.preventDefault();
+        toggleMinimize();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, isMinimized, closeAgent, toggleMinimize]);
+
+  // Focus trap
+  useEffect(() => {
+    if (!isOpen || isMinimized) return;
+
+    // Focus modal on mount
+    if (modalRef.current) {
+      modalRef.current.focus();
+    }
+
+    // Prevent body scroll
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen, isMinimized]);
 
   // Don't render if not open or if minimized
   if (!isOpen || isMinimized) return null;
@@ -41,11 +81,16 @@ export function AgentModal() {
 
         {/* Modal Container */}
         <motion.div
+          ref={modalRef}
+          tabIndex={-1}
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="relative w-full h-full max-w-[95vw] max-h-[95vh] m-4 bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+          className="relative w-full h-full max-w-[95vw] max-h-[95vh] m-4 bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden focus:outline-none"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-title"
         >
           {/* Header */}
           <div className="bg-gradient-to-r from-teal-600 to-teal-700 px-6 py-4 flex items-center justify-between border-b border-teal-800 flex-shrink-0">
@@ -54,8 +99,8 @@ export function AgentModal() {
                 <span className="text-2xl">🤖</span>
               </div>
               <div>
-                <h2 className="text-white font-bold text-xl">AI Travel Assistant</h2>
-                <p className="text-teal-100 text-sm">Powered by Claude AI</p>
+                <h2 id="modal-title" className="text-white font-bold text-xl">AI Travel Assistant</h2>
+                <p className="text-teal-100 text-sm">Powered by Claude AI • Press ESC to close</p>
               </div>
             </div>
 

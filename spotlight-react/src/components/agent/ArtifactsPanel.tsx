@@ -12,15 +12,19 @@
  */
 
 import { motion } from 'framer-motion';
-import { Sparkles, MapPin } from 'lucide-react';
+import { Sparkles, MapPin, Loader } from 'lucide-react';
 import { useAgent } from '../../contexts/AgentProvider';
 import { ArtifactRenderer } from './ArtifactRenderer';
+import { LoadingSkeleton } from './artifacts/LoadingSkeleton';
 
 export function ArtifactsPanel() {
-  const { currentArtifact, artifactHistory, setCurrentArtifact } = useAgent();
+  const { currentArtifact, artifactHistory, setCurrentArtifact, isLoading, activeTools } = useAgent();
+
+  // Loading state when generating artifact
+  const isGeneratingArtifact = isLoading && activeTools.length > 0 && !currentArtifact;
 
   // Empty state when no artifact
-  if (!currentArtifact) {
+  if (!currentArtifact && !isGeneratingArtifact) {
     return (
       <div className="flex flex-col h-full bg-white">
         {/* Header */}
@@ -49,10 +53,29 @@ export function ArtifactsPanel() {
     );
   }
 
-  // Render artifact using ArtifactRenderer
-  const renderArtifact = () => {
-    return <ArtifactRenderer artifact={currentArtifact} />;
-  };
+  // Loading skeleton state
+  if (isGeneratingArtifact) {
+    return (
+      <div className="flex flex-col h-full bg-white">
+        {/* Header */}
+        <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex-shrink-0">
+          <h3 className="font-semibold text-gray-900 text-sm flex items-center gap-2">
+            <Loader className="w-4 h-4 text-teal-600 animate-spin" />
+            Generating Results...
+          </h3>
+        </div>
+
+        {/* Loading skeleton */}
+        <div className="flex-1 overflow-y-auto">
+          <LoadingSkeleton />
+        </div>
+      </div>
+    );
+  }
+
+  // This point is only reached if currentArtifact is non-null
+  // TypeScript needs explicit check to narrow the type
+  if (!currentArtifact) return null;
 
   return (
     <div className="flex flex-col h-full bg-white">
@@ -112,7 +135,7 @@ export function ArtifactsPanel() {
           transition={{ duration: 0.2 }}
           className="h-full"
         >
-          {renderArtifact()}
+          <ArtifactRenderer artifact={currentArtifact} />
         </motion.div>
       </div>
     </div>
