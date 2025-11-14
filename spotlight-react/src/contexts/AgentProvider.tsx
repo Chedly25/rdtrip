@@ -232,21 +232,29 @@ export function AgentProvider({ children }: AgentProviderProps) {
 
       let buffer = '';
       let eventCount = 0;
+      let chunkCount = 0;
 
       while (true) {
         const { done, value } = await reader.read();
+        chunkCount++;
+
+        console.log(`🔄 [AGENT] Chunk #${chunkCount}: done=${done}, bytes=${value?.length || 0}`);
 
         if (done) {
-          console.log('✅ [AGENT] SSE stream ended. Total events:', eventCount);
+          console.log('✅ [AGENT] SSE stream ended. Total chunks:', chunkCount, 'Total events:', eventCount);
+          console.log('📦 [AGENT] Final buffer state:', buffer.length > 0 ? `${buffer.length} bytes remaining` : 'empty');
           break;
         }
 
         // Decode chunk
-        buffer += decoder.decode(value, { stream: true });
+        const decodedChunk = decoder.decode(value, { stream: true });
+        console.log(`📝 [AGENT] Decoded chunk #${chunkCount} (${decodedChunk.length} chars):`, decodedChunk.substring(0, 200));
+        buffer += decodedChunk;
 
         // Split by newlines to get individual SSE messages
         const lines = buffer.split('\n');
         buffer = lines.pop() || ''; // Keep incomplete line in buffer
+        console.log(`📋 [AGENT] Found ${lines.length} lines in chunk #${chunkCount}, buffer has ${buffer.length} chars remaining`);
 
         for (const line of lines) {
           if (line.startsWith('data: ')) {
