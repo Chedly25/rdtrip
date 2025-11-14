@@ -7337,6 +7337,10 @@ app.get('/api/cache/stats', async (req, res) => {
 const itineraryRoutes = require('./server/routes/itinerary');
 app.use('/api/itinerary', itineraryRoutes.initializeRoutes(itineraryJobs, pool));
 
+// ==================== PROACTIVE NOTIFICATIONS ROUTES ====================
+const notificationsRoutes = require('./server/routes/notifications');
+app.use('/api/notifications', notificationsRoutes);
+
 // =====================================================
 // CATCH-ALL ROUTE - Serve React app for client-side routing
 // =====================================================
@@ -9798,6 +9802,12 @@ runDatabaseMigrations().then(() => {
     const collaborationService = new CollaborationService(server, pool);
     global.collaborationService = collaborationService; // Make available to API endpoints
 
+    // Initialize Proactive AI Monitoring Service (STEP 4 Phase 1)
+    const { getInstance: getProactiveAgent } = require('./server/services/ProactiveAgentService');
+    const proactiveAgent = getProactiveAgent();
+    proactiveAgent.start(); // Start background monitoring
+    global.proactiveAgent = proactiveAgent; // Make available for manual triggers
+
     // Cache warming enabled for instant loads on popular cities
     warmCacheForPopularCities();
 
@@ -9805,6 +9815,7 @@ runDatabaseMigrations().then(() => {
     process.on('SIGTERM', () => {
       console.log('🛑 SIGTERM received, closing server gracefully...');
       collaborationService.close();
+      proactiveAgent.stop();
       server.close(() => {
         console.log('✅ Server closed');
         process.exit(0);
@@ -9814,6 +9825,7 @@ runDatabaseMigrations().then(() => {
     process.on('SIGINT', () => {
       console.log('🛑 SIGINT received, closing server gracefully...');
       collaborationService.close();
+      proactiveAgent.stop();
       server.close(() => {
         console.log('✅ Server closed');
         process.exit(0);

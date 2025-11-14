@@ -4,6 +4,7 @@ import { Loader2, ArrowLeft, Calendar, MapPin, Users, DollarSign } from 'lucide-
 import { DayCardV2 } from './DayCardV2';
 import { BudgetSummary } from './BudgetSummary';
 import { ChatSidebar } from '../agent/ChatSidebar';
+import { ProactiveNotifications } from '../notifications/ProactiveNotifications';
 import { useNavigate } from 'react-router-dom';
 
 interface ItineraryViewProps {
@@ -205,6 +206,11 @@ export function ItineraryView({ itineraryId, routeData }: ItineraryViewProps) {
             {budget && (
               <BudgetSummary budget={budget} />
             )}
+
+            {/* Proactive AI Notifications */}
+            <div className="bg-white rounded-2xl shadow-md overflow-hidden">
+              <ProactiveNotifications itineraryId={itineraryId} />
+            </div>
 
             {/* Day Cards */}
             <div className="space-y-6">

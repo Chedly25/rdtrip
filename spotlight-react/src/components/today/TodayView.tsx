@@ -20,6 +20,7 @@ import { DayProgress } from './DayProgress';
 import { QuickActions } from './QuickActions';
 import { ModalInput } from '../agent/ModalInput';
 import { ChatHistoryPanel } from '../agent/ChatHistoryPanel';
+import { ProactiveNotifications } from '../notifications/ProactiveNotifications';
 
 export function TodayView() {
   const navigate = useNavigate();
@@ -237,6 +238,15 @@ export function TodayView() {
             </button>
           </motion.div>
         )}
+
+        {/* Proactive AI Notifications */}
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-2xl shadow-lg overflow-hidden"
+        >
+          <ProactiveNotifications itineraryId={itineraryId} />
+        </motion.div>
 
         {/* Quick Actions */}
         <QuickActions
