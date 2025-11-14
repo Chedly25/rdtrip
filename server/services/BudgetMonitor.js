@@ -10,7 +10,7 @@
  * - Daily/category-based spending analysis
  */
 
-const pool = require('../db');
+const pool = require('../../db/connection');
 const NotificationService = require('./NotificationService');
 
 class BudgetMonitor {

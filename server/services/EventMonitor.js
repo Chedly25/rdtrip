@@ -12,7 +12,7 @@
  * - Support multiple event sources (Ticketmaster, local APIs)
  */
 
-const pool = require('../db');
+const pool = require('../../db/connection');
 const NotificationService = require('./NotificationService');
 
 class EventMonitor {

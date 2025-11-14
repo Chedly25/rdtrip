@@ -16,7 +16,7 @@
  * - Handles graceful shutdown
  */
 
-const pool = require('../db');
+const pool = require('../../db/connection');
 const WeatherMonitor = require('./WeatherMonitor');
 const EventMonitor = require('./EventMonitor');
 const BudgetMonitor = require('./BudgetMonitor');
