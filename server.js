@@ -4124,8 +4124,18 @@ app.post('/api/agent/query', optionalAuth, async (req, res) => {
     const { message, sessionId, pageContext, routeId } = req.body;
     const userId = req.user?.id || null;
 
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('🤖 [BACKEND] /api/agent/query RECEIVED');
+    console.log('   User ID:', userId || 'anonymous');
+    console.log('   Session ID:', sessionId);
+    console.log('   Route ID:', routeId);
+    console.log('   Page Context:', pageContext);
+    console.log('   Message:', message);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
     // Validation
     if (!message || typeof message !== 'string' || message.trim().length === 0) {
+      console.log('❌ [BACKEND] Validation failed: empty message');
       return res.status(400).json({
         success: false,
         error: 'Message is required and must be a non-empty string'
@@ -4133,13 +4143,14 @@ app.post('/api/agent/query', optionalAuth, async (req, res) => {
     }
 
     if (!sessionId) {
+      console.log('❌ [BACKEND] Validation failed: no session ID');
       return res.status(400).json({
         success: false,
         error: 'Session ID is required'
       });
     }
 
-    console.log(`🤖 Agent query from ${userId || 'anonymous'}: "${message.slice(0, 50)}..."`);
+    console.log('✅ [BACKEND] Validation passed');
 
     // Set up Server-Sent Events (SSE) for streaming
     res.setHeader('Content-Type', 'text/event-stream');
@@ -4147,23 +4158,31 @@ app.post('/api/agent/query', optionalAuth, async (req, res) => {
     res.setHeader('Connection', 'keep-alive');
     res.setHeader('X-Accel-Buffering', 'no'); // Disable buffering on Nginx
 
+    console.log('📡 [BACKEND] SSE headers set');
+
     // Send initial connection confirmation
     res.write(`data: ${JSON.stringify({ type: 'connected', timestamp: new Date().toISOString() })}\n\n`);
+    console.log('📤 [BACKEND] Sent "connected" event');
 
     // Handle client disconnect
     req.on('close', () => {
-      console.log('🔌 Client disconnected from agent stream');
+      console.log('🔌 [BACKEND] Client disconnected from agent stream');
       res.end();
     });
 
     // Stream handler - send tokens to client in real-time
+    let streamEventCount = 0;
     const streamHandler = (event) => {
       try {
+        streamEventCount++;
+        console.log(`📤 [BACKEND] Streaming event #${streamEventCount}:`, event.type);
         res.write(`data: ${JSON.stringify(event)}\n\n`);
       } catch (error) {
-        console.error('Error writing to stream:', error.message);
+        console.error('❌ [BACKEND] Error writing to stream:', error.message);
       }
     };
+
+    console.log('🔄 [BACKEND] Calling agentOrchestrator.handleQuery...');
 
     // Call agent orchestrator with streaming
     const response = await agentOrchestrator.handleQuery({
@@ -4175,6 +4194,10 @@ app.post('/api/agent/query', optionalAuth, async (req, res) => {
       onStream: streamHandler
     });
 
+    console.log('✅ [BACKEND] agentOrchestrator.handleQuery completed');
+    console.log('   Response content length:', response.content?.length || 0);
+    console.log('   Tool calls:', response.toolCalls?.length || 0);
+
     // Send final response
     res.write(`data: ${JSON.stringify({
       type: 'complete',
@@ -4183,7 +4206,11 @@ app.post('/api/agent/query', optionalAuth, async (req, res) => {
       timestamp: new Date().toISOString()
     })}\n\n`);
 
+    console.log('📤 [BACKEND] Sent "complete" event');
+
     res.end();
+    console.log('🏁 [BACKEND] SSE stream ended');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
   } catch (error) {
     console.error('❌ Agent query error:', error.message);

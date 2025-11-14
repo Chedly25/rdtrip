@@ -57,14 +57,22 @@ class AgentOrchestrator {
     pageContext,
     onStream
   }) {
-    console.log(`\n🤖 Agent Query from user ${userId}`);
-    console.log(`   Message: "${message}"`);
-    console.log(`   Page: ${pageContext?.page || 'unknown'}`);
+    console.log('\n╔════════════════════════════════════════════╗');
+    console.log('║  🤖 AGENT ORCHESTRATOR - handleQuery      ║');
+    console.log('╚════════════════════════════════════════════╝');
+    console.log('   User ID:', userId);
+    console.log('   Route ID:', routeId);
+    console.log('   Session ID:', sessionId);
+    console.log('   Message:', message);
+    console.log('   Page Context:', pageContext);
 
     try {
+      console.log('\n[Step 1/9] Getting or creating conversation...');
       // 1. Get or create conversation
       const conversationId = await this.getOrCreateConversation(userId, routeId, sessionId);
+      console.log('   ✅ Conversation ID:', conversationId);
 
+      console.log('[Step 2/9] Building context...');
       // 2. Build context
       const context = {
         userId,
@@ -73,17 +81,25 @@ class AgentOrchestrator {
         pageContext: pageContext || {},
         sessionId
       };
+      console.log('   ✅ Context built');
 
+      console.log('[Step 3/9] Getting conversation history...');
       // 3. Get conversation history (last 10 messages)
       const conversationHistory = await this.getConversationHistory(sessionId);
+      console.log('   ✅ History messages:', conversationHistory.length);
 
+      console.log('[Step 4/9] Getting memories and preferences...');
       // 4. Get relevant memories and preferences
       const memories = await this.memoryService.getRelevantMemories(userId, message, 5);
       const preferences = await this.memoryService.getPreferences(userId);
+      console.log('   ✅ Memories:', memories.length, '| Preferences:', Object.keys(preferences).length);
 
+      console.log('[Step 5/9] Building system prompt...');
       // 5. Build system prompt with memory context
       const systemPrompt = this.buildSystemPrompt(context, memories, preferences);
+      console.log('   ✅ System prompt length:', systemPrompt.length, 'chars');
 
+      console.log('[Step 6/9] Preparing messages for Claude...');
       // 5. Prepare messages for Claude
       const messages = [
         ...conversationHistory,
@@ -92,7 +108,9 @@ class AgentOrchestrator {
           content: message
         }
       ];
+      console.log('   ✅ Total messages:', messages.length);
 
+      console.log('[Step 7/9] Saving user message to DB...');
       // 6. Save user message
       await this.saveMessage({
         conversationId,
@@ -100,7 +118,9 @@ class AgentOrchestrator {
         content: message,
         contextSnapshot: { page: pageContext }
       });
+      console.log('   ✅ User message saved');
 
+      console.log('[Step 8/9] Running agent loop with Claude...');
       // 7. Run agent loop with Claude
       const response = await this.runAgentLoop({
         systemPrompt,
@@ -108,7 +128,9 @@ class AgentOrchestrator {
         context,
         onStream
       });
+      console.log('   ✅ Agent loop completed');
 
+      console.log('[Step 9/9] Saving assistant response to DB...');
       // 8. Save assistant response
       const messageId = await this.saveMessage({
         conversationId,
@@ -118,16 +140,21 @@ class AgentOrchestrator {
         toolResults: response.toolResults,
         contextSnapshot: { page: pageContext }
       });
+      console.log('   ✅ Assistant response saved');
 
+      console.log('📝 Storing conversation memory (async)...');
       // 9. Store conversation in memory (asynchronously to not block response)
       this.storeConversationMemory(userId, messageId, message, response.content, context).catch(err => {
         console.warn('Failed to store memory:', err);
       });
 
+      console.log('✅ handleQuery completed successfully');
+      console.log('╚════════════════════════════════════════════╝\n');
       return response;
 
     } catch (error) {
-      console.error('❌ Agent error:', error);
+      console.error('❌ [ORCHESTRATOR] Agent error:', error);
+      console.error('❌ [ORCHESTRATOR] Error stack:', error.stack);
       throw error;
     }
   }
@@ -137,6 +164,13 @@ class AgentOrchestrator {
    * Implements: think → act → observe → repeat
    */
   async runAgentLoop({ systemPrompt, messages, context, onStream }) {
+    console.log('\n╔════════════════════════════════════════════╗');
+    console.log('║  🔄 AGENT LOOP - Starting                 ║');
+    console.log('╚════════════════════════════════════════════╝');
+    console.log('   Max iterations:', this.maxIterations);
+    console.log('   Initial messages count:', messages.length);
+    console.log('   Available tools:', this.toolRegistry.getToolDefinitions().length);
+
     let currentMessages = [...messages];
     let iteration = 0;
     let finalResponse = null;
@@ -145,7 +179,13 @@ class AgentOrchestrator {
 
     while (iteration < this.maxIterations) {
       iteration++;
-      console.log(`\n🔄 Agent Loop Iteration ${iteration}`);
+      console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+      console.log(`🔄 [LOOP] Iteration ${iteration}/${this.maxIterations}`);
+      console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+
+      console.log('🤖 [LOOP] Calling Claude API...');
+      console.log('   Model:', this.model);
+      console.log('   Messages:', currentMessages.length);
 
       // Call Claude with streaming
       const response = await this.client.messages.create({
@@ -157,14 +197,24 @@ class AgentOrchestrator {
         stream: true
       });
 
+      console.log('📡 [LOOP] Claude API stream started, processing events...');
+
       let assistantMessage = '';
       let toolUses = [];
+      let eventCount = 0;
 
       // Stream handler
       for await (const event of response) {
+        eventCount++;
+        if (eventCount % 10 === 0) {
+          console.log(`   Processed ${eventCount} stream events...`);
+        }
+
         if (event.type === 'content_block_start') {
+          console.log('   [Stream] content_block_start:', event.content_block.type);
           if (event.content_block.type === 'tool_use') {
             // Tool call started
+            console.log('   🔧 [Stream] Tool call detected:', event.content_block.name);
             toolUses.push({
               id: event.content_block.id,
               name: event.content_block.name,
@@ -191,8 +241,13 @@ class AgentOrchestrator {
         }
       }
 
+      console.log(`✅ [LOOP] Claude stream completed. Total events: ${eventCount}`);
+      console.log('   Assistant message length:', assistantMessage.length);
+      console.log('   Tool calls detected:', toolUses.length);
+
       // If no tool calls, we're done
       if (toolUses.length === 0) {
+        console.log('🏁 [LOOP] No tool calls - agent loop complete!');
         finalResponse = {
           content: assistantMessage,
           toolCalls: allToolCalls,
@@ -201,15 +256,22 @@ class AgentOrchestrator {
         break;
       }
 
+      console.log('🔧 [LOOP] Tool calls detected, parsing inputs...');
       // Parse tool inputs
       toolUses = toolUses.map(use => ({
         ...use,
         input: typeof use.input === 'string' ? JSON.parse(use.input) : use.input
       }));
 
+      console.log('🔧 [LOOP] Tools to execute:');
+      toolUses.forEach((use, idx) => {
+        console.log(`   ${idx + 1}. ${use.name}(${JSON.stringify(use.input).slice(0, 100)}...)`);
+      });
+
       // Execute tool calls
-      console.log(`   🔧 Executing ${toolUses.length} tool call(s)...`);
+      console.log(`\n🔨 [LOOP] Executing ${toolUses.length} tool(s)...`);
       const toolResults = await this.executeTools(toolUses, context, onStream);
+      console.log(`✅ [LOOP] All tools executed`);
 
       allToolCalls.push(...toolUses);
       allToolResults.push(...toolResults);
