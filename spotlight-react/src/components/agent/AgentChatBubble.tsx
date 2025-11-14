@@ -9,6 +9,10 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageCircle, X, Send, Loader, Sparkles, Trash2, Bot } from 'lucide-react';
 import { useAgent } from '../../contexts/AgentProvider';
+import { WeatherCard } from './WeatherCard';
+import { ActivityGrid } from './ActivityCard';
+import { DirectionsCard } from './DirectionsCard';
+import { CityInfoCard } from './CityInfoCard';
 
 export function AgentChatBubble() {
   const {
@@ -98,6 +102,56 @@ export function AgentChatBubble() {
 
   const welcome = getWelcomeMessage();
   const quickActions = getQuickActions();
+
+  /**
+   * Render rich content cards based on tool results
+   */
+  const renderRichContent = (message: any) => {
+    if (!message.toolResults || message.toolResults.length === 0) {
+      return null;
+    }
+
+    return message.toolResults.map((toolResult: any, index: number) => {
+      try {
+        const result = typeof toolResult.content === 'string'
+          ? JSON.parse(toolResult.content)
+          : toolResult.content;
+
+        // Check for checkWeather tool
+        if (toolResult.name === 'checkWeather' && result.success && result.current) {
+          return <div key={index} className="mt-4"><WeatherCard data={result} /></div>;
+        }
+
+        // Check for searchActivities tool
+        if (toolResult.name === 'searchActivities' && result.success && result.activities) {
+          return (
+            <div key={index} className="mt-4">
+              <ActivityGrid
+                activities={result.activities}
+                city={result.city}
+                category={result.category}
+              />
+            </div>
+          );
+        }
+
+        // Check for getDirections tool
+        if (toolResult.name === 'getDirections' && result.success) {
+          return <div key={index} className="mt-4"><DirectionsCard data={result} /></div>;
+        }
+
+        // Check for getCityInfo tool
+        if (toolResult.name === 'getCityInfo' && result.success) {
+          return <div key={index} className="mt-4"><CityInfoCard data={result} /></div>;
+        }
+
+        return null;
+      } catch (error) {
+        console.error('Error rendering rich content:', error);
+        return null;
+      }
+    });
+  };
 
   // Auto-scroll to latest message
   useEffect(() => {
@@ -257,6 +311,9 @@ export function AgentChatBubble() {
                       <p className="text-xs text-gray-500 mt-2">
                         {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </p>
+
+                      {/* Rich content cards */}
+                      {renderRichContent(message)}
                     </div>
                   )}
                 </motion.div>
