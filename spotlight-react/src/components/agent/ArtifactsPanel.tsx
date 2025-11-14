@@ -12,13 +12,9 @@
  */
 
 import { motion } from 'framer-motion';
-import { Sparkles, MapPin, Info } from 'lucide-react';
+import { Sparkles, MapPin } from 'lucide-react';
 import { useAgent } from '../../contexts/AgentProvider';
-import { WeatherCard } from './WeatherCard';
-import { ActivityGrid } from './ActivityCard';
-import { DirectionsCard } from './DirectionsCard';
-import { CityInfoCard } from './CityInfoCard';
-import { HotelCard } from './HotelCard';
+import { ArtifactRenderer } from './ArtifactRenderer';
 
 export function ArtifactsPanel() {
   const { currentArtifact, artifactHistory, setCurrentArtifact } = useAgent();
@@ -53,58 +49,9 @@ export function ArtifactsPanel() {
     );
   }
 
-  // Render artifact based on type
+  // Render artifact using ArtifactRenderer
   const renderArtifact = () => {
-    switch (currentArtifact.type) {
-      case 'activity_grid':
-        return (
-          <ActivityGrid
-            activities={currentArtifact.data}
-            city={currentArtifact.metadata?.city || ''}
-            category={currentArtifact.metadata?.category || ''}
-          />
-        );
-
-      case 'hotel_list':
-        return (
-          <HotelCard
-            data={{
-              success: true,
-              hotels: currentArtifact.data,
-              city: currentArtifact.metadata?.city || '',
-              count: currentArtifact.data?.length || 0
-            }}
-          />
-        );
-
-      case 'weather_display':
-        return <WeatherCard data={currentArtifact.data} />;
-
-      case 'directions_map':
-        return <DirectionsCard data={currentArtifact.data} />;
-
-      case 'city_info':
-        return <CityInfoCard data={currentArtifact.data} />;
-
-      default:
-        return (
-          <div className="p-6">
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <div className="flex items-start gap-3">
-                <Info className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-medium text-yellow-900 mb-1">
-                    Unsupported Artifact Type
-                  </p>
-                  <p className="text-xs text-yellow-700">
-                    Type: {currentArtifact.type}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-    }
+    return <ArtifactRenderer artifact={currentArtifact} />;
   };
 
   return (
