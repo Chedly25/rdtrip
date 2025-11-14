@@ -6,6 +6,7 @@
  */
 
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid';
 
 // ==================== TYPES ====================
@@ -20,14 +21,28 @@ export interface AgentMessage {
   isStreaming?: boolean;
 }
 
+export interface RouteContext {
+  routeId: string | null;
+  origin: string | null;
+  destination: string | null;
+  cities: string[];
+  duration: number | null;
+  startDate: string | null;
+}
+
+export interface PageContext {
+  path: string;
+  name: 'landing' | 'spotlight' | 'itinerary' | 'unknown';
+  route: RouteContext | null;
+}
+
 export interface AgentContextValue {
   // State
   isOpen: boolean;
   messages: AgentMessage[];
   isLoading: boolean;
   sessionId: string;
-  currentPage: string;
-  routeId: string | null;
+  pageContext: PageContext;
 
   // Actions
   openAgent: () => void;
@@ -35,8 +50,6 @@ export interface AgentContextValue {
   toggleAgent: () => void;
   sendMessage: (message: string) => Promise<void>;
   clearHistory: () => void;
-  setCurrentPage: (page: string) => void;
-  setRouteId: (routeId: string | null) => void;
 }
 
 // ==================== CONTEXT ====================
@@ -50,16 +63,66 @@ interface AgentProviderProps {
 }
 
 export function AgentProvider({ children }: AgentProviderProps) {
+  // Hooks
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+
   // State
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<AgentMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [sessionId] = useState(() => uuidv4()); // Persistent session ID
-  const [currentPage, setCurrentPage] = useState('landing');
-  const [routeId, setRouteId] = useState<string | null>(null);
 
   // Refs
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Detect page context
+  const getPageContext = useCallback((): PageContext => {
+    const path = location.pathname;
+
+    // Detect page name
+    let pageName: PageContext['name'] = 'unknown';
+    if (path.includes('/spotlight/generate')) {
+      pageName = 'itinerary';
+    } else if (path.includes('/spotlight') || searchParams.get('routeId') || searchParams.get('itinerary')) {
+      pageName = 'spotlight';
+    } else if (path === '/' || path === '') {
+      pageName = 'landing';
+    }
+
+    // Extract route context if available
+    let routeContext: RouteContext | null = null;
+
+    // Try to get route from URL params
+    const routeId = searchParams.get('routeId');
+
+    // Try to get route from localStorage (spotlight data)
+    try {
+      const spotlightDataStr = localStorage.getItem('spotlightData');
+      if (spotlightDataStr) {
+        const spotlightData = JSON.parse(spotlightDataStr);
+
+        routeContext = {
+          routeId: routeId,
+          origin: spotlightData.origin?.displayName || spotlightData.origin || null,
+          destination: spotlightData.destination?.displayName || spotlightData.destination || null,
+          cities: spotlightData.waypoints?.map((w: any) => w.name || w.location || w) || [],
+          duration: spotlightData.duration || null,
+          startDate: spotlightData.startDate || null
+        };
+      }
+    } catch (e) {
+      console.warn('Failed to parse spotlight data:', e);
+    }
+
+    return {
+      path,
+      name: pageName,
+      route: routeContext
+    };
+  }, [location, searchParams]);
+
+  const pageContext = getPageContext();
 
   // Actions
   const openAgent = useCallback(() => setIsOpen(true), []);
@@ -117,8 +180,8 @@ export function AgentProvider({ children }: AgentProviderProps) {
         body: JSON.stringify({
           message: messageText.trim(),
           sessionId: sessionId,
-          pageContext: currentPage,
-          routeId: routeId
+          pageContext: pageContext.name,
+          routeId: pageContext.route?.routeId || null
         }),
         signal: abortController.signal
       });
@@ -222,7 +285,7 @@ export function AgentProvider({ children }: AgentProviderProps) {
       setIsLoading(false);
       abortControllerRef.current = null;
     }
-  }, [sessionId, currentPage, routeId]);
+  }, [sessionId, pageContext]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -239,15 +302,12 @@ export function AgentProvider({ children }: AgentProviderProps) {
     messages,
     isLoading,
     sessionId,
-    currentPage,
-    routeId,
+    pageContext,
     openAgent,
     closeAgent,
     toggleAgent,
     sendMessage,
-    clearHistory,
-    setCurrentPage,
-    setRouteId
+    clearHistory
   };
 
   return (
