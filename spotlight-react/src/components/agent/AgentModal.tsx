@@ -144,7 +144,7 @@ export function AgentModal() {
                   <div className="w-[40%] border-r border-gray-200 flex flex-col min-h-0 overflow-hidden">
                     <ChatHistoryPanel />
                   </div>
-                  <div className="w-[60%] flex flex-col min-h-0 overflow-hidden">
+                  <div className="w-[60%] flex flex-col min-h-0">
                     <ArtifactsPanel />
                   </div>
                 </>

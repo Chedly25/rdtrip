@@ -46,26 +46,16 @@ export function ActivityGridArtifact({ activities }: ActivityGridArtifactProps) 
   console.log('🔍 [ActivityGridArtifact] First activity keys:', activities[0] ? Object.keys(activities[0]) : 'none');
 
   return (
-    <div className="p-4" style={{ border: '3px solid red', minHeight: '800px' }}>
-      <div style={{ position: 'absolute', top: 0, left: 0, background: 'red', color: 'white', padding: '4px', zIndex: 9999 }}>
-        OUTER CONTAINER - Should be 800px min
-      </div>
+    <div className="p-4">
       {/* Grid of activity cards - 1 col on mobile, 2 cols on desktop */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4" style={{ border: '3px solid blue', minHeight: '700px' }}>
-        <div style={{ position: 'absolute', top: 30, left: 0, background: 'blue', color: 'white', padding: '4px', zIndex: 9999 }}>
-          GRID CONTAINER - Should be 700px min
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         {activities.map((activity, index) => (
           <motion.div
             key={activity.name || `activity-${index}`}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.05, duration: 0.3 }}
-            style={{ border: '2px solid green' }}
           >
-            <div style={{ position: 'absolute', top: 0, right: 0, background: 'green', color: 'white', padding: '2px', fontSize: '10px', zIndex: 9999 }}>
-              CARD {index + 1}
-            </div>
             <ActivityCard
               activity={activity}
               onSelect={() => setSelectedActivity(activity)}
