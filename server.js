@@ -7443,7 +7443,7 @@ async function runDatabaseMigrations() {
           user_id UUID REFERENCES users(id) ON DELETE CASCADE,
           message_id UUID REFERENCES agent_messages(id) ON DELETE SET NULL,
           content TEXT NOT NULL,
-          embedding vector(1536),
+          embedding vector(1024),
           metadata JSONB NOT NULL DEFAULT '{}',
           created_at TIMESTAMPTZ DEFAULT NOW()
         )

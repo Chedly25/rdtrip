@@ -5,21 +5,23 @@
  * - Conversation history storage with embeddings
  * - User preference learning and tracking
  * - Contextual memory retrieval
+ *
+ * Uses Cohere's free embedding API (100 req/min, 1024 dimensions)
  */
 
-const { OpenAI } = require('openai');
+const { CohereClient } = require('cohere-ai');
 
 class MemoryService {
   constructor(db) {
     this.db = db;
 
-    // Initialize OpenAI for embeddings
-    const apiKey = process.env.OPENAI_API_KEY;
+    // Initialize Cohere for embeddings (FREE tier!)
+    const apiKey = process.env.COHERE_API_KEY;
     if (!apiKey) {
-      console.warn('⚠️  OPENAI_API_KEY not configured - memory features will be limited');
-      this.openai = null;
+      console.warn('⚠️  COHERE_API_KEY not configured - memory features will be limited');
+      this.cohere = null;
     } else {
-      this.openai = new OpenAI({ apiKey });
+      this.cohere = new CohereClient({ token: apiKey });
     }
   }
 
@@ -32,22 +34,23 @@ class MemoryService {
    * @returns {Promise<string>} Memory ID
    */
   async storeConversation(userId, messageId, summary, metadata = {}) {
-    if (!this.openai) {
-      console.warn('Cannot store conversation: OpenAI API not configured');
+    if (!this.cohere) {
+      console.warn('Cannot store conversation: Cohere API not configured');
       return null;
     }
 
     try {
       console.log(`💾 Storing conversation memory for user ${userId.slice(0, 8)}...`);
 
-      // Generate embedding for semantic search
-      const embeddingResponse = await this.openai.embeddings.create({
-        model: 'text-embedding-3-small', // 1536 dimensions, $0.02/1M tokens
-        input: summary,
-        encoding_format: 'float'
+      // Generate embedding for semantic search using Cohere
+      const embeddingResponse = await this.cohere.embed({
+        model: 'embed-english-v3.0', // 1024 dimensions, FREE tier
+        texts: [summary],
+        inputType: 'search_document', // Optimized for storage
+        embeddingTypes: ['float']
       });
 
-      const embedding = embeddingResponse.data[0].embedding;
+      const embedding = embeddingResponse.embeddings.float[0];
 
       // Store in database with pgvector
       const result = await this.db.query(`
@@ -80,22 +83,23 @@ class MemoryService {
    * @returns {Promise<Array>} Array of relevant memories
    */
   async getRelevantMemories(userId, currentQuery, limit = 5, similarityThreshold = 0.7) {
-    if (!this.openai) {
-      console.warn('Cannot retrieve memories: OpenAI API not configured');
+    if (!this.cohere) {
+      console.warn('Cannot retrieve memories: Cohere API not configured');
       return [];
     }
 
     try {
       console.log(`🔍 Searching memories for: "${currentQuery.slice(0, 50)}..."`);
 
-      // Generate embedding for query
-      const queryEmbedding = await this.openai.embeddings.create({
-        model: 'text-embedding-3-small',
-        input: currentQuery,
-        encoding_format: 'float'
+      // Generate embedding for query using Cohere
+      const queryEmbedding = await this.cohere.embed({
+        model: 'embed-english-v3.0', // 1024 dimensions
+        texts: [currentQuery],
+        inputType: 'search_query', // Optimized for retrieval
+        embeddingTypes: ['float']
       });
 
-      const embedding = queryEmbedding.data[0].embedding;
+      const embedding = queryEmbedding.embeddings.float[0];
 
       // Perform vector similarity search
       // Using cosine similarity (1 - cosine_distance)
