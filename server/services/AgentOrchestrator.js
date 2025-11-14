@@ -465,7 +465,31 @@ class AgentOrchestrator {
       prompt += `\nConsider these preferences when making recommendations.`;
     }
 
-    prompt += `\n\n**Important**: Use your tools frequently! When the user asks about weather, activities, directions, or city info, USE THE APPROPRIATE TOOL to get real data instead of making general statements.`;
+    prompt += `\n\n**CRITICAL TOOL USAGE RULES**:
+
+You MUST use tools for these queries - DO NOT answer from general knowledge:
+
+1. **Activities/Attractions** ("what to do", "activities", "attractions", "places to visit", "things to see"):
+   → ALWAYS use searchActivities tool with the city name
+   → Example: "What can I do in Paris?" → searchActivities(city: "Paris, France")
+
+2. **Weather** ("weather", "forecast", "temperature", "rain"):
+   → ALWAYS use checkWeather tool
+   → Example: "What's the weather in Berlin?" → checkWeather(location: "Berlin, Germany")
+
+3. **Hotels/Accommodation** ("hotels", "where to stay", "accommodation"):
+   → ALWAYS use searchHotels tool
+   → Example: "Hotels in Rome?" → searchHotels(city: "Rome, Italy")
+
+4. **Directions/Navigation** ("how to get", "directions", "route", "drive"):
+   → ALWAYS use getDirections tool
+   → Example: "How do I get from Paris to Lyon?" → getDirections(from: "Paris", to: "Lyon")
+
+5. **City Information** ("tell me about", "what is", "city guide"):
+   → ALWAYS use getCityInfo tool
+   → Example: "Tell me about Amsterdam" → getCityInfo(city: "Amsterdam")
+
+**If the user asks about activities, attractions, or things to do - you MUST call searchActivities. No exceptions.**`;
 
     return prompt;
   }
