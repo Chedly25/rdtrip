@@ -131,6 +131,226 @@ class ToolRegistry {
       execute: require('../tools/getCityInfo')
     });
 
+    // 6. Modify Itinerary
+    this.register({
+      name: 'modifyItinerary',
+      description: 'Modify the trip itinerary by adding, removing, or updating activities, restaurants, or accommodations. Use when user wants to change their trip.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          routeId: {
+            type: 'string',
+            description: 'Route/itinerary ID'
+          },
+          action: {
+            type: 'string',
+            description: 'Action to perform',
+            enum: ['add_activity', 'remove_activity', 'update_activity', 'add_restaurant', 'remove_restaurant', 'update_accommodation']
+          },
+          dayNumber: {
+            type: 'number',
+            description: 'Which day to modify (1-based)'
+          },
+          item: {
+            type: 'object',
+            description: 'The item to add/update (activity, restaurant, hotel data)'
+          },
+          itemId: {
+            type: 'string',
+            description: 'ID of item to remove/update (optional)'
+          }
+        },
+        required: ['routeId', 'action', 'dayNumber', 'item']
+      },
+      execute: require('../tools/modifyItinerary')
+    });
+
+    // 7. Check Opening Hours
+    this.register({
+      name: 'checkOpeningHours',
+      description: 'Check if a place (restaurant, museum, attraction) is open now or at a specific date/time. Critical for planning.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          placeName: {
+            type: 'string',
+            description: 'Name of the place'
+          },
+          placeAddress: {
+            type: 'string',
+            description: 'Address or city'
+          },
+          date: {
+            type: 'string',
+            description: 'Date to check (YYYY-MM-DD), defaults to today'
+          }
+        },
+        required: ['placeName', 'placeAddress']
+      },
+      execute: require('../tools/checkOpeningHours')
+    });
+
+    // 8. Find Alternative
+    this.register({
+      name: 'findAlternative',
+      description: 'Find alternative places similar to a given restaurant, hotel, or attraction. Use when user doesn\'t like a suggestion or place is closed.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          type: {
+            type: 'string',
+            description: 'Type of place',
+            enum: ['restaurant', 'hotel', 'attraction']
+          },
+          currentPlace: {
+            type: 'string',
+            description: 'Name of the current place'
+          },
+          location: {
+            type: 'string',
+            description: 'City or area'
+          },
+          priceLevel: {
+            type: 'string',
+            description: 'Price level preference',
+            enum: ['budget', 'moderate', 'upscale']
+          },
+          cuisine: {
+            type: 'string',
+            description: 'For restaurants: cuisine type'
+          }
+        },
+        required: ['type', 'currentPlace', 'location']
+      },
+      execute: require('../tools/findAlternative')
+    });
+
+    // 9. Currency Conversion
+    this.register({
+      name: 'currencyConversion',
+      description: 'Convert amounts between currencies. Use when discussing costs, budgets, or prices in different currencies.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          amount: {
+            type: 'number',
+            description: 'Amount to convert'
+          },
+          from: {
+            type: 'string',
+            description: 'Source currency code (e.g., USD, EUR, GBP)'
+          },
+          to: {
+            type: 'string',
+            description: 'Target currency code'
+          }
+        },
+        required: ['amount', 'from', 'to']
+      },
+      execute: require('../tools/currencyConversion')
+    });
+
+    // 10. Translate Text
+    this.register({
+      name: 'translateText',
+      description: 'Translate text between languages. Useful for helping with phrases, menus, signs, or communication.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          text: {
+            type: 'string',
+            description: 'Text to translate'
+          },
+          targetLanguage: {
+            type: 'string',
+            description: 'Target language (e.g., French, Spanish, Italian, German)'
+          },
+          context: {
+            type: 'string',
+            description: 'Optional context (e.g., "restaurant menu", "asking for directions")'
+          }
+        },
+        required: ['text', 'targetLanguage']
+      },
+      execute: require('../tools/translateText')
+    });
+
+    // 11. Add Expense
+    this.register({
+      name: 'addExpense',
+      description: 'Track an expense for the trip. Use when user mentions spending money or wants to log a cost.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          routeId: {
+            type: 'string',
+            description: 'Route ID'
+          },
+          description: {
+            type: 'string',
+            description: 'What the expense was for'
+          },
+          amount: {
+            type: 'number',
+            description: 'Amount spent'
+          },
+          currency: {
+            type: 'string',
+            description: 'Currency code (EUR, USD, GBP, etc.)'
+          },
+          category: {
+            type: 'string',
+            description: 'Expense category',
+            enum: ['accommodation', 'food', 'transport', 'activities', 'shopping', 'other']
+          },
+          date: {
+            type: 'string',
+            description: 'Date of expense (YYYY-MM-DD), defaults to today'
+          }
+        },
+        required: ['routeId', 'description', 'amount', 'currency', 'category']
+      },
+      execute: require('../tools/addExpense')
+    });
+
+    // 12. Search Hotels
+    this.register({
+      name: 'searchHotels',
+      description: 'Search for hotels and accommodations in a city. Returns options with ratings, prices, and booking links.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          city: {
+            type: 'string',
+            description: 'City name'
+          },
+          checkIn: {
+            type: 'string',
+            description: 'Check-in date (YYYY-MM-DD)'
+          },
+          checkOut: {
+            type: 'string',
+            description: 'Check-out date (YYYY-MM-DD)'
+          },
+          priceLevel: {
+            type: 'string',
+            description: 'Price range',
+            enum: ['budget', 'moderate', 'luxury']
+          },
+          minRating: {
+            type: 'number',
+            description: 'Minimum rating (1-5), default 3.5'
+          },
+          limit: {
+            type: 'number',
+            description: 'Max results, default 5'
+          }
+        },
+        required: ['city']
+      },
+      execute: require('../tools/searchHotels')
+    });
+
     console.log(`✅ Registered ${this.tools.size} tools`);
   }
 
