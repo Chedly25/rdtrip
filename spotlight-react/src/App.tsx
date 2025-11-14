@@ -18,8 +18,8 @@ const queryClient = new QueryClient({
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AgentProvider>
-        <Router>
+      <Router>
+        <AgentProvider>
           <Routes>
             <Route path="/spotlight/generate" element={<ItineraryGenerationPage />} />
             <Route path="*" element={<SpotlightV2 />} />
@@ -27,8 +27,8 @@ function App() {
 
           {/* AI Agent - Available everywhere */}
           <AgentChatBubble />
-        </Router>
-      </AgentProvider>
+        </AgentProvider>
+      </Router>
     </QueryClientProvider>
   )
 }
