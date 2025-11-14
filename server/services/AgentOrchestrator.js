@@ -7,6 +7,7 @@
 
 const Anthropic = require('@anthropic-ai/sdk');
 const ToolRegistry = require('./ToolRegistry');
+const MemoryService = require('./MemoryService');
 const { Pool } = require('pg');
 
 class AgentOrchestrator {
@@ -28,10 +29,13 @@ class AgentOrchestrator {
       ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
     });
 
+    // Memory service for conversation history and preferences
+    this.memoryService = new MemoryService(this.db);
+
     // Max iterations to prevent infinite loops
     this.maxIterations = 10;
 
-    console.log('🤖 AgentOrchestrator initialized with Claude Haiku 4.5');
+    console.log('🤖 AgentOrchestrator initialized with Claude Haiku 4.5 + Memory');
   }
 
   /**
@@ -73,8 +77,12 @@ class AgentOrchestrator {
       // 3. Get conversation history (last 10 messages)
       const conversationHistory = await this.getConversationHistory(sessionId);
 
-      // 4. Build system prompt
-      const systemPrompt = this.buildSystemPrompt(context);
+      // 4. Get relevant memories and preferences
+      const memories = await this.memoryService.getRelevantMemories(userId, message, 5);
+      const preferences = await this.memoryService.getPreferences(userId);
+
+      // 5. Build system prompt with memory context
+      const systemPrompt = this.buildSystemPrompt(context, memories, preferences);
 
       // 5. Prepare messages for Claude
       const messages = [
@@ -102,13 +110,18 @@ class AgentOrchestrator {
       });
 
       // 8. Save assistant response
-      await this.saveMessage({
+      const messageId = await this.saveMessage({
         conversationId,
         role: 'assistant',
         content: response.content,
         toolCalls: response.toolCalls,
         toolResults: response.toolResults,
         contextSnapshot: { page: pageContext }
+      });
+
+      // 9. Store conversation in memory (asynchronously to not block response)
+      this.storeConversationMemory(userId, messageId, message, response.content, context).catch(err => {
+        console.warn('Failed to store memory:', err);
       });
 
       return response;
@@ -321,9 +334,9 @@ class AgentOrchestrator {
   }
 
   /**
-   * Build system prompt with context injection
+   * Build system prompt with context injection + memory
    */
-  buildSystemPrompt(context) {
+  buildSystemPrompt(context, memories = [], preferences = {}) {
     const { pageContext, routeData } = context;
 
     let prompt = `You are an expert travel assistant for RDTrip, a road trip planning platform.
@@ -360,6 +373,25 @@ class AgentOrchestrator {
       prompt += `\n\nThe user is planning this trip. Tailor your responses to help with this specific route.`;
     } else {
       prompt += `\n\nThe user is ${pageContext.page === 'itinerary' ? 'building their itinerary' : pageContext.page === 'spotlight' ? 'exploring routes' : 'browsing the landing page'}.`;
+    }
+
+    // Inject relevant memories from past conversations
+    if (memories.length > 0) {
+      prompt += `\n\n**Past Conversations**:\n`;
+      memories.forEach((memory, index) => {
+        const date = new Date(memory.createdAt).toLocaleDateString();
+        prompt += `- [${date}] ${memory.content}\n`;
+      });
+      prompt += `\nUse this context to personalize your responses and remember the user's preferences.`;
+    }
+
+    // Inject user preferences
+    if (Object.keys(preferences).length > 0) {
+      prompt += `\n\n**User Preferences**:\n`;
+      for (const [category, pref] of Object.entries(preferences)) {
+        prompt += `- ${category}: ${JSON.stringify(pref)}\n`;
+      }
+      prompt += `\nConsider these preferences when making recommendations.`;
     }
 
     prompt += `\n\n**Important**: Use your tools frequently! When the user asks about weather, activities, directions, or city info, USE THE APPROPRIATE TOOL to get real data instead of making general statements.`;
@@ -420,9 +452,10 @@ class AgentOrchestrator {
    * Save message to database
    */
   async saveMessage({ conversationId, role, content, toolCalls, toolResults, contextSnapshot }) {
-    await this.db.query(`
+    const result = await this.db.query(`
       INSERT INTO agent_messages (conversation_id, role, content, tool_calls, tool_results, context_snapshot)
       VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING id
     `, [
       conversationId,
       role,
@@ -431,6 +464,100 @@ class AgentOrchestrator {
       toolResults ? JSON.stringify(toolResults) : null,
       JSON.stringify(contextSnapshot)
     ]);
+
+    return result.rows[0].id;
+  }
+
+  /**
+   * Store conversation in memory for future retrieval
+   * Creates a summary and stores it with semantic embeddings
+   */
+  async storeConversationMemory(userId, messageId, userMessage, assistantResponse, context) {
+    try {
+      // Create a concise summary of the exchange
+      const summary = `User asked: "${userMessage.slice(0, 100)}${userMessage.length > 100 ? '...' : ''}". ` +
+                     `Agent responded about: ${this.extractTopics(assistantResponse)}`;
+
+      // Store with metadata
+      const metadata = {
+        routeId: context.routeId,
+        page: context.pageContext?.page,
+        timestamp: new Date().toISOString()
+      };
+
+      await this.memoryService.storeConversation(userId, messageId, summary, metadata);
+
+      // Extract and store preferences if mentioned
+      await this.extractAndStorePreferences(userId, userMessage, assistantResponse);
+
+    } catch (error) {
+      console.error('Error storing conversation memory:', error);
+      // Don't throw - memory storage failures shouldn't break agent flow
+    }
+  }
+
+  /**
+   * Extract topics from assistant response
+   */
+  extractTopics(response) {
+    // Simple topic extraction - just take first 100 chars
+    const cleaned = response.replace(/\n/g, ' ').trim();
+    return cleaned.slice(0, 100) + (cleaned.length > 100 ? '...' : '');
+  }
+
+  /**
+   * Extract and store user preferences from conversation
+   * (Simple version - could be enhanced with NLP)
+   */
+  async extractAndStorePreferences(userId, userMessage, assistantResponse) {
+    try {
+      const combined = userMessage + ' ' + assistantResponse;
+      const lowerText = combined.toLowerCase();
+
+      // Detect accommodation preferences
+      if (lowerText.includes('hotel') || lowerText.includes('hostel') || lowerText.includes('airbnb')) {
+        const preference = {
+          mentioned: new Date().toISOString(),
+          context: userMessage.slice(0, 200)
+        };
+
+        if (lowerText.includes('budget')) {
+          preference.type = 'budget';
+        } else if (lowerText.includes('luxury') || lowerText.includes('upscale')) {
+          preference.type = 'luxury';
+        }
+
+        await this.memoryService.updatePreference(userId, 'accommodation', preference);
+      }
+
+      // Detect cuisine preferences
+      const cuisines = ['italian', 'french', 'japanese', 'chinese', 'indian', 'mexican', 'thai', 'mediterranean'];
+      for (const cuisine of cuisines) {
+        if (lowerText.includes(cuisine)) {
+          await this.memoryService.updatePreference(userId, 'cuisine', {
+            preference: cuisine,
+            mentioned: new Date().toISOString()
+          });
+          break;
+        }
+      }
+
+      // Detect activity preferences
+      if (lowerText.includes('museum') || lowerText.includes('art') || lowerText.includes('culture')) {
+        await this.memoryService.updatePreference(userId, 'activities', {
+          type: 'cultural',
+          mentioned: new Date().toISOString()
+        });
+      } else if (lowerText.includes('hiking') || lowerText.includes('outdoor') || lowerText.includes('nature')) {
+        await this.memoryService.updatePreference(userId, 'activities', {
+          type: 'outdoor',
+          mentioned: new Date().toISOString()
+        });
+      }
+
+    } catch (error) {
+      console.warn('Error extracting preferences:', error);
+    }
   }
 }
 
