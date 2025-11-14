@@ -154,6 +154,8 @@ export function AgentProvider({ children }: AgentProviderProps) {
   const sendMessage = useCallback(async (messageText: string) => {
     if (!messageText.trim()) return;
 
+    console.log('🚀 [AGENT] sendMessage called with:', messageText.trim());
+
     // Add user message immediately
     const userMessage: AgentMessage = {
       id: uuidv4(),
@@ -191,20 +193,28 @@ export function AgentProvider({ children }: AgentProviderProps) {
       const apiUrl = import.meta.env.VITE_API_URL ||
                      (import.meta.env.MODE === 'production' ? '' : 'http://localhost:5000');
 
+      const payload = {
+        message: messageText.trim(),
+        sessionId: sessionId,
+        pageContext: pageContext.name,
+        routeId: pageContext.route?.routeId || null
+      };
+
+      console.log('📤 [AGENT] Sending fetch to:', `${apiUrl}/api/agent/query`);
+      console.log('📦 [AGENT] Payload:', payload);
+      console.log('🎫 [AGENT] Has token:', !!token);
+
       const response = await fetch(`${apiUrl}/api/agent/query`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
-        body: JSON.stringify({
-          message: messageText.trim(),
-          sessionId: sessionId,
-          pageContext: pageContext.name,
-          routeId: pageContext.route?.routeId || null
-        }),
+        body: JSON.stringify(payload),
         signal: abortController.signal
       });
+
+      console.log('📥 [AGENT] Fetch response received. Status:', response.status, 'OK:', response.ok);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -218,12 +228,16 @@ export function AgentProvider({ children }: AgentProviderProps) {
         throw new Error('No response body');
       }
 
+      console.log('🌊 [AGENT] Starting SSE stream reading...');
+
       let buffer = '';
+      let eventCount = 0;
 
       while (true) {
         const { done, value } = await reader.read();
 
         if (done) {
+          console.log('✅ [AGENT] SSE stream ended. Total events:', eventCount);
           break;
         }
 
@@ -240,9 +254,12 @@ export function AgentProvider({ children }: AgentProviderProps) {
 
             try {
               const event = JSON.parse(data);
+              eventCount++;
+
+              console.log(`📨 [AGENT] Event #${eventCount}:`, event.type, event);
 
               if (event.type === 'connected') {
-                console.log('🤖 Agent connected');
+                console.log('🤖 [AGENT] Connected to agent stream');
               } else if (event.type === 'text') {
                 // Stream text token
                 setMessages(prev =>
@@ -331,7 +348,10 @@ export function AgentProvider({ children }: AgentProviderProps) {
       }
 
     } catch (error: any) {
-      console.error('Error sending message:', error);
+      console.error('❌ [AGENT] Error in sendMessage:', error);
+      console.error('❌ [AGENT] Error name:', error.name);
+      console.error('❌ [AGENT] Error message:', error.message);
+      console.error('❌ [AGENT] Error stack:', error.stack);
 
       // Update assistant message with error
       setMessages(prev =>
@@ -348,6 +368,7 @@ export function AgentProvider({ children }: AgentProviderProps) {
         )
       );
     } finally {
+      console.log('🏁 [AGENT] sendMessage completed. Loading:', false);
       setIsLoading(false);
       abortControllerRef.current = null;
     }
