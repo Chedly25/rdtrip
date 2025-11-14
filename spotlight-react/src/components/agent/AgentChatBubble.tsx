@@ -13,7 +13,7 @@ import { WeatherCard } from './WeatherCard';
 import { ActivityGrid } from './ActivityCard';
 import { DirectionsCard } from './DirectionsCard';
 import { CityInfoCard } from './CityInfoCard';
-import { ToolActivityIndicator } from './ToolActivityIndicator';
+import { ToolExecutionStatus } from './ToolExecutionStatus';
 
 export function AgentChatBubble() {
   const {
@@ -334,8 +334,8 @@ export function AgentChatBubble() {
                       <p className="text-sm text-gray-600">Thinking...</p>
                     </div>
 
-                    {/* Tool Activity Indicators */}
-                    <ToolActivityIndicator activeTools={activeTools} />
+                    {/* Tool Execution Status */}
+                    <ToolExecutionStatus activeTools={activeTools} />
                   </div>
                 </motion.div>
               )}
