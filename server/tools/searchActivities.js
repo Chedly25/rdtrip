@@ -51,25 +51,83 @@ async function searchActivities(params, context) {
     const location = geocodeResponse.data.results[0].geometry.location;
     const { lat, lng } = location;
 
-    // Step 2: Map category to Google Places types
+    // Step 2: Map common search terms to Google Places API types
+    // Google Places supports 100+ types: https://developers.google.com/maps/documentation/places/web-service/supported_types
     const categoryTypeMap = {
-      museum: 'museum',
-      park: 'park',
-      attraction: 'tourist_attraction',
-      restaurant: 'restaurant',
-      outdoor: 'park',
-      cultural: 'museum'
+      // Nightlife & Entertainment
+      'bar': 'bar',
+      'bars': 'bar',
+      'pub': 'bar',
+      'pubs': 'bar',
+      'nightclub': 'night_club',
+      'nightclubs': 'night_club',
+      'club': 'night_club',
+      'clubs': 'night_club',
+
+      // Food & Drink
+      'restaurant': 'restaurant',
+      'restaurants': 'restaurant',
+      'cafe': 'cafe',
+      'coffee': 'cafe',
+      'bakery': 'bakery',
+
+      // Culture & Attractions
+      'museum': 'museum',
+      'museums': 'museum',
+      'art gallery': 'art_gallery',
+      'attraction': 'tourist_attraction',
+      'attractions': 'tourist_attraction',
+      'tourist attraction': 'tourist_attraction',
+      'zoo': 'zoo',
+      'aquarium': 'aquarium',
+      'amusement park': 'amusement_park',
+      'library': 'library',
+
+      // Nature & Outdoors
+      'park': 'park',
+      'parks': 'park',
+      'outdoor': 'park',
+
+      // Shopping
+      'shopping': 'shopping_mall',
+      'mall': 'shopping_mall',
+      'store': 'store',
+      'bookstore': 'book_store',
+      'clothing store': 'clothing_store',
+
+      // Health & Wellness
+      'spa': 'spa',
+      'gym': 'gym',
+      'pharmacy': 'pharmacy',
+      'hospital': 'hospital',
+      'doctor': 'doctor',
+
+      // Services
+      'bank': 'bank',
+      'atm': 'atm',
+      'gas station': 'gas_station',
+      'parking': 'parking',
+      'hotel': 'lodging',
+      'lodging': 'lodging'
     };
 
-    const placeType = category ? categoryTypeMap[category] || 'tourist_attraction' : 'tourist_attraction';
+    // Get the Google Places type, or use category as-is if not in map
+    const placeType = category ? (categoryTypeMap[category.toLowerCase()] || null) : 'tourist_attraction';
 
     // Step 3: Search for places nearby
-    // For restaurants, add keyword to avoid getting hotels with restaurants
-    let searchUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=10000&type=${placeType}&key=${GOOGLE_PLACES_API_KEY}`;
+    let searchUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=10000&key=${GOOGLE_PLACES_API_KEY}`;
 
-    if (category === 'restaurant') {
-      // Use keyword to ensure we get actual restaurants, not hotels
-      searchUrl += '&keyword=restaurant';
+    if (placeType) {
+      // Use the type parameter if we have a match
+      searchUrl += `&type=${placeType}`;
+
+      // For restaurants, add keyword to filter out hotels
+      if (placeType === 'restaurant') {
+        searchUrl += '&keyword=restaurant';
+      }
+    } else if (category) {
+      // If no type match, use keyword search (more flexible, works for any search term)
+      searchUrl += `&keyword=${encodeURIComponent(category)}`;
     }
 
     const searchResponse = await axios.get(searchUrl, { timeout: 15000 });
