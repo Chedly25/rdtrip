@@ -80,11 +80,10 @@ CREATE TABLE IF NOT EXISTS agent_suggestions (
   expires_at TIMESTAMPTZ
 );
 
-CREATE INDEX idx_agent_suggestions_route ON agent_suggestions(route_id)
-  WHERE NOT dismissed AND (expires_at IS NULL OR expires_at > NOW());
-
-CREATE INDEX idx_agent_suggestions_user ON agent_suggestions(user_id)
-  WHERE NOT dismissed;
+-- Simplified indexes without WHERE clauses (avoid immutability issues)
+CREATE INDEX idx_agent_suggestions_route ON agent_suggestions(route_id);
+CREATE INDEX idx_agent_suggestions_user ON agent_suggestions(user_id);
+CREATE INDEX idx_agent_suggestions_dismissed ON agent_suggestions(dismissed);
 
 -- Update trigger for updated_at columns
 CREATE OR REPLACE FUNCTION update_updated_at_column()
