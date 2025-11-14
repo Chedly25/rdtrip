@@ -107,7 +107,7 @@ async function searchActivities(params, context) {
           name: place.name,
           place_id: place.place_id,
           rating: place.rating || null,
-          ratingCount: place.user_ratings_total || 0,
+          userRatingsTotal: place.user_ratings_total || 0,  // Changed from ratingCount
           address: details.formatted_address || place.vicinity,
           coordinates: {
             lat: place.geometry.location.lat,
@@ -115,12 +115,13 @@ async function searchActivities(params, context) {
           },
           photo: photoUrl,
           openingHours: details.opening_hours?.weekday_text || null,
-          isOpenNow: details.opening_hours?.open_now || null,
+          isOpen: details.opening_hours?.open_now || null,  // Changed from isOpenNow
           website: details.website || null,
-          phone: details.formatted_phone_number || null,
+          phoneNumber: details.formatted_phone_number || null,  // Changed from phone
           priceLevel: details.price_level || place.price_level || null,
           summary: details.editorial_summary?.overview || place.editorial_summary?.overview || null,
           types: place.types || [],
+          vicinity: place.vicinity || null,  // Added vicinity field
           category: category || 'attraction'
         };
       })
