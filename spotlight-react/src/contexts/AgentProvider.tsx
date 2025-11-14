@@ -110,10 +110,17 @@ export function AgentProvider({ children }: AgentProviderProps) {
       if (spotlightDataStr) {
         const spotlightData = JSON.parse(spotlightDataStr);
 
+        // Helper to extract string from location (handles both string and CityData object)
+        const getLocationString = (location: any): string | null => {
+          if (!location) return null;
+          if (typeof location === 'string') return location;
+          return location.displayName || location.name || null;
+        };
+
         routeContext = {
           routeId: routeId,
-          origin: spotlightData.origin?.displayName || spotlightData.origin || null,
-          destination: spotlightData.destination?.displayName || spotlightData.destination || null,
+          origin: getLocationString(spotlightData.origin),
+          destination: getLocationString(spotlightData.destination),
           cities: spotlightData.waypoints?.map((w: any) => w.name || w.location || w) || [],
           duration: spotlightData.duration || null,
           startDate: spotlightData.startDate || null
