@@ -10,8 +10,9 @@
  */
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { MapPin, Star, ExternalLink, Plus, Navigation, X, Phone, Globe, DollarSign } from 'lucide-react';
+import { MapPin, Star, ExternalLink, Plus, Navigation, X, Phone, Globe, DollarSign, Calendar, Clock } from 'lucide-react';
 import { useState } from 'react';
+import { useAgent } from '../../../contexts/AgentProvider';
 
 interface Activity {
   name: string;
@@ -39,11 +40,40 @@ interface ActivityGridArtifactProps {
 
 export function ActivityGridArtifact({ activities }: ActivityGridArtifactProps) {
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
+  const [addingActivity, setAddingActivity] = useState<Activity | null>(null); // For day selector modal
+  const { itineraryId, addActivityToDay } = useAgent();
 
   // Debug logging
   console.log('🔍 [ActivityGridArtifact] Received activities:', activities);
   console.log('🔍 [ActivityGridArtifact] First activity:', activities[0]);
   console.log('🔍 [ActivityGridArtifact] First activity keys:', activities[0] ? Object.keys(activities[0]) : 'none');
+  console.log('🔍 [ActivityGridArtifact] Itinerary ID:', itineraryId);
+
+  // Handle adding activity to itinerary
+  const handleAddToItinerary = (activity: Activity) => {
+    if (!itineraryId) {
+      alert('No itinerary available. Please generate a route first.');
+      return;
+    }
+    // Open day selector modal
+    setAddingActivity(activity);
+  };
+
+  // Handle day and time block selection
+  const handleDaySelected = async (dayNumber: number, block: 'morning' | 'afternoon' | 'evening') => {
+    if (!addingActivity) return;
+
+    const result = await addActivityToDay(addingActivity, dayNumber, block);
+
+    if (result.success) {
+      // Success feedback
+      alert(`✅ Added "${addingActivity.name}" to Day ${dayNumber} (${block})`);
+      setAddingActivity(null);
+    } else {
+      // Error feedback
+      alert(`❌ Failed to add activity: ${result.error || 'Unknown error'}`);
+    }
+  };
 
   return (
     <div className="p-4">
@@ -59,6 +89,7 @@ export function ActivityGridArtifact({ activities }: ActivityGridArtifactProps) 
             <ActivityCard
               activity={activity}
               onSelect={() => setSelectedActivity(activity)}
+              onAddToItinerary={handleAddToItinerary}
             />
           </motion.div>
         ))}
@@ -68,12 +99,28 @@ export function ActivityGridArtifact({ activities }: ActivityGridArtifactProps) 
       <ActivityDetailModal
         activity={selectedActivity}
         onClose={() => setSelectedActivity(null)}
+        onAddToItinerary={handleAddToItinerary}
+      />
+
+      {/* Day selector modal for adding to itinerary */}
+      <DaySelectorModal
+        activity={addingActivity}
+        onClose={() => setAddingActivity(null)}
+        onSelect={handleDaySelected}
       />
     </div>
   );
 }
 
-function ActivityCard({ activity, onSelect }: { activity: Activity; onSelect: () => void }) {
+function ActivityCard({
+  activity,
+  onSelect,
+  onAddToItinerary
+}: {
+  activity: Activity;
+  onSelect: () => void;
+  onAddToItinerary: (activity: Activity) => void;
+}) {
   return (
     <div
       onClick={onSelect}
@@ -150,7 +197,7 @@ function ActivityCard({ activity, onSelect }: { activity: Activity; onSelect: ()
           <button
             onClick={(e) => {
               e.stopPropagation();
-              handleAddToItinerary(activity);
+              onAddToItinerary(activity);
             }}
             className="flex-1 bg-teal-600 hover:bg-teal-700 text-white text-sm py-2 px-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
           >
@@ -173,7 +220,15 @@ function ActivityCard({ activity, onSelect }: { activity: Activity; onSelect: ()
   );
 }
 
-function ActivityDetailModal({ activity, onClose }: { activity: Activity | null; onClose: () => void }) {
+function ActivityDetailModal({
+  activity,
+  onClose,
+  onAddToItinerary
+}: {
+  activity: Activity | null;
+  onClose: () => void;
+  onAddToItinerary: (activity: Activity) => void;
+}) {
   if (!activity) return null;
 
   return (
@@ -314,7 +369,7 @@ function ActivityDetailModal({ activity, onClose }: { activity: Activity | null;
             {/* Actions */}
             <div className="flex gap-3">
               <button
-                onClick={() => handleAddToItinerary(activity)}
+                onClick={() => onAddToItinerary(activity)}
                 className="flex-1 bg-teal-600 hover:bg-teal-700 text-white py-3 px-4 rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
               >
                 <Plus className="w-5 h-5" />
@@ -335,17 +390,151 @@ function ActivityDetailModal({ activity, onClose }: { activity: Activity | null;
   );
 }
 
+function DaySelectorModal({
+  activity,
+  onClose,
+  onSelect
+}: {
+  activity: Activity | null;
+  onClose: () => void;
+  onSelect: (dayNumber: number, block: 'morning' | 'afternoon' | 'evening') => void;
+}) {
+  if (!activity) return null;
+
+  const [selectedDay, setSelectedDay] = useState<number>(1);
+  const [selectedBlock, setSelectedBlock] = useState<'morning' | 'afternoon' | 'evening'>('afternoon');
+
+  const blocks = [
+    { id: 'morning', label: 'Morning', icon: '🌅', time: '8am - 12pm' },
+    { id: 'afternoon', label: 'Afternoon', icon: '☀️', time: '12pm - 6pm' },
+    { id: 'evening', label: 'Evening', icon: '🌆', time: '6pm - 10pm' }
+  ] as const;
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[2100] flex items-center justify-center p-4"
+        onClick={onClose}
+      >
+        <motion.div
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.9, opacity: 0 }}
+          transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+          onClick={(e) => e.stopPropagation()}
+          className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+        >
+          {/* Header */}
+          <div className="bg-gradient-to-r from-teal-500 to-blue-500 p-6 text-white">
+            <div className="flex items-start justify-between mb-2">
+              <h3 className="text-xl font-bold">Add to Itinerary</h3>
+              <button
+                onClick={onClose}
+                className="w-8 h-8 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white/30 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-white/90 text-sm">{activity.name}</p>
+          </div>
+
+          {/* Content */}
+          <div className="p-6">
+            {/* Day selector */}
+            <div className="mb-6">
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-3">
+                <Calendar className="w-4 h-4" />
+                Select Day
+              </label>
+              <div className="grid grid-cols-5 gap-2">
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((day) => (
+                  <button
+                    key={day}
+                    onClick={() => setSelectedDay(day)}
+                    className={`
+                      h-12 rounded-lg font-medium transition-all
+                      ${selectedDay === day
+                        ? 'bg-teal-600 text-white shadow-lg scale-105'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }
+                    `}
+                  >
+                    {day}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Time block selector */}
+            <div className="mb-6">
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-3">
+                <Clock className="w-4 h-4" />
+                Select Time
+              </label>
+              <div className="space-y-2">
+                {blocks.map((block) => (
+                  <button
+                    key={block.id}
+                    onClick={() => setSelectedBlock(block.id)}
+                    className={`
+                      w-full p-3 rounded-lg flex items-center gap-3 transition-all
+                      ${selectedBlock === block.id
+                        ? 'bg-teal-50 border-2 border-teal-600 shadow-md'
+                        : 'bg-gray-50 border-2 border-gray-200 hover:border-gray-300'
+                      }
+                    `}
+                  >
+                    <span className="text-2xl">{block.icon}</span>
+                    <div className="text-left flex-1">
+                      <div className={`font-medium ${selectedBlock === block.id ? 'text-teal-900' : 'text-gray-900'}`}>
+                        {block.label}
+                      </div>
+                      <div className={`text-sm ${selectedBlock === block.id ? 'text-teal-600' : 'text-gray-500'}`}>
+                        {block.time}
+                      </div>
+                    </div>
+                    {selectedBlock === block.id && (
+                      <div className="w-6 h-6 bg-teal-600 rounded-full flex items-center justify-center">
+                        <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3">
+              <button
+                onClick={onClose}
+                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 px-4 rounded-xl font-medium transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => onSelect(selectedDay, selectedBlock)}
+                className="flex-1 bg-teal-600 hover:bg-teal-700 text-white py-3 px-4 rounded-xl font-medium transition-colors flex items-center justify-center gap-2"
+              >
+                <Plus className="w-5 h-5" />
+                Add to Day {selectedDay}
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
 // Helper functions
 function getPriceLevelText(level: number): string {
   const levels = ['Free', 'Inexpensive', 'Moderate', 'Expensive', 'Very Expensive'];
   return levels[level] || 'Unknown';
-}
-
-function handleAddToItinerary(activity: Activity) {
-  console.log('Add to itinerary:', activity.name);
-  // TODO: Implement itinerary integration
-  // This will open a modal to select which day/time to add the activity
-  alert(`Adding "${activity.name}" to itinerary (feature coming soon)`);
 }
 
 function handleGetDirections(activity: Activity) {
