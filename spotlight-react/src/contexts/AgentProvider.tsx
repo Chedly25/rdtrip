@@ -187,7 +187,11 @@ export function AgentProvider({ children }: AgentProviderProps) {
       abortControllerRef.current = abortController;
 
       // Call agent API with SSE streaming
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/agent/query`, {
+      // In production, use relative URL (same host). In dev, use env var or localhost
+      const apiUrl = import.meta.env.VITE_API_URL ||
+                     (import.meta.env.MODE === 'production' ? '' : 'http://localhost:5000');
+
+      const response = await fetch(`${apiUrl}/api/agent/query`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
