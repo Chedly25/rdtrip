@@ -315,7 +315,7 @@ class AgentOrchestrator {
           tools: toolUses.map((use, idx) => ({
             name: use.name,
             input: use.input,
-            result: toolResults[idx].content
+            content: toolResults[idx].content  // Changed from 'result' to 'content' to match frontend
           }))
         });
       }
