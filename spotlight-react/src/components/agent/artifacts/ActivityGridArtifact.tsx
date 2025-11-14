@@ -75,7 +75,7 @@ function ActivityCard({ activity, onSelect }: { activity: Activity; onSelect: ()
       className="bg-white rounded-xl overflow-hidden border-2 border-gray-200 hover:border-teal-300 hover:shadow-lg transition-all cursor-pointer group"
     >
       {/* Image */}
-      <div className="relative h-48 bg-gradient-to-br from-teal-100 to-blue-100">
+      <div className="relative h-32 bg-gradient-to-br from-teal-100 to-blue-100">
         {activity.photo ? (
           <img
             src={activity.photo}
