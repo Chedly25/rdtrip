@@ -415,12 +415,17 @@ class AgentOrchestrator {
       return existing.rows[0].id;
     }
 
+    // Validate routeId format (must be a valid UUID)
+    // If invalid or not provided, set to null
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const validRouteId = (routeId && uuidRegex.test(routeId)) ? routeId : null;
+
     // Create new conversation
     const result = await this.db.query(`
       INSERT INTO agent_conversations (user_id, route_id, session_id)
       VALUES ($1, $2, $3)
       RETURNING id
-    `, [userId, routeId, sessionId]);
+    `, [userId, validRouteId, sessionId]);
 
     return result.rows[0].id;
   }
