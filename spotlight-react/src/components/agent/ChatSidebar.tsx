@@ -43,7 +43,7 @@ export function ChatSidebar() {
     <motion.div
       initial={{ x: 100, opacity: 0 }}
       animate={{ x: 0, opacity: 1 }}
-      className="sticky top-16 h-[calc(100vh-4rem)] flex flex-col bg-white border-l border-gray-200 shadow-xl"
+      className="lg:sticky lg:top-16 lg:h-[calc(100vh-4rem)] flex flex-col bg-white lg:border-l border-t lg:border-t-0 border-gray-200 shadow-xl"
     >
       {/* Header */}
       <div className="flex-shrink-0 px-4 py-3 bg-gradient-to-r from-teal-600 to-blue-600 text-white flex items-center justify-between">
@@ -60,23 +60,25 @@ export function ChatSidebar() {
         </button>
       </div>
 
-      {/* Content - split between chat and artifacts */}
+      {/* Content - flexible split between chat and artifacts */}
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
         {currentArtifact ? (
           <>
-            {/* Chat history - smaller when artifact shown */}
-            <div className="flex-shrink-0 h-1/3 border-b border-gray-200 overflow-hidden">
-              <ChatHistoryPanel />
+            {/* Chat history - 40% when artifact shown (better than 33%) */}
+            <div className="flex-shrink-0 h-[40%] min-h-[200px] border-b border-gray-200 flex flex-col">
+              <div className="flex-1 overflow-y-auto">
+                <ChatHistoryPanel />
+              </div>
             </div>
 
-            {/* Artifacts - larger section */}
-            <div className="flex-1 overflow-auto">
+            {/* Artifacts - 60% section with scroll */}
+            <div className="flex-1 min-h-0 overflow-y-auto bg-gray-50">
               <ArtifactsPanel />
             </div>
           </>
         ) : (
           /* Full chat when no artifact */
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 overflow-y-auto">
             <ChatHistoryPanel />
           </div>
         )}

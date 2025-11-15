@@ -78,8 +78,8 @@ export function DayCardV2({
           </div>
         </div>
 
-        {/* Activity grid: 4 columns desktop, 2 tablet, 1 mobile */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {/* Activity grid: Responsive columns that fit the available space */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
           {activities.slice(0, 6).map((activity: any, index: number) => (
             <CompactActivityCard
               key={activity.place_id || activity.name || index}
@@ -111,8 +111,8 @@ export function DayCardV2({
           </div>
         </div>
 
-        {/* 3-column layout: Breakfast | Lunch | Dinner */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Responsive meal layout: stacked on mobile, 3 columns on desktop */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {/* Breakfast column */}
           {breakfastRestaurants.length > 0 && (
             <div>
