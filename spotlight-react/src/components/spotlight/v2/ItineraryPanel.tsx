@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Loader2, Calendar, Sparkles, CheckCircle2, AlertCircle, MapPin, Landmark, Star, Car } from 'lucide-react';
 import { useItineraryGeneration } from '../../../hooks/useItineraryGeneration';
@@ -16,6 +17,7 @@ interface ItineraryPanelProps {
 }
 
 export const ItineraryPanel = ({ isOpen, onClose }: ItineraryPanelProps) => {
+  const navigate = useNavigate();
   const { route } = useSpotlightStoreV2();
   const {
     agentNodes,
@@ -477,7 +479,7 @@ export const ItineraryPanel = ({ isOpen, onClose }: ItineraryPanelProps) => {
                         <button
                           onClick={() => {
                             // Navigate to view full itinerary
-                            window.location.href = `/spotlight?itinerary=${itinerary.id}`;
+                            navigate(`/?itinerary=${itinerary.id}`);
                           }}
                           className="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors"
                         >

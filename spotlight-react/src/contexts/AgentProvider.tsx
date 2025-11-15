@@ -187,9 +187,9 @@ export function AgentProvider({ children }: AgentProviderProps) {
 
     // Detect page name
     let pageName: PageContext['name'] = 'unknown';
-    if (path.includes('/spotlight/generate')) {
+    if (path.includes('/generate')) {
       pageName = 'itinerary';
-    } else if (path.includes('/spotlight') || searchParams.get('routeId') || searchParams.get('itinerary')) {
+    } else if (searchParams.get('routeId') || searchParams.get('itinerary')) {
       pageName = 'spotlight';
     } else if (path === '/' || path === '') {
       pageName = 'landing';

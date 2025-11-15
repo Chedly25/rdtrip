@@ -161,7 +161,7 @@ export function TodayView() {
             Days until trip: {totalDays > 0 ? Math.abs(daysCompleted) : 'Unknown'}
           </p>
           <button
-            onClick={() => navigate(`/itinerary?itinerary=${itineraryId}`)}
+            onClick={() => navigate(`/?itinerary=${itineraryId}`)}
             className="px-6 py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-medium transition-colors"
           >
             View Full Itinerary
