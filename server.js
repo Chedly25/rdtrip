@@ -8437,6 +8437,311 @@ app.delete('/api/routes/:routeId/comments/:commentId', authMiddleware, async (re
   }
 });
 
+// ===========================
+// POLLING ENDPOINTS (Phase 3)
+// ===========================
+
+// POST /api/routes/:routeId/polls - Create poll
+app.post('/api/routes/:routeId/polls', authMiddleware, async (req, res) => {
+  try {
+    const { routeId } = req.params;
+    const {
+      question,
+      pollType,
+      options,
+      multipleChoice,
+      deadline,
+      autoExecute,
+      consensusThreshold,
+      targetType,
+      targetId,
+      dayNumber
+    } = req.body;
+    const userId = req.user.id;
+
+    // Validation
+    if (!question || !options || !Array.isArray(options) || options.length < 2) {
+      return res.status(400).json({
+        error: 'Question and at least 2 options are required'
+      });
+    }
+
+    // Verify access to route
+    const permission = await checkRoutePermission(routeId, userId);
+    if (!permission.hasAccess) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    // Insert poll
+    const result = await pool.query(`
+      INSERT INTO trip_polls (
+        route_id,
+        created_by,
+        question,
+        poll_type,
+        target_type,
+        target_id,
+        day_number,
+        options,
+        multiple_choice,
+        deadline,
+        auto_execute,
+        consensus_threshold
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      RETURNING *
+    `, [
+      routeId,
+      userId,
+      question,
+      pollType || 'general',
+      targetType || null,
+      targetId || null,
+      dayNumber || null,
+      JSON.stringify(options),
+      multipleChoice || false,
+      deadline || null,
+      autoExecute || false,
+      consensusThreshold || 50
+    ]);
+
+    const poll = result.rows[0];
+
+    // Get creator info
+    const userResult = await pool.query(
+      'SELECT name FROM users WHERE id = $1',
+      [userId]
+    );
+
+    const pollWithUser = {
+      ...poll,
+      options: typeof poll.options === 'string' ? JSON.parse(poll.options) : poll.options,
+      created_by_name: userResult.rows[0]?.name,
+      votes: []
+    };
+
+    // Broadcast via WebSocket
+    if (collaborationService) {
+      collaborationService.broadcast(routeId, {
+        type: 'poll_created',
+        poll: pollWithUser
+      });
+    }
+
+    res.json({ success: true, poll: pollWithUser });
+
+  } catch (error) {
+    console.error('Error creating poll:', error);
+    res.status(500).json({ error: 'Failed to create poll' });
+  }
+});
+
+// GET /api/routes/:routeId/polls - Get polls for route
+app.get('/api/routes/:routeId/polls', authMiddleware, async (req, res) => {
+  try {
+    const { routeId } = req.params;
+    const { status } = req.query;
+    const userId = req.user.id;
+
+    // Verify access
+    const permission = await checkRoutePermission(routeId, userId);
+    if (!permission.hasAccess) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    let query = `
+      SELECT
+        p.*,
+        u.name as created_by_name,
+        (
+          SELECT json_agg(json_build_object(
+            'user_id', v.user_id,
+            'user_name', vu.name,
+            'selected_options', v.selected_options,
+            'created_at', v.created_at
+          ))
+          FROM poll_votes v
+          JOIN users vu ON v.user_id = vu.id
+          WHERE v.poll_id = p.id
+        ) as votes
+      FROM trip_polls p
+      JOIN users u ON p.created_by = u.id
+      WHERE p.route_id = $1
+    `;
+
+    const params = [routeId];
+
+    if (status) {
+      query += ` AND p.status = $2`;
+      params.push(status);
+    }
+
+    query += ` ORDER BY p.created_at DESC`;
+
+    const result = await pool.query(query, params);
+
+    // Parse JSONB fields
+    const polls = result.rows.map(poll => ({
+      ...poll,
+      options: typeof poll.options === 'string' ? JSON.parse(poll.options) : poll.options,
+      votes: poll.votes || []
+    }));
+
+    res.json({
+      success: true,
+      polls
+    });
+
+  } catch (error) {
+    console.error('Error fetching polls:', error);
+    res.status(500).json({ error: 'Failed to fetch polls' });
+  }
+});
+
+// POST /api/routes/:routeId/polls/:pollId/vote - Vote on poll
+app.post('/api/routes/:routeId/polls/:pollId/vote', authMiddleware, async (req, res) => {
+  try {
+    const { routeId, pollId } = req.params;
+    const { selectedOptions } = req.body;
+    const userId = req.user.id;
+
+    // Validation
+    if (!selectedOptions || !Array.isArray(selectedOptions) || selectedOptions.length === 0) {
+      return res.status(400).json({ error: 'selectedOptions array is required' });
+    }
+
+    // Verify access
+    const permission = await checkRoutePermission(routeId, userId);
+    if (!permission.hasAccess) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    // Check if poll exists and is active
+    const pollCheck = await pool.query(
+      'SELECT id, status, multiple_choice, options, max_choices FROM trip_polls WHERE id = $1 AND route_id = $2',
+      [pollId, routeId]
+    );
+
+    if (pollCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Poll not found' });
+    }
+
+    const poll = pollCheck.rows[0];
+
+    if (poll.status !== 'active') {
+      return res.status(400).json({ error: 'Poll is closed' });
+    }
+
+    // Validate single choice
+    if (!poll.multiple_choice && selectedOptions.length > 1) {
+      return res.status(400).json({ error: 'Poll only allows single choice' });
+    }
+
+    // Validate max choices
+    if (poll.max_choices && selectedOptions.length > poll.max_choices) {
+      return res.status(400).json({ error: `Poll allows maximum ${poll.max_choices} choices` });
+    }
+
+    // Insert or update vote
+    await pool.query(`
+      INSERT INTO poll_votes (poll_id, user_id, selected_options)
+      VALUES ($1, $2, $3)
+      ON CONFLICT (poll_id, user_id)
+      DO UPDATE SET selected_options = $3, updated_at = NOW()
+    `, [pollId, userId, JSON.stringify(selectedOptions)]);
+
+    // Get updated votes
+    const votesResult = await pool.query(`
+      SELECT
+        v.user_id,
+        v.selected_options,
+        v.created_at,
+        u.name as user_name
+      FROM poll_votes v
+      JOIN users u ON v.user_id = u.id
+      WHERE v.poll_id = $1
+    `, [pollId]);
+
+    const votes = votesResult.rows.map(v => ({
+      ...v,
+      selected_options: typeof v.selected_options === 'string' ? JSON.parse(v.selected_options) : v.selected_options
+    }));
+
+    // Broadcast via WebSocket
+    if (collaborationService) {
+      collaborationService.broadcast(routeId, {
+        type: 'vote_cast',
+        pollId,
+        userId,
+        selectedOptions,
+        votes
+      });
+    }
+
+    res.json({ success: true, votes });
+
+  } catch (error) {
+    console.error('Error casting vote:', error);
+    res.status(500).json({ error: 'Failed to cast vote' });
+  }
+});
+
+// POST /api/routes/:routeId/polls/:pollId/close - Close poll
+app.post('/api/routes/:routeId/polls/:pollId/close', authMiddleware, async (req, res) => {
+  try {
+    const { routeId, pollId } = req.params;
+    const userId = req.user.id;
+
+    // Check if user is poll creator or route owner/editor
+    const permissionCheck = await pool.query(`
+      SELECT p.id
+      FROM trip_polls p
+      LEFT JOIN route_collaborators rc ON rc.route_id = p.route_id AND rc.user_id = $3
+      WHERE p.id = $1
+        AND p.route_id = $2
+        AND (
+          p.created_by = $3
+          OR rc.role IN ('owner', 'editor')
+        )
+    `, [pollId, routeId, userId]);
+
+    if (permissionCheck.rows.length === 0) {
+      return res.status(403).json({ error: 'Permission denied. Only poll creator or route owner/editor can close polls.' });
+    }
+
+    // Close poll
+    const result = await pool.query(`
+      UPDATE trip_polls
+      SET status = 'closed', closed_at = NOW(), closed_by = $1
+      WHERE id = $2 AND route_id = $3
+      RETURNING *
+    `, [userId, pollId, routeId]);
+
+    const poll = result.rows[0];
+
+    // Parse JSONB
+    const pollParsed = {
+      ...poll,
+      options: typeof poll.options === 'string' ? JSON.parse(poll.options) : poll.options
+    };
+
+    // Broadcast via WebSocket
+    if (collaborationService) {
+      collaborationService.broadcast(routeId, {
+        type: 'poll_closed',
+        pollId,
+        poll: pollParsed
+      });
+    }
+
+    res.json({ success: true, poll: pollParsed });
+
+  } catch (error) {
+    console.error('Error closing poll:', error);
+    res.status(500).json({ error: 'Failed to close poll' });
+  }
+});
+
 // GET /api/routes/:id/activity - Get activity log
 app.get('/api/routes/:id/activity', authMiddleware, async (req, res) => {
   try {
