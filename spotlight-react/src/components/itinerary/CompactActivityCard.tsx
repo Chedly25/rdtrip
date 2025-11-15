@@ -8,10 +8,10 @@ interface CompactActivityCardProps {
 }
 
 export function CompactActivityCard({ activity, onSelect, isSelected = false }: CompactActivityCardProps) {
-  // Extract photo URL with fallback
+  // Extract photo URL with fallback (supports both 'photo' and 'photos' fields)
   const photo = activity.photos?.[0];
   const photoUrl = typeof photo === 'string' ? photo :
-    photo?.url || activity.primaryPhoto?.url || activity.primaryPhoto || null;
+    photo?.url || activity.photo || activity.primaryPhoto?.url || activity.primaryPhoto || null;
 
   // Google Maps link helper
   const getGoogleMapsLink = () => {
