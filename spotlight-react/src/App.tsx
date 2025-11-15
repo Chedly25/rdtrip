@@ -4,6 +4,7 @@ import SpotlightV2 from './components/spotlight/v2/SpotlightV2'
 import { ItineraryGenerationPage } from './components/itinerary/ItineraryGenerationPage'
 import { TodayView } from './components/today/TodayView'
 import { MyTripsPage } from './pages/MyTripsPage'
+import { RouteProposalsPage } from './pages/RouteProposalsPage'
 import { AgentProvider } from './contexts/AgentProvider'
 import { AgentChatBubble } from './components/agent/AgentChatBubble'
 import { AgentModal } from './components/agent/AgentModal'
@@ -29,6 +30,7 @@ function App() {
 
           <Routes>
             <Route path="/my-trips" element={<MyTripsPage />} />
+            <Route path="/trips/:tripId/proposals" element={<RouteProposalsPage />} />
             <Route path="/generate" element={<ItineraryGenerationPage />} />
             <Route path="/today" element={<TodayView />} />
             <Route path="*" element={<SpotlightV2 />} />

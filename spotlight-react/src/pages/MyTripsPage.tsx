@@ -186,6 +186,19 @@ export function MyTripsPage() {
                     </button>
                   </div>
 
+                  {/* View Proposals Link */}
+                  {trip.proposal_count > 0 && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/trips/${trip.id}/proposals`);
+                      }}
+                      className="mt-4 text-sm text-teal-600 hover:text-teal-700 hover:underline font-medium"
+                    >
+                      View {trip.proposal_count} proposal{trip.proposal_count > 1 ? 's' : ''}
+                    </button>
+                  )}
+
                   {/* Last updated */}
                   <div className="mt-4 pt-4 border-t border-gray-100 text-xs text-gray-400">
                     Updated {formatRelativeTime(trip.updated_at)}
