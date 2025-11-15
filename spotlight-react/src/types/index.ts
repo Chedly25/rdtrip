@@ -477,3 +477,73 @@ export interface PublishRouteResponse {
   publishedRoute: PublishedRoute
   success: boolean
 }
+
+// Notification types (Phase 5)
+export type NotificationType =
+  | 'mention'
+  | 'task_assigned'
+  | 'task_due_soon'
+  | 'poll_created'
+  | 'poll_closed'
+  | 'comment_on_activity'
+  | 'activity_changed'
+  | 'chat_message'
+  | 'collaborator_added'
+  | 'route_shared'
+
+export type NotificationChannel = 'push' | 'email' | 'in_app'
+
+export interface Notification {
+  id: string
+  userId: string
+  type: NotificationType
+  title: string
+  message: string
+  routeId?: string
+  itineraryId?: string
+  read: boolean
+  readAt?: string
+  metadata?: Record<string, any>
+  createdAt: string
+}
+
+export interface NotificationPreferences {
+  userId: string
+  // Channel toggles
+  pushEnabled: boolean
+  emailEnabled: boolean
+  inAppEnabled: boolean
+  // Event-specific toggles
+  notifyMention: boolean
+  notifyTaskAssigned: boolean
+  notifyTaskDueSoon: boolean
+  notifyPollCreated: boolean
+  notifyCommentOnActivity: boolean
+  notifyActivityChanged: boolean
+  notifyMessage: boolean
+  // Quiet hours
+  quietHoursStart?: string
+  quietHoursEnd?: string
+  quietHoursTimezone?: string
+  updatedAt?: string
+}
+
+export interface UserDevice {
+  id: string
+  userId: string
+  deviceId: string
+  fcmToken?: string
+  platform: 'ios' | 'android' | 'web'
+  lastActive: string
+  createdAt: string
+}
+
+// API response types for notifications
+export interface NotificationsResponse {
+  notifications: Notification[]
+  unreadCount: number
+}
+
+export interface NotificationPreferencesResponse {
+  preferences: NotificationPreferences
+}

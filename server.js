@@ -9127,6 +9127,222 @@ app.delete('/api/routes/:routeId/tasks/:taskId', authMiddleware, async (req, res
   }
 });
 
+// =====================================================
+// PHASE 5: NOTIFICATION ENDPOINTS
+// =====================================================
+
+// POST /api/notifications/devices - Register device for push notifications
+app.post('/api/notifications/devices', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { deviceId, fcmToken, platform } = req.body;
+
+    if (!deviceId) {
+      return res.status(400).json({ error: 'deviceId is required' });
+    }
+
+    // Upsert device (insert or update if exists)
+    await pool.query(`
+      INSERT INTO user_devices (user_id, device_id, fcm_token, platform, last_active)
+      VALUES ($1, $2, $3, $4, NOW())
+      ON CONFLICT (user_id, device_id)
+      DO UPDATE SET
+        fcm_token = EXCLUDED.fcm_token,
+        platform = EXCLUDED.platform,
+        last_active = NOW()
+    `, [userId, deviceId, fcmToken || null, platform || 'web']);
+
+    console.log(`✅ Registered device for user ${userId}: ${deviceId}`);
+
+    res.json({ success: true, message: 'Device registered successfully' });
+
+  } catch (error) {
+    console.error('Error registering device:', error);
+    res.status(500).json({ error: 'Failed to register device' });
+  }
+});
+
+// GET /api/notifications - Get user's notifications
+app.get('/api/notifications', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { unreadOnly = false, limit = 50 } = req.query;
+
+    let query = `
+      SELECT
+        id, type, title, message, route_id, itinerary_id,
+        read, read_at, metadata, created_at
+      FROM notifications
+      WHERE user_id = $1
+    `;
+
+    const params = [userId];
+
+    if (unreadOnly === 'true') {
+      query += ' AND read = false';
+    }
+
+    query += ' ORDER BY created_at DESC LIMIT $2';
+    params.push(parseInt(limit as string) || 50);
+
+    const result = await pool.query(query, params);
+
+    // Get unread count
+    const countResult = await pool.query(
+      'SELECT COUNT(*) as count FROM notifications WHERE user_id = $1 AND read = false',
+      [userId]
+    );
+
+    const notifications = result.rows.map(row => ({
+      ...row,
+      metadata: typeof row.metadata === 'string' ? JSON.parse(row.metadata) : row.metadata
+    }));
+
+    res.json({
+      notifications,
+      unreadCount: parseInt(countResult.rows[0].count)
+    });
+
+  } catch (error) {
+    console.error('Error fetching notifications:', error);
+    res.status(500).json({ error: 'Failed to fetch notifications' });
+  }
+});
+
+// PATCH /api/notifications/:notificationId/read - Mark notification as read
+app.patch('/api/notifications/:notificationId/read', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { notificationId } = req.params;
+
+    // Update and verify ownership
+    const result = await pool.query(`
+      UPDATE notifications
+      SET read = true, read_at = NOW()
+      WHERE id = $1 AND user_id = $2
+      RETURNING id
+    `, [notificationId, userId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Notification not found or not authorized' });
+    }
+
+    res.json({ success: true });
+
+  } catch (error) {
+    console.error('Error marking notification as read:', error);
+    res.status(500).json({ error: 'Failed to mark notification as read' });
+  }
+});
+
+// POST /api/notifications/read-all - Mark all notifications as read
+app.post('/api/notifications/read-all', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const result = await pool.query(`
+      UPDATE notifications
+      SET read = true, read_at = NOW()
+      WHERE user_id = $1 AND read = false
+      RETURNING id
+    `, [userId]);
+
+    console.log(`✅ Marked ${result.rows.length} notifications as read for user ${userId}`);
+
+    res.json({ success: true, count: result.rows.length });
+
+  } catch (error) {
+    console.error('Error marking all as read:', error);
+    res.status(500).json({ error: 'Failed to mark all as read' });
+  }
+});
+
+// GET /api/notifications/preferences - Get notification preferences
+app.get('/api/notifications/preferences', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    let result = await pool.query(
+      'SELECT * FROM notification_preferences WHERE user_id = $1',
+      [userId]
+    );
+
+    // If no preferences exist, create defaults
+    if (result.rows.length === 0) {
+      await pool.query(
+        'INSERT INTO notification_preferences (user_id) VALUES ($1)',
+        [userId]
+      );
+
+      result = await pool.query(
+        'SELECT * FROM notification_preferences WHERE user_id = $1',
+        [userId]
+      );
+    }
+
+    res.json({ preferences: result.rows[0] });
+
+  } catch (error) {
+    console.error('Error fetching preferences:', error);
+    res.status(500).json({ error: 'Failed to fetch preferences' });
+  }
+});
+
+// PATCH /api/notifications/preferences - Update notification preferences
+app.patch('/api/notifications/preferences', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const updates = req.body;
+
+    // Whitelist of allowed fields
+    const allowedFields = [
+      'push_enabled', 'email_enabled', 'in_app_enabled',
+      'notify_mention', 'notify_task_assigned', 'notify_task_due_soon',
+      'notify_poll_created', 'notify_comment_on_activity',
+      'notify_activity_changed', 'notify_message',
+      'quiet_hours_start', 'quiet_hours_end', 'quiet_hours_timezone'
+    ];
+
+    // Build dynamic update query
+    const updateFields = [];
+    const params = [userId];
+    let paramCounter = 2;
+
+    Object.keys(updates).forEach(key => {
+      if (allowedFields.includes(key)) {
+        updateFields.push(`${key} = $${paramCounter}`);
+        params.push(updates[key]);
+        paramCounter++;
+      }
+    });
+
+    if (updateFields.length === 0) {
+      return res.status(400).json({ error: 'No valid fields to update' });
+    }
+
+    updateFields.push('updated_at = NOW()');
+
+    const query = `
+      UPDATE notification_preferences
+      SET ${updateFields.join(', ')}
+      WHERE user_id = $1
+      RETURNING *
+    `;
+
+    const result = await pool.query(query, params);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Preferences not found' });
+    }
+
+    res.json({ preferences: result.rows[0] });
+
+  } catch (error) {
+    console.error('Error updating preferences:', error);
+    res.status(500).json({ error: 'Failed to update preferences' });
+  }
+});
+
 // GET /api/routes/:id/activity - Get activity log
 app.get('/api/routes/:id/activity', authMiddleware, async (req, res) => {
   try {
