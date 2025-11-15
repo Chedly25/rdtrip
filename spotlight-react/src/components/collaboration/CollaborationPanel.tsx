@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
-import { MessageCircle, Users, Send, Loader2, UserPlus, MoreVertical, Crown, Edit, Eye, Reply, X } from 'lucide-react'
+import { MessageCircle, Users, Send, Loader2, UserPlus, MoreVertical, Crown, Edit, Eye, Reply, X, ListTodo } from 'lucide-react'
 import { useWebSocket } from '../../hooks/useWebSocket'
 import type { Collaborator, TripMessage, PresenceStatus } from '../../types'
 import { motion, AnimatePresence } from 'framer-motion'
 import { MessageReactionPicker } from './MessageReactionPicker'
 import { MentionAutocomplete } from './MentionAutocomplete'
 import { ActivityMessageCard } from './ActivityMessageCard'
+import { TaskBoard } from './TaskBoard'
 
 interface CollaborationPanelProps {
   routeId: string
@@ -13,7 +14,7 @@ interface CollaborationPanelProps {
   onInviteClick: () => void
 }
 
-type TabType = 'chat' | 'collaborators'
+type TabType = 'chat' | 'collaborators' | 'tasks'
 
 export function CollaborationPanel({ routeId, currentUserId, onInviteClick }: CollaborationPanelProps) {
   const [activeTab, setActiveTab] = useState<TabType>('chat')
@@ -24,6 +25,7 @@ export function CollaborationPanel({ routeId, currentUserId, onInviteClick }: Co
   const [isLoadingCollaborators, setIsLoadingCollaborators] = useState(true)
   const [isLoadingMessages, setIsLoadingMessages] = useState(true)
   const [isSending, setIsSending] = useState(false)
+  const [taskWsMessage, setTaskWsMessage] = useState<any>(null)
 
   // Mention autocomplete state
   const [mentionTrigger, setMentionTrigger] = useState('')
@@ -109,6 +111,13 @@ export function CollaborationPanel({ routeId, currentUserId, onInviteClick }: Co
 
       case 'route_update':
         // Could show a notification here
+        break
+
+      case 'task_created':
+      case 'task_updated':
+      case 'task_deleted':
+        // Forward task messages to TaskBoard
+        setTaskWsMessage(message)
         break
     }
   }
@@ -391,6 +400,18 @@ export function CollaborationPanel({ routeId, currentUserId, onInviteClick }: Co
               {collaborators.length}
             </span>
           </button>
+
+          <button
+            onClick={() => setActiveTab('tasks')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+              activeTab === 'tasks'
+                ? 'bg-blue-50 text-blue-600 font-medium'
+                : 'text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+            <ListTodo className="h-4 w-4" />
+            <span>Tasks</span>
+          </button>
         </div>
 
         {/* Connection status indicator */}
@@ -614,7 +635,7 @@ export function CollaborationPanel({ routeId, currentUserId, onInviteClick }: Co
               </div>
             </div>
           </div>
-        ) : (
+        ) : activeTab === 'collaborators' ? (
           /* Collaborators list */
           <div className="p-4 space-y-2">
             {/* Invite button */}
@@ -687,6 +708,14 @@ export function CollaborationPanel({ routeId, currentUserId, onInviteClick }: Co
               </div>
             )}
           </div>
+        ) : (
+          /* Tasks Board */
+          <TaskBoard
+            routeId={routeId}
+            currentUserId={currentUserId}
+            userRole={collaborators.find(c => c.userId === currentUserId)?.role}
+            wsMessage={taskWsMessage}
+          />
         )}
       </div>
     </div>

@@ -8742,6 +8742,391 @@ app.post('/api/routes/:routeId/polls/:pollId/close', authMiddleware, async (req,
   }
 });
 
+// =====================================================
+// PHASE 4: TASK MANAGEMENT ENDPOINTS
+// =====================================================
+
+// POST /api/routes/:routeId/tasks - Create task
+app.post('/api/routes/:routeId/tasks', authMiddleware, async (req, res) => {
+  try {
+    const { routeId } = req.params;
+    const {
+      title,
+      description,
+      taskType,
+      assignedTo,
+      relatedActivity,
+      relatedDay,
+      relatedRestaurant,
+      priority,
+      dueDate,
+      itineraryId
+    } = req.body;
+    const userId = req.user.id;
+
+    // Validation
+    if (!title || title.trim().length === 0) {
+      return res.status(400).json({ error: 'Title is required' });
+    }
+
+    // Verify assignee is a collaborator (if specified)
+    if (assignedTo && assignedTo !== userId) {
+      const collabCheck = await pool.query(
+        'SELECT id FROM route_collaborators WHERE route_id = $1 AND user_id = $2',
+        [routeId, assignedTo]
+      );
+
+      if (collabCheck.rows.length === 0) {
+        return res.status(400).json({ error: 'Assigned user is not a collaborator' });
+      }
+    }
+
+    // Create task
+    const result = await pool.query(`
+      INSERT INTO trip_tasks (
+        route_id,
+        itinerary_id,
+        title,
+        description,
+        task_type,
+        assigned_to,
+        assigned_by,
+        related_activity,
+        related_day,
+        related_restaurant,
+        priority,
+        due_date
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      RETURNING *
+    `, [
+      routeId,
+      itineraryId || null,
+      title.trim(),
+      description?.trim() || null,
+      taskType || 'custom',
+      assignedTo || null,
+      userId,
+      relatedActivity || null,
+      relatedDay || null,
+      relatedRestaurant || null,
+      priority || 'medium',
+      dueDate || null
+    ]);
+
+    const task = result.rows[0];
+
+    // Get user info for enrichment
+    const userQuery = `
+      SELECT
+        u1.name as assigned_to_name,
+        u2.name as assigned_by_name
+      FROM users u2
+      LEFT JOIN users u1 ON u1.id = $1
+      WHERE u2.id = $2
+    `;
+
+    const userInfo = await pool.query(userQuery, [assignedTo || null, userId]);
+
+    const taskWithUsers = {
+      ...task,
+      assigned_to_name: userInfo.rows[0]?.assigned_to_name,
+      assigned_by_name: userInfo.rows[0]?.assigned_by_name
+    };
+
+    // Broadcast via WebSocket
+    if (collaborationService) {
+      collaborationService.broadcast(routeId, {
+        type: 'task_created',
+        task: taskWithUsers
+      });
+    }
+
+    res.json({ success: true, task: taskWithUsers });
+
+  } catch (error) {
+    console.error('Error creating task:', error);
+    res.status(500).json({ error: 'Failed to create task' });
+  }
+});
+
+// GET /api/routes/:routeId/tasks - Get tasks with optional filters
+app.get('/api/routes/:routeId/tasks', authMiddleware, async (req, res) => {
+  try {
+    const { routeId } = req.params;
+    const { status, assignedTo, priority } = req.query;
+    const userId = req.user.id;
+
+    // Verify access
+    const permission = await checkRoutePermission(routeId, userId);
+    if (!permission.hasAccess) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    let query = `
+      SELECT
+        t.*,
+        u1.name as assigned_to_name,
+        u2.name as assigned_by_name
+      FROM trip_tasks t
+      LEFT JOIN users u1 ON t.assigned_to = u1.id
+      JOIN users u2 ON t.assigned_by = u2.id
+      WHERE t.route_id = $1
+    `;
+
+    const params = [routeId];
+    let paramIndex = 2;
+
+    if (status) {
+      query += ` AND t.status = $${paramIndex}`;
+      params.push(status);
+      paramIndex++;
+    }
+
+    if (assignedTo) {
+      query += ` AND t.assigned_to = $${paramIndex}`;
+      params.push(assignedTo);
+      paramIndex++;
+    }
+
+    if (priority) {
+      query += ` AND t.priority = $${paramIndex}`;
+      params.push(priority);
+      paramIndex++;
+    }
+
+    query += ` ORDER BY
+      CASE t.priority
+        WHEN 'urgent' THEN 1
+        WHEN 'high' THEN 2
+        WHEN 'medium' THEN 3
+        WHEN 'low' THEN 4
+      END,
+      t.due_date ASC NULLS LAST,
+      t.created_at DESC
+    `;
+
+    const result = await pool.query(query, params);
+
+    // Parse JSONB completion_proof if exists
+    const tasks = result.rows.map(task => ({
+      ...task,
+      completion_proof: task.completion_proof && typeof task.completion_proof === 'string'
+        ? JSON.parse(task.completion_proof)
+        : task.completion_proof
+    }));
+
+    // Group by status for Kanban board
+    const grouped = {
+      pending: [],
+      in_progress: [],
+      completed: [],
+      cancelled: []
+    };
+
+    tasks.forEach(task => {
+      if (grouped[task.status]) {
+        grouped[task.status].push(task);
+      }
+    });
+
+    res.json({
+      success: true,
+      tasks,
+      grouped,
+      counts: {
+        total: tasks.length,
+        pending: grouped.pending.length,
+        in_progress: grouped.in_progress.length,
+        completed: grouped.completed.length,
+        cancelled: grouped.cancelled.length
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching tasks:', error);
+    res.status(500).json({ error: 'Failed to fetch tasks' });
+  }
+});
+
+// PATCH /api/routes/:routeId/tasks/:taskId - Update task
+app.patch('/api/routes/:routeId/tasks/:taskId', authMiddleware, async (req, res) => {
+  try {
+    const { routeId, taskId } = req.params;
+    const {
+      title,
+      description,
+      assignedTo,
+      status,
+      priority,
+      dueDate,
+      completionNotes,
+      completionProof
+    } = req.body;
+    const userId = req.user.id;
+
+    // Check if user has permission (assigned user, assigner, or route owner/editor)
+    const permissionCheck = await pool.query(`
+      SELECT t.id
+      FROM trip_tasks t
+      WHERE t.id = $1
+        AND t.route_id = $2
+        AND (
+          t.assigned_to = $3
+          OR t.assigned_by = $3
+          OR EXISTS (
+            SELECT 1 FROM route_collaborators rc
+            WHERE rc.route_id = $2 AND rc.user_id = $3 AND rc.role IN ('owner', 'editor')
+          )
+        )
+    `, [taskId, routeId, userId]);
+
+    if (permissionCheck.rows.length === 0) {
+      return res.status(403).json({ error: 'Permission denied' });
+    }
+
+    // Build update query dynamically
+    const updates = [];
+    const values = [taskId, routeId];
+    let paramIndex = 3;
+
+    if (title !== undefined) {
+      updates.push(`title = $${paramIndex}`);
+      values.push(title.trim());
+      paramIndex++;
+    }
+
+    if (description !== undefined) {
+      updates.push(`description = $${paramIndex}`);
+      values.push(description?.trim() || null);
+      paramIndex++;
+    }
+
+    if (assignedTo !== undefined) {
+      updates.push(`assigned_to = $${paramIndex}`);
+      values.push(assignedTo || null);
+      paramIndex++;
+    }
+
+    if (status !== undefined) {
+      updates.push(`status = $${paramIndex}`);
+      values.push(status);
+      paramIndex++;
+
+      // Auto-set completion timestamp
+      if (status === 'completed') {
+        updates.push(`completed_at = NOW()`);
+      }
+    }
+
+    if (priority !== undefined) {
+      updates.push(`priority = $${paramIndex}`);
+      values.push(priority);
+      paramIndex++;
+    }
+
+    if (dueDate !== undefined) {
+      updates.push(`due_date = $${paramIndex}`);
+      values.push(dueDate || null);
+      paramIndex++;
+    }
+
+    if (completionNotes !== undefined) {
+      updates.push(`completion_notes = $${paramIndex}`);
+      values.push(completionNotes?.trim() || null);
+      paramIndex++;
+    }
+
+    if (completionProof !== undefined) {
+      updates.push(`completion_proof = $${paramIndex}`);
+      values.push(JSON.stringify(completionProof));
+      paramIndex++;
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ error: 'No updates provided' });
+    }
+
+    updates.push('updated_at = NOW()');
+
+    const query = `
+      UPDATE trip_tasks
+      SET ${updates.join(', ')}
+      WHERE id = $1 AND route_id = $2
+      RETURNING *
+    `;
+
+    const result = await pool.query(query, values);
+
+    const task = result.rows[0];
+
+    // Parse JSONB
+    const taskParsed = {
+      ...task,
+      completion_proof: task.completion_proof && typeof task.completion_proof === 'string'
+        ? JSON.parse(task.completion_proof)
+        : task.completion_proof
+    };
+
+    // Broadcast via WebSocket
+    if (collaborationService) {
+      collaborationService.broadcast(routeId, {
+        type: 'task_updated',
+        taskId,
+        task: taskParsed,
+        updatedBy: userId
+      });
+    }
+
+    res.json({ success: true, task: taskParsed });
+
+  } catch (error) {
+    console.error('Error updating task:', error);
+    res.status(500).json({ error: 'Failed to update task' });
+  }
+});
+
+// DELETE /api/routes/:routeId/tasks/:taskId - Delete task
+app.delete('/api/routes/:routeId/tasks/:taskId', authMiddleware, async (req, res) => {
+  try {
+    const { routeId, taskId } = req.params;
+    const userId = req.user.id;
+
+    // Check if user created the task or is route owner
+    const result = await pool.query(`
+      DELETE FROM trip_tasks
+      WHERE id = $1
+        AND route_id = $2
+        AND (
+          assigned_by = $3
+          OR EXISTS (
+            SELECT 1 FROM route_collaborators
+            WHERE route_id = $2 AND user_id = $3 AND role = 'owner'
+          )
+        )
+      RETURNING id
+    `, [taskId, routeId, userId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Task not found or permission denied' });
+    }
+
+    // Broadcast via WebSocket
+    if (collaborationService) {
+      collaborationService.broadcast(routeId, {
+        type: 'task_deleted',
+        taskId
+      });
+    }
+
+    res.json({ success: true });
+
+  } catch (error) {
+    console.error('Error deleting task:', error);
+    res.status(500).json({ error: 'Failed to delete task' });
+  }
+});
+
 // GET /api/routes/:id/activity - Get activity log
 app.get('/api/routes/:id/activity', authMiddleware, async (req, res) => {
   try {
