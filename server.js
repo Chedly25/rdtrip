@@ -8127,6 +8127,316 @@ app.delete('/api/routes/:id/messages/:messageId/reactions', authMiddleware, asyn
   }
 });
 
+// ============================================================================
+// ACTIVITY COMMENTS API (Phase 2: Activity-Level Collaboration)
+// ============================================================================
+
+// GET /api/routes/:routeId/comments - Get comments for a target
+app.get('/api/routes/:routeId/comments', authMiddleware, async (req, res) => {
+  try {
+    const { routeId } = req.params;
+    const { targetType, targetId, dayNumber } = req.query;
+    const userId = req.user.id;
+
+    // Verify access
+    const permission = await checkRoutePermission(routeId, userId);
+    if (!permission) {
+      return res.status(403).json({ error: 'Not authorized to view comments' });
+    }
+
+    let query = `
+      SELECT
+        c.id,
+        c.target_type,
+        c.target_id,
+        c.day_number,
+        c.comment,
+        c.parent_comment_id,
+        c.resolved,
+        c.resolved_by,
+        c.resolved_at,
+        c.created_at,
+        c.updated_at,
+        u.id as user_id,
+        u.name as user_name,
+        u.avatar as user_avatar,
+        resolver.name as resolved_by_name
+      FROM activity_comments c
+      JOIN users u ON c.user_id = u.id
+      LEFT JOIN users resolver ON c.resolved_by = resolver.id
+      WHERE c.route_id = $1
+    `;
+
+    const params = [routeId];
+    let paramIndex = 2;
+
+    if (targetType) {
+      query += ` AND c.target_type = $${paramIndex}`;
+      params.push(targetType);
+      paramIndex++;
+    }
+
+    if (targetId) {
+      query += ` AND c.target_id = $${paramIndex}`;
+      params.push(targetId);
+      paramIndex++;
+    }
+
+    if (dayNumber) {
+      query += ` AND c.day_number = $${paramIndex}`;
+      params.push(parseInt(dayNumber));
+      paramIndex++;
+    }
+
+    query += ` ORDER BY c.created_at ASC`;
+
+    const result = await pool.query(query, params);
+
+    // Build nested comment structure (parent comments with replies)
+    const comments = result.rows;
+    const commentMap = new Map();
+    const rootComments = [];
+
+    // First pass: create map of all comments
+    comments.forEach(comment => {
+      commentMap.set(comment.id, { ...comment, replies: [] });
+    });
+
+    // Second pass: build tree structure
+    comments.forEach(comment => {
+      if (comment.parent_comment_id) {
+        const parent = commentMap.get(comment.parent_comment_id);
+        if (parent) {
+          parent.replies.push(commentMap.get(comment.id));
+        }
+      } else {
+        rootComments.push(commentMap.get(comment.id));
+      }
+    });
+
+    res.json({
+      success: true,
+      comments: rootComments,
+      count: rootComments.length,
+      totalCount: comments.length
+    });
+
+  } catch (error) {
+    console.error('Error fetching comments:', error);
+    res.status(500).json({ error: 'Failed to fetch comments' });
+  }
+});
+
+// POST /api/routes/:routeId/comments - Add comment
+app.post('/api/routes/:routeId/comments', authMiddleware, async (req, res) => {
+  try {
+    const { routeId } = req.params;
+    const {
+      targetType,
+      targetId,
+      dayNumber,
+      comment,
+      parentCommentId,
+      itineraryId
+    } = req.body;
+    const userId = req.user.id;
+
+    // Validation
+    if (!targetType || !targetId || !comment) {
+      return res.status(400).json({
+        error: 'targetType, targetId, and comment are required'
+      });
+    }
+
+    const validTypes = ['activity', 'day', 'restaurant', 'route'];
+    if (!validTypes.includes(targetType)) {
+      return res.status(400).json({
+        error: `targetType must be one of: ${validTypes.join(', ')}`
+      });
+    }
+
+    // Verify access
+    const permission = await checkRoutePermission(routeId, userId);
+    if (!permission) {
+      return res.status(403).json({ error: 'Not authorized to comment' });
+    }
+
+    // Insert comment
+    const result = await pool.query(`
+      INSERT INTO activity_comments (
+        route_id,
+        itinerary_id,
+        target_type,
+        target_id,
+        day_number,
+        user_id,
+        comment,
+        parent_comment_id
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING *
+    `, [
+      routeId,
+      itineraryId || null,
+      targetType,
+      targetId,
+      dayNumber || null,
+      userId,
+      comment,
+      parentCommentId || null
+    ]);
+
+    const newComment = result.rows[0];
+
+    // Get user details
+    const userResult = await pool.query(
+      'SELECT id, name, avatar FROM users WHERE id = $1',
+      [userId]
+    );
+
+    const commentWithUser = {
+      ...newComment,
+      user_id: userResult.rows[0].id,
+      user_name: userResult.rows[0].name,
+      user_avatar: userResult.rows[0].avatar,
+      replies: []
+    };
+
+    // Broadcast via WebSocket
+    if (global.collaborationService) {
+      global.collaborationService.broadcast(routeId, {
+        type: 'comment_added',
+        data: commentWithUser
+      });
+    }
+
+    // Log activity
+    await logRouteActivity(routeId, userId, 'comment_added',
+      `Added comment on ${targetType}: ${targetId}`,
+      { commentId: newComment.id, targetType, targetId }
+    );
+
+    res.json({ success: true, comment: commentWithUser });
+
+  } catch (error) {
+    console.error('Error adding comment:', error);
+    res.status(500).json({ error: 'Failed to add comment' });
+  }
+});
+
+// PATCH /api/routes/:routeId/comments/:commentId/resolve - Toggle resolve status
+app.patch('/api/routes/:routeId/comments/:commentId/resolve', authMiddleware, async (req, res) => {
+  try {
+    const { routeId, commentId } = req.params;
+    const { resolved } = req.body;
+    const userId = req.user.id;
+
+    // Verify access (editors and owners can resolve)
+    const permission = await checkRoutePermission(routeId, userId);
+    if (!permission || permission.role === 'viewer') {
+      return res.status(403).json({ error: 'Not authorized to resolve comments' });
+    }
+
+    // Update comment
+    const result = await pool.query(`
+      UPDATE activity_comments
+      SET
+        resolved = $1,
+        resolved_by = CASE WHEN $1 = true THEN $2 ELSE NULL END,
+        resolved_at = CASE WHEN $1 = true THEN NOW() ELSE NULL END,
+        updated_at = NOW()
+      WHERE id = $3 AND route_id = $4
+      RETURNING *
+    `, [resolved, userId, commentId, routeId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Comment not found' });
+    }
+
+    const updatedComment = result.rows[0];
+
+    // Get resolver name if resolved
+    if (resolved) {
+      const userResult = await pool.query(
+        'SELECT name FROM users WHERE id = $1',
+        [userId]
+      );
+      updatedComment.resolved_by_name = userResult.rows[0].name;
+    }
+
+    // Broadcast via WebSocket
+    if (global.collaborationService) {
+      global.collaborationService.broadcast(routeId, {
+        type: 'comment_resolved',
+        data: {
+          commentId,
+          resolved,
+          resolvedBy: userId,
+          resolvedByName: updatedComment.resolved_by_name,
+          resolvedAt: updatedComment.resolved_at
+        }
+      });
+    }
+
+    res.json({ success: true, comment: updatedComment });
+
+  } catch (error) {
+    console.error('Error resolving comment:', error);
+    res.status(500).json({ error: 'Failed to resolve comment' });
+  }
+});
+
+// DELETE /api/routes/:routeId/comments/:commentId - Delete comment
+app.delete('/api/routes/:routeId/comments/:commentId', authMiddleware, async (req, res) => {
+  try {
+    const { routeId, commentId } = req.params;
+    const userId = req.user.id;
+
+    // Verify access
+    const permission = await checkRoutePermission(routeId, userId);
+    if (!permission) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    // Check if user owns the comment or is route owner/editor
+    const commentCheck = await pool.query(
+      'SELECT user_id FROM activity_comments WHERE id = $1 AND route_id = $2',
+      [commentId, routeId]
+    );
+
+    if (commentCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Comment not found' });
+    }
+
+    const isOwner = commentCheck.rows[0].user_id === userId;
+    const canDelete = isOwner || permission.role === 'owner' || permission.role === 'editor';
+
+    if (!canDelete) {
+      return res.status(403).json({ error: 'Not authorized to delete this comment' });
+    }
+
+    // Delete comment (CASCADE will delete replies)
+    await pool.query(
+      'DELETE FROM activity_comments WHERE id = $1',
+      [commentId]
+    );
+
+    // Broadcast via WebSocket
+    if (global.collaborationService) {
+      global.collaborationService.broadcast(routeId, {
+        type: 'comment_deleted',
+        data: { commentId }
+      });
+    }
+
+    res.json({ success: true });
+
+  } catch (error) {
+    console.error('Error deleting comment:', error);
+    res.status(500).json({ error: 'Failed to delete comment' });
+  }
+});
+
 // GET /api/routes/:id/activity - Get activity log
 app.get('/api/routes/:id/activity', authMiddleware, async (req, res) => {
   try {
