@@ -138,9 +138,9 @@ class ToolRegistry {
       inputSchema: {
         type: 'object',
         properties: {
-          routeId: {
+          itineraryId: {
             type: 'string',
-            description: 'Route/itinerary ID'
+            description: 'Itinerary ID (from context.itineraryData.itineraryId)'
           },
           action: {
             type: 'string',
@@ -160,7 +160,7 @@ class ToolRegistry {
             description: 'ID of item to remove/update (optional)'
           }
         },
-        required: ['routeId', 'action', 'dayNumber', 'item']
+        required: ['itineraryId', 'action', 'dayNumber', 'item']
       },
       execute: require('../tools/modifyItinerary')
     });
@@ -349,6 +349,169 @@ class ToolRegistry {
         required: ['city']
       },
       execute: require('../tools/searchHotels')
+    });
+
+    // 13. Replace Activity
+    this.register({
+      name: 'replaceActivity',
+      description: 'Replace an activity in the itinerary. Use when user wants to swap/change an activity. Automatically finds the activity by name (fuzzy match).',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          itineraryId: { type: 'string', description: 'Itinerary ID from context' },
+          dayNumber: { type: 'number', description: 'Which day (1-indexed)' },
+          oldActivityName: { type: 'string', description: 'Name of activity to replace (partial match OK)' },
+          newActivity: {
+            type: 'object',
+            description: 'New activity data from searchActivities result',
+            properties: {
+              name: { type: 'string' },
+              place_id: { type: 'string' },
+              address: { type: 'string' },
+              rating: { type: 'number' },
+              photos: { type: 'array' },
+              description: { type: 'string' }
+            },
+            required: ['name']
+          }
+        },
+        required: ['itineraryId', 'dayNumber', 'oldActivityName', 'newActivity']
+      },
+      execute: require('../tools/replaceActivity')
+    });
+
+    // 14. Move Activity
+    this.register({
+      name: 'moveActivity',
+      description: 'Move an activity from one day to another. Use when user wants to reschedule an activity.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          itineraryId: { type: 'string', description: 'Itinerary ID' },
+          activityName: { type: 'string', description: 'Name of activity to move (partial match OK)' },
+          fromDay: { type: 'number', description: 'Current day number (1-indexed)' },
+          toDay: { type: 'number', description: 'Target day number (1-indexed)' },
+          timeBlock: { type: 'string', enum: ['morning', 'afternoon', 'evening'], description: 'Time slot on new day (optional)' }
+        },
+        required: ['itineraryId', 'activityName', 'fromDay', 'toDay']
+      },
+      execute: require('../tools/moveActivity')
+    });
+
+    // 15. Reorder Activities
+    this.register({
+      name: 'reorderActivities',
+      description: 'Reorder activities within a day. Use when user wants to change the sequence of activities.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          itineraryId: { type: 'string', description: 'Itinerary ID' },
+          dayNumber: { type: 'number', description: 'Which day (1-indexed)' },
+          activityOrder: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'Array of activity names in desired order (can be partial names)'
+          }
+        },
+        required: ['itineraryId', 'dayNumber', 'activityOrder']
+      },
+      execute: require('../tools/reorderActivities')
+    });
+
+    // 16. Optimize Route (Geographic TSP)
+    this.register({
+      name: 'optimizeRoute',
+      description: 'Optimize activity order by geographic proximity to minimize travel time. Use when user asks to "optimize my day" or "reduce travel time".',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          itineraryId: { type: 'string', description: 'Itinerary ID' },
+          dayNumber: { type: 'number', description: 'Which day to optimize (1-indexed)' }
+        },
+        required: ['itineraryId', 'dayNumber']
+      },
+      execute: require('../tools/optimizeRoute')
+    });
+
+    // 17. Analyze Day Feasibility
+    this.register({
+      name: 'analyzeDayFeasibility',
+      description: 'Analyze if a day\'s activities are realistic timing-wise. Calculates total time needed including travel, meals, buffer. Use when user asks "is this day realistic?" or "is day X too packed?"',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          itineraryId: { type: 'string', description: 'Itinerary ID' },
+          dayNumber: { type: 'number', description: 'Which day to analyze (1-indexed)' }
+        },
+        required: ['itineraryId', 'dayNumber']
+      },
+      execute: require('../tools/analyzeDayFeasibility')
+    });
+
+    // 18. Check Weather Impact
+    this.register({
+      name: 'checkWeatherImpact',
+      description: 'Analyze weather impact on a specific day\'s activities. Identifies outdoor activities and assesses weather risks. Use when user asks about weather or when planning outdoor activities.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          itineraryId: { type: 'string', description: 'Itinerary ID' },
+          dayNumber: { type: 'number', description: 'Which day to analyze (1-indexed)' }
+        },
+        required: ['itineraryId', 'dayNumber']
+      },
+      execute: require('../tools/checkWeatherImpact')
+    });
+
+    // 19. Suggest Improvements
+    this.register({
+      name: 'suggestImprovements',
+      description: 'AI-powered day analysis with specific improvement suggestions. Analyzes variety, pacing, logistics, and optimization opportunities. Use when user asks "how can I improve this day?" or for proactive coaching.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          itineraryId: { type: 'string', description: 'Itinerary ID' },
+          dayNumber: { type: 'number', description: 'Which day to analyze (1-indexed)' }
+        },
+        required: ['itineraryId', 'dayNumber']
+      },
+      execute: require('../tools/suggestImprovements')
+    });
+
+    // 20. Analyze Trip Overview
+    this.register({
+      name: 'analyzeTripOverview',
+      description: 'Holistic analysis of the entire trip across all days. Provides trip score, category distribution, variety/pacing analysis, and comprehensive recommendations. Use when user asks "how does my trip look overall?" or for trip-level insights.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          itineraryId: { type: 'string', description: 'Itinerary ID' }
+        },
+        required: ['itineraryId']
+      },
+      execute: require('../tools/analyzeTripOverview')
+    });
+
+    // 21. Find Nearby
+    this.register({
+      name: 'findNearby',
+      description: 'Find places near a specific activity (not city-wide search). Use when user asks "what\'s near the Louvre?" or "find a cafe near the museum". Searches within 500m radius by default.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          itineraryId: { type: 'string', description: 'Itinerary ID' },
+          dayNumber: { type: 'number', description: 'Which day (1-indexed)' },
+          activityName: { type: 'string', description: 'Name of reference activity (partial match OK)' },
+          type: {
+            type: 'string',
+            enum: ['restaurant', 'cafe', 'bar', 'shop', 'store', 'atm', 'pharmacy', 'parking', 'gas_station', 'supermarket'],
+            description: 'Type of place to find (default: restaurant)'
+          },
+          radius: { type: 'number', description: 'Search radius in meters (default: 500, max: 5000)' }
+        },
+        required: ['itineraryId', 'dayNumber', 'activityName']
+      },
+      execute: require('../tools/findNearby')
     });
 
     console.log(`✅ Registered ${this.tools.size} tools`);

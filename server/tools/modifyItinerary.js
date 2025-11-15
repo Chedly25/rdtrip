@@ -3,64 +3,74 @@
  *
  * Allows the agent to update activities, restaurants, or accommodations
  * in the user's itinerary based on their requests.
+ *
+ * UPDATED: Now uses JSONB schema (itinerary_data.days array)
  */
 
 const db = require('../../db/connection');
 
 /**
  * @param {Object} args
- * @param {string} args.routeId - Route/itinerary ID
+ * @param {string} args.itineraryId - Itinerary ID (not routeId)
  * @param {string} args.action - Action to perform: 'add_activity', 'remove_activity', 'update_activity', 'add_restaurant', 'remove_restaurant', 'update_accommodation'
  * @param {number} args.dayNumber - Which day to modify (1-based)
  * @param {Object} args.item - The item to add/update (activity, restaurant, etc.)
  * @param {string} [args.itemId] - ID of item to remove/update
  */
-async function modifyItinerary({ routeId, action, dayNumber, item, itemId }) {
+async function modifyItinerary({ itineraryId, action, dayNumber, item, itemId }) {
   try {
-    console.log(`🔧 Modifying itinerary: ${action} on day ${dayNumber} for route ${routeId.slice(0, 8)}...`);
+    console.log(`🔧 [modifyItinerary] ${action} on day ${dayNumber} for itinerary ${itineraryId.slice(0, 8)}...`);
 
-    // Get current itinerary
+    // Get current itinerary (NEW JSONB SCHEMA)
     const result = await db.query(
-      'SELECT id, day_structure, activities, restaurants, accommodations FROM itineraries WHERE route_id = $1 ORDER BY created_at DESC LIMIT 1',
-      [routeId]
+      'SELECT id, itinerary_data FROM itineraries WHERE id = $1',
+      [itineraryId]
     );
 
     if (result.rows.length === 0) {
       return {
         success: false,
-        error: 'No itinerary found for this route. Please generate an itinerary first.'
+        error: 'No itinerary found. Please generate an itinerary first.'
       };
     }
 
     const itinerary = result.rows[0];
-    let dayStructure = itinerary.day_structure || [];
-    let activities = itinerary.activities || {};
-    let restaurants = itinerary.restaurants || {};
-    let accommodations = itinerary.accommodations || {};
+    const itineraryData = itinerary.itinerary_data || {};
+    const days = itineraryData.days || [];
 
+    // Validate day number
+    if (dayNumber < 1 || dayNumber > days.length) {
+      return {
+        success: false,
+        error: `Day ${dayNumber} not found (itinerary has ${days.length} days)`
+      };
+    }
+
+    const day = days[dayNumber - 1];
     let modified = false;
     let message = '';
 
     // Perform the requested action
     switch (action) {
       case 'add_activity':
-        if (!activities[`day${dayNumber}`]) {
-          activities[`day${dayNumber}`] = [];
+        if (!day.activities) {
+          day.activities = [];
         }
-        activities[`day${dayNumber}`].push({
+        day.activities.push({
           id: `activity_${Date.now()}`,
           ...item,
-          addedByAgent: true
+          addedByAgent: true,
+          addedAt: new Date().toISOString()
         });
         modified = true;
-        message = `Added ${item.name || 'activity'} to day ${dayNumber}`;
+        message = `Added ${item.name || 'activity'} to day ${dayNumber} (${day.city || 'Unknown city'})`;
         break;
 
       case 'remove_activity':
-        if (activities[`day${dayNumber}`]) {
-          const originalLength = activities[`day${dayNumber}`].length;
-          activities[`day${dayNumber}`] = activities[`day${dayNumber}`].filter(a => a.id !== itemId);
-          if (activities[`day${dayNumber}`].length < originalLength) {
+        if (day.activities) {
+          const originalLength = day.activities.length;
+          day.activities = day.activities.filter(a => a.id !== itemId || a.name !== itemId);
+          if (day.activities.length < originalLength) {
             modified = true;
             message = `Removed activity from day ${dayNumber}`;
           }
@@ -68,12 +78,14 @@ async function modifyItinerary({ routeId, action, dayNumber, item, itemId }) {
         break;
 
       case 'update_activity':
-        if (activities[`day${dayNumber}`]) {
-          const activityIndex = activities[`day${dayNumber}`].findIndex(a => a.id === itemId);
+        if (day.activities) {
+          const activityIndex = day.activities.findIndex(a => a.id === itemId || a.name === itemId);
           if (activityIndex !== -1) {
-            activities[`day${dayNumber}`][activityIndex] = {
-              ...activities[`day${dayNumber}`][activityIndex],
-              ...item
+            day.activities[activityIndex] = {
+              ...day.activities[activityIndex],
+              ...item,
+              updatedByAgent: true,
+              updatedAt: new Date().toISOString()
             };
             modified = true;
             message = `Updated activity on day ${dayNumber}`;
@@ -82,26 +94,31 @@ async function modifyItinerary({ routeId, action, dayNumber, item, itemId }) {
         break;
 
       case 'add_restaurant':
-        if (!restaurants[`day${dayNumber}`]) {
-          restaurants[`day${dayNumber}`] = { breakfast: [], lunch: [], dinner: [] };
+        if (!day.restaurants) {
+          day.restaurants = { breakfast: [], lunch: [], dinner: [] };
         }
-        const mealType = item.mealType || 'lunch';
-        restaurants[`day${dayNumber}`][mealType].push({
+        const mealType = item.meal || item.mealType || 'lunch';
+        if (!day.restaurants[mealType]) {
+          day.restaurants[mealType] = [];
+        }
+        day.restaurants[mealType].push({
           id: `restaurant_${Date.now()}`,
           ...item,
-          addedByAgent: true
+          meal: mealType,
+          addedByAgent: true,
+          addedAt: new Date().toISOString()
         });
         modified = true;
         message = `Added ${item.name || 'restaurant'} for ${mealType} on day ${dayNumber}`;
         break;
 
       case 'remove_restaurant':
-        if (restaurants[`day${dayNumber}`]) {
-          const mealType = item.mealType || 'lunch';
-          if (restaurants[`day${dayNumber}`][mealType]) {
-            const originalLength = restaurants[`day${dayNumber}`][mealType].length;
-            restaurants[`day${dayNumber}`][mealType] = restaurants[`day${dayNumber}`][mealType].filter(r => r.id !== itemId);
-            if (restaurants[`day${dayNumber}`][mealType].length < originalLength) {
+        if (day.restaurants) {
+          const mealType = item.meal || item.mealType || 'lunch';
+          if (day.restaurants[mealType]) {
+            const originalLength = day.restaurants[mealType].length;
+            day.restaurants[mealType] = day.restaurants[mealType].filter(r => r.id !== itemId || r.name !== itemId);
+            if (day.restaurants[mealType].length < originalLength) {
               modified = true;
               message = `Removed restaurant from ${mealType} on day ${dayNumber}`;
             }
@@ -110,14 +127,12 @@ async function modifyItinerary({ routeId, action, dayNumber, item, itemId }) {
         break;
 
       case 'update_accommodation':
-        if (!accommodations[`day${dayNumber}`]) {
-          accommodations[`day${dayNumber}`] = [];
-        }
-        accommodations[`day${dayNumber}`] = [{
+        day.accommodation = {
           id: `hotel_${Date.now()}`,
           ...item,
-          addedByAgent: true
-        }];
+          addedByAgent: true,
+          addedAt: new Date().toISOString()
+        };
         modified = true;
         message = `Updated accommodation for day ${dayNumber} to ${item.name || 'new hotel'}`;
         break;
@@ -136,26 +151,29 @@ async function modifyItinerary({ routeId, action, dayNumber, item, itemId }) {
       };
     }
 
-    // Update database
+    // Update the day in the days array
+    days[dayNumber - 1] = day;
+    itineraryData.days = days;
+
+    // Update database with new JSONB structure
     await db.query(
-      `UPDATE itineraries
-       SET activities = $1, restaurants = $2, accommodations = $3, updated_at = NOW()
-       WHERE id = $4`,
-      [JSON.stringify(activities), JSON.stringify(restaurants), JSON.stringify(accommodations), itinerary.id]
+      'UPDATE itineraries SET itinerary_data = $1, updated_at = NOW() WHERE id = $2',
+      [JSON.stringify(itineraryData), itinerary.id]
     );
 
-    console.log(`✅ Itinerary modified: ${message}`);
+    console.log(`✅ [modifyItinerary] ${message}`);
 
     return {
       success: true,
       message,
       action,
       dayNumber,
+      city: day.city,
       modifiedAt: new Date().toISOString()
     };
 
   } catch (error) {
-    console.error('Error modifying itinerary:', error);
+    console.error('❌ [modifyItinerary] Error:', error);
     return {
       success: false,
       error: error.message || 'Failed to modify itinerary'

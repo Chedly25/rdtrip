@@ -4121,7 +4121,7 @@ const agentOrchestrator = new AgentOrchestrator();
  */
 app.post('/api/agent/query', optionalAuth, async (req, res) => {
   try {
-    const { message, sessionId, pageContext, routeId } = req.body;
+    const { message, sessionId, pageContext, routeId, itineraryId } = req.body;
     const userId = req.user?.id || null;
 
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -4129,6 +4129,7 @@ app.post('/api/agent/query', optionalAuth, async (req, res) => {
     console.log('   User ID:', userId || 'anonymous');
     console.log('   Session ID:', sessionId);
     console.log('   Route ID:', routeId);
+    console.log('   Itinerary ID:', itineraryId);
     console.log('   Page Context:', pageContext);
     console.log('   Message:', message);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -4228,6 +4229,7 @@ app.post('/api/agent/query', optionalAuth, async (req, res) => {
     const response = await agentOrchestrator.handleQuery({
       userId: userId,
       routeId: routeId || null,
+      itineraryId: itineraryId || null,
       message: message.trim(),
       sessionId: sessionId,
       pageContext: pageContext || 'unknown',
