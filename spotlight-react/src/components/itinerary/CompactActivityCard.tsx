@@ -1,13 +1,28 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Star, Clock, MapPin, ExternalLink, Phone } from 'lucide-react';
+import { CommentBadge } from '../collaboration/CommentBadge';
+import { ActivityCommentThread } from '../collaboration/ActivityCommentThread';
 
 interface CompactActivityCardProps {
   activity: any;
   onSelect?: (activity: any) => void;
   isSelected?: boolean;
+  routeId?: string;
+  currentUserId?: string;
+  dayNumber?: number;
 }
 
-export function CompactActivityCard({ activity, onSelect, isSelected = false }: CompactActivityCardProps) {
+export function CompactActivityCard({
+  activity,
+  onSelect,
+  isSelected = false,
+  routeId,
+  currentUserId,
+  dayNumber
+}: CompactActivityCardProps) {
+  const [showComments, setShowComments] = useState(false);
+
   // Extract photo URL with fallback (supports both 'photo' and 'photos' fields)
   const photo = activity.photos?.[0];
   const photoUrl = typeof photo === 'string' ? photo :
@@ -132,7 +147,7 @@ export function CompactActivityCard({ activity, onSelect, isSelected = false }: 
         )}
 
         {/* Action icons */}
-        <div className="mt-auto flex items-center gap-2">
+        <div className="mt-auto flex items-center gap-2 flex-wrap">
           {mapsLink && (
             <a
               href={mapsLink}
@@ -169,8 +184,31 @@ export function CompactActivityCard({ activity, onSelect, isSelected = false }: 
               <Phone className="w-4 h-4" />
             </a>
           )}
+
+          {/* Comment badge - only show if routeId and currentUserId are available */}
+          {routeId && currentUserId && (
+            <div onClick={(e) => e.stopPropagation()}>
+              <CommentBadge
+                count={0} // TODO: Fetch actual count from API
+                hasUnresolved={false} // TODO: Fetch from API
+                onClick={() => setShowComments(true)}
+              />
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Comment thread modal */}
+      {showComments && routeId && currentUserId && (
+        <ActivityCommentThread
+          routeId={routeId}
+          targetType="activity"
+          targetId={activity.name || activity.place_id}
+          dayNumber={dayNumber}
+          currentUserId={currentUserId}
+          onClose={() => setShowComments(false)}
+        />
+      )}
     </motion.div>
   );
 }

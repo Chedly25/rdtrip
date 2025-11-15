@@ -15,6 +15,8 @@ interface DayCardProps {
   events: any[];
   agentType: string;
   density?: 'compact' | 'comfortable' | 'spacious';
+  routeId?: string;
+  currentUserId?: string;
 }
 
 export function DayCardV2({
@@ -23,6 +25,8 @@ export function DayCardV2({
   restaurants,
   accommodation,
   agentType,
+  routeId,
+  currentUserId,
 }: DayCardProps) {
   const theme = getTheme(agentType as any);
 
@@ -84,6 +88,9 @@ export function DayCardV2({
             <CompactActivityCard
               key={activity.place_id || activity.name || index}
               activity={activity}
+              routeId={routeId}
+              currentUserId={currentUserId}
+              dayNumber={day.day}
             />
           ))}
         </div>
