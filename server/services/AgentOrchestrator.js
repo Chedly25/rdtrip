@@ -39,11 +39,84 @@ class AgentOrchestrator {
   }
 
   /**
+   * Load complete itinerary data from database
+   * Includes all days, activities, restaurants, cities
+   */
+  async loadItineraryData(itineraryId) {
+    if (!itineraryId) {
+      console.log('   ⚠️  No itinerary ID provided');
+      return null;
+    }
+
+    try {
+      console.log(`   🔍 Loading itinerary ${itineraryId}...`);
+
+      const result = await this.db.query(`
+        SELECT
+          i.id,
+          i.route_id,
+          i.itinerary_data,
+          r.route_data
+        FROM itineraries i
+        LEFT JOIN routes r ON i.route_id = r.id
+        WHERE i.id = $1
+      `, [itineraryId]);
+
+      if (result.rows.length === 0) {
+        console.log('   ⚠️  Itinerary not found');
+        return null;
+      }
+
+      const row = result.rows[0];
+      const itineraryData = row.itinerary_data || {};
+      const routeData = row.route_data || {};
+
+      // Extract cities from days
+      const days = itineraryData.days || [];
+      const cities = days.map(day => {
+        const cityName = day.city || day.cityName || 'Unknown';
+        return cityName;
+      }).filter(Boolean);
+
+      // Build structured data
+      const data = {
+        itineraryId: row.id,
+        routeId: row.route_id,
+        origin: routeData.origin,
+        destination: routeData.destination,
+        cities: cities,
+        days: days.map((day, index) => ({
+          dayNumber: index + 1,
+          city: day.city || day.cityName,
+          date: day.date || null,
+          activities: day.activities || [],
+          restaurants: {
+            breakfast: day.restaurants?.breakfast || [],
+            lunch: day.restaurants?.lunch || [],
+            dinner: day.restaurants?.dinner || []
+          },
+          accommodation: day.accommodation || null
+        })),
+        totalDays: days.length,
+        budget: routeData.budget || null
+      };
+
+      console.log(`   ✅ Loaded: ${data.totalDays} days, ${cities.length} cities`);
+      return data;
+
+    } catch (error) {
+      console.error('   ❌ Error loading itinerary:', error.message);
+      return null;
+    }
+  }
+
+  /**
    * Main entry point for agent queries
    *
    * @param {Object} params
    * @param {string} params.userId - Current user ID
    * @param {string} params.routeId - Current route ID (optional)
+   * @param {string} params.itineraryId - Current itinerary ID (optional)
    * @param {string} params.message - User's message
    * @param {string} params.sessionId - Conversation session ID
    * @param {Object} params.pageContext - Current page info
@@ -52,6 +125,7 @@ class AgentOrchestrator {
   async handleQuery({
     userId,
     routeId,
+    itineraryId,
     message,
     sessionId,
     pageContext,
@@ -62,6 +136,7 @@ class AgentOrchestrator {
     console.log('╚════════════════════════════════════════════╝');
     console.log('   User ID:', userId);
     console.log('   Route ID:', routeId);
+    console.log('   Itinerary ID:', itineraryId);
     console.log('   Session ID:', sessionId);
     console.log('   Message:', message);
     console.log('   Page Context:', pageContext);
@@ -73,13 +148,25 @@ class AgentOrchestrator {
       console.log('   ✅ Conversation ID:', conversationId);
 
       console.log('[Step 2/9] Building context...');
-      // 2. Build context
+
+      // 2. Load itinerary data if available
+      let itineraryData = null;
+      if (itineraryId) {
+        console.log('[Step 2.1/9] Loading itinerary data...');
+        itineraryData = await this.loadItineraryData(itineraryId);
+        if (itineraryData) {
+          console.log(`   ✅ Loaded itinerary: ${itineraryData.totalDays} days, ${itineraryData.cities.length} cities`);
+        }
+      }
+
+      // 3. Build context with itinerary data
       const context = {
         userId,
         routeId,
         conversationId,
         pageContext: pageContext || {},
-        sessionId
+        sessionId,
+        itineraryData
       };
       console.log('   ✅ Context built');
 
@@ -408,7 +495,7 @@ class AgentOrchestrator {
    * Build system prompt with context injection + memory
    */
   buildSystemPrompt(context, memories = [], preferences = {}) {
-    const { pageContext, routeData } = context;
+    const { pageContext, itineraryData } = context;
 
     let prompt = `You are an expert travel assistant for RDTrip, a road trip planning platform.
 
@@ -429,21 +516,89 @@ class AgentOrchestrator {
 **Current Context**:
 - Page: ${pageContext.page || 'unknown'}`;
 
-    // Add route-specific context if available
-    if (routeData) {
-      prompt += `\n- Current Trip: ${routeData.origin || 'Unknown'} → ${routeData.destination || 'Unknown'}`;
+    // Add itinerary-specific context if available
+    if (itineraryData) {
+      prompt += `\n\n**Current Trip Itinerary**:
+- Route: ${itineraryData.origin || 'Unknown'} → ${itineraryData.destination || 'Unknown'}
+- Duration: ${itineraryData.totalDays} day${itineraryData.totalDays !== 1 ? 's' : ''}
+- Cities: ${itineraryData.cities.join(' → ')}`;
 
-      if (routeData.cities && routeData.cities.length > 0) {
-        prompt += `\n- Cities on route: ${routeData.cities.join(', ')}`;
+      if (itineraryData.budget) {
+        prompt += `\n- Budget: ${itineraryData.budget}`;
       }
 
-      if (routeData.startDate) {
-        prompt += `\n- Start date: ${routeData.startDate}`;
+      // Add day-by-day summary
+      if (itineraryData.days && itineraryData.days.length > 0) {
+        prompt += `\n\n**Daily Plan**:`;
+        itineraryData.days.forEach(day => {
+          const activityCount = day.activities?.length || 0;
+          const restaurantCount = (day.restaurants?.breakfast?.length || 0) +
+                                 (day.restaurants?.lunch?.length || 0) +
+                                 (day.restaurants?.dinner?.length || 0);
+
+          prompt += `\n- Day ${day.dayNumber} (${day.city}): ${activityCount} activit${activityCount !== 1 ? 'ies' : 'y'}, ${restaurantCount} meal${restaurantCount !== 1 ? 's' : ''}`;
+        });
       }
 
-      prompt += `\n\nThe user is planning this trip. Tailor your responses to help with this specific route.`;
+      // Add current day details if viewing specific day
+      const currentDay = pageContext?.currentDay;
+      if (currentDay && itineraryData.days[currentDay - 1]) {
+        const day = itineraryData.days[currentDay - 1];
+
+        prompt += `\n\n**Currently Viewing**: Day ${day.dayNumber} in ${day.city}`;
+
+        if (day.activities && day.activities.length > 0) {
+          prompt += `\n\n**Planned Activities for Day ${day.dayNumber}**:`;
+          day.activities.forEach((activity, i) => {
+            prompt += `\n${i + 1}. ${activity.name || 'Unnamed activity'}`;
+            if (activity.description) {
+              prompt += ` - ${activity.description}`;
+            }
+          });
+        }
+
+        if (day.restaurants) {
+          prompt += `\n\n**Planned Meals for Day ${day.dayNumber}**:`;
+          if (day.restaurants.breakfast?.length > 0) {
+            prompt += `\n- Breakfast: ${day.restaurants.breakfast[0].name}`;
+          }
+          if (day.restaurants.lunch?.length > 0) {
+            prompt += `\n- Lunch: ${day.restaurants.lunch[0].name}`;
+          }
+          if (day.restaurants.dinner?.length > 0) {
+            prompt += `\n- Dinner: ${day.restaurants.dinner[0].name}`;
+          }
+        }
+      }
+
+      prompt += `\n\n**CRITICAL CONTEXT AWARENESS RULES**:
+
+1. **City Name Extraction**: When user mentions a city (like "aix en provence", "paris", "lyon"):
+   - Check if it matches any city in the cities list above
+   - Accept fuzzy matches (e.g., "aix" matches "Aix-en-Provence")
+   - If found, use the EXACT city name from the list
+
+2. **Activity Replacement**: When user says "change X" or "replace X":
+   - They want to MODIFY an existing activity in the itinerary
+   - Find which day has that activity
+   - Use searchActivities to find alternatives in the SAME CITY
+   - The city is already known from the context above
+
+3. **Same-City Rule**:
+   - When replacing activities, ALWAYS search in the same city
+   - Example: If replacing "Chaîne d'Eguilles" on Day 3 (Aix-en-Provence), search in Aix-en-Provence
+
+4. **No City Questions**:
+   - If the city is mentioned in user's message OR already in context, DON'T ask "Which city?"
+   - Extract it yourself and proceed
+
+**Example Interaction**:
+User: "Let's change chaine d'eguilles from the aix en provence activities"
+✅ GOOD: Extract "Aix-en-Provence" → searchActivities(city: "Aix-en-Provence, France")
+❌ BAD: Ask "Which city are you interested in?"`;
     } else {
-      prompt += `\n\nThe user is ${pageContext.page === 'itinerary' ? 'building their itinerary' : pageContext.page === 'spotlight' ? 'exploring routes' : 'browsing the landing page'}.`;
+      // No itinerary context
+      prompt += `\n\nThe user is ${pageContext?.name === 'itinerary' ? 'building an itinerary' : pageContext?.name === 'spotlight' ? 'exploring routes' : 'browsing the site'}.`;
     }
 
     // Inject relevant memories from past conversations

@@ -416,6 +416,23 @@ export function AgentProvider({ children }: AgentProviderProps) {
   }, []);
 
   /**
+   * Detect which day number user is currently viewing
+   * Uses URL params or scroll position heuristics
+   */
+  const getCurrentDayNumber = useCallback((): number | null => {
+    // Check URL for day parameter
+    const dayParam = searchParams.get('day');
+    if (dayParam) {
+      const dayNum = parseInt(dayParam);
+      return !isNaN(dayNum) ? dayNum : null;
+    }
+
+    // TODO: Could detect from scroll position in future
+    // For now, return null (agent will work without it)
+    return null;
+  }, [searchParams]);
+
+  /**
    * Send message to agent with streaming response
    */
   const sendMessage = useCallback(async (messageText: string) => {
@@ -460,11 +477,22 @@ export function AgentProvider({ children }: AgentProviderProps) {
       const apiUrl = import.meta.env.VITE_API_URL ||
                      (import.meta.env.MODE === 'production' ? '' : 'http://localhost:5000');
 
+      // Build rich page context
+      const enrichedPageContext = {
+        name: pageContext.name,
+        path: pageContext.path,
+        // Add current day if viewing itinerary
+        currentDay: pageContext.name === 'itinerary' ? getCurrentDayNumber() : null,
+        // Add route info if available
+        route: pageContext.route || null
+      };
+
       const payload = {
         message: messageText.trim(),
         sessionId: sessionId,
-        pageContext: pageContext.name,
-        routeId: pageContext.route?.routeId || null
+        pageContext: enrichedPageContext,  // ✅ SEND RICH CONTEXT
+        routeId: pageContext.route?.routeId || null,
+        itineraryId: itineraryId || null  // ✅ ADD ITINERARY ID
       };
 
       console.log('📤 [AGENT] Sending fetch to:', `${apiUrl}/api/agent/query`);
