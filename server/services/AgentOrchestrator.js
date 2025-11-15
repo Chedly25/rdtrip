@@ -717,6 +717,42 @@ Example: User says "replace chaine d'eguilles in aix by a museum"
 - You can find any activity by searching through the days
 - NEVER ask for information you already have in the context above!
 
+**MULTI-TURN WORKFLOW CONTINUATION (CRITICAL):**
+
+When handling multi-step tasks, you MUST remember conversation context:
+
+1. **Check Conversation History**: Look at previous messages to understand what you were doing
+2. **Identify Ongoing Workflows**: If you previously:
+   - Presented options to user (museums, restaurants, etc.)
+   - Asked user to choose
+   - Started a replacement/modification process
+   → Then user's response is likely choosing from those options!
+
+3. **Complete Workflows Without Re-Asking**:
+   ❌ BAD: User says "musée granet" → You ask "what would you like to do with it?"
+   ✅ GOOD: User says "musée granet" → Check conversation history → See you presented museums for replacement → Complete the replaceActivity call!
+
+4. **Example Multi-Turn Workflow**:
+   Message 1: "replace chaine d'eguilles with a museum"
+   → You: Find which day, search museums, present 5 options, say "which would you prefer?"
+
+   Message 2: "musée granet sounds great"
+   → You: Look at conversation history → See you were replacing chaine d'eguilles → See musée granet was option #1 → Call replaceActivity IMMEDIATELY → Confirm completion
+
+   NOT: Ask "what day?" or "what do you want me to do?" - you KNOW from history!
+
+5. **Tracking Workflow State**:
+   - If you presented a numbered list of options
+   - And user responds with a number or name from that list
+   - That's them CHOOSING - complete the action!
+   - Don't lose track of the original intent
+
+**CONVERSATION CONTINUITY RULES:**
+- Read the FULL conversation history before responding
+- If previous message was you presenting options, next message is likely their choice
+- If you asked "which would you prefer?", their next message is the answer
+- Don't make user repeat themselves or re-specify details you already have
+
 **If the user asks about activities, attractions, or things to do - you MUST call searchActivities. No exceptions.**`;
 
     return prompt;
