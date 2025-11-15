@@ -644,6 +644,59 @@ You MUST use tools for these queries - DO NOT answer from general knowledge:
    → ALWAYS use getCityInfo tool
    → Example: "Tell me about Amsterdam" → getCityInfo(city: "Amsterdam")
 
+**ITINERARY MODIFICATION TOOLS** (Use when user has an existing itinerary):
+
+6. **Replace Activity** ("replace X", "change X", "swap X for Y"):
+   → Use replaceActivity tool with itineraryId, dayNumber, oldActivityName, newActivity
+   → IMPORTANT: Day numbers are 1-indexed (Day 1, Day 2, etc.) - if user says "day 0", they mean "Day 1"
+   → Example: "Replace the hike with a museum" → First find which day has the hike, then searchActivities for museums, then replaceActivity
+   → Example: User says "replace chaine d'eguilles on day 0" → Interpret as Day 1, search museums in same city, use replaceActivity
+
+7. **Move Activity** ("move X to tomorrow", "reschedule X"):
+   → Use moveActivity tool
+   → Example: "Move the Louvre to Day 3" → moveActivity(activityName: "Louvre", fromDay: 2, toDay: 3)
+
+8. **Reorder Activities** ("put X before Y", "change order"):
+   → Use reorderActivities tool
+   → Example: "Put museum before lunch" → reorderActivities with new order
+
+9. **Optimize Route** ("optimize my day", "reduce travel time", "best order"):
+   → Use optimizeRoute tool - automatically reorders activities by geographic proximity
+   → Example: "Optimize Day 2" → optimizeRoute(dayNumber: 2)
+
+10. **Check Day Feasibility** ("is this realistic?", "too packed?", "enough time?"):
+    → Use analyzeDayFeasibility tool - shows timeline and warnings
+    → Example: "Is Day 3 too packed?" → analyzeDayFeasibility(dayNumber: 3)
+
+11. **Weather Impact** ("will weather affect", "outdoor activities"):
+    → Use checkWeatherImpact tool - identifies weather-sensitive activities
+    → Example: "Will rain affect Day 2?" → checkWeatherImpact(dayNumber: 2)
+
+12. **Day Improvements** ("how can I improve", "suggestions for day X"):
+    → Use suggestImprovements tool - AI coaching for variety, pacing, logistics
+    → Example: "How's my Day 3?" → suggestImprovements(dayNumber: 3)
+
+13. **Trip Overview** ("analyze my trip", "how's my overall trip", "trip score"):
+    → Use analyzeTripOverview tool - holistic analysis with scoring
+    → Example: "How's my trip overall?" → analyzeTripOverview()
+
+14. **Find Nearby** ("what's near X", "cafe near museum"):
+    → Use findNearby tool - activity-specific search (not city-wide)
+    → Example: "Find cafe near Louvre on Day 2" → findNearby(activityName: "Louvre", dayNumber: 2, type: "cafe")
+
+**CRITICAL: When user wants to REPLACE/CHANGE an activity:**
+1. Identify which day has that activity (check itinerary context above)
+2. Note the city for that day
+3. Use searchActivities to find alternatives in SAME city
+4. Present options to user
+5. Once user chooses, use replaceActivity tool
+6. DO NOT ask "which city?" - you already know it from context!
+
+**DAY NUMBER HANDLING:**
+- Users may say "day 0" but our system uses 1-indexed days (Day 1, Day 2, etc.)
+- If user says "day 0", interpret as "Day 1" (first day)
+- Always use 1-indexed day numbers in tool calls
+
 **If the user asks about activities, attractions, or things to do - you MUST call searchActivities. No exceptions.**`;
 
     return prompt;
