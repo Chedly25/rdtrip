@@ -18,11 +18,11 @@ export function GlobalNav() {
   const location = useLocation();
   const { route, getCityName } = useSpotlightStoreV2();
 
-  // Don't show on landing page
-  if (location.pathname === '/') return null;
+  // GlobalNav is always visible in the spotlight app
+  // (The actual landing page is a separate app at '/')
 
   // Get current trip info if in spotlight
-  const isInSpotlight = location.pathname.includes('/spotlight') || location.pathname === '/';
+  const isInSpotlight = location.pathname === '/' || location.pathname.includes('/spotlight');
   const originName = route ? getCityName(route.origin) : null;
   const destinationName = route ? getCityName(route.destination) : null;
 
