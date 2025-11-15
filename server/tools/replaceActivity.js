@@ -8,6 +8,9 @@ const db = require('../../db/connection');
 
 async function replaceActivity({ itineraryId, dayNumber, oldActivityName, newActivity }) {
   console.log(`🔄 [replaceActivity] Replacing "${oldActivityName}" with "${newActivity.name}" on Day ${dayNumber}`);
+  console.log(`📸 [replaceActivity] New activity fields:`, JSON.stringify(Object.keys(newActivity)));
+  console.log(`📸 [replaceActivity] Photo field:`, newActivity.photo || 'MISSING!');
+  console.log(`📸 [replaceActivity] Full newActivity:`, JSON.stringify(newActivity, null, 2));
 
   try {
     // 1. Load current itinerary from correct schema
