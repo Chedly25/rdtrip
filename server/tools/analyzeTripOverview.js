@@ -10,11 +10,20 @@ async function analyzeTripOverview({ itineraryId }) {
   console.log(`📊 [analyzeTripOverview] Analyzing entire trip for itinerary ${itineraryId}`);
 
   try {
-    const result = await db.query('SELECT id, itinerary_data FROM itineraries WHERE id = $1', [itineraryId]);
+    const result = await db.query('SELECT id, activities, restaurants FROM itineraries WHERE id = $1', [itineraryId]);
     if (result.rows.length === 0) return { success: false, error: 'Itinerary not found' };
 
-    const itineraryData = result.rows[0].itinerary_data;
-    const days = itineraryData.days || [];
+    const activitiesData = result.rows[0].activities || [];
+    const restaurantsData = result.rows[0].restaurants || [];
+
+    // Build days array
+    const days = activitiesData.map((dayData) => ({
+      dayNumber: dayData.day,
+      city: dayData.city,
+      date: dayData.date || null,
+      activities: dayData.activities || [],
+      restaurants: restaurantsData.find(r => r.day === dayData.day) || {}
+    }));
 
     if (days.length === 0) {
       return { success: false, error: 'No days planned in this trip' };

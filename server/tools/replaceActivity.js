@@ -10,9 +10,9 @@ async function replaceActivity({ itineraryId, dayNumber, oldActivityName, newAct
   console.log(`🔄 [replaceActivity] Replacing "${oldActivityName}" with "${newActivity.name}" on Day ${dayNumber}`);
 
   try {
-    // 1. Load current itinerary
+    // 1. Load current itinerary from correct schema
     const result = await db.query(
-      'SELECT id, itinerary_data FROM itineraries WHERE id = $1',
+      'SELECT id, activities FROM itineraries WHERE id = $1',
       [itineraryId]
     );
 
@@ -20,19 +20,19 @@ async function replaceActivity({ itineraryId, dayNumber, oldActivityName, newAct
       return { success: false, error: 'Itinerary not found' };
     }
 
-    const itineraryData = result.rows[0].itinerary_data;
-    const days = itineraryData.days || [];
+    const activitiesData = result.rows[0].activities || [];
 
-    // 2. Validate day number
-    if (dayNumber < 1 || dayNumber > days.length) {
+    // 2. Find the day
+    const dayData = activitiesData.find(d => d.day === dayNumber);
+
+    if (!dayData) {
       return {
         success: false,
-        error: `Day ${dayNumber} not found (itinerary has ${days.length} days)`
+        error: `Day ${dayNumber} not found in itinerary`
       };
     }
 
-    const day = days[dayNumber - 1];
-    const activities = day.activities || [];
+    const activities = dayData.activities || [];
 
     // 3. Find activity with fuzzy matching
     const activityIndex = activities.findIndex(a => {
@@ -59,24 +59,24 @@ async function replaceActivity({ itineraryId, dayNumber, oldActivityName, newAct
       replaced: true
     };
 
-    // 5. Update itinerary
-    days[dayNumber - 1].activities = activities;
-    itineraryData.days = days;
+    // 5. Update the day's activities
+    dayData.activities = activities;
 
+    // 6. Update database
     await db.query(
-      'UPDATE itineraries SET itinerary_data = $1, updated_at = NOW() WHERE id = $2',
-      [JSON.stringify(itineraryData), itineraryId]
+      'UPDATE itineraries SET activities = $1, updated_at = NOW() WHERE id = $2',
+      [JSON.stringify(activitiesData), itineraryId]
     );
 
     console.log(`✅ Replaced "${oldActivity.name}" with "${newActivity.name}" on Day ${dayNumber}`);
 
     return {
       success: true,
-      message: `Replaced "${oldActivity.name}" with "${newActivity.name}" on Day ${dayNumber} (${day.city || 'Unknown city'})`,
+      message: `Replaced "${oldActivity.name}" with "${newActivity.name}" on Day ${dayNumber} (${dayData.city || 'Unknown city'})`,
       oldActivity: oldActivity.name,
       newActivity: newActivity.name,
       day: dayNumber,
-      city: day.city
+      city: dayData.city
     };
 
   } catch (error) {

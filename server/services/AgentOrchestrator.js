@@ -55,7 +55,9 @@ class AgentOrchestrator {
         SELECT
           i.id,
           i.route_id,
-          i.itinerary_data,
+          i.day_structure,
+          i.activities,
+          i.restaurants,
           r.route_data
         FROM itineraries i
         LEFT JOIN routes r ON i.route_id = r.id
@@ -68,15 +70,34 @@ class AgentOrchestrator {
       }
 
       const row = result.rows[0];
-      const itineraryData = row.itinerary_data || {};
+      const dayStructure = row.day_structure || {};
+      const activitiesData = row.activities || [];
+      const restaurantsData = row.restaurants || [];
       const routeData = row.route_data || {};
 
-      // Extract cities from days
-      const days = itineraryData.days || [];
-      const cities = days.map(day => {
-        const cityName = day.city || day.cityName || 'Unknown';
-        return cityName;
-      }).filter(Boolean);
+      // Build days array by combining day_structure with activities
+      const dayStructureDays = dayStructure.days || [];
+      const days = activitiesData.map((dayActivities) => {
+        const dayNum = dayActivities.day;
+        const structure = dayStructureDays.find(d => d.day === dayNum) || {};
+        const dayRestaurants = restaurantsData.find(r => r.day === dayNum) || {};
+
+        return {
+          dayNumber: dayNum,
+          city: dayActivities.city || structure.location || 'Unknown',
+          date: dayActivities.date || structure.date || null,
+          activities: dayActivities.activities || [],
+          restaurants: {
+            breakfast: dayRestaurants.breakfast || [],
+            lunch: dayRestaurants.lunch || [],
+            dinner: dayRestaurants.dinner || []
+          },
+          accommodation: null // Can be added if needed
+        };
+      });
+
+      // Extract unique cities
+      const cities = days.map(day => day.city).filter(Boolean);
 
       // Build structured data
       const data = {
@@ -85,27 +106,17 @@ class AgentOrchestrator {
         origin: routeData.origin,
         destination: routeData.destination,
         cities: cities,
-        days: days.map((day, index) => ({
-          dayNumber: index + 1,
-          city: day.city || day.cityName,
-          date: day.date || null,
-          activities: day.activities || [],
-          restaurants: {
-            breakfast: day.restaurants?.breakfast || [],
-            lunch: day.restaurants?.lunch || [],
-            dinner: day.restaurants?.dinner || []
-          },
-          accommodation: day.accommodation || null
-        })),
+        days: days,
         totalDays: days.length,
         budget: routeData.budget || null
       };
 
-      console.log(`   ✅ Loaded: ${data.totalDays} days, ${cities.length} cities`);
+      console.log(`   ✅ Loaded: ${data.totalDays} days, ${cities.length} cities (${cities.join(', ')})`);
       return data;
 
     } catch (error) {
       console.error('   ❌ Error loading itinerary:', error.message);
+      console.error('   Stack:', error.stack);
       return null;
     }
   }

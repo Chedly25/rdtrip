@@ -11,12 +11,18 @@ async function findNearby({ itineraryId, dayNumber, activityName, type, radius }
   console.log(`📍 [findNearby] Finding ${type || 'places'} near "${activityName}" on Day ${dayNumber}`);
 
   try {
-    // 1. Load itinerary
-    const result = await db.query('SELECT id, itinerary_data FROM itineraries WHERE id = $1', [itineraryId]);
+    // 1. Load itinerary from correct schema
+    const result = await db.query('SELECT id, activities FROM itineraries WHERE id = $1', [itineraryId]);
     if (result.rows.length === 0) return { success: false, error: 'Itinerary not found' };
 
-    const itineraryData = result.rows[0].itinerary_data;
-    const days = itineraryData.days || [];
+    const activitiesData = result.rows[0].activities || [];
+
+    // Build days array
+    const days = activitiesData.map((dayData) => ({
+      dayNumber: dayData.day,
+      city: dayData.city,
+      activities: dayData.activities || []
+    }));
 
     // 2. Validate day number
     if (dayNumber < 1 || dayNumber > days.length) {

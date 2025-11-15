@@ -10,12 +10,21 @@ async function searchItinerary({ itineraryId, query, type }) {
   console.log(`🔍 [searchItinerary] Searching for "${query}" (type: ${type || 'any'})`);
 
   try {
-    // Load itinerary
-    const result = await db.query('SELECT id, itinerary_data FROM itineraries WHERE id = $1', [itineraryId]);
+    // Load itinerary from correct schema
+    const result = await db.query('SELECT id, activities, restaurants FROM itineraries WHERE id = $1', [itineraryId]);
     if (result.rows.length === 0) return { success: false, error: 'Itinerary not found' };
 
-    const itineraryData = result.rows[0].itinerary_data;
-    const days = itineraryData.days || [];
+    const activitiesData = result.rows[0].activities || [];
+    const restaurantsData = result.rows[0].restaurants || [];
+
+    // Build days array from activities data
+    const days = activitiesData.map((dayData) => ({
+      dayNumber: dayData.day,
+      city: dayData.city,
+      date: dayData.date || null,
+      activities: dayData.activities || [],
+      restaurants: restaurantsData.find(r => r.day === dayData.day) || {}
+    }));
 
     if (days.length === 0) {
       return { success: false, error: 'No days planned in this itinerary' };
@@ -54,28 +63,30 @@ async function searchItinerary({ itineraryId, query, type }) {
 
       // Search restaurants (if type is 'restaurant' or 'any')
       if (!type || type === 'restaurant' || type === 'any') {
-        const restaurants = day.restaurants || {};
-        ['breakfast', 'lunch', 'dinner'].forEach(meal => {
-          const mealList = restaurants[meal] || [];
-          for (const restaurant of mealList) {
-            const restaurantName = restaurant.name?.toLowerCase() || '';
-            if (restaurantName.includes(searchQuery) || searchQuery.includes(restaurantName)) {
-              results.push({
-                type: 'restaurant',
-                meal,
-                dayNumber,
-                city: day.city,
-                date: day.date || null,
-                item: {
-                  name: restaurant.name,
-                  address: restaurant.address || null,
-                  rating: restaurant.rating || null,
-                  cuisine: restaurant.cuisine || null
-                }
-              });
+        const restaurantDay = restaurantsData.find(r => r.day === dayNumber);
+        if (restaurantDay) {
+          ['breakfast', 'lunch', 'dinner'].forEach(meal => {
+            const mealList = restaurantDay[meal] || [];
+            for (const restaurant of mealList) {
+              const restaurantName = restaurant.name?.toLowerCase() || '';
+              if (restaurantName.includes(searchQuery) || searchQuery.includes(restaurantName)) {
+                results.push({
+                  type: 'restaurant',
+                  meal,
+                  dayNumber,
+                  city: day.city,
+                  date: day.date || null,
+                  item: {
+                    name: restaurant.name,
+                    address: restaurant.address || null,
+                    rating: restaurant.rating || null,
+                    cuisine: restaurant.cuisine || null
+                  }
+                });
+              }
             }
-          }
-        });
+          });
+        }
       }
     }
 
