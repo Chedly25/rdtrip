@@ -110,7 +110,7 @@ export function RouteForm({ onRouteGenerated }: RouteFormProps) {
 
     try {
       // Get auth token from localStorage (if user is logged in)
-      const authToken = localStorage.getItem('auth_token');
+      const authToken = localStorage.getItem('rdtrip_auth_token');
 
       // Build headers
       const headers: Record<string, string> = {

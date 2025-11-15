@@ -22,7 +22,7 @@ export function useAutoSave(
     debounce(async (tripId: string, data: any) => {
       try {
         setIsSaving(true);
-        const token = localStorage.getItem('auth_token');
+        const token = localStorage.getItem('rdtrip_auth_token');
 
         const response = await fetch(`/api/my-trips/${tripId}`, {
           method: 'PATCH',

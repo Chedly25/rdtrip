@@ -49,7 +49,7 @@ export function InviteCollaboratorModal({
     setIsSubmitting(true)
 
     try {
-      const token = localStorage.getItem('auth_token')
+      const token = localStorage.getItem('rdtrip_auth_token')
       const response = await fetch(`/api/routes/${routeId}/collaborators`, {
         method: 'POST',
         headers: {

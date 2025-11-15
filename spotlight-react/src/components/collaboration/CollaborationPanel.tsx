@@ -126,7 +126,7 @@ export function CollaborationPanel({ routeId, currentUserId, onInviteClick, onCl
   // Fetch collaborators from API
   async function fetchCollaborators() {
     try {
-      const token = localStorage.getItem('auth_token')
+      const token = localStorage.getItem('rdtrip_auth_token')
       const response = await fetch(`/api/routes/${routeId}/collaborators`, {
         headers: { Authorization: `Bearer ${token}` },
       })
@@ -145,7 +145,7 @@ export function CollaborationPanel({ routeId, currentUserId, onInviteClick, onCl
   // Fetch message history from API
   async function fetchMessages() {
     try {
-      const token = localStorage.getItem('auth_token')
+      const token = localStorage.getItem('rdtrip_auth_token')
       const response = await fetch(`/api/routes/${routeId}/messages`, {
         headers: { Authorization: `Bearer ${token}` },
       })

@@ -85,7 +85,7 @@ export function AddExpenseModal({
       setIsScanning(true)
       setScanError(null)
 
-      const token = localStorage.getItem('auth_token')
+      const token = localStorage.getItem('rdtrip_auth_token')
       const formData = new FormData()
       formData.append('receipt', file)
 
@@ -146,7 +146,7 @@ export function AddExpenseModal({
     setIsSubmitting(true)
 
     try {
-      const token = localStorage.getItem('auth_token')
+      const token = localStorage.getItem('rdtrip_auth_token')
       const response = await fetch(`/api/routes/${routeId}/expenses`, {
         method: 'POST',
         headers: {

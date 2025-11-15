@@ -39,7 +39,7 @@ export function MyTripsPage() {
 
   const fetchTrips = async () => {
     try {
-      const token = localStorage.getItem('auth_token');
+      const token = localStorage.getItem('rdtrip_auth_token');
       const response = await fetch('/api/my-trips', {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -73,7 +73,7 @@ export function MyTripsPage() {
     if (!confirm('Archive this trip?')) return;
 
     try {
-      const token = localStorage.getItem('auth_token');
+      const token = localStorage.getItem('rdtrip_auth_token');
       await fetch(`/api/my-trips/${tripId}`, {
         method: 'DELETE',
         headers: {

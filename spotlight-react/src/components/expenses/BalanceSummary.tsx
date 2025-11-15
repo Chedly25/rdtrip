@@ -48,7 +48,7 @@ export function BalanceSummary({ routeId, userId }: BalanceSummaryProps) {
   async function fetchBalances() {
     try {
       setLoading(true)
-      const token = localStorage.getItem('auth_token')
+      const token = localStorage.getItem('rdtrip_auth_token')
 
       const response = await fetch(`/api/routes/${routeId}/expenses/balances`, {
         headers: {
