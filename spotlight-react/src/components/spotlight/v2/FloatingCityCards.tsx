@@ -322,13 +322,13 @@ const FloatingCityCards = () => {
         onClose={() => setIsAddingLandmark(false)}
       />
 
-      {/* Floating Add Button (FAB) */}
+      {/* Floating Add Button (FAB) - Closer to city cards */}
       <motion.button
         initial={{ scale: 0, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ delay: 0.3, type: 'spring', stiffness: 260, damping: 20 }}
         onClick={() => setIsAddingLandmark(true)}
-        className="absolute right-8 -top-20 w-16 h-16 rounded-full shadow-2xl flex items-center justify-center text-white hover:scale-110 transition-transform z-50"
+        className="absolute right-8 -top-8 w-16 h-16 rounded-full shadow-2xl flex items-center justify-center text-white hover:scale-110 transition-transform z-50"
         style={{
           background: `linear-gradient(135deg, ${agentColors.primary}, ${agentColors.secondary})`
         }}
