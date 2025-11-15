@@ -527,16 +527,43 @@ class AgentOrchestrator {
         prompt += `\n- Budget: ${itineraryData.budget}`;
       }
 
-      // Add day-by-day summary
+      // Add day-by-day summary with FULL ACTIVITY DETAILS
       if (itineraryData.days && itineraryData.days.length > 0) {
-        prompt += `\n\n**Daily Plan**:`;
+        prompt += `\n\n**Daily Plan** (Complete Activity List):`;
         itineraryData.days.forEach(day => {
           const activityCount = day.activities?.length || 0;
           const restaurantCount = (day.restaurants?.breakfast?.length || 0) +
                                  (day.restaurants?.lunch?.length || 0) +
                                  (day.restaurants?.dinner?.length || 0);
 
-          prompt += `\n- Day ${day.dayNumber} (${day.city}): ${activityCount} activit${activityCount !== 1 ? 'ies' : 'y'}, ${restaurantCount} meal${restaurantCount !== 1 ? 's' : ''}`;
+          prompt += `\n\n**Day ${day.dayNumber} - ${day.city}** (${day.date || 'TBD'}):`;
+
+          // Show ALL activities with names
+          if (day.activities && day.activities.length > 0) {
+            prompt += `\n  Activities (${activityCount}):`;
+            day.activities.forEach((activity, i) => {
+              prompt += `\n  ${i + 1}. ${activity.name || 'Unnamed activity'}`;
+              if (activity.address) {
+                prompt += ` (${activity.address})`;
+              }
+            });
+          } else {
+            prompt += `\n  Activities: None planned yet`;
+          }
+
+          // Show meals
+          if (restaurantCount > 0) {
+            prompt += `\n  Meals:`;
+            if (day.restaurants?.breakfast?.length > 0) {
+              prompt += `\n    - Breakfast: ${day.restaurants.breakfast[0].name}`;
+            }
+            if (day.restaurants?.lunch?.length > 0) {
+              prompt += `\n    - Lunch: ${day.restaurants.lunch[0].name}`;
+            }
+            if (day.restaurants?.dinner?.length > 0) {
+              prompt += `\n    - Dinner: ${day.restaurants.dinner[0].name}`;
+            }
+          }
         });
       }
 
@@ -686,16 +713,20 @@ You MUST use tools for these queries - DO NOT answer from general knowledge:
 
 **CRITICAL: When user wants to REPLACE/CHANGE an activity:**
 
-You have FULL itinerary context above. Use it! Here's the exact workflow:
+You have FULL itinerary context above with ALL activity names listed. Use it! Here's the exact workflow:
 
 Example: User says "replace chaine d'eguilles in aix by a museum"
-1. ✅ Check itinerary context above → Find which day has "Chaîne d'Eguilles"
-2. ✅ Check what city that day is in → "Aix-en-Provence, France"
-3. ✅ Call searchActivities(city: "Aix-en-Provence, France", category: "museum")
-4. ✅ Present top 3-5 museum options to user
-5. ✅ User picks one → Call replaceActivity(itineraryId: "${itineraryData?.itineraryId}", dayNumber: X, oldActivityName: "chaine d'eguilles", newActivity: {...})
-6. ❌ DO NOT ask "which city?" - you KNOW it from context!
-7. ❌ DO NOT ask "which day?" - you can FIND it in the itinerary above!
+1. ✅ Look at "Daily Plan (Complete Activity List)" above
+2. ✅ Search through each day's activities to find "Chaîne d'Eguilles"
+3. ✅ Note: Day number where it's found AND the city for that day
+4. ✅ Call searchActivities(city: "Aix-en-Provence, France", category: "museum")
+5. ✅ Present top 3-5 museum options to user
+6. ✅ User picks one → Call replaceActivity(itineraryId: "${itineraryData?.itineraryId}", dayNumber: X, oldActivityName: "chaine d'eguilles", newActivity: {...})
+7. ❌ DO NOT ask "which city?" - you KNOW it from Daily Plan!
+8. ❌ DO NOT ask "which day?" - you can FIND it in Daily Plan!
+9. ❌ DO NOT ask "what's your itinerary ID?" - you HAVE it: ${itineraryData?.itineraryId}
+
+**IMPORTANT**: The itinerary ID is ALWAYS available in context. You never need to ask for it!
 
 **BE PROACTIVE - NEVER ASK REDUNDANT QUESTIONS:**
 - ❌ BAD: "Which city are you interested in?" (when city is in context)
