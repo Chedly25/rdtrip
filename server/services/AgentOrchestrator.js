@@ -185,6 +185,10 @@ class AgentOrchestrator {
       // 3. Get conversation history (last 10 messages)
       const conversationHistory = await this.getConversationHistory(sessionId);
       console.log('   ✅ History messages:', conversationHistory.length);
+      if (conversationHistory.length > 0) {
+        const lastMsg = conversationHistory[conversationHistory.length - 1];
+        console.log(`   📜 Last message: ${lastMsg.role} - "${lastMsg.content.substring(0, 100)}..."`);
+      }
 
       console.log('[Step 4/9] Getting memories and preferences...');
       // 4. Get relevant memories and preferences
@@ -523,6 +527,28 @@ class AgentOrchestrator {
 - Concise and to the point (2-3 paragraphs max)
 - Actionable - always suggest next steps
 - Honest - if you don't know something, use your tools to find out
+
+⚠️ **CRITICAL: CONVERSATION MEMORY** ⚠️
+BEFORE responding to ANY message, ALWAYS check the conversation history:
+
+1. **Did YOU just present options to the user?**
+   - If your previous message listed museums/restaurants/activities
+   - And asked "Which would you prefer?" or "Which one do you like?"
+   - Then the user's current message is THEIR CHOICE from your list!
+   - ✅ IMMEDIATELY call the appropriate tool (replaceActivity, addActivity, etc.)
+   - ❌ NEVER say "I don't have context" - YOU presented the options!
+
+2. **Example of CORRECT behavior:**
+   YOU (Message 1): "I found 5 museums: Musée Granet, Fondation Vasarely... Which would you prefer?"
+   USER (Message 2): "musée granet"
+   YOU (Message 3): ✅ Call replaceActivity with Musée Granet
+   YOU (Message 3): ❌ DON'T ask "what were we doing?" - YOU KNOW!
+
+3. **How to check history:**
+   - Look at the LAST assistant message (yours!)
+   - Did it end with a question about choosing?
+   - If yes, user's response is the answer!
+   - Extract the choice and complete the action!
 
 **Current Context**:
 - Page: ${pageContext.page || 'unknown'}`;
