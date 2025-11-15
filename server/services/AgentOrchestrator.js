@@ -824,16 +824,21 @@ When handling multi-step tasks, you MUST remember conversation context:
    */
   async getOrCreateConversation(userId, routeId, sessionId) {
     // Check if conversation exists
+    // IMPORTANT: Handle NULL userId correctly (NULL = NULL is FALSE in SQL!)
     const existing = await this.db.query(`
       SELECT id FROM agent_conversations
-      WHERE user_id = $1 AND session_id = $2
+      WHERE (user_id = $1 OR (user_id IS NULL AND $1 IS NULL))
+        AND session_id = $2
       ORDER BY created_at DESC
       LIMIT 1
     `, [userId, sessionId]);
 
     if (existing.rows.length > 0) {
+      console.log(`   ♻️  Reusing existing conversation: ${existing.rows[0].id}`);
       return existing.rows[0].id;
     }
+
+    console.log(`   🆕 Creating new conversation for session: ${sessionId}`);
 
     // Validate routeId format (must be a valid UUID)
     // If invalid or not provided, set to null
