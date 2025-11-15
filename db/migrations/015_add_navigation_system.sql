@@ -130,47 +130,64 @@ CREATE TABLE IF NOT EXISTS user_preferences (
 -- ============================================
 -- Migrate existing completed route_jobs to user_trips table
 -- This ensures backward compatibility with existing data
+-- Only runs if route_jobs table exists
 
-INSERT INTO user_trips (
-  user_id,
-  title,
-  status,
-  origin,
-  destination,
-  nights,
-  selected_agent_type,
-  route_data,
-  generation_job_id,
-  created_at,
-  updated_at
-)
-SELECT
-  '00000000-0000-0000-0000-000000000000'::uuid as user_id, -- Default guest user for now
-  CONCAT(
-    COALESCE((origin->>'name')::text, 'Unknown'),
-    ' to ',
-    COALESCE((destination->>'name')::text, 'Unknown')
-  ) as title,
-  CASE
-    WHEN status = 'completed' THEN 'active'
-    WHEN status = 'failed' THEN 'archived'
-    ELSE 'draft'
-  END as status,
-  origin,
-  destination,
-  nights,
-  agent_type as selected_agent_type,
-  result as route_data,
-  job_id as generation_job_id,
-  created_at,
-  updated_at
-FROM route_jobs
-WHERE status = 'completed'
-  AND result IS NOT NULL
-  AND NOT EXISTS (
-    SELECT 1 FROM user_trips ut WHERE ut.generation_job_id = route_jobs.job_id
-  )
-ON CONFLICT DO NOTHING;
+DO $$
+BEGIN
+  -- Check if route_jobs table exists
+  IF EXISTS (
+    SELECT FROM information_schema.tables
+    WHERE table_schema = 'public'
+    AND table_name = 'route_jobs'
+  ) THEN
+    -- Migrate data from route_jobs to user_trips
+    INSERT INTO user_trips (
+      user_id,
+      title,
+      status,
+      origin,
+      destination,
+      nights,
+      selected_agent_type,
+      route_data,
+      generation_job_id,
+      created_at,
+      updated_at
+    )
+    SELECT
+      '00000000-0000-0000-0000-000000000000'::uuid as user_id, -- Default guest user for now
+      CONCAT(
+        COALESCE((origin->>'name')::text, 'Unknown'),
+        ' to ',
+        COALESCE((destination->>'name')::text, 'Unknown')
+      ) as title,
+      CASE
+        WHEN status = 'completed' THEN 'active'
+        WHEN status = 'failed' THEN 'archived'
+        ELSE 'draft'
+      END as status,
+      origin,
+      destination,
+      nights,
+      agent_type as selected_agent_type,
+      result as route_data,
+      job_id as generation_job_id,
+      created_at,
+      updated_at
+    FROM route_jobs
+    WHERE status = 'completed'
+      AND result IS NOT NULL
+      AND NOT EXISTS (
+        SELECT 1 FROM user_trips ut WHERE ut.generation_job_id = route_jobs.job_id
+      )
+    ON CONFLICT DO NOTHING;
+
+    RAISE NOTICE 'Migrated data from route_jobs to user_trips';
+  ELSE
+    RAISE NOTICE 'route_jobs table does not exist - skipping data migration';
+  END IF;
+END
+$$;
 
 COMMIT;
 
