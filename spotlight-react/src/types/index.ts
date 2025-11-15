@@ -129,6 +129,49 @@ export interface ActivityComment {
   replies?: ActivityComment[]
 }
 
+// Polling & Voting (Phase 3)
+export interface PollOption {
+  id: string
+  label: string
+  description?: string
+  metadata?: any
+}
+
+export interface PollVote {
+  userId: string
+  userName: string
+  selectedOptions: string[]
+  createdAt: string
+}
+
+export interface TripPoll {
+  id: string
+  routeId: string
+  createdBy: string
+  createdByName: string
+  question: string
+  description?: string
+  pollType: 'activity' | 'restaurant' | 'accommodation' | 'time' | 'general'
+  targetType?: string
+  targetId?: string
+  dayNumber?: number
+  options: PollOption[]
+  multipleChoice: boolean
+  maxChoices: number
+  minVotesRequired: number
+  autoExecute: boolean
+  consensusThreshold: number
+  deadline?: string
+  status: 'active' | 'closed' | 'executed'
+  closedAt?: string
+  closedBy?: string
+  winningOption?: string
+  results?: any
+  votes: PollVote[]
+  createdAt: string
+  updatedAt?: string
+}
+
 // Expense tracking types (Phase 3)
 export type ExpenseCategory =
   | 'accommodation'
