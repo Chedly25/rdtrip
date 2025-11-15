@@ -17,6 +17,20 @@ export function ItineraryView({ itineraryId, routeData }: ItineraryViewProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [itinerary, setItinerary] = useState<any>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  // Get current user from localStorage
+  useEffect(() => {
+    const userData = localStorage.getItem('rdtrip_user_data');
+    if (userData) {
+      try {
+        const user = JSON.parse(userData);
+        setCurrentUserId(user.id);
+      } catch (e) {
+        console.warn('Failed to parse user data:', e);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     loadItinerary();
@@ -261,6 +275,8 @@ export function ItineraryView({ itineraryId, routeData }: ItineraryViewProps) {
                     events={dayData.events}
                     agentType="best-overall" // TODO: Get from route data if available
                     density="compact"
+                    routeId={itinerary.routeId}
+                    currentUserId={currentUserId || undefined}
                   />
                 );
               })}
