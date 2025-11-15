@@ -13,6 +13,15 @@ export function CompactActivityCard({ activity, onSelect, isSelected = false }: 
   const photoUrl = typeof photo === 'string' ? photo :
     photo?.url || activity.photo || activity.primaryPhoto?.url || activity.primaryPhoto || null;
 
+  // DEBUG: Log photo information
+  if (!photoUrl) {
+    console.log(`📸 [CompactActivityCard] NO PHOTO for "${activity.name}"`);
+    console.log('   activity.photo:', activity.photo);
+    console.log('   activity.photos:', activity.photos);
+    console.log('   activity.primaryPhoto:', activity.primaryPhoto);
+    console.log('   Full activity:', activity);
+  }
+
   // Google Maps link helper
   const getGoogleMapsLink = () => {
     if (activity.place_id) {
