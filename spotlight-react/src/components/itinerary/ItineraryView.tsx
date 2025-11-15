@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Loader2, ArrowLeft, Calendar, MapPin, Users, DollarSign } from 'lucide-react';
+import { Loader2, ArrowLeft, Calendar, MapPin, Users, DollarSign, PlusCircle } from 'lucide-react';
 import { DayCardV2 } from './DayCardV2';
 import { BudgetSummary } from './BudgetSummary';
 import { ChatSidebar } from '../agent/ChatSidebar';
 import { ProactiveNotifications } from '../notifications/ProactiveNotifications';
+import { PollCard } from '../collaboration/PollCard';
+import { CreatePollModal } from '../collaboration/CreatePollModal';
+import type { TripPoll } from '../../types';
 import { useNavigate } from 'react-router-dom';
 
 interface ItineraryViewProps {
@@ -18,6 +21,11 @@ export function ItineraryView({ itineraryId, routeData }: ItineraryViewProps) {
   const [error, setError] = useState<string | null>(null);
   const [itinerary, setItinerary] = useState<any>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  // Polling state
+  const [polls, setPolls] = useState<TripPoll[]>([]);
+  const [showCreatePoll, setShowCreatePoll] = useState(false);
+  const [pollsLoading, setPollsLoading] = useState(false);
 
   // Get current user from localStorage
   useEffect(() => {
@@ -89,6 +97,46 @@ export function ItineraryView({ itineraryId, routeData }: ItineraryViewProps) {
       console.error('❌ Silent refresh error:', err);
       // Don't set error state - just log it
     }
+  };
+
+  // Load polls for this route
+  const loadPolls = async () => {
+    if (!itinerary?.routeId) return;
+
+    try {
+      setPollsLoading(true);
+      const response = await fetch(`/api/routes/${itinerary.routeId}/polls?status=active`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('rdtrip_token')}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setPolls(data.polls || []);
+      }
+    } catch (err) {
+      console.error('Error loading polls:', err);
+    } finally {
+      setPollsLoading(false);
+    }
+  };
+
+  // Load polls when itinerary loads
+  useEffect(() => {
+    if (itinerary?.routeId) {
+      loadPolls();
+    }
+  }, [itinerary?.routeId]);
+
+  // Handle poll created
+  const handlePollCreated = (newPoll: TripPoll) => {
+    setPolls(prev => [newPoll, ...prev]);
+  };
+
+  // Handle poll closed
+  const handlePollClosed = (pollId: string) => {
+    setPolls(prev => prev.filter(p => p.id !== pollId));
   };
 
   if (loading) {
@@ -258,6 +306,50 @@ export function ItineraryView({ itineraryId, routeData }: ItineraryViewProps) {
               <ProactiveNotifications itineraryId={itineraryId} />
             </div>
 
+            {/* Polling Section */}
+            {itinerary?.routeId && (
+              <div className="bg-white rounded-2xl shadow-md overflow-hidden p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900">Group Decisions</h3>
+                    <p className="text-sm text-gray-600">Vote on activities, restaurants, and more</p>
+                  </div>
+                  <button
+                    onClick={() => setShowCreatePoll(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                  >
+                    <PlusCircle className="w-4 h-4" />
+                    Create Poll
+                  </button>
+                </div>
+
+                {/* Polls List */}
+                {pollsLoading ? (
+                  <div className="text-center py-8">
+                    <Loader2 className="w-8 h-8 animate-spin mx-auto text-blue-600" />
+                    <p className="text-gray-600 mt-2">Loading polls...</p>
+                  </div>
+                ) : polls.length > 0 ? (
+                  <div className="space-y-4">
+                    {polls.map(poll => (
+                      <PollCard
+                        key={poll.id}
+                        poll={poll}
+                        routeId={itinerary.routeId}
+                        currentUserId={currentUserId || undefined}
+                        onVote={() => loadPolls()}
+                        onClose={handlePollClosed}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 bg-gray-50 rounded-lg">
+                    <p className="text-gray-600">No active polls yet. Create one to get group decisions!</p>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Day Cards */}
             <div className="space-y-6">
               {daysArray.map((day: any) => {
@@ -296,6 +388,15 @@ export function ItineraryView({ itineraryId, routeData }: ItineraryViewProps) {
           <ChatSidebar />
         </div>
       </div>
+
+      {/* Create Poll Modal */}
+      {showCreatePoll && itinerary?.routeId && (
+        <CreatePollModal
+          routeId={itinerary.routeId}
+          onClose={() => setShowCreatePoll(false)}
+          onPollCreated={handlePollCreated}
+        />
+      )}
     </div>
   );
 }
