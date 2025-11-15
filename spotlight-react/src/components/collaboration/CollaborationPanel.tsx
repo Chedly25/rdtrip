@@ -5,6 +5,7 @@ import type { Collaborator, TripMessage, PresenceStatus } from '../../types'
 import { motion, AnimatePresence } from 'framer-motion'
 import { MessageReactionPicker } from './MessageReactionPicker'
 import { MentionAutocomplete } from './MentionAutocomplete'
+import { ActivityMessageCard } from './ActivityMessageCard'
 
 interface CollaborationPanelProps {
   routeId: string
@@ -476,7 +477,20 @@ export function CollaborationPanel({ routeId, currentUserId, onInviteClick }: Co
                             }
                             return null
                           })()}
-                          <p className="text-sm whitespace-pre-wrap break-words">{message.message}</p>
+
+                          {/* Render activity card or regular text */}
+                          {message.messageType === 'activity' && message.messageMetadata?.activity ? (
+                            <div className="mb-2">
+                              <ActivityMessageCard
+                                activity={message.messageMetadata.activity}
+                                isCurrentUser={message.userId === currentUserId}
+                              />
+                            </div>
+                          ) : null}
+
+                          {message.message && (
+                            <p className="text-sm whitespace-pre-wrap break-words">{message.message}</p>
+                          )}
                         </div>
 
                         {/* Reaction picker and reply button */}
