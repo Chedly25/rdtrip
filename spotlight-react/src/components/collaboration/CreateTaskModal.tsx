@@ -220,6 +220,9 @@ export function CreateTaskModal({
                     </option>
                   ))}
                 </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  {TASK_TYPES.find(t => t.value === taskType)?.description}
+                </p>
               </div>
 
               {/* Priority */}
