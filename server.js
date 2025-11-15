@@ -7908,7 +7908,7 @@ app.post('/api/routes/:id/collaborators/:userId/accept', authMiddleware, async (
 // POST /api/routes/:id/messages - Send chat message
 app.post('/api/routes/:id/messages', authMiddleware, async (req, res) => {
   try {
-    const { message, messageType = 'text', metadata, mentionedUsers } = req.body;
+    const { message, messageType = 'text', metadata, mentionedUsers, parentMessageId } = req.body;
     const routeId = req.params.id;
     const userId = req.user.id;
 
@@ -7923,10 +7923,10 @@ app.post('/api/routes/:id/messages', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: 'Not authorized to send messages' });
     }
 
-    // Insert message with mentions
+    // Insert message with mentions and thread support
     const result = await pool.query(`
-      INSERT INTO trip_messages (route_id, user_id, message, message_type, message_metadata, mentioned_users)
-      VALUES ($1, $2, $3, $4, $5, $6)
+      INSERT INTO trip_messages (route_id, user_id, message, message_type, message_metadata, mentioned_users, parent_message_id)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING
         *,
         (SELECT name FROM users WHERE id = $2) as user_name,
@@ -7937,7 +7937,8 @@ app.post('/api/routes/:id/messages', authMiddleware, async (req, res) => {
       message,
       messageType,
       metadata ? JSON.stringify(metadata) : null,
-      mentionedUsers || null
+      mentionedUsers || null,
+      parentMessageId || null
     ]);
 
     const newMessage = result.rows[0];

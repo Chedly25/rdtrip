@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { MessageCircle, Users, Send, Loader2, UserPlus, MoreVertical, Crown, Edit, Eye } from 'lucide-react'
+import { MessageCircle, Users, Send, Loader2, UserPlus, MoreVertical, Crown, Edit, Eye, Reply, X } from 'lucide-react'
 import { useWebSocket } from '../../hooks/useWebSocket'
 import type { Collaborator, TripMessage, PresenceStatus } from '../../types'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -28,6 +28,9 @@ export function CollaborationPanel({ routeId, currentUserId, onInviteClick }: Co
   const [mentionTrigger, setMentionTrigger] = useState('')
   const [showMentionDropdown, setShowMentionDropdown] = useState(false)
   const [mentionStartPos, setMentionStartPos] = useState(0)
+
+  // Thread/reply state
+  const [replyingTo, setReplyingTo] = useState<TripMessage | null>(null)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -179,12 +182,14 @@ export function CollaborationPanel({ routeId, currentUserId, onInviteClick }: Co
         body: JSON.stringify({
           message: messageInput.trim(),
           mentionedUsers: mentionedUserIds.length > 0 ? mentionedUserIds : undefined,
+          parentMessageId: replyingTo?.id || undefined,
         }),
       })
 
       if (response.ok) {
         setMessageInput('')
         setShowMentionDropdown(false)
+        setReplyingTo(null)
         // Message will be added via WebSocket broadcast
       } else {
         console.error('Failed to send message')
@@ -447,11 +452,35 @@ export function CollaborationPanel({ routeId, currentUserId, onInviteClick }: Co
                               : 'bg-gray-100 text-gray-900'
                           }`}
                         >
+                          {/* Parent message indicator (if this is a reply) */}
+                          {message.parentMessageId && (() => {
+                            const parentMsg = messages.find((m) => m.id === message.parentMessageId)
+                            if (parentMsg) {
+                              return (
+                                <div
+                                  className={`mb-2 pb-2 border-l-2 pl-2 text-xs ${
+                                    message.userId === currentUserId
+                                      ? 'border-blue-300 text-blue-100'
+                                      : 'border-gray-300 text-gray-500'
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-1 mb-0.5">
+                                    <Reply className="w-2.5 h-2.5" />
+                                    <span className="font-medium">
+                                      {parentMsg.userId === currentUserId ? 'You' : parentMsg.userName}
+                                    </span>
+                                  </div>
+                                  <p className="truncate">{parentMsg.message}</p>
+                                </div>
+                              )
+                            }
+                            return null
+                          })()}
                           <p className="text-sm whitespace-pre-wrap break-words">{message.message}</p>
                         </div>
 
-                        {/* Reaction picker */}
-                        <div className="mt-1">
+                        {/* Reaction picker and reply button */}
+                        <div className="mt-1 flex items-center gap-2">
                           <MessageReactionPicker
                             messageId={message.id}
                             routeId={routeId}
@@ -459,6 +488,13 @@ export function CollaborationPanel({ routeId, currentUserId, onInviteClick }: Co
                             existingReactions={message.reactions || []}
                             currentUserId={currentUserId}
                           />
+                          <button
+                            onClick={() => setReplyingTo(message)}
+                            className="p-1 rounded-full hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+                            title="Reply to this message"
+                          >
+                            <Reply className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       </div>
                     </motion.div>
@@ -490,6 +526,36 @@ export function CollaborationPanel({ routeId, currentUserId, onInviteClick }: Co
 
             {/* Message input */}
             <div className="border-t border-gray-200 p-4">
+              {/* Reply indicator */}
+              <AnimatePresence>
+                {replyingTo && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.15 }}
+                    className="mb-2 p-2 bg-blue-50 border-l-4 border-blue-500 rounded flex items-start justify-between"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Reply className="w-3.5 h-3.5 text-blue-600" />
+                        <span className="text-xs font-medium text-blue-700">
+                          Replying to {replyingTo.userId === currentUserId ? 'yourself' : replyingTo.userName}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-700 truncate">{replyingTo.message}</p>
+                    </div>
+                    <button
+                      onClick={() => setReplyingTo(null)}
+                      className="ml-2 p-1 hover:bg-blue-100 rounded transition-colors"
+                      title="Cancel reply"
+                    >
+                      <X className="w-3.5 h-3.5 text-blue-600" />
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
               {/* Mention autocomplete */}
               <MentionAutocomplete
                 users={collaborators.map((c) => ({
