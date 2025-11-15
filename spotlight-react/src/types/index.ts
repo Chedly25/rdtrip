@@ -107,6 +107,28 @@ export interface RouteActivity {
   createdAt: string
 }
 
+// Activity Comments (Phase 2)
+export interface ActivityComment {
+  id: string
+  routeId: string
+  itineraryId?: string
+  targetType: 'activity' | 'day' | 'restaurant' | 'route'
+  targetId: string
+  dayNumber?: number
+  userId: string
+  userName: string
+  userAvatar?: string
+  comment: string
+  parentCommentId?: string
+  resolved: boolean
+  resolvedBy?: string
+  resolvedByName?: string
+  resolvedAt?: string
+  createdAt: string
+  updatedAt?: string
+  replies?: ActivityComment[]
+}
+
 // Expense tracking types (Phase 3)
 export type ExpenseCategory =
   | 'accommodation'
