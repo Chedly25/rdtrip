@@ -7984,6 +7984,139 @@ app.get('/api/routes/:id/messages', authMiddleware, async (req, res) => {
   }
 });
 
+// POST /api/routes/:id/messages/:messageId/reactions - Add reaction to message
+app.post('/api/routes/:id/messages/:messageId/reactions', authMiddleware, async (req, res) => {
+  try {
+    const { emoji } = req.body;
+    const routeId = req.params.id;
+    const messageId = req.params.messageId;
+    const userId = req.user.id;
+
+    // Validate emoji
+    if (!emoji || typeof emoji !== 'string') {
+      return res.status(400).json({ error: 'Valid emoji required' });
+    }
+
+    // Verify access
+    const permission = await checkRoutePermission(routeId, userId);
+    if (!permission) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    // Verify message exists and belongs to route
+    const msgCheck = await pool.query(
+      'SELECT id FROM trip_messages WHERE id = $1 AND route_id = $2',
+      [messageId, routeId]
+    );
+
+    if (msgCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Message not found' });
+    }
+
+    // Add reaction (using PostgreSQL JSONB operations)
+    const reaction = {
+      emoji,
+      userId,
+      createdAt: new Date().toISOString()
+    };
+
+    await pool.query(`
+      UPDATE trip_messages
+      SET reactions = reactions || $1::jsonb
+      WHERE id = $2
+    `, [JSON.stringify([reaction]), messageId]);
+
+    // Get updated message
+    const result = await pool.query(`
+      SELECT m.*, u.name as user_name, u.avatar_url as user_avatar
+      FROM trip_messages m
+      JOIN users u ON m.user_id = u.id
+      WHERE m.id = $1
+    `, [messageId]);
+
+    const updatedMessage = result.rows[0];
+
+    // Broadcast via WebSocket
+    if (global.collaborationService) {
+      global.collaborationService.broadcast(routeId, {
+        type: 'message_reaction_added',
+        data: {
+          messageId,
+          reaction,
+          message: updatedMessage
+        }
+      });
+    }
+
+    res.json({ success: true, message: updatedMessage });
+
+  } catch (error) {
+    console.error('Error adding reaction:', error);
+    res.status(500).json({ error: 'Failed to add reaction' });
+  }
+});
+
+// DELETE /api/routes/:id/messages/:messageId/reactions - Remove reaction from message
+app.delete('/api/routes/:id/messages/:messageId/reactions', authMiddleware, async (req, res) => {
+  try {
+    const { emoji } = req.body;
+    const routeId = req.params.id;
+    const messageId = req.params.messageId;
+    const userId = req.user.id;
+
+    // Validate emoji
+    if (!emoji || typeof emoji !== 'string') {
+      return res.status(400).json({ error: 'Valid emoji required' });
+    }
+
+    // Verify access
+    const permission = await checkRoutePermission(routeId, userId);
+    if (!permission) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    // Remove reaction (filter out reactions matching userId and emoji)
+    await pool.query(`
+      UPDATE trip_messages
+      SET reactions = (
+        SELECT jsonb_agg(elem)
+        FROM jsonb_array_elements(reactions) elem
+        WHERE NOT (elem->>'userId' = $1 AND elem->>'emoji' = $2)
+      )
+      WHERE id = $3
+    `, [userId, emoji, messageId]);
+
+    // Get updated message
+    const result = await pool.query(`
+      SELECT m.*, u.name as user_name, u.avatar_url as user_avatar
+      FROM trip_messages m
+      JOIN users u ON m.user_id = u.id
+      WHERE m.id = $1
+    `, [messageId]);
+
+    const updatedMessage = result.rows[0];
+
+    // Broadcast via WebSocket
+    if (global.collaborationService) {
+      global.collaborationService.broadcast(routeId, {
+        type: 'message_reaction_removed',
+        data: {
+          messageId,
+          emoji,
+          userId,
+          message: updatedMessage
+        }
+      });
+    }
+
+    res.json({ success: true, message: updatedMessage });
+
+  } catch (error) {
+    console.error('Error removing reaction:', error);
+    res.status(500).json({ error: 'Failed to remove reaction' });
+  }
+});
+
 // GET /api/routes/:id/activity - Get activity log
 app.get('/api/routes/:id/activity', authMiddleware, async (req, res) => {
   try {
