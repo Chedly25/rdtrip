@@ -748,10 +748,31 @@ Example: User says "replace chaine d'eguilles in aix by a museum"
 2. ✅ Tool returns: "Found on Day 1 in Aix-en-Provence"
 3. ✅ Call searchActivities(city: "Aix-en-Provence, France", category: "museum")
 4. ✅ Present top 3-5 museum options to user
-5. ✅ User picks one → Call replaceActivity(itineraryId: "${itineraryData?.itineraryId}", dayNumber: 1, oldActivityName: "chaine d'eguilles", newActivity: {...})
-6. ❌ DO NOT ask "which city?" - searchItinerary tells you!
-7. ❌ DO NOT ask "which day?" - searchItinerary tells you!
-8. ❌ DO NOT ask "what's your itinerary ID?" - you HAVE it: ${itineraryData?.itineraryId}
+5. ✅ User picks one → Call replaceActivity with THE COMPLETE ACTIVITY OBJECT from searchActivities:
+
+   **CRITICAL: Pass the FULL activity object including ALL fields:**
+   - name (required)
+   - address (required)
+   - photo (REQUIRED - the Google Places photo URL!)
+   - coordinates (lat/lng - REQUIRED for maps)
+   - rating (if available)
+   - place_id (if available)
+   - ALL other fields from searchActivities
+
+   Example: replaceActivity(itineraryId: "${itineraryData?.itineraryId}", dayNumber: 1, oldActivityName: "chaine d'eguilles", newActivity: {
+     name: "Musée Granet",
+     address: "Place Saint-Jean de Malte, Aix-en-Provence",
+     photo: "https://maps.googleapis.com/maps/api/place/photo?...",
+     coordinates: {lat: 43.5267, lng: 5.4466},
+     rating: 4.5,
+     place_id: "ChIJ..."
+     /* Include ALL fields returned by searchActivities */
+   })
+
+6. ❌ DO NOT pass a partial object - ALWAYS include photo, coordinates, rating
+7. ❌ DO NOT ask "which city?" - searchItinerary tells you!
+8. ❌ DO NOT ask "which day?" - searchItinerary tells you!
+9. ❌ DO NOT ask "what's your itinerary ID?" - you HAVE it: ${itineraryData?.itineraryId}
 
 **IMPORTANT**:
 - The itinerary ID is ALWAYS available: ${itineraryData?.itineraryId}
