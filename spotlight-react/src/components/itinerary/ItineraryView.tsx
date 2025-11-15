@@ -22,6 +22,17 @@ export function ItineraryView({ itineraryId, routeData }: ItineraryViewProps) {
     loadItinerary();
   }, [itineraryId]);
 
+  // Listen for itinerary updates from agent (replaceActivity, addActivity, etc.)
+  useEffect(() => {
+    const handleItineraryUpdate = () => {
+      console.log('🔄 [ItineraryView] Received itinerary_updated event, refreshing...');
+      loadItinerary();
+    };
+
+    window.addEventListener('itinerary_updated', handleItineraryUpdate);
+    return () => window.removeEventListener('itinerary_updated', handleItineraryUpdate);
+  }, [itineraryId]);
+
   const loadItinerary = async () => {
     try {
       setLoading(true);
