@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useSpotlightStoreV2, type SpotlightRoute, type CityData } from '../../../stores/spotlightStoreV2';
 import MapViewV2 from './MapViewV2';
 import FloatingCityCards from './FloatingCityCards';
 import SpotlightHeader from './SpotlightHeader';
 import { ItineraryView } from '../../itinerary/ItineraryView';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Users, X } from 'lucide-react';
+import { CollaborationPanel } from '../../collaboration/CollaborationPanel';
 
 const SpotlightV2 = () => {
   // Get routeId from query params (?routeId=123) not path params
@@ -16,6 +17,7 @@ const SpotlightV2 = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showCollaboration, setShowCollaboration] = useState(false);
 
   const {
     route,
@@ -407,6 +409,46 @@ const SpotlightV2 = () => {
 
       {/* Floating City Cards - Bottom overlay */}
       <FloatingCityCards />
+
+      {/* Collaborate Button - Fixed position */}
+      {routeId && (
+        <motion.button
+          onClick={() => setShowCollaboration(!showCollaboration)}
+          className="fixed bottom-6 right-6 z-50 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 shadow-lg transition-all flex items-center gap-2"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          <Users className="w-6 h-6" />
+          <span className="font-medium">Collaborate</span>
+        </motion.button>
+      )}
+
+      {/* Collaboration Panel - Slide in from right */}
+      <AnimatePresence>
+        {showCollaboration && routeId && (
+          <motion.div
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="fixed right-0 top-0 h-full w-96 z-50 shadow-2xl bg-white"
+          >
+            {/* Close button */}
+            <button
+              onClick={() => setShowCollaboration(false)}
+              className="absolute top-4 right-4 z-10 p-2 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
+
+            <CollaborationPanel
+              routeId={routeId}
+              currentUserId={localStorage.getItem('userId') || ''}
+              onInviteClick={() => {/* TODO: Open invite modal */}}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Background gradient overlay for visual polish */}
       <div
