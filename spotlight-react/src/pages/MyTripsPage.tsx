@@ -45,10 +45,21 @@ export function MyTripsPage() {
           'Authorization': `Bearer ${token}`
         }
       });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          console.warn('Not authenticated - showing empty trips list');
+          setTrips([]);
+          return;
+        }
+        throw new Error(`Failed to fetch trips: ${response.statusText}`);
+      }
+
       const data = await response.json();
-      setTrips(data.trips);
+      setTrips(data.trips || []);
     } catch (error) {
       console.error('Failed to fetch trips:', error);
+      setTrips([]);
     } finally {
       setIsLoading(false);
     }

@@ -1292,11 +1292,16 @@ app.get('/api/routes/:id/stats', authenticate, async (req, res) => {
 // =====================================================
 
 // GET /api/my-trips - List all user's trips
-app.get('/api/my-trips', authenticate, async (req, res) => {
-  const userId = req.user.id; // From auth middleware
+app.get('/api/my-trips', optionalAuth, async (req, res) => {
+  // If not authenticated, return empty list (guest users have no saved trips)
+  if (!req.user) {
+    return res.json({ trips: [] });
+  }
+
+  const userId = req.user.id;
 
   try {
-    const result = await db.query(`
+    const result = await pool.query(`
       SELECT
         t.id,
         t.title,
