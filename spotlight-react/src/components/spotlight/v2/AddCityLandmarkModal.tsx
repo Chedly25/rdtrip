@@ -282,7 +282,7 @@ const AddCityLandmarkModal = ({ isOpen, onClose }: AddCityLandmarkModalProps) =>
                   <img
                     src={selectedPlace.photoUrl}
                     alt={selectedPlace.name}
-                    className="w-full h-40 object-cover"
+                    className="w-full h-24 object-cover"
                   />
                 )}
 
