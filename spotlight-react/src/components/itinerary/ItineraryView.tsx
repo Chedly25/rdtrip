@@ -197,11 +197,11 @@ export function ItineraryView({ itineraryId, routeData }: ItineraryViewProps) {
         </div>
       </motion.header>
 
-      {/* Main Content - 70/30 Split Layout */}
-      <div className="flex max-w-screen-2xl mx-auto">
-        {/* Left: Itinerary Content (70%) */}
-        <div className="flex-1 px-6 py-8 overflow-y-auto">
-          <div className="space-y-8">
+      {/* Main Content - Responsive Split Layout */}
+      <div className="flex flex-col lg:flex-row max-w-screen-2xl mx-auto">
+        {/* Left: Itinerary Content - Full width on mobile, 65% on desktop */}
+        <div className="flex-1 px-4 md:px-6 py-6 md:py-8 overflow-y-auto">
+          <div className="space-y-6 md:space-y-8">
             {/* Budget Summary */}
             {budget && (
               <BudgetSummary budget={budget} />
@@ -243,8 +243,8 @@ export function ItineraryView({ itineraryId, routeData }: ItineraryViewProps) {
           </div>
         </div>
 
-        {/* Right: AI Assistant Sidebar (30%) */}
-        <div className="w-[30%] min-w-[400px]">
+        {/* Right: AI Assistant Sidebar - Bottom on mobile, 35% sidebar on desktop */}
+        <div className="w-full lg:w-[35%] lg:min-w-[350px] lg:max-w-[500px]">
           <ChatSidebar />
         </div>
       </div>

@@ -56,7 +56,7 @@ export function CompactActivityCard({ activity, onSelect, isSelected = false }: 
       onClick={() => onSelect?.(activity)}
       className={`
         relative bg-white rounded-lg overflow-hidden border-2 transition-all cursor-pointer
-        w-[250px] h-[280px] flex flex-col
+        w-full h-auto flex flex-col
         ${isSelected ? 'border-blue-500 shadow-lg' : 'border-gray-200 hover:border-blue-300'}
       `}
     >
