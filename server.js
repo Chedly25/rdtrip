@@ -9183,7 +9183,7 @@ app.get('/api/notifications', authMiddleware, async (req, res) => {
     }
 
     query += ' ORDER BY created_at DESC LIMIT $2';
-    params.push(parseInt(limit as string) || 50);
+    params.push(parseInt(limit) || 50);
 
     const result = await pool.query(query, params);
 
