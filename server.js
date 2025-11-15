@@ -1737,12 +1737,15 @@ app.post('/api/places/search', async (req, res) => {
       return res.json({ results: [] });
     }
 
-    // Different types based on search mode
-    const typesParam = type === 'landmark'
-      ? 'tourist_attraction|point_of_interest|museum|art_gallery|church|synagogue|hindu_temple|mosque|park|amusement_park|aquarium|zoo'
-      : '(cities)';
-
-    const autocompleteUrl = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(query)}&types=${typesParam}&key=${googleApiKey}`;
+    // Build autocomplete URL based on search type
+    let autocompleteUrl;
+    if (type === 'landmark') {
+      // For landmarks, use establishment type (covers tourist attractions, museums, monuments, etc.)
+      autocompleteUrl = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(query)}&types=establishment&key=${googleApiKey}`;
+    } else {
+      // For cities, use (cities) type
+      autocompleteUrl = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(query)}&types=(cities)&key=${googleApiKey}`;
+    }
 
     const response = await axios.get(autocompleteUrl);
 
