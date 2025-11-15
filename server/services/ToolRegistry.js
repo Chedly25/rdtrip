@@ -514,6 +514,22 @@ class ToolRegistry {
       execute: require('../tools/findNearby')
     });
 
+    // 22. Search Itinerary
+    this.register({
+      name: 'searchItinerary',
+      description: 'Search the current itinerary for activities or restaurants. Returns which day an item is on. Use this FIRST when user mentions an activity name to find which day it\'s on. More efficient than showing all activities in context.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          itineraryId: { type: 'string', description: 'Itinerary ID' },
+          query: { type: 'string', description: 'Activity or restaurant name to search for (partial match OK, e.g., "louvre" or "eiffel")' },
+          type: { type: 'string', enum: ['activity', 'restaurant', 'any'], description: 'What to search for (default: any)' }
+        },
+        required: ['itineraryId', 'query']
+      },
+      execute: require('../tools/searchItinerary')
+    });
+
     console.log(`✅ Registered ${this.tools.size} tools`);
   }
 
