@@ -109,10 +109,26 @@ export function RouteForm({ onRouteGenerated }: RouteFormProps) {
     setIsSubmitting(true)
 
     try {
+      // Get auth token from localStorage (if user is logged in)
+      const authToken = localStorage.getItem('auth_token');
+
+      // Build headers
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
+
+      // Add Authorization header if user is logged in
+      if (authToken) {
+        headers['Authorization'] = `Bearer ${authToken}`;
+        console.log('🔐 Sending route generation request with auth token');
+      } else {
+        console.log('⚠️ Sending route generation request without auth (guest mode)');
+      }
+
       // Start route generation job with NEW nights-based endpoint
       const response = await fetch('/api/generate-route-nights-based', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           origin: {
             name: origin.name,
