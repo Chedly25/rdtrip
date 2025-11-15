@@ -88,6 +88,8 @@ export interface TripMessage {
   message: string
   messageType: 'text' | 'system' | 'notification'
   reactions?: Array<{ emoji: string; userId: string; createdAt: string }>
+  parentMessageId?: string
+  mentionedUsers?: string[]
   createdAt: string
   updatedAt?: string
 }
