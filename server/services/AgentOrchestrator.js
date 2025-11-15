@@ -746,9 +746,14 @@ Use the searchItinerary tool to find activities! Here's the exact workflow:
 Example: User says "replace chaine d'eguilles in aix by a museum"
 1. ✅ Call searchItinerary(itineraryId: "${itineraryData?.itineraryId}", query: "chaine d'eguilles")
 2. ✅ Tool returns: "Found on Day 1 in Aix-en-Provence"
-3. ✅ Call searchActivities(city: "Aix-en-Provence, France", category: "museum")
+3. ✅ **MANDATORY:** Call searchActivities(city: "Aix-en-Provence, France", category: "museum") to get COMPLETE activity data with photos!
 4. ✅ Present top 3-5 museum options to user
-5. ✅ User picks one → Call replaceActivity with THE COMPLETE ACTIVITY OBJECT from searchActivities:
+5. ✅ User picks one → Call replaceActivity with THE COMPLETE ACTIVITY OBJECT from searchActivities
+
+⚠️ **CRITICAL RULE:**
+- You MUST call searchActivities BEFORE replaceActivity!
+- NEVER call replaceActivity without first calling searchActivities!
+- The searchActivities result contains the photo URL - you CANNOT get photos any other way!
 
    **CRITICAL: Pass the FULL activity object including ALL fields:**
    - name (required)
