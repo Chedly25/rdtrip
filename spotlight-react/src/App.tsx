@@ -20,10 +20,10 @@ const queryClient = new QueryClient({
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <Router>
+      <Router basename="/spotlight-new">
         <AgentProvider>
           <Routes>
-            <Route path="/spotlight/generate" element={<ItineraryGenerationPage />} />
+            <Route path="/generate" element={<ItineraryGenerationPage />} />
             <Route path="/today" element={<TodayView />} />
             <Route path="*" element={<SpotlightV2 />} />
           </Routes>
