@@ -410,11 +410,11 @@ const SpotlightV2 = () => {
       {/* Floating City Cards - Bottom overlay */}
       <FloatingCityCards />
 
-      {/* Collaborate Button - Fixed position */}
+      {/* Collaborate Button - Fixed position (above AI chat button) */}
       {routeId && (
         <motion.button
           onClick={() => setShowCollaboration(!showCollaboration)}
-          className="fixed bottom-6 right-6 z-50 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 shadow-lg transition-all flex items-center gap-2"
+          className="fixed bottom-24 right-6 z-50 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 shadow-lg transition-all flex items-center gap-2"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
         >
