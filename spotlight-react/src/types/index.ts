@@ -86,10 +86,11 @@ export interface TripMessage {
   userName: string
   userAvatar?: string
   message: string
-  messageType: 'text' | 'system' | 'notification'
+  messageType: 'text' | 'system' | 'notification' | 'activity'
   reactions?: Array<{ emoji: string; userId: string; createdAt: string }>
   parentMessageId?: string
   mentionedUsers?: string[]
+  messageMetadata?: any
   createdAt: string
   updatedAt?: string
 }
