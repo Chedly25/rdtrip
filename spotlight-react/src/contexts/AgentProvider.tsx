@@ -279,7 +279,7 @@ export function AgentProvider({ children }: AgentProviderProps) {
         body: JSON.stringify({
           activity,
           block,
-          userId: localStorage.getItem('userId') || null
+          userId: localStorage.getItem('rdtrip_user_id') || null
         })
       });
 
@@ -465,8 +465,8 @@ export function AgentProvider({ children }: AgentProviderProps) {
     setMessages(prev => [...prev, assistantMessage]);
 
     try {
-      // Get auth token from localStorage
-      const token = localStorage.getItem('token');
+      // Get auth token from localStorage (using same key as landing-react AuthContext)
+      const token = localStorage.getItem('rdtrip_auth_token');
 
       // Create abort controller for this request
       const abortController = new AbortController();
