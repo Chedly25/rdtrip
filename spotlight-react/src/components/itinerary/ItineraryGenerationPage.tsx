@@ -45,7 +45,7 @@ export function ItineraryGenerationPage() {
       console.log('✅ Generation complete! Auto-navigating to itinerary view:', itinerary.id);
       // Small delay to show success state briefly
       const timer = setTimeout(() => {
-        navigate(`/spotlight?itinerary=${itinerary.id}`);
+        navigate(`/?itinerary=${itinerary.id}`);
       }, 2000); // 2 second delay to show celebration
       return () => clearTimeout(timer);
     }
@@ -118,7 +118,7 @@ export function ItineraryGenerationPage() {
 
   const handleBack = () => {
     if (routeId) {
-      navigate(`/spotlight?routeId=${routeId}`);
+      navigate(`/?routeId=${routeId}`);
     } else {
       navigate(-1);
     }
@@ -126,7 +126,7 @@ export function ItineraryGenerationPage() {
 
   const handleViewItinerary = () => {
     if (itinerary?.id) {
-      navigate(`/spotlight?itinerary=${itinerary.id}`);
+      navigate(`/?itinerary=${itinerary.id}`);
     }
   };
 

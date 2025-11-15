@@ -347,7 +347,7 @@ const SpotlightV2 = () => {
   // Handler for Generate Itinerary button - navigate to full-screen experience
   const handleGenerateItinerary = () => {
     console.log('🎯 Navigating to itinerary generation');
-    navigate(`/spotlight/generate?routeId=${routeId}`);
+    navigate(`/generate?routeId=${routeId}`);
   };
 
   // If itinerary param exists, show ItineraryView instead of normal spotlight
