@@ -25,8 +25,9 @@ export function ItineraryView({ itineraryId, routeData }: ItineraryViewProps) {
   // Listen for itinerary updates from agent (replaceActivity, addActivity, etc.)
   useEffect(() => {
     const handleItineraryUpdate = () => {
-      console.log('🔄 [ItineraryView] Received itinerary_updated event, refreshing...');
-      loadItinerary();
+      console.log('🔄 [ItineraryView] Received itinerary_updated event, refreshing silently...');
+      // Use silent refresh to avoid showing loading spinner
+      silentRefreshItinerary();
     };
 
     window.addEventListener('itinerary_updated', handleItineraryUpdate);
@@ -53,6 +54,26 @@ export function ItineraryView({ itineraryId, routeData }: ItineraryViewProps) {
       setError(err instanceof Error ? err.message : 'Failed to load itinerary');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Silent refresh - updates data without showing loading spinner
+  const silentRefreshItinerary = async () => {
+    try {
+      console.log('🔄 Silently refreshing itinerary:', itineraryId);
+      const response = await fetch(`/api/itinerary/${itineraryId}`);
+
+      if (!response.ok) {
+        console.warn('⚠️ Silent refresh failed:', response.status);
+        return;
+      }
+
+      const data = await response.json();
+      console.log('✅ Itinerary silently updated');
+      setItinerary(data); // Update data without touching loading state
+    } catch (err) {
+      console.error('❌ Silent refresh error:', err);
+      // Don't set error state - just log it
     }
   };
 
