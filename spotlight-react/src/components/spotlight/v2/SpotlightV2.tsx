@@ -6,7 +6,7 @@ import MapViewV2 from './MapViewV2';
 import FloatingCityCards from './FloatingCityCards';
 import SpotlightHeader from './SpotlightHeader';
 import { ItineraryView } from '../../itinerary/ItineraryView';
-import { Loader2, Users, X } from 'lucide-react';
+import { Loader2, Users } from 'lucide-react';
 import { CollaborationPanel } from '../../collaboration/CollaborationPanel';
 
 const SpotlightV2 = () => {
@@ -431,20 +431,13 @@ const SpotlightV2 = () => {
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed right-0 top-0 h-full w-96 z-50 shadow-2xl bg-white"
+            className="fixed right-0 top-0 h-full w-96 z-50 shadow-2xl"
           >
-            {/* Close button */}
-            <button
-              onClick={() => setShowCollaboration(false)}
-              className="absolute top-4 right-4 z-10 p-2 rounded-lg hover:bg-gray-100 transition-colors"
-            >
-              <X className="w-5 h-5 text-gray-500" />
-            </button>
-
             <CollaborationPanel
               routeId={routeId}
               currentUserId={localStorage.getItem('userId') || ''}
               onInviteClick={() => {/* TODO: Open invite modal */}}
+              onClose={() => setShowCollaboration(false)}
             />
           </motion.div>
         )}

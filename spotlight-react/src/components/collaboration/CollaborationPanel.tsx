@@ -12,11 +12,12 @@ interface CollaborationPanelProps {
   routeId: string
   currentUserId: string
   onInviteClick: () => void
+  onClose?: () => void
 }
 
 type TabType = 'chat' | 'collaborators' | 'tasks'
 
-export function CollaborationPanel({ routeId, currentUserId, onInviteClick }: CollaborationPanelProps) {
+export function CollaborationPanel({ routeId, currentUserId, onInviteClick, onClose }: CollaborationPanelProps) {
   const [activeTab, setActiveTab] = useState<TabType>('chat')
   const [collaborators, setCollaborators] = useState<Collaborator[]>([])
   const [messages, setMessages] = useState<TripMessage[]>([])
@@ -367,11 +368,12 @@ export function CollaborationPanel({ routeId, currentUserId, onInviteClick }: Co
   return (
     <div className="flex flex-col h-full bg-white rounded-xl shadow-lg border border-gray-200">
       {/* Header with tabs */}
-      <div className="flex items-center justify-between border-b border-gray-200 p-4">
-        <div className="flex gap-2">
+      <div className="flex items-center border-b border-gray-200 p-4 gap-3">
+        {/* Tabs */}
+        <div className="flex gap-2 flex-1 min-w-0">
           <button
             onClick={() => setActiveTab('chat')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm ${
               activeTab === 'chat'
                 ? 'bg-blue-50 text-blue-600 font-medium'
                 : 'text-gray-600 hover:bg-gray-50'
@@ -388,14 +390,15 @@ export function CollaborationPanel({ routeId, currentUserId, onInviteClick }: Co
 
           <button
             onClick={() => setActiveTab('collaborators')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm ${
               activeTab === 'collaborators'
                 ? 'bg-blue-50 text-blue-600 font-medium'
                 : 'text-gray-600 hover:bg-gray-50'
             }`}
           >
             <Users className="h-4 w-4" />
-            <span>Collaborators</span>
+            <span className="hidden sm:inline">Collaborators</span>
+            <span className="sm:hidden">Team</span>
             <span className="ml-1 text-xs bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded-full">
               {collaborators.length}
             </span>
@@ -403,7 +406,7 @@ export function CollaborationPanel({ routeId, currentUserId, onInviteClick }: Co
 
           <button
             onClick={() => setActiveTab('tasks')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm ${
               activeTab === 'tasks'
                 ? 'bg-blue-50 text-blue-600 font-medium'
                 : 'text-gray-600 hover:bg-gray-50'
@@ -415,10 +418,21 @@ export function CollaborationPanel({ routeId, currentUserId, onInviteClick }: Co
         </div>
 
         {/* Connection status indicator */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <div className={`h-2 w-2 rounded-full ${isOpen ? 'bg-green-500' : 'bg-gray-400'}`} />
-          <span className="text-xs text-gray-500">{isOpen ? 'Connected' : 'Connecting...'}</span>
+          <span className="text-xs text-gray-500 hidden md:inline">{isOpen ? 'Connected' : 'Connecting...'}</span>
         </div>
+
+        {/* Close button */}
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="flex-shrink-0 p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+            aria-label="Close panel"
+          >
+            <X className="w-5 h-5 text-gray-500" />
+          </button>
+        )}
       </div>
 
       {/* Content area */}
