@@ -4,6 +4,7 @@ import { useWebSocket } from '../../hooks/useWebSocket'
 import type { Collaborator, TripMessage, PresenceStatus } from '../../types'
 import { motion, AnimatePresence } from 'framer-motion'
 import { MessageReactionPicker } from './MessageReactionPicker'
+import { MentionAutocomplete } from './MentionAutocomplete'
 
 interface CollaborationPanelProps {
   routeId: string
@@ -23,8 +24,14 @@ export function CollaborationPanel({ routeId, currentUserId, onInviteClick }: Co
   const [isLoadingMessages, setIsLoadingMessages] = useState(true)
   const [isSending, setIsSending] = useState(false)
 
+  // Mention autocomplete state
+  const [mentionTrigger, setMentionTrigger] = useState('')
+  const [showMentionDropdown, setShowMentionDropdown] = useState(false)
+  const [mentionStartPos, setMentionStartPos] = useState(0)
+
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const messageInputRef = useRef<HTMLInputElement>(null)
 
   // WebSocket connection for real-time updates
   const { send, isOpen } = useWebSocket('/ws/collab', {
@@ -146,6 +153,22 @@ export function CollaborationPanel({ routeId, currentUserId, onInviteClick }: Co
 
     setIsSending(true)
     try {
+      // Parse mentions from message
+      const mentionedUserIds: string[] = []
+      const mentionPattern = /@(\w+)/g
+      let match
+
+      while ((match = mentionPattern.exec(messageInput)) !== null) {
+        const mentionedUsername = match[1]
+        // Find user by name (removing spaces for matching)
+        const user = collaborators.find(
+          (c) => c.name.replace(/\s+/g, '').toLowerCase() === mentionedUsername.toLowerCase()
+        )
+        if (user && !mentionedUserIds.includes(user.userId)) {
+          mentionedUserIds.push(user.userId)
+        }
+      }
+
       const token = localStorage.getItem('rdtrip_auth_token')
       const response = await fetch(`/api/routes/${routeId}/messages`, {
         method: 'POST',
@@ -153,11 +176,15 @@ export function CollaborationPanel({ routeId, currentUserId, onInviteClick }: Co
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ message: messageInput.trim() }),
+        body: JSON.stringify({
+          message: messageInput.trim(),
+          mentionedUsers: mentionedUserIds.length > 0 ? mentionedUserIds : undefined,
+        }),
       })
 
       if (response.ok) {
         setMessageInput('')
+        setShowMentionDropdown(false)
         // Message will be added via WebSocket broadcast
       } else {
         console.error('Failed to send message')
@@ -191,9 +218,22 @@ export function CollaborationPanel({ routeId, currentUserId, onInviteClick }: Co
     }
   }
 
-  // Handle typing indicator
+  // Handle typing indicator and mention detection
   function handleInputChange(value: string) {
     setMessageInput(value)
+
+    // Detect @ mentions
+    const cursorPos = messageInputRef.current?.selectionStart || value.length
+    const textBeforeCursor = value.substring(0, cursorPos)
+    const match = textBeforeCursor.match(/@(\w*)$/)
+
+    if (match) {
+      setMentionTrigger(match[1])
+      setShowMentionDropdown(true)
+      setMentionStartPos(cursorPos - match[0].length)
+    } else {
+      setShowMentionDropdown(false)
+    }
 
     // Send typing indicator
     if (isOpen) {
@@ -208,6 +248,26 @@ export function CollaborationPanel({ routeId, currentUserId, onInviteClick }: Co
         send({ type: 'typing_indicator', routeId, isTyping: false })
       }, 2000)
     }
+  }
+
+  // Handle mention selection
+  function handleMentionSelect(user: { id: string; name: string; avatarUrl?: string }) {
+    const beforeMention = messageInput.substring(0, mentionStartPos)
+    const afterMention = messageInput.substring(messageInputRef.current?.selectionStart || messageInput.length)
+    const mentionText = `@${user.name.replace(/\s+/g, '')} `
+
+    const newValue = beforeMention + mentionText + afterMention
+    setMessageInput(newValue)
+    setShowMentionDropdown(false)
+
+    // Set cursor position after mention
+    setTimeout(() => {
+      if (messageInputRef.current) {
+        const newCursorPos = beforeMention.length + mentionText.length
+        messageInputRef.current.focus()
+        messageInputRef.current.setSelectionRange(newCursorPos, newCursorPos)
+      }
+    }, 0)
   }
 
   // Update typing indicators from other users
@@ -430,18 +490,33 @@ export function CollaborationPanel({ routeId, currentUserId, onInviteClick }: Co
 
             {/* Message input */}
             <div className="border-t border-gray-200 p-4">
+              {/* Mention autocomplete */}
+              <MentionAutocomplete
+                users={collaborators.map((c) => ({
+                  id: c.userId,
+                  name: c.name,
+                  avatarUrl: c.avatar,
+                }))}
+                onSelect={handleMentionSelect}
+                trigger={mentionTrigger}
+                isOpen={showMentionDropdown}
+                onClose={() => setShowMentionDropdown(false)}
+                inputRef={messageInputRef as React.RefObject<HTMLInputElement | HTMLTextAreaElement>}
+              />
+
               <div className="flex gap-2">
                 <input
+                  ref={messageInputRef}
                   type="text"
                   value={messageInput}
                   onChange={(e) => handleInputChange(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
+                    if (e.key === 'Enter' && !e.shiftKey && !showMentionDropdown) {
                       e.preventDefault()
                       sendMessage()
                     }
                   }}
-                  placeholder="Type a message..."
+                  placeholder="Type a message... (use @ to mention)"
                   disabled={!isOpen}
                   className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-400"
                 />

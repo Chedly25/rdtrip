@@ -7908,7 +7908,7 @@ app.post('/api/routes/:id/collaborators/:userId/accept', authMiddleware, async (
 // POST /api/routes/:id/messages - Send chat message
 app.post('/api/routes/:id/messages', authMiddleware, async (req, res) => {
   try {
-    const { message, messageType = 'text', metadata } = req.body;
+    const { message, messageType = 'text', metadata, mentionedUsers } = req.body;
     const routeId = req.params.id;
     const userId = req.user.id;
 
@@ -7923,15 +7923,22 @@ app.post('/api/routes/:id/messages', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: 'Not authorized to send messages' });
     }
 
-    // Insert message
+    // Insert message with mentions
     const result = await pool.query(`
-      INSERT INTO trip_messages (route_id, user_id, message, message_type, metadata)
-      VALUES ($1, $2, $3, $4, $5)
+      INSERT INTO trip_messages (route_id, user_id, message, message_type, message_metadata, mentioned_users)
+      VALUES ($1, $2, $3, $4, $5, $6)
       RETURNING
         *,
         (SELECT name FROM users WHERE id = $2) as user_name,
         (SELECT avatar_url FROM users WHERE id = $2) as user_avatar
-    `, [routeId, userId, message, messageType, metadata ? JSON.stringify(metadata) : null]);
+    `, [
+      routeId,
+      userId,
+      message,
+      messageType,
+      metadata ? JSON.stringify(metadata) : null,
+      mentionedUsers || null
+    ]);
 
     const newMessage = result.rows[0];
 
@@ -7942,6 +7949,8 @@ app.post('/api/routes/:id/messages', authMiddleware, async (req, res) => {
         data: newMessage
       });
     }
+
+    // TODO: Send notifications to mentioned users (Phase 1.1 enhancement)
 
     res.json({ message: newMessage });
   } catch (error) {
