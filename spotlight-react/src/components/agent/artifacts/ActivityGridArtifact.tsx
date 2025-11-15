@@ -127,7 +127,7 @@ function ActivityCard({
       className="bg-white rounded-xl overflow-hidden border-2 border-gray-200 hover:border-teal-300 hover:shadow-lg transition-all cursor-pointer group"
     >
       {/* Image */}
-      <div className="relative h-32 bg-gradient-to-br from-teal-100 to-blue-100">
+      <div className="relative h-24 bg-gradient-to-br from-teal-100 to-blue-100">
         {activity.photo ? (
           <img
             src={activity.photo}
@@ -136,7 +136,7 @@ function ActivityCard({
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <MapPin className="w-12 h-12 text-gray-400" />
+            <MapPin className="w-10 h-10 text-gray-400" />
           </div>
         )}
 
@@ -159,7 +159,7 @@ function ActivityCard({
 
       {/* Content */}
       <div className="p-4">
-        <h4 className="font-bold text-gray-900 text-base mb-2 line-clamp-2 group-hover:text-teal-600 transition-colors">
+        <h4 className="font-bold text-gray-900 text-lg mb-3 line-clamp-2 group-hover:text-teal-600 transition-colors">
           {activity.name}
         </h4>
 
