@@ -157,6 +157,7 @@ class AgentOrchestrator {
       // 1. Get or create conversation
       const conversationId = await this.getOrCreateConversation(userId, routeId, sessionId);
       console.log('   ✅ Conversation ID:', conversationId);
+      console.log('   🔑 Session ID for this conversation:', sessionId);
 
       console.log('[Step 2/9] Building context...');
 
@@ -853,6 +854,22 @@ When handling multi-step tasks, you MUST remember conversation context:
    * Get conversation history
    */
   async getConversationHistory(sessionId) {
+    console.log(`   🔍 Fetching conversation history for session: ${sessionId}`);
+
+    // First, check if conversation exists
+    const convCheck = await this.db.query(`
+      SELECT id, user_id FROM agent_conversations
+      WHERE session_id = $1
+      ORDER BY created_at DESC
+      LIMIT 1
+    `, [sessionId]);
+
+    if (convCheck.rows.length > 0) {
+      console.log(`   📁 Found conversation: ${convCheck.rows[0].id} (user: ${convCheck.rows[0].user_id})`);
+    } else {
+      console.log(`   ⚠️  No conversation found for session ${sessionId}`);
+    }
+
     const messages = await this.db.query(`
       SELECT role, content
       FROM agent_messages
@@ -865,6 +882,8 @@ When handling multi-step tasks, you MUST remember conversation context:
       ORDER BY created_at ASC
       LIMIT 10
     `, [sessionId]);
+
+    console.log(`   📨 Retrieved ${messages.rows.length} messages from database`);
 
     return messages.rows.map(msg => ({
       role: msg.role,
