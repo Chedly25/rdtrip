@@ -7,6 +7,7 @@ import { MyTripsPage } from './pages/MyTripsPage'
 import { AgentProvider } from './contexts/AgentProvider'
 import { AgentChatBubble } from './components/agent/AgentChatBubble'
 import { AgentModal } from './components/agent/AgentModal'
+import { GlobalNav } from './components/navigation/GlobalNav'
 
 // Create a client
 const queryClient = new QueryClient({
@@ -23,6 +24,9 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <Router basename="/spotlight-new">
         <AgentProvider>
+          {/* PHASE 4: Global Navigation Bar - Always visible */}
+          <GlobalNav />
+
           <Routes>
             <Route path="/my-trips" element={<MyTripsPage />} />
             <Route path="/generate" element={<ItineraryGenerationPage />} />
