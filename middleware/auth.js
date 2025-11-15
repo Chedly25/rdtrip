@@ -63,10 +63,15 @@ async function authenticate(req, res, next) {
  */
 async function optionalAuth(req, res, next) {
   try {
+    console.log('🔐 [optionalAuth] Running...');
+    console.log('   Authorization header:', req.headers.authorization ? 'Present' : 'Missing');
+
     const token = extractTokenFromHeader(req.headers.authorization);
+    console.log('   Extracted token:', token ? `${token.substring(0, 20)}...` : 'null');
 
     if (token) {
       const decoded = verifyToken(token);
+      console.log('   Decoded token:', decoded ? `{id: ${decoded.id}}` : 'null (invalid/expired)');
 
       if (decoded) {
         // Fetch user from database
@@ -74,18 +79,22 @@ async function optionalAuth(req, res, next) {
           'SELECT id, email, name, avatar_url, created_at FROM users WHERE id = $1',
           [decoded.id]
         );
+        console.log('   User query result:', result.rows.length > 0 ? `Found user ${result.rows[0].email}` : 'No user found');
 
         if (result.rows.length > 0) {
           req.user = result.rows[0];
+          console.log('   ✅ req.user populated:', req.user.email);
         }
       }
+    } else {
+      console.log('   ⚠️ No token provided, continuing without user');
     }
 
     // Continue regardless of whether user is authenticated
     next();
 
   } catch (error) {
-    console.error('Optional auth error:', error);
+    console.error('❌ Optional auth error:', error);
     // Don't fail the request, just continue without user
     next();
   }

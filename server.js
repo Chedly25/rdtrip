@@ -4126,6 +4126,8 @@ app.post('/api/agent/query', optionalAuth, async (req, res) => {
 
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('🤖 [BACKEND] /api/agent/query RECEIVED');
+    console.log('   🔑 Authorization header:', req.headers.authorization ? `Bearer ${req.headers.authorization.substring(7, 27)}...` : 'NOT PROVIDED');
+    console.log('   👤 req.user:', req.user ? `{id: ${req.user.id}, email: ${req.user.email}}` : 'NULL (optionalAuth failed to populate)');
     console.log('   User ID:', userId || 'anonymous');
     console.log('   Session ID:', sessionId);
     console.log('   Route ID:', routeId);
