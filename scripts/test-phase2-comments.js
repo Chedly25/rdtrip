@@ -84,8 +84,7 @@ async function testCommentAPIs() {
         ac.resolved_at,
         ac.created_at,
         ac.updated_at,
-        u.name as user_name,
-        u.avatar as user_avatar
+        u.name as user_name
        FROM activity_comments ac
        JOIN users u ON ac.user_id = u.id
        WHERE ac.route_id = $1
