@@ -1719,6 +1719,115 @@ app.post('/api/geocode/autocomplete', async (req, res) => {
   }
 });
 
+// POST /api/places/search - Universal search for cities and landmarks
+// Supports both city autocomplete and landmark search with photos
+app.post('/api/places/search', async (req, res) => {
+  try {
+    const { query, type = 'city' } = req.body; // type: 'city' or 'landmark'
+
+    if (!query || query.length < 2) {
+      return res.json({ results: [] });
+    }
+
+    console.log(`🔍 ${type} search for: ${query}`);
+
+    const googleApiKey = process.env.GOOGLE_PLACES_API_KEY;
+    if (!googleApiKey) {
+      console.error('❌ GOOGLE_PLACES_API_KEY not configured');
+      return res.json({ results: [] });
+    }
+
+    // Different types based on search mode
+    const typesParam = type === 'landmark'
+      ? 'tourist_attraction|point_of_interest|museum|art_gallery|church|synagogue|hindu_temple|mosque|park|amusement_park|aquarium|zoo'
+      : '(cities)';
+
+    const autocompleteUrl = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(query)}&types=${typesParam}&key=${googleApiKey}`;
+
+    const response = await axios.get(autocompleteUrl);
+
+    if (!response.data || !response.data.predictions || response.data.predictions.length === 0) {
+      console.log(`⚠️ No ${type}s found for "${query}"`);
+      return res.json({ results: [] });
+    }
+
+    console.log(`📍 Found ${response.data.predictions.length} predictions`);
+
+    // Get place details for each prediction (top 5 results)
+    const placePromises = response.data.predictions.slice(0, 5).map(async (prediction) => {
+      try {
+        // Request fields including photos
+        const fields = 'name,geometry,address_components,photos,types,place_id,formatted_address';
+        const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${prediction.place_id}&fields=${fields}&key=${googleApiKey}`;
+        const detailsResponse = await axios.get(detailsUrl);
+
+        if (!detailsResponse.data || !detailsResponse.data.result) {
+          return null;
+        }
+
+        const place = detailsResponse.data.result;
+
+        // Extract country from address components
+        const countryComponent = place.address_components?.find(
+          (component) => component.types.includes('country')
+        );
+        const country = countryComponent?.long_name || '';
+        const countryCode = countryComponent?.short_name || '';
+
+        // Get photo URL if available
+        let photoUrl = null;
+        if (place.photos && place.photos.length > 0) {
+          const photoReference = place.photos[0].photo_reference;
+          photoUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${photoReference}&key=${googleApiKey}`;
+        }
+
+        return {
+          name: place.name,
+          country: country,
+          countryCode: countryCode,
+          coordinates: {
+            lat: place.geometry.location.lat,
+            lng: place.geometry.location.lng
+          },
+          displayName: type === 'landmark'
+            ? place.name
+            : `${place.name}, ${country}`,
+          photoUrl: photoUrl,
+          placeId: place.place_id,
+          types: place.types,
+          formattedAddress: place.formatted_address
+        };
+      } catch (error) {
+        console.error(`Failed to get details for ${prediction.description}:`, error.message);
+        return null;
+      }
+    });
+
+    // Wait for all place details to resolve
+    const places = await Promise.all(placePromises);
+
+    // Filter out nulls
+    const validPlaces = places.filter(place => place !== null);
+
+    // For cities, filter to European countries only
+    if (type === 'city') {
+      const europeanCountryCodes = ['AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR', 'HU', 'IS', 'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL', 'NO', 'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE', 'CH', 'GB'];
+      const europeanPlaces = validPlaces.filter(place =>
+        europeanCountryCodes.includes(place.countryCode)
+      );
+      console.log(`✅ Returning ${europeanPlaces.length} European cities for "${query}"`);
+      return res.json({ results: europeanPlaces });
+    }
+
+    console.log(`✅ Returning ${validPlaces.length} ${type}s for "${query}"`);
+    res.json({ results: validPlaces });
+
+  } catch (error) {
+    console.error('Places search error:', error);
+    res.json({ results: [] });
+  }
+});
+
 // Get job status and results
 app.get('/api/route-status/:jobId', (req, res) => {
   const { jobId } = req.params;

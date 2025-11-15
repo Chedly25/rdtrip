@@ -10,7 +10,11 @@ export interface GeocodingResult {
     lng: number;
   };
   country?: string;
+  countryCode?: string;
   type?: 'city' | 'landmark' | 'place';
+  photoUrl?: string;
+  placeId?: string;
+  formattedAddress?: string;
 }
 
 /**
@@ -52,17 +56,27 @@ export async function geocodePlace(placeName: string): Promise<GeocodingResult |
 }
 
 /**
- * Search for places matching a query
+ * Search for places matching a query (cities or landmarks)
  * @param query Search query
+ * @param type Type of place to search for ('city' or 'landmark')
  * @returns Array of matching places
  */
-export async function searchPlaces(query: string): Promise<GeocodingResult[]> {
+export async function searchPlaces(
+  query: string,
+  type: 'city' | 'landmark' = 'city'
+): Promise<GeocodingResult[]> {
   if (!query || query.length < 2) {
     return [];
   }
 
   try {
-    const response = await fetch(`/api/city-autocomplete?query=${encodeURIComponent(query)}`);
+    const response = await fetch(`/api/places/search`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ query, type }),
+    });
 
     if (!response.ok) {
       throw new Error(`Search failed: ${response.status}`);
@@ -70,13 +84,17 @@ export async function searchPlaces(query: string): Promise<GeocodingResult[]> {
 
     const data = await response.json();
 
-    if (Array.isArray(data)) {
-      return data.map((place: any) => ({
-        name: place.name || place.city,
-        displayName: place.displayName || `${place.name}, ${place.country}`,
+    if (Array.isArray(data.results)) {
+      return data.results.map((place: any) => ({
+        name: place.name,
+        displayName: place.displayName,
         coordinates: place.coordinates,
         country: place.country,
-        type: 'city'
+        countryCode: place.countryCode,
+        type: type,
+        photoUrl: place.photoUrl,
+        placeId: place.placeId,
+        formattedAddress: place.formattedAddress
       }));
     }
 

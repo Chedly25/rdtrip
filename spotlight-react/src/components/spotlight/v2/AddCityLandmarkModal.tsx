@@ -54,13 +54,13 @@ const AddCityLandmarkModal = ({ isOpen, onClose }: AddCityLandmarkModalProps) =>
 
     const timeoutId = setTimeout(async () => {
       setIsSearching(true);
-      const results = await searchPlaces(searchQuery);
+      const results = await searchPlaces(searchQuery, activeTab);
       setSearchResults(results);
       setIsSearching(false);
     }, 300);
 
     return () => clearTimeout(timeoutId);
-  }, [searchQuery]);
+  }, [searchQuery, activeTab]);
 
   const handleSelectPlace = async (place: GeocodingResult) => {
     setSelectedPlace(place);
@@ -250,7 +250,14 @@ const AddCityLandmarkModal = ({ isOpen, onClose }: AddCityLandmarkModalProps) =>
                     className="w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0"
                   >
                     <div className="flex items-center gap-3">
-                      {activeTab === 'landmark' ? (
+                      {/* Show photo for landmarks if available */}
+                      {result.photoUrl && activeTab === 'landmark' ? (
+                        <img
+                          src={result.photoUrl}
+                          alt={result.name}
+                          className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
+                        />
+                      ) : activeTab === 'landmark' ? (
                         <Star className="w-5 h-5 text-gray-400 flex-shrink-0" />
                       ) : (
                         <MapPin className="w-5 h-5 text-gray-400 flex-shrink-0" />
@@ -269,31 +276,41 @@ const AddCityLandmarkModal = ({ isOpen, onClose }: AddCityLandmarkModalProps) =>
 
             {/* Selected Place */}
             {selectedPlace && (
-              <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-3">
-                    {activeTab === 'landmark' ? (
-                      <Star className="w-6 h-6" style={{ color: agentColors.accent }} />
-                    ) : (
-                      <MapPin className="w-6 h-6" style={{ color: agentColors.accent }} />
-                    )}
-                    <div>
-                      <h3 className="text-gray-900 font-semibold">{selectedPlace.displayName}</h3>
-                      {selectedPlace.country && (
-                        <p className="text-gray-600 text-sm">{selectedPlace.country}</p>
+              <div className="mb-4 bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
+                {/* Photo header for landmarks */}
+                {selectedPlace.photoUrl && activeTab === 'landmark' && (
+                  <img
+                    src={selectedPlace.photoUrl}
+                    alt={selectedPlace.name}
+                    className="w-full h-40 object-cover"
+                  />
+                )}
+
+                <div className="p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-3">
+                      {activeTab === 'landmark' ? (
+                        <Star className="w-6 h-6" style={{ color: agentColors.accent }} />
+                      ) : (
+                        <MapPin className="w-6 h-6" style={{ color: agentColors.accent }} />
                       )}
+                      <div>
+                        <h3 className="text-gray-900 font-semibold">{selectedPlace.displayName}</h3>
+                        {selectedPlace.country && (
+                          <p className="text-gray-600 text-sm">{selectedPlace.country}</p>
+                        )}
+                      </div>
                     </div>
+                    <button
+                      onClick={() => {
+                        setSelectedPlace(null);
+                        setDetourInfo(null);
+                      }}
+                      className="p-1 rounded hover:bg-gray-200 transition-colors text-gray-600 hover:text-gray-900"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
                   </div>
-                  <button
-                    onClick={() => {
-                      setSelectedPlace(null);
-                      setDetourInfo(null);
-                    }}
-                    className="p-1 rounded hover:bg-gray-200 transition-colors text-gray-600 hover:text-gray-900"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
 
                 {/* Detour Info */}
                 {activeTab === 'landmark' && (
@@ -318,6 +335,7 @@ const AddCityLandmarkModal = ({ isOpen, onClose }: AddCityLandmarkModalProps) =>
                     )}
                   </>
                 )}
+                </div>
               </div>
             )}
 
