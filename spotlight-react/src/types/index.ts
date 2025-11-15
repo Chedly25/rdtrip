@@ -172,6 +172,35 @@ export interface TripPoll {
   updatedAt?: string
 }
 
+// Task Management (Phase 4)
+export type TaskType = 'book_hotel' | 'book_restaurant' | 'research' | 'purchase_tickets' | 'custom' | 'pack' | 'transport'
+export type TaskStatus = 'pending' | 'in_progress' | 'completed' | 'cancelled'
+export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent'
+
+export interface TripTask {
+  id: string
+  routeId: string
+  itineraryId?: string
+  title: string
+  description?: string
+  taskType: TaskType
+  assignedTo?: string
+  assignedToName?: string
+  assignedBy: string
+  assignedByName: string
+  relatedActivity?: string
+  relatedDay?: number
+  relatedRestaurant?: string
+  status: TaskStatus
+  priority: TaskPriority
+  dueDate?: string
+  completedAt?: string
+  completionNotes?: string
+  completionProof?: any
+  createdAt: string
+  updatedAt?: string
+}
+
 // Expense tracking types (Phase 3)
 export type ExpenseCategory =
   | 'accommodation'
