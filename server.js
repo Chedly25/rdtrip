@@ -2125,6 +2125,7 @@ app.get('/api/route-status/:jobId', (req, res) => {
     jobId: job.id,
     status: job.status,
     progress: job.progress,
+    tripId: job.tripId, // PHASE 3: Include tripId for auto-save
     route: job.status === 'completed' ? (job.result || {
       // Fallback to old format if job.result doesn't exist (for old jobs)
       origin: job.origin,  // Full object or string (backward compatible)
@@ -2300,6 +2301,55 @@ async function processRouteJobNightsBased(jobId, origin, destination, totalNight
     };
 
     job.updatedAt = new Date();
+
+    // PHASE 3 NAVIGATION: Auto-create trip and proposals after successful generation
+    const userId = job.userId || '00000000-0000-0000-0000-000000000000'; // Guest fallback
+
+    try {
+      // Create trip in user_trips table
+      const tripResult = await pool.query(`
+        INSERT INTO user_trips (
+          user_id, origin, destination, nights, generation_job_id,
+          title, status
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+        RETURNING id
+      `, [
+        userId,
+        origin,
+        destination,
+        totalNights,
+        jobId,
+        `${origin.name} to ${destination.name}`,
+        'draft'
+      ]);
+
+      const tripId = tripResult.rows[0].id;
+
+      // Create proposals for all agents
+      for (const agentResult of agentResults) {
+        if (agentResult.agent === 'best-overall') continue; // Skip best-overall
+
+        const routeData = JSON.parse(agentResult.recommendations);
+        await pool.query(`
+          INSERT INTO route_proposals (trip_id, agent_type, route_data, is_selected)
+          VALUES ($1, $2, $3, $4)
+        `, [
+          tripId,
+          agentResult.agent,
+          routeData,
+          false // Not selected yet
+        ]);
+      }
+
+      // Store tripId in job for later reference
+      job.tripId = tripId;
+
+      console.log(`✅ Created trip ${tripId} from job ${jobId}`);
+      console.log(`   - ${agentResults.length - 1} proposals saved`); // -1 for best-overall
+    } catch (error) {
+      console.error('Failed to persist trip:', error);
+      // Don't fail the job, just log the error
+    }
 
     const duration = (Date.now() - job.progress.startTime) / 1000;
     console.log(`\n✅ === Route job ${jobId} completed in ${duration.toFixed(1)}s ===`);

@@ -12,9 +12,11 @@ import ExportMenu from './ExportMenu';
 
 interface SpotlightHeaderProps {
   onGenerateItinerary?: () => void;
+  lastSaved?: string | null;
+  isSaving?: boolean;
 }
 
-const SpotlightHeader = ({ onGenerateItinerary }: SpotlightHeaderProps) => {
+const SpotlightHeader = ({ onGenerateItinerary, lastSaved, isSaving }: SpotlightHeaderProps) => {
   const navigate = useNavigate();
   const { route, getCityName, getAgentColors } = useSpotlightStoreV2();
   const agentColors = getAgentColors();
@@ -90,10 +92,28 @@ const SpotlightHeader = ({ onGenerateItinerary }: SpotlightHeaderProps) => {
               <MapPin className="w-5 h-5" style={{ color: agentColors.accent }} />
               {originName} → {destinationName}
             </h1>
-            <p className="text-sm text-gray-600">
-              {route.cities.length} {route.cities.length === 1 ? 'city' : 'cities'} •{' '}
-              {route.landmarks.length} {route.landmarks.length === 1 ? 'landmark' : 'landmarks'}
-            </p>
+            <div className="flex items-center gap-3">
+              <p className="text-sm text-gray-600">
+                {route.cities.length} {route.cities.length === 1 ? 'city' : 'cities'} •{' '}
+                {route.landmarks.length} {route.landmarks.length === 1 ? 'landmark' : 'landmarks'}
+              </p>
+              {/* Auto-save indicator */}
+              {(lastSaved || isSaving) && (
+                <p className="text-xs text-gray-500 flex items-center gap-1">
+                  {isSaving ? (
+                    <>
+                      <span className="inline-block w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+                      Saving...
+                    </>
+                  ) : lastSaved ? (
+                    <>
+                      <span className="inline-block w-2 h-2 bg-green-500 rounded-full" />
+                      Saved {formatRelativeTime(lastSaved)}
+                    </>
+                  ) : null}
+                </p>
+              )}
+            </div>
           </div>
         </div>
 
@@ -147,5 +167,26 @@ const SpotlightHeader = ({ onGenerateItinerary }: SpotlightHeaderProps) => {
     </motion.header>
   );
 };
+
+// Helper function to format relative time
+function formatRelativeTime(dateString: string): string {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffSecs = Math.floor(diffMs / 1000);
+  const diffMins = Math.floor(diffMs / 60000);
+
+  if (diffSecs < 10) return 'just now';
+  if (diffSecs < 60) return `${diffSecs}s ago`;
+  if (diffMins < 60) return `${diffMins}m ago`;
+
+  const diffHours = Math.floor(diffMs / 3600000);
+  if (diffHours < 24) return `${diffHours}h ago`;
+
+  const diffDays = Math.floor(diffMs / 86400000);
+  if (diffDays < 7) return `${diffDays}d ago`;
+
+  return date.toLocaleDateString();
+}
 
 export default SpotlightHeader;

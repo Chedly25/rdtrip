@@ -8,6 +8,7 @@ import SpotlightHeader from './SpotlightHeader';
 import { ItineraryView } from '../../itinerary/ItineraryView';
 import { Loader2, Users } from 'lucide-react';
 import { CollaborationPanel } from '../../collaboration/CollaborationPanel';
+import { useAutoSave } from '../../../hooks/useAutoSave';
 
 const SpotlightV2 = () => {
   // Get routeId from query params (?routeId=123) not path params
@@ -26,6 +27,13 @@ const SpotlightV2 = () => {
     getCityName,
     getAgentColors
   } = useSpotlightStoreV2();
+
+  // PHASE 3: Auto-save hook - saves route changes automatically
+  const { lastSaved, isSaving } = useAutoSave(
+    route?.id || null,
+    route,
+    !!route?.id // Only enable if we have a trip ID
+  );
 
   useEffect(() => {
     // Skip loading route data if we're viewing an itinerary
@@ -402,7 +410,11 @@ const SpotlightV2 = () => {
   return (
     <div className="h-screen w-screen overflow-hidden bg-gray-50 relative">
       {/* Header */}
-      <SpotlightHeader onGenerateItinerary={handleGenerateItinerary} />
+      <SpotlightHeader
+        onGenerateItinerary={handleGenerateItinerary}
+        lastSaved={lastSaved}
+        isSaving={isSaving}
+      />
 
       {/* Map - Fullscreen hero element */}
       <MapViewV2 />
