@@ -1682,7 +1682,7 @@ app.post('/api/generate-route', async (req, res) => {
 
 // NEW: Nights-based route generation (Phase 1 of stops removal)
 // Start nights-based route generation job (returns immediately with job ID)
-app.post('/api/generate-route-nights-based', async (req, res) => {
+app.post('/api/generate-route-nights-based', optionalAuth, async (req, res) => {
   try {
     const {
       origin,
@@ -1692,6 +1692,9 @@ app.post('/api/generate-route-nights-based', async (req, res) => {
       agents: selectedAgents = ['adventure', 'culture', 'food'],
       budget = 'mid'
     } = req.body;
+
+    // Extract userId for trip persistence (guest fallback)
+    const userId = req.user?.id || '00000000-0000-0000-0000-000000000000';
 
     // ============= ENHANCED VALIDATION =============
 
@@ -1823,6 +1826,7 @@ app.post('/api/generate-route-nights-based', async (req, res) => {
     // Initialize job status
     const job = {
       id: jobId,
+      userId,  // CRITICAL: Store userId for auto-create trip
       status: 'processing',
       origin: originData,  // Store full object
       destination: destinationData,  // Store full object
@@ -2310,8 +2314,11 @@ async function processRouteJobNightsBased(jobId, origin, destination, totalNight
     // PHASE 3 NAVIGATION: Auto-create trip and proposals after successful generation
     const userId = job.userId || '00000000-0000-0000-0000-000000000000'; // Guest fallback
 
+    console.log(`\n💾 Auto-creating trip for user ${userId}...`);
+
     try {
       // Create trip in user_trips table
+      console.log(`   Inserting trip: ${origin.name} → ${destination.name} (${totalNights} nights)`);
       const tripResult = await pool.query(`
         INSERT INTO user_trips (
           user_id, origin, destination, nights, generation_job_id,
@@ -2329,8 +2336,10 @@ async function processRouteJobNightsBased(jobId, origin, destination, totalNight
       ]);
 
       const tripId = tripResult.rows[0].id;
+      console.log(`   ✓ Trip created: ${tripId}`);
 
       // Create proposals for all agents
+      console.log(`   Creating ${agentResults.length - 1} route proposals...`);
       for (const agentResult of agentResults) {
         if (agentResult.agent === 'best-overall') continue; // Skip best-overall
 
@@ -2344,15 +2353,22 @@ async function processRouteJobNightsBased(jobId, origin, destination, totalNight
           routeData,
           false // Not selected yet
         ]);
+        console.log(`   ✓ Created ${agentResult.agent} proposal`);
       }
 
       // Store tripId in job for later reference
       job.tripId = tripId;
 
-      console.log(`✅ Created trip ${tripId} from job ${jobId}`);
-      console.log(`   - ${agentResults.length - 1} proposals saved`); // -1 for best-overall
+      console.log(`✅ Trip auto-save complete!`);
+      console.log(`   Trip ID: ${tripId}`);
+      console.log(`   User ID: ${userId}`);
+      console.log(`   Proposals: ${agentResults.length - 1}`); // -1 for best-overall
     } catch (error) {
-      console.error('Failed to persist trip:', error);
+      console.error('\n❌ Failed to persist trip:');
+      console.error('   Error message:', error.message);
+      console.error('   Error code:', error.code);
+      console.error('   Error detail:', error.detail);
+      console.error('   Full error:', error);
       // Don't fail the job, just log the error
     }
 
