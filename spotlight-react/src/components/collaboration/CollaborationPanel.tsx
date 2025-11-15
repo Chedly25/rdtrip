@@ -3,6 +3,7 @@ import { MessageCircle, Users, Send, Loader2, UserPlus, MoreVertical, Crown, Edi
 import { useWebSocket } from '../../hooks/useWebSocket'
 import type { Collaborator, TripMessage, PresenceStatus } from '../../types'
 import { motion, AnimatePresence } from 'framer-motion'
+import { MessageReactionPicker } from './MessageReactionPicker'
 
 interface CollaborationPanelProps {
   routeId: string
@@ -50,6 +51,16 @@ export function CollaborationPanel({ routeId, currentUserId, onInviteClick }: Co
     switch (message.type) {
       case 'chat_message':
         setMessages((prev) => [...prev, message.data])
+        break
+
+      case 'message_reaction_added':
+      case 'message_reaction_removed':
+        // Update the message with new reactions
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === message.data.messageId ? message.data.message : msg
+          )
+        )
         break
 
       case 'user_joined':
@@ -135,7 +146,7 @@ export function CollaborationPanel({ routeId, currentUserId, onInviteClick }: Co
 
     setIsSending(true)
     try {
-      const token = localStorage.getItem('auth_token')
+      const token = localStorage.getItem('rdtrip_auth_token')
       const response = await fetch(`/api/routes/${routeId}/messages`, {
         method: 'POST',
         headers: {
@@ -155,6 +166,28 @@ export function CollaborationPanel({ routeId, currentUserId, onInviteClick }: Co
       console.error('Error sending message:', error)
     } finally {
       setIsSending(false)
+    }
+  }
+
+  // Handle reaction add
+  async function handleReactionAdd(messageId: string, emoji: string) {
+    try {
+      const token = localStorage.getItem('rdtrip_auth_token')
+      const response = await fetch(`/api/routes/${routeId}/messages/${messageId}/reactions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ emoji }),
+      })
+
+      if (!response.ok) {
+        console.error('Failed to add reaction')
+      }
+      // Reaction will be updated via WebSocket broadcast
+    } catch (error) {
+      console.error('Error adding reaction:', error)
     }
   }
 
@@ -355,6 +388,17 @@ export function CollaborationPanel({ routeId, currentUserId, onInviteClick }: Co
                           }`}
                         >
                           <p className="text-sm whitespace-pre-wrap break-words">{message.message}</p>
+                        </div>
+
+                        {/* Reaction picker */}
+                        <div className="mt-1">
+                          <MessageReactionPicker
+                            messageId={message.id}
+                            routeId={routeId}
+                            onReactionAdd={handleReactionAdd}
+                            existingReactions={message.reactions || []}
+                            currentUserId={currentUserId}
+                          />
                         </div>
                       </div>
                     </motion.div>

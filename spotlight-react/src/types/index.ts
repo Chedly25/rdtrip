@@ -87,7 +87,7 @@ export interface TripMessage {
   userAvatar?: string
   message: string
   messageType: 'text' | 'system' | 'notification'
-  reactions?: Array<{ emoji: string; userId: string }>
+  reactions?: Array<{ emoji: string; userId: string; createdAt: string }>
   createdAt: string
   updatedAt?: string
 }
