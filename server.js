@@ -1288,6 +1288,276 @@ app.get('/api/routes/:id/stats', authenticate, async (req, res) => {
 });
 
 // =====================================================
+// MY TRIPS API (Phase 1: Navigation Redesign)
+// =====================================================
+
+// GET /api/my-trips - List all user's trips
+app.get('/api/my-trips', authenticate, async (req, res) => {
+  const userId = req.user.id; // From auth middleware
+
+  try {
+    const result = await db.query(`
+      SELECT
+        t.id,
+        t.title,
+        t.status,
+        t.origin,
+        t.destination,
+        t.nights,
+        t.selected_agent_type,
+        t.created_at,
+        t.updated_at,
+        t.last_viewed_at,
+        COUNT(DISTINCT p.id) as proposal_count
+      FROM user_trips t
+      LEFT JOIN route_proposals p ON p.trip_id = t.id
+      WHERE t.user_id = $1 AND t.status != 'archived'
+      GROUP BY t.id
+      ORDER BY t.last_viewed_at DESC NULLS LAST, t.updated_at DESC
+      LIMIT 50
+    `, [userId]);
+
+    res.json({ trips: result.rows });
+  } catch (error) {
+    console.error('Error fetching trips:', error);
+    res.status(500).json({ error: 'Failed to fetch trips' });
+  }
+});
+
+// GET /api/my-trips/:tripId - Get single trip with proposals
+app.get('/api/my-trips/:tripId', authenticate, async (req, res) => {
+  const { tripId } = req.params;
+  const userId = req.user.id;
+
+  try {
+    // Get trip
+    const tripResult = await db.query(
+      'SELECT * FROM user_trips WHERE id = $1 AND user_id = $2',
+      [tripId, userId]
+    );
+
+    if (tripResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Trip not found' });
+    }
+
+    // Get all proposals for this trip
+    const proposalsResult = await db.query(
+      'SELECT * FROM route_proposals WHERE trip_id = $1 ORDER BY agent_type',
+      [tripId]
+    );
+
+    // Update last_viewed_at
+    await db.query(
+      'UPDATE user_trips SET last_viewed_at = NOW() WHERE id = $1',
+      [tripId]
+    );
+
+    res.json({
+      trip: tripResult.rows[0],
+      proposals: proposalsResult.rows
+    });
+  } catch (error) {
+    console.error('Error fetching trip:', error);
+    res.status(500).json({ error: 'Failed to fetch trip' });
+  }
+});
+
+// POST /api/my-trips - Create new trip (from generation)
+app.post('/api/my-trips', authenticate, async (req, res) => {
+  const userId = req.user.id;
+  const { origin, destination, nights, budget, generationJobId } = req.body;
+
+  try {
+    const result = await db.query(`
+      INSERT INTO user_trips (
+        user_id, origin, destination, nights, budget,
+        generation_job_id, title, status
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING *
+    `, [
+      userId,
+      origin,
+      destination,
+      nights,
+      budget,
+      generationJobId,
+      `${origin.name} to ${destination.name}`,
+      'draft'
+    ]);
+
+    res.json({ trip: result.rows[0] });
+  } catch (error) {
+    console.error('Error creating trip:', error);
+    res.status(500).json({ error: 'Failed to create trip' });
+  }
+});
+
+// PATCH /api/my-trips/:tripId - Update trip (auto-save)
+app.patch('/api/my-trips/:tripId', authenticate, async (req, res) => {
+  const { tripId } = req.params;
+  const userId = req.user.id;
+  const { route_data, title, status, selected_agent_type } = req.body;
+
+  try {
+    // Verify ownership
+    const checkResult = await db.query(
+      'SELECT id FROM user_trips WHERE id = $1 AND user_id = $2',
+      [tripId, userId]
+    );
+
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Trip not found' });
+    }
+
+    // Get current version number
+    const versionResult = await db.query(
+      'SELECT COALESCE(MAX(version_number), 0) + 1 as next_version FROM trip_versions WHERE trip_id = $1',
+      [tripId]
+    );
+    const nextVersion = versionResult.rows[0].next_version;
+
+    // Update trip
+    const updateResult = await db.query(`
+      UPDATE user_trips
+      SET
+        route_data = COALESCE($1, route_data),
+        title = COALESCE($2, title),
+        status = COALESCE($3, status),
+        selected_agent_type = COALESCE($4, selected_agent_type),
+        updated_at = NOW()
+      WHERE id = $5 AND user_id = $6
+      RETURNING *
+    `, [route_data, title, status, selected_agent_type, tripId, userId]);
+
+    // Create version snapshot if route_data changed
+    if (route_data) {
+      await db.query(`
+        INSERT INTO trip_versions (trip_id, version_number, route_snapshot, created_by_user_id)
+        VALUES ($1, $2, $3, $4)
+      `, [tripId, nextVersion, route_data, userId]);
+    }
+
+    res.json({
+      trip: updateResult.rows[0],
+      message: 'Changes saved automatically',
+      version: nextVersion
+    });
+  } catch (error) {
+    console.error('Error updating trip:', error);
+    res.status(500).json({ error: 'Failed to update trip' });
+  }
+});
+
+// DELETE /api/my-trips/:tripId - Archive trip
+app.delete('/api/my-trips/:tripId', authenticate, async (req, res) => {
+  const { tripId } = req.params;
+  const userId = req.user.id;
+
+  try {
+    await db.query(`
+      UPDATE user_trips
+      SET status = 'archived', updated_at = NOW()
+      WHERE id = $1 AND user_id = $2
+    `, [tripId, userId]);
+
+    res.json({ message: 'Trip archived successfully' });
+  } catch (error) {
+    console.error('Error archiving trip:', error);
+    res.status(500).json({ error: 'Failed to archive trip' });
+  }
+});
+
+// POST /api/my-trips/:tripId/proposals - Add proposal
+app.post('/api/my-trips/:tripId/proposals', authenticate, async (req, res) => {
+  const { tripId } = req.params;
+  const { agent_type, route_data, cost_estimate } = req.body;
+  const userId = req.user.id;
+
+  try {
+    // Verify ownership
+    const checkResult = await db.query(
+      'SELECT id FROM user_trips WHERE id = $1 AND user_id = $2',
+      [tripId, userId]
+    );
+
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Trip not found' });
+    }
+
+    const result = await db.query(`
+      INSERT INTO route_proposals (trip_id, agent_type, route_data, cost_estimate)
+      VALUES ($1, $2, $3, $4)
+      ON CONFLICT (trip_id, agent_type)
+      DO UPDATE SET route_data = $3, cost_estimate = $4, created_at = NOW()
+      RETURNING *
+    `, [tripId, agent_type, route_data, cost_estimate]);
+
+    res.json({ proposal: result.rows[0] });
+  } catch (error) {
+    console.error('Error adding proposal:', error);
+    res.status(500).json({ error: 'Failed to add proposal' });
+  }
+});
+
+// PATCH /api/my-trips/:tripId/proposals/:proposalId/select - Select proposal
+app.patch('/api/my-trips/:tripId/proposals/:proposalId/select', authenticate, async (req, res) => {
+  const { tripId, proposalId } = req.params;
+  const userId = req.user.id;
+
+  try {
+    // Verify ownership
+    const checkResult = await db.query(
+      'SELECT id FROM user_trips WHERE id = $1 AND user_id = $2',
+      [tripId, userId]
+    );
+
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Trip not found' });
+    }
+
+    // Get proposal data
+    const proposalResult = await db.query(
+      'SELECT * FROM route_proposals WHERE id = $1 AND trip_id = $2',
+      [proposalId, tripId]
+    );
+
+    if (proposalResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Proposal not found' });
+    }
+
+    const proposal = proposalResult.rows[0];
+
+    // Unselect all other proposals for this trip
+    await db.query(
+      'UPDATE route_proposals SET is_selected = false WHERE trip_id = $1',
+      [tripId]
+    );
+
+    // Select this proposal
+    await db.query(
+      'UPDATE route_proposals SET is_selected = true WHERE id = $1',
+      [proposalId]
+    );
+
+    // Update trip with selected agent and route data
+    await db.query(`
+      UPDATE user_trips
+      SET
+        selected_agent_type = $1,
+        route_data = $2,
+        status = 'active',
+        updated_at = NOW()
+      WHERE id = $3
+    `, [proposal.agent_type, proposal.route_data, tripId]);
+
+    res.json({ message: 'Proposal selected successfully' });
+  } catch (error) {
+    console.error('Error selecting proposal:', error);
+    res.status(500).json({ error: 'Failed to select proposal' });
+  }
+});
+
+// =====================================================
 // ROUTE GENERATION ENDPOINTS
 // =====================================================
 
