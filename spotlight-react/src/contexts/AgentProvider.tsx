@@ -612,6 +612,19 @@ export function AgentProvider({ children }: AgentProviderProps) {
                 // Tool execution results - store them for rich rendering
                 console.log('🔧 Tool execution:', event.tools);
 
+                // Check if any tool modifies the itinerary
+                const itineraryModifyingTools = ['replaceActivity', 'addActivity', 'moveActivity', 'reorderActivities'];
+                const modifiedItinerary = event.tools.some((tool: any) =>
+                  itineraryModifyingTools.includes(tool.name) &&
+                  (typeof tool.content === 'string' ? JSON.parse(tool.content).success : tool.content?.success)
+                );
+
+                if (modifiedItinerary) {
+                  console.log('🔄 [AGENT] Itinerary was modified, dispatching refresh event');
+                  // Dispatch custom event that spotlight page can listen to
+                  window.dispatchEvent(new CustomEvent('itinerary_updated'));
+                }
+
                 // Detect and set artifact
                 const artifact = detectArtifact(event.tools);
                 if (artifact) {

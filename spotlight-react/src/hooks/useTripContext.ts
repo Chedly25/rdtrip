@@ -104,6 +104,17 @@ export function useTripContext(options: UseTripContextOptions = {}): UseTripCont
     loadItinerary();
   }, [itineraryId]);
 
+  // Listen for itinerary updates from agent
+  useEffect(() => {
+    const handleItineraryUpdate = () => {
+      console.log('🔄 [useTripContext] Received itinerary_updated event, refreshing...');
+      loadItinerary();
+    };
+
+    window.addEventListener('itinerary_updated', handleItineraryUpdate);
+    return () => window.removeEventListener('itinerary_updated', handleItineraryUpdate);
+  }, [itineraryId]);
+
   // Calculate current day based on start date
   const currentDay = useMemo(() => {
     if (!startDate || !itinerary) return null;
