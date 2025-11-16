@@ -1,0 +1,227 @@
+/**
+ * Hover States - Phase 6.5
+ * Beautiful hover interactions for desktop users
+ */
+
+/* Button Hover: Lift + Shadow Increase */
+.btn-hover {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform, box-shadow;
+}
+
+.btn-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15),
+              0 8px 10px -6px rgba(0, 0, 0, 0.1);
+}
+
+.btn-hover:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+              0 2px 4px -2px rgba(0, 0, 0, 0.1);
+}
+
+/* Card Hover: Lift + Shadow + Border Glow */
+.card-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform, box-shadow, border-color;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.15),
+              0 0 0 1px rgba(99, 102, 241, 0.1);
+  border-color: rgba(99, 102, 241, 0.2);
+}
+
+/* City Card Hover (for Agent Suggestions) */
+.city-card-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform, box-shadow;
+}
+
+.city-card-hover:hover {
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25),
+              0 0 0 2px rgba(99, 102, 241, 0.1);
+}
+
+/* Link Hover: Underline Slide-in Animation */
+.link-hover {
+  position: relative;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.link-hover::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: currentColor;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.link-hover:hover::after {
+  width: 100%;
+}
+
+/* Icon Hover: Scale + Color */
+.icon-hover {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform, color;
+}
+
+.icon-hover:hover {
+  transform: scale(1.1);
+  color: #6366f1; /* primary-500 */
+}
+
+/* Input Hover: Border Glow */
+.input-hover {
+  transition: all 0.2s ease;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.input-hover:hover:not(:focus) {
+  border-color: rgba(99, 102, 241, 0.3);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.05);
+}
+
+.input-hover:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  outline: none;
+}
+
+/* Nav Item Hover: Background Fade */
+.nav-item-hover {
+  transition: all 0.2s ease;
+  border-radius: 0.5rem;
+}
+
+.nav-item-hover:hover {
+  background-color: rgba(99, 102, 241, 0.05);
+  color: #6366f1;
+}
+
+/* Dropdown Menu Hover */
+.dropdown-item-hover {
+  transition: all 0.15s ease;
+}
+
+.dropdown-item-hover:hover {
+  background-color: rgba(99, 102, 241, 0.08);
+  padding-left: 1rem;
+}
+
+/* Checkbox/Radio Hover */
+.checkbox-hover {
+  transition: all 0.2s ease;
+}
+
+.checkbox-hover:hover {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+/* Avatar Hover: Ring Animation */
+.avatar-hover {
+  transition: all 0.2s ease;
+  will-change: box-shadow;
+}
+
+.avatar-hover:hover {
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.3),
+              0 0 0 6px rgba(99, 102, 241, 0.1);
+}
+
+/* Tab Hover: Border Slide */
+.tab-hover {
+  position: relative;
+  transition: color 0.2s ease;
+}
+
+.tab-hover::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 0;
+  height: 2px;
+  background: #6366f1;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: translateX(-50%);
+}
+
+.tab-hover:hover::before {
+  width: 100%;
+}
+
+.tab-hover.active::before {
+  width: 100%;
+}
+
+/* Badge Hover: Pulse */
+.badge-hover {
+  transition: all 0.2s ease;
+}
+
+.badge-hover:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+}
+
+/* Toggle/Switch Hover */
+.switch-hover {
+  transition: all 0.2s ease;
+}
+
+.switch-hover:hover {
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+}
+
+/* Error Input Styles */
+.error-input input,
+.error-input textarea,
+.error-input select {
+  border-color: #ef4444 !important;
+  animation: pulse-red-border 1.5s infinite;
+}
+
+@keyframes pulse-red-border {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.2);
+  }
+}
+
+/* Smooth transitions for all interactive elements */
+button, a, input, textarea, select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Disable hover effects on touch devices */
+@media (hover: none) {
+  .btn-hover:hover,
+  .card-hover:hover,
+  .city-card-hover:hover,
+  .link-hover:hover,
+  .icon-hover:hover,
+  .input-hover:hover,
+  .nav-item-hover:hover,
+  .dropdown-item-hover:hover,
+  .checkbox-hover:hover,
+  .avatar-hover:hover,
+  .tab-hover:hover,
+  .badge-hover:hover,
+  .switch-hover:hover {
+    transform: none;
+    box-shadow: none;
+  }
+}

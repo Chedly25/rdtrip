@@ -13,6 +13,10 @@ import { AgentModal } from './components/agent/AgentModal'
 import { GlobalNav } from './components/navigation/GlobalNav'
 import { ToastProvider } from './components/toast/ToastProvider'
 
+// Phase 6: Import CSS for hover states and dark mode
+import './styles/hover-states.css'
+import './styles/dark-mode.css'
+
 // Create a client
 const queryClient = new QueryClient({
   defaultOptions: {

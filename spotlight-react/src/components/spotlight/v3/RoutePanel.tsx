@@ -13,10 +13,12 @@
 
 import { type SpotlightRoute } from '../../../stores/spotlightStoreV2';
 import { useSpotlightStoreV2 } from '../../../stores/spotlightStoreV2';
+import { useAgentSuggestionsStore } from '../../../stores/agentSuggestionsStore';
 import { ItineraryView } from '../../itinerary/ItineraryView';
 import ExportMenu from '../v2/ExportMenu';
 import { Heading, Button } from '../../design-system';
 import { Plus } from 'lucide-react';
+import { EmptyItineraryState } from '../../empty-states/EmptyState';
 
 interface RoutePanelProps {
   route: SpotlightRoute | null;
@@ -25,21 +27,27 @@ interface RoutePanelProps {
 
 const RoutePanel = ({ route, routeId }: RoutePanelProps) => {
   const { getCityName } = useSpotlightStoreV2();
+  const { togglePanel } = useAgentSuggestionsStore();
 
   if (!route) {
     return (
       <div className="h-full flex items-center justify-center p-8 text-center">
-        <div>
-          <div className="text-6xl mb-4">🗺️</div>
-          <Heading level={3} className="mb-2">No Route Loaded</Heading>
-          <p className="text-gray-600">Generate a route from the homepage to get started</p>
-        </div>
+        <EmptyItineraryState onAddCity={togglePanel} />
       </div>
     );
   }
 
   // Calculate total nights from cities
   const totalNights = route.cities.reduce((sum, city) => sum + city.nights, 0);
+
+  // Show empty state if no cities in route (Phase 6.4)
+  if (!route.cities || route.cities.length === 0) {
+    return (
+      <div className="h-full flex items-center justify-center p-8 text-center">
+        <EmptyItineraryState onAddCity={togglePanel} />
+      </div>
+    );
+  }
 
   return (
     <div className="h-full flex flex-col bg-white">

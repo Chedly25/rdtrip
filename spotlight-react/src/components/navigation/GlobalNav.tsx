@@ -12,6 +12,7 @@
 import { Home, Map, User } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useSpotlightStoreV2 } from '../../stores/spotlightStoreV2';
+import { ThemeToggle } from '../theme/ThemeToggle';
 
 export function GlobalNav() {
   const navigate = useNavigate();
@@ -62,6 +63,9 @@ export function GlobalNav() {
                 </span>
               </div>
             )}
+
+            {/* Phase 6.7: Dark Mode Toggle */}
+            <ThemeToggle />
 
             {/* Profile */}
             <button
