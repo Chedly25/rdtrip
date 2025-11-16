@@ -88,6 +88,7 @@ interface SpotlightStoreV2 {
   // Actions
   setRoute: (route: SpotlightRoute) => void;
   updateCities: (cities: CityData[]) => void;
+  addCityAtDay: (cityData: Partial<CityData>, dayNumber: number) => Promise<void>;
   addLandmark: (landmark: LandmarkStop) => void;
   addLandmarkToRoute: (landmark: Landmark) => Promise<void>;
   removeLandmark: (landmarkId: string) => void;
@@ -140,6 +141,115 @@ export const useSpotlightStoreV2 = create<SpotlightStoreV2>((set, get) => ({
   updateCities: (cities) => set((state) => ({
     route: state.route ? { ...state.route, cities } : null
   })),
+
+  addCityAtDay: async (cityData, dayNumber) => {
+    const state = get();
+    if (!state.route) {
+      console.error('No route available');
+      return;
+    }
+
+    try {
+      console.log(`🏙️ Adding city to day ${dayNumber}:`, cityData.city);
+
+      // Convert dayNumber to array index (day 1 = index 0)
+      const insertIndex = Math.max(0, Math.min(dayNumber - 1, state.route.cities.length));
+
+      // Create complete CityData object
+      const newCity: CityData = {
+        city: cityData.city || { name: '', country: '', coordinates: { lat: 0, lng: 0 } },
+        coordinates: cityData.coordinates || { lat: 0, lng: 0 },
+        nights: cityData.nights || 1,
+        activities: cityData.activities || [],
+        restaurants: cityData.restaurants || [],
+        accommodation: cityData.accommodation || [],
+        practicalInfo: cityData.practicalInfo,
+        weather: cityData.weather,
+        events: cityData.events || [],
+        agentData: cityData.agentData || {}
+      };
+
+      // Insert city at the specified position
+      const newCities = [...state.route.cities];
+      newCities.splice(insertIndex, 0, newCity);
+
+      // Update nightAllocations
+      const cityName = get().getCityName(newCity.city);
+      const newNightAllocations = {
+        ...state.route.nightAllocations,
+        [cityName]: newCity.nights
+      };
+
+      // Update local state
+      set((state) => ({
+        route: state.route
+          ? { ...state.route, cities: newCities, nightAllocations: newNightAllocations }
+          : null
+      }));
+
+      console.log(`✅ Added ${cityName} to route at position ${insertIndex}`);
+
+      // Fly map to new city
+      if (newCity.coordinates && newCity.coordinates.lat && newCity.coordinates.lng) {
+        set({
+          mapCenter: [newCity.coordinates.lat, newCity.coordinates.lng],
+          mapZoom: 10
+        });
+        console.log(`🗺️ Flying map to ${cityName}`);
+      }
+
+      // Save to backend if route has an ID
+      const updatedState = get();
+      if (updatedState.route?.id) {
+        try {
+          const apiUrl = import.meta.env.VITE_API_URL || '';
+          const token = localStorage.getItem('token');
+          const headers: HeadersInit = {
+            'Content-Type': 'application/json',
+          };
+          if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+          }
+
+          console.log(`💾 Saving updated route to backend...`);
+          const response = await fetch(`${apiUrl}/api/routes/${updatedState.route.id}`, {
+            method: 'PATCH',
+            headers,
+            body: JSON.stringify({
+              cities: newCities,
+              nightAllocations: newNightAllocations
+            })
+          });
+
+          if (response.ok) {
+            console.log('✅ Route saved to backend successfully');
+          } else {
+            console.warn('⚠️ Failed to save route to backend:', response.status, response.statusText);
+          }
+        } catch (apiError) {
+          console.warn('⚠️ Could not save route to backend:', apiError);
+        }
+      } else {
+        // Save to localStorage if no route ID
+        console.warn('⚠️ Route has no database ID. Saving to localStorage instead.');
+        try {
+          const spotlightDataStr = localStorage.getItem('spotlightData');
+          if (spotlightDataStr) {
+            const spotlightData = JSON.parse(spotlightDataStr);
+            spotlightData.cities = newCities;
+            spotlightData.nightAllocations = newNightAllocations;
+            localStorage.setItem('spotlightData', JSON.stringify(spotlightData));
+            console.log('✅ Route saved to localStorage');
+          }
+        } catch (err) {
+          console.error('❌ Failed to save to localStorage:', err);
+        }
+      }
+    } catch (error) {
+      console.error('❌ Failed to add city to route:', error);
+      throw error;
+    }
+  },
 
   addLandmark: (landmark) => set((state) => ({
     route: state.route
