@@ -34,12 +34,9 @@ function HomePage() {
   }, [location.state])
 
   const handleRouteGenerated = (data: any) => {
-    setRouteData(data)
-    setShowResults(true)
-    // Scroll to results
-    setTimeout(() => {
-      window.scrollTo({ top: 0, behavior: 'smooth' })
-    }, 100)
+    // Skip results page - go directly to Spotlight
+    localStorage.setItem('spotlightData', JSON.stringify(data))
+    window.location.href = `/spotlight-new/?routeId=${data.id || Date.now()}`
   }
 
   const handleViewMap = (agent?: string) => {
