@@ -202,21 +202,21 @@ export function RouteForm({ onRouteGenerated }: RouteFormProps) {
   }
 
   return (
-    <section id="route-form" className="relative bg-gradient-to-b from-gray-50 to-white py-20">
+    <section id="route-form" className="relative bg-white py-24">
       <div className="container mx-auto max-w-4xl px-4">
         {!isLoading && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="mb-12 text-center"
+            transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
+            className="mb-16 text-center"
           >
-            <h2 className="mb-4 text-4xl font-bold text-gray-900">
+            <h2 className="mb-3 text-4xl font-bold tracking-tight text-gray-900 lg:text-5xl">
               Plan Your Journey
             </h2>
-            <p className="text-lg text-gray-600">
-              Tell us where you want to go, and we'll create a personalized route just for you
+            <p className="text-lg font-medium text-gray-600">
+              Tell us where you want to go, and we'll create a personalized route
             </p>
           </motion.div>
         )}
@@ -237,8 +237,8 @@ export function RouteForm({ onRouteGenerated }: RouteFormProps) {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="space-y-8 rounded-2xl bg-white p-8 shadow-xl"
+          transition={{ duration: 0.5, delay: 0.1, ease: [0.23, 1, 0.32, 1] }}
+          className="space-y-8 rounded-3xl bg-white p-10 shadow-xl border border-gray-200"
         >
           {/* Origin and Destination */}
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -266,101 +266,104 @@ export function RouteForm({ onRouteGenerated }: RouteFormProps) {
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
-              className="rounded-lg bg-blue-50 p-4 border border-blue-200"
+              transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
+              className="rounded-xl bg-gray-50 p-4 border border-gray-200"
             >
-              <p className="text-sm text-blue-900">
-                <span className="font-medium">
+              <p className="text-sm font-medium text-gray-700">
+                <span className="font-semibold text-gray-900">
                   {calculateDistance(origin.coordinates, destination.coordinates).toFixed(0)} km
                 </span>
-                {' '}road trip from <span className="font-medium">{origin.name}</span> to <span className="font-medium">{destination.name}</span>
+                {' '}road trip from <span className="font-semibold text-gray-900">{origin.name}</span> to <span className="font-semibold text-gray-900">{destination.name}</span>
               </p>
             </motion.div>
           )}
 
           {/* Trip Pace */}
-          <div className="space-y-3">
-            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-              <Zap className="h-4 w-4 text-purple-600" />
+          <div className="space-y-4">
+            <label className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+              <Zap className="h-4 w-4 text-gray-700" />
               Trip Pace
             </label>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="flex gap-3 p-1.5 bg-gray-100 rounded-2xl">
               <button
                 type="button"
                 onClick={() => setTripPace('leisurely')}
-                className={`rounded-lg border-2 p-4 transition-all ${
+                className={`flex-1 rounded-xl p-4 transition-all duration-200 ease-smooth ${
                   tripPace === 'leisurely'
-                    ? 'border-purple-500 bg-purple-50 shadow-md'
-                    : 'border-gray-200 bg-white hover:border-purple-300'
+                    ? 'bg-white shadow-md transform scale-[1.02]'
+                    : 'bg-transparent hover:bg-white/50'
                 }`}
               >
-                <div className="text-2xl mb-1">🚶</div>
-                <div className="font-semibold text-gray-900">Leisurely</div>
-                <div className="text-xs text-gray-500 mt-1">2-4 cities, deeper stays</div>
+                <div className="text-2xl mb-2">🚶</div>
+                <div className="font-semibold text-gray-900 text-sm">Leisurely</div>
+                <div className="text-xs text-gray-600 mt-1">2-4 cities</div>
               </button>
               <button
                 type="button"
                 onClick={() => setTripPace('balanced')}
-                className={`rounded-lg border-2 p-4 transition-all ${
+                className={`flex-1 rounded-xl p-4 transition-all duration-200 ease-smooth ${
                   tripPace === 'balanced'
-                    ? 'border-purple-500 bg-purple-50 shadow-md'
-                    : 'border-gray-200 bg-white hover:border-purple-300'
+                    ? 'bg-white shadow-md transform scale-[1.02]'
+                    : 'bg-transparent hover:bg-white/50'
                 }`}
               >
-                <div className="text-2xl mb-1">🚶‍♂️</div>
-                <div className="font-semibold text-gray-900">Balanced</div>
-                <div className="text-xs text-gray-500 mt-1">3-5 cities, mixed pace</div>
+                <div className="text-2xl mb-2">🚶‍♂️</div>
+                <div className="font-semibold text-gray-900 text-sm">Balanced</div>
+                <div className="text-xs text-gray-600 mt-1">3-5 cities</div>
               </button>
               <button
                 type="button"
                 onClick={() => setTripPace('fast-paced')}
-                className={`rounded-lg border-2 p-4 transition-all ${
+                className={`flex-1 rounded-xl p-4 transition-all duration-200 ease-smooth ${
                   tripPace === 'fast-paced'
-                    ? 'border-purple-500 bg-purple-50 shadow-md'
-                    : 'border-gray-200 bg-white hover:border-purple-300'
+                    ? 'bg-white shadow-md transform scale-[1.02]'
+                    : 'bg-transparent hover:bg-white/50'
                 }`}
               >
-                <div className="text-2xl mb-1">🏃</div>
-                <div className="font-semibold text-gray-900">Fast-Paced</div>
-                <div className="text-xs text-gray-500 mt-1">4-7 cities, see more</div>
+                <div className="text-2xl mb-2">🏃</div>
+                <div className="font-semibold text-gray-900 text-sm">Fast-Paced</div>
+                <div className="text-xs text-gray-600 mt-1">4-7 cities</div>
               </button>
             </div>
           </div>
 
           {/* Trip Duration */}
-          <div className="space-y-4 rounded-lg bg-gradient-to-br from-purple-50 to-blue-50 p-6 border-2 border-purple-200">
-            <div className="flex items-center gap-2 mb-2">
-              <Calendar className="h-5 w-5 text-purple-600" />
-              <h3 className="text-lg font-bold text-gray-900">Total Trip Duration</h3>
+          <div className="space-y-5 rounded-2xl bg-gray-50 p-6 border border-gray-200">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-gray-700" />
+              <h3 className="text-base font-bold text-gray-900">Trip Duration</h3>
             </div>
 
-            <div className="space-y-3">
-              <label className="flex items-center justify-between text-sm font-semibold text-gray-700">
-                <span>How long is your trip?</span>
-                <span className="text-purple-600 font-bold text-2xl">{totalNights} nights</span>
-              </label>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-gray-700">How long is your trip?</span>
+                <span className="text-gray-900 font-bold text-3xl tracking-tight">{totalNights}</span>
+              </div>
               <input
                 type="range"
                 min="3"
                 max="30"
                 value={totalNights}
                 onChange={(e) => setTotalNights(Number(e.target.value))}
-                className="h-2 w-full cursor-pointer appearance-none rounded-lg"
+                className="w-full cursor-pointer"
                 style={{
-                  background: `linear-gradient(to right, #9333ea 0%, #9333ea ${((totalNights - 3) / 27) * 100}%, #e5e7eb ${((totalNights - 3) / 27) * 100}%, #e5e7eb 100%)`,
+                  background: `linear-gradient(to right, #0066FF 0%, #0066FF ${((totalNights - 3) / 27) * 100}%, #E5E5E5 ${((totalNights - 3) / 27) * 100}%, #E5E5E5 100%)`,
                 }}
               />
-              <div className="flex justify-between text-xs text-gray-500">
-                <span>3 nights (weekend)</span>
-                <span>30 nights (epic adventure)</span>
+              <div className="flex justify-between text-xs text-gray-500 font-medium">
+                <span>3 nights</span>
+                <span>30 nights</span>
               </div>
 
               {/* Days Display */}
-              <div className="mt-3 text-center">
-                <div className="text-xl font-bold text-gray-900">
-                  = {totalDays} {totalDays === 1 ? 'day' : 'days'} total
-                </div>
-                <div className="text-xs text-gray-600 mt-1">
-                  AI will determine optimal cities based on your pace
+              <div className="pt-3 border-t border-gray-200">
+                <div className="text-center">
+                  <div className="text-base font-semibold text-gray-900">
+                    {totalDays} {totalDays === 1 ? 'day' : 'days'} total
+                  </div>
+                  <div className="text-xs text-gray-600 mt-1">
+                    AI determines optimal cities for your pace
+                  </div>
                 </div>
               </div>
             </div>
@@ -387,12 +390,11 @@ export function RouteForm({ onRouteGenerated }: RouteFormProps) {
           <motion.button
             type="submit"
             disabled={isLoading || isSubmitting}
-            className="w-full rounded-lg bg-slate-900 px-8 py-4 text-lg font-semibold text-white shadow-lg transition-all hover:bg-slate-800 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50"
-            whileHover={!isLoading && !isSubmitting ? { scale: 1.01 } : undefined}
-            whileTap={!isLoading && !isSubmitting ? { scale: 0.99 } : undefined}
+            className="w-full rounded-2xl bg-gray-900 px-8 py-4 text-base font-semibold tracking-wide text-white shadow-lg transition-all duration-200 ease-smooth hover:shadow-xl hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+            whileTap={!isLoading && !isSubmitting ? { scale: 0.98 } : undefined}
           >
             {isLoading || isSubmitting ? (
-              <span className="flex items-center justify-center gap-2">
+              <span className="flex items-center justify-center gap-3">
                 <svg
                   className="h-5 w-5 animate-spin"
                   viewBox="0 0 24 24"

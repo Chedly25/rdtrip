@@ -1,0 +1,222 @@
+import { useState, useEffect } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Map as MapIcon, List, ArrowLeft, Share2, Download } from 'lucide-react'
+import { MapView } from '../components/map/MapView'
+import { FloatingSidebar } from '../components/map/FloatingSidebar'
+import { ItineraryView } from '../components/itinerary/ItineraryView'
+
+type ViewMode = 'map' | 'itinerary'
+
+interface City {
+  name: string
+  country?: string
+  coordinates: [number, number]
+  nights?: number
+  image?: string
+  description?: string
+  highlights?: string[]
+}
+
+interface Activity {
+  id: string
+  name: string
+  type: 'activity' | 'restaurant' | 'scenic'
+  timeOfDay: 'morning' | 'afternoon' | 'evening' | 'night'
+  duration?: number
+  image?: string
+  description?: string
+  price?: string
+  rating?: number
+  difficulty?: 'easy' | 'moderate' | 'challenging'
+  coordinates?: [number, number]
+}
+
+interface DayPlan {
+  day: number
+  date?: string
+  city: string
+  activities: Activity[]
+}
+
+export default function SpotlightPage() {
+  const { routeId } = useParams()
+  const navigate = useNavigate()
+  const [viewMode, setViewMode] = useState<ViewMode>('map')
+  const [selectedCity, setSelectedCity] = useState<City | null>(null)
+  const [cities, setCities] = useState<City[]>([])
+  const [itinerary, setItinerary] = useState<DayPlan[]>([])
+
+  // Load route data
+  useEffect(() => {
+    // Try to load from localStorage first
+    const storedData = localStorage.getItem('spotlightData')
+
+    if (storedData) {
+      const data = JSON.parse(storedData)
+      // Transform data to match our interface
+      // This is a simplified version - you'll need to adapt based on your actual data structure
+      const transformedCities: City[] = data.cities || []
+      const transformedItinerary: DayPlan[] = data.itinerary || []
+
+      setCities(transformedCities)
+      setItinerary(transformedItinerary)
+    } else if (routeId) {
+      // Fetch from API if not in localStorage
+      fetchRouteData(routeId)
+    }
+  }, [routeId])
+
+  const fetchRouteData = async (id: string) => {
+    try {
+      const response = await fetch(`/api/routes/${id}`)
+      if (!response.ok) throw new Error('Failed to fetch route')
+
+      const data = await response.json()
+      // Transform and set data
+      setCities(data.cities || [])
+      setItinerary(data.itinerary || [])
+    } catch (error) {
+      console.error('Error fetching route:', error)
+    }
+  }
+
+  const handleActivityClick = (activity: Activity) => {
+    if (activity.coordinates) {
+      setViewMode('map')
+      // TODO: Zoom to activity location on map
+    }
+  }
+
+  const handleShare = () => {
+    // TODO: Implement share functionality
+    if (navigator.share) {
+      navigator.share({
+        title: 'Check out my route!',
+        text: 'I created this amazing travel itinerary',
+        url: window.location.href
+      })
+    }
+  }
+
+  const handleExport = () => {
+    // TODO: Implement export functionality (PDF, etc.)
+    console.log('Export functionality coming soon')
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Fixed Header */}
+      <header className="fixed top-0 left-0 right-0 h-16 bg-white/90 backdrop-blur-xl border-b border-gray-200/50 z-40">
+        <div className="h-full px-6 flex items-center justify-between">
+          {/* Left: Back Button */}
+          <button
+            onClick={() => navigate('/')}
+            className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            <span className="font-medium">Back</span>
+          </button>
+
+          {/* Center: View Toggle */}
+          <div className="flex gap-1 p-1 bg-gray-100 rounded-xl">
+            <button
+              onClick={() => setViewMode('map')}
+              className={`
+                flex items-center gap-2 px-6 py-2 rounded-lg
+                font-semibold text-sm transition-all duration-200
+                ${
+                  viewMode === 'map'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }
+              `}
+            >
+              <MapIcon className="w-4 h-4" />
+              Map
+            </button>
+            <button
+              onClick={() => setViewMode('itinerary')}
+              className={`
+                flex items-center gap-2 px-6 py-2 rounded-lg
+                font-semibold text-sm transition-all duration-200
+                ${
+                  viewMode === 'itinerary'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }
+              `}
+            >
+              <List className="w-4 h-4" />
+              Itinerary
+            </button>
+          </div>
+
+          {/* Right: Actions */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleShare}
+              className="p-2 text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+              title="Share"
+            >
+              <Share2 className="w-5 h-5" />
+            </button>
+            <button
+              onClick={handleExport}
+              className="p-2 text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+              title="Export"
+            >
+              <Download className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="pt-16 h-screen">
+        <AnimatePresence mode="wait">
+          {viewMode === 'map' ? (
+            <motion.div
+              key="map-view"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="h-full relative"
+            >
+              {/* Floating Sidebar */}
+              {cities.length > 0 && (
+                <FloatingSidebar
+                  cities={cities}
+                  selectedCity={selectedCity}
+                  onCitySelect={setSelectedCity}
+                />
+              )}
+
+              {/* Map */}
+              <MapView
+                cities={cities}
+                selectedCity={selectedCity}
+                onCitySelect={setSelectedCity}
+              />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="itinerary-view"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="h-full overflow-y-auto"
+            >
+              <ItineraryView
+                itinerary={itinerary}
+                onActivityClick={handleActivityClick}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </main>
+    </div>
+  )
+}
