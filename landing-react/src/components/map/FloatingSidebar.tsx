@@ -1,5 +1,6 @@
-import { motion } from 'framer-motion'
-import { MapPin, Calendar, ChevronRight } from 'lucide-react'
+import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { MapPin, Calendar, ChevronRight, Menu, X } from 'lucide-react'
 
 interface City {
   name: string
@@ -24,23 +25,46 @@ export function FloatingSidebar({
   onCitySelect,
   className = ''
 }: FloatingSidebarProps) {
+  const [isOpen, setIsOpen] = useState(false)
+
   return (
-    <motion.div
-      initial={{ opacity: 0, x: -20 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
-      className={`
-        absolute top-6 left-6 bottom-6
-        w-96
-        bg-white/90 backdrop-blur-xl
-        border border-gray-200/50
-        rounded-2xl
-        shadow-2xl
-        overflow-hidden
-        flex flex-col
-        ${className}
-      `}
-    >
+    <>
+      {/* Mobile Toggle Button */}
+      <motion.button
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        onClick={() => setIsOpen(!isOpen)}
+        className="lg:hidden absolute top-6 left-6 z-50 p-3 bg-white/90 backdrop-blur-xl border border-gray-200/50 rounded-xl shadow-lg hover:shadow-xl transition-all"
+        aria-label="Toggle route sidebar"
+      >
+        {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+      </motion.button>
+
+      {/* Sidebar */}
+      <AnimatePresence>
+        {(isOpen || true) && (
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
+            className={`
+              absolute top-6 bottom-6
+              left-6 lg:left-6
+              w-[calc(100%-3rem)] sm:w-96
+              max-w-md
+              bg-white/90 backdrop-blur-xl
+              border border-gray-200/50
+              rounded-2xl
+              shadow-2xl
+              overflow-hidden
+              flex flex-col
+              ${!isOpen ? 'hidden lg:flex' : ''}
+              ${className}
+            `}
+            role="navigation"
+            aria-label="Route cities"
+          >
       {/* Header */}
       <div className="p-6 border-b border-gray-200/50">
         <h2 className="text-2xl font-bold text-gray-900 mb-2 tracking-tight">
@@ -228,7 +252,10 @@ export function FloatingSidebar({
           </div>
         </div>
       </div>
-    </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   )
 }
 

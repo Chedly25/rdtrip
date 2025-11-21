@@ -1,12 +1,26 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Map as MapIcon, List, ArrowLeft, Share2, Download } from 'lucide-react'
-import { MapView } from '../components/map/MapView'
-import { FloatingSidebar } from '../components/map/FloatingSidebar'
-import { ItineraryView } from '../components/itinerary/ItineraryView'
+import { Map as MapIcon, List, ArrowLeft, Share2, Download, Loader2 } from 'lucide-react'
+
+// Lazy load heavy components for code splitting
+const MapView = lazy(() => import('../components/map/MapView').then(m => ({ default: m.MapView })))
+const FloatingSidebar = lazy(() => import('../components/map/FloatingSidebar').then(m => ({ default: m.FloatingSidebar })))
+const ItineraryView = lazy(() => import('../components/itinerary/ItineraryView').then(m => ({ default: m.ItineraryView })))
 
 type ViewMode = 'map' | 'itinerary'
+
+// Loading fallback component
+function LoadingFallback() {
+  return (
+    <div className="flex items-center justify-center h-full bg-gray-50">
+      <div className="text-center">
+        <Loader2 className="w-8 h-8 text-gray-900 animate-spin mx-auto mb-4" />
+        <p className="text-sm text-gray-600 font-medium">Loading...</p>
+      </div>
+    </div>
+  )
+}
 
 interface City {
   name: string
@@ -174,48 +188,50 @@ export default function SpotlightPage() {
 
       {/* Main Content */}
       <main className="pt-16 h-screen">
-        <AnimatePresence mode="wait">
-          {viewMode === 'map' ? (
-            <motion.div
-              key="map-view"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="h-full relative"
-            >
-              {/* Floating Sidebar */}
-              {cities.length > 0 && (
-                <FloatingSidebar
+        <Suspense fallback={<LoadingFallback />}>
+          <AnimatePresence mode="wait">
+            {viewMode === 'map' ? (
+              <motion.div
+                key="map-view"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="h-full relative"
+              >
+                {/* Floating Sidebar */}
+                {cities.length > 0 && (
+                  <FloatingSidebar
+                    cities={cities}
+                    selectedCity={selectedCity}
+                    onCitySelect={setSelectedCity}
+                  />
+                )}
+
+                {/* Map */}
+                <MapView
                   cities={cities}
                   selectedCity={selectedCity}
                   onCitySelect={setSelectedCity}
                 />
-              )}
-
-              {/* Map */}
-              <MapView
-                cities={cities}
-                selectedCity={selectedCity}
-                onCitySelect={setSelectedCity}
-              />
-            </motion.div>
-          ) : (
-            <motion.div
-              key="itinerary-view"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="h-full overflow-y-auto"
-            >
-              <ItineraryView
-                itinerary={itinerary}
-                onActivityClick={handleActivityClick}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="itinerary-view"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="h-full overflow-y-auto"
+              >
+                <ItineraryView
+                  itinerary={itinerary}
+                  onActivityClick={handleActivityClick}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </Suspense>
       </main>
     </div>
   )
