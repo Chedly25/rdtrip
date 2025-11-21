@@ -10,25 +10,17 @@ export function Hero() {
   }
 
   return (
-    <section className="relative min-h-[85vh] w-full overflow-hidden">
-      {/* Premium Gradient Background with Animation */}
-      <div className="absolute inset-0">
-        <div
-          className="h-full w-full bg-gradient-to-br from-[#667eea] via-[#764ba2] to-[#f093fb]"
-          style={{
-            backgroundSize: '400% 400%',
-            animation: 'gradientShift 15s ease infinite'
-          }}
-        />
+    <section className="relative min-h-[85vh] w-full overflow-hidden bg-gradient-to-b from-gray-50 to-white">
+      {/* Subtle accent gradient */}
+      <div className="absolute inset-0 bg-gradient-to-br from-gray-900/[0.02] via-transparent to-gray-900/[0.02]" />
 
-        {/* Noise texture overlay for depth */}
-        <div
-          className="absolute inset-0 opacity-[0.03] mix-blend-overlay"
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
-          }}
-        />
-      </div>
+      {/* Subtle noise texture for depth */}
+      <div
+        className="absolute inset-0 opacity-[0.015] mix-blend-overlay pointer-events-none"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
+        }}
+      />
 
       {/* Content */}
       <div className="relative z-10 flex min-h-[85vh] flex-col items-center justify-center px-4 text-center">

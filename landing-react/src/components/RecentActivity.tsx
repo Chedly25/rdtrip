@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { MapPin, Clock } from 'lucide-react'
 
 interface RecentRoute {
-  destination: string
+  destination: string | { name: string; country?: string; coordinates?: number[] }
   createdAt: string
   agents: string[]
 }
@@ -76,7 +76,7 @@ export function RecentActivity() {
 
   if (isLoading) {
     return (
-      <div className="h-12 w-full max-w-md animate-pulse rounded-lg bg-white/10" />
+      <div className="h-12 w-full max-w-md animate-pulse rounded-lg bg-gray-200" />
     )
   }
 
@@ -86,6 +86,12 @@ export function RecentActivity() {
 
   const currentRoute = recentRoutes[currentIndex]
 
+  // Handle destination being either string or object
+  const getDestinationName = (dest: string | { name: string; country?: string }): string => {
+    if (typeof dest === 'string') return dest
+    return dest.name
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -93,11 +99,11 @@ export function RecentActivity() {
       transition={{ duration: 0.6, delay: 0.5 }}
       className="w-full max-w-2xl"
     >
-      <div className="overflow-hidden rounded-xl bg-white/10 backdrop-blur-sm">
+      <div className="overflow-hidden rounded-xl bg-white border border-gray-200 shadow-md">
         <div className="px-6 py-4">
           <div className="mb-2 flex items-center gap-2">
-            <div className="h-2 w-2 animate-pulse rounded-full bg-green-400" />
-            <p className="text-xs font-medium uppercase tracking-wide text-white/70">
+            <div className="h-2 w-2 animate-pulse rounded-full bg-green-500" />
+            <p className="text-xs font-semibold uppercase tracking-wider text-gray-600">
               Recent Activity
             </p>
           </div>
@@ -112,14 +118,14 @@ export function RecentActivity() {
               className="flex items-center justify-between"
             >
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/20">
-                  <MapPin className="h-5 w-5 text-white" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100">
+                  <MapPin className="h-5 w-5 text-gray-900" />
                 </div>
                 <div>
-                  <p className="font-semibold text-white">
-                    Aix-en-Provence → {currentRoute.destination}
+                  <p className="font-semibold text-gray-900">
+                    Aix-en-Provence → {getDestinationName(currentRoute.destination)}
                   </p>
-                  <div className="flex items-center gap-2 text-sm text-white/70">
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
                     <Clock className="h-3 w-3" />
                     <span>{getTimeAgo(currentRoute.createdAt)}</span>
                     {currentRoute.agents && currentRoute.agents.length > 0 && (
@@ -152,8 +158,8 @@ export function RecentActivity() {
                   onClick={() => setCurrentIndex(index)}
                   className={`h-1.5 rounded-full transition-all ${
                     index === currentIndex
-                      ? 'w-6 bg-white'
-                      : 'w-1.5 bg-white/30 hover:bg-white/50'
+                      ? 'w-6 bg-gray-900'
+                      : 'w-1.5 bg-gray-300 hover:bg-gray-500'
                   }`}
                   aria-label={`View route ${index + 1}`}
                 />
