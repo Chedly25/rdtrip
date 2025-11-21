@@ -77,14 +77,6 @@ export function RouteGenerationLoading({ progress, destination, agents }: RouteG
   }
 
   // Get current agent metadata
-  const getCurrentAgentColor = (): string => {
-    if (!progress.currentAgent) return '#4B5563'
-    const agentKey = agents.find(a =>
-      agentMetadata[a]?.name === progress.currentAgent
-    )
-    return agentKey ? agentMetadata[agentKey].color : '#4B5563'
-  }
-
   const getCurrentAgentDescription = (): string => {
     if (!progress.currentAgent) return 'Preparing your route...'
     const agentKey = agents.find(a =>
@@ -95,50 +87,68 @@ export function RouteGenerationLoading({ progress, destination, agents }: RouteG
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="w-full max-w-2xl mx-auto p-8 bg-white rounded-2xl shadow-xl"
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
+      className="w-full max-w-2xl mx-auto p-8 bg-white rounded-3xl shadow-2xl border border-gray-100"
     >
       {/* Header */}
-      <div className="text-center mb-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+      <div className="text-center mb-10">
+        <motion.h2
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="text-3xl font-bold text-gray-900 mb-3 tracking-tight"
+        >
           Creating your perfect route to {destination}
-        </h2>
-        <p className="text-gray-600">
+        </motion.h2>
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
+          className="text-base text-gray-600"
+        >
           Our AI agents are crafting the ideal itinerary for you
-        </p>
+        </motion.p>
       </div>
 
       {/* Progress Bar */}
-      <div className="mb-8">
-        <div className="flex justify-between items-center mb-2">
-          <span className="text-sm font-medium text-gray-700">
+      <div className="mb-10">
+        <div className="flex justify-between items-center mb-3">
+          <span className="text-sm font-semibold text-gray-900 tracking-wide">
             {progress.percentComplete}% Complete
           </span>
-          <div className="flex items-center text-sm text-gray-600">
-            <Clock className="w-4 h-4 mr-1" />
-            {formatTimeRemaining(progress.estimatedTimeRemaining)}
+          <div className="flex items-center gap-1.5 text-sm text-gray-500">
+            <Clock className="w-4 h-4" />
+            <span className="font-medium">{formatTimeRemaining(progress.estimatedTimeRemaining)}</span>
           </div>
         </div>
 
-        <div className="relative h-3 bg-gray-200 rounded-full overflow-hidden">
+        <div className="relative h-2 bg-gray-100 rounded-full overflow-hidden">
           <motion.div
-            className="absolute top-0 left-0 h-full rounded-full"
-            style={{
-              backgroundColor: getCurrentAgentColor(),
-            }}
+            className="absolute top-0 left-0 h-full rounded-full bg-gradient-to-r from-gray-800 to-gray-900"
             initial={{ width: '0%' }}
             animate={{ width: `${progress.percentComplete}%` }}
-            transition={{ duration: 0.5, ease: 'easeOut' }}
+            transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
           >
-            {/* Shimmer effect */}
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse" />
+            {/* Premium shimmer effect */}
+            <motion.div
+              className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
+              animate={{
+                x: ['-100%', '200%']
+              }}
+              transition={{
+                duration: 1.5,
+                repeat: Infinity,
+                ease: 'linear'
+              }}
+            />
           </motion.div>
         </div>
       </div>
 
       {/* Agent Status Cards */}
-      <div className="mb-8 space-y-3">
+      <div className="mb-8 space-y-2">
         {agents.map((agentKey) => {
           const agent = agentMetadata[agentKey]
           if (!agent) return null
@@ -150,76 +160,84 @@ export function RouteGenerationLoading({ progress, destination, agents }: RouteG
           return (
             <motion.div
               key={agentKey}
-              initial={{ opacity: 0, x: -20 }}
+              initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: agentIndex * 0.1 }}
-              className={`flex items-center p-4 rounded-lg border-2 transition-all ${
-                isCompleted
-                  ? 'border-green-500 bg-green-50'
-                  : isCurrent
-                  ? 'border-current bg-white shadow-md'
-                  : 'border-gray-200 bg-gray-50'
-              }`}
-              style={{
-                borderColor: isCurrent ? agent.color : undefined,
+              transition={{
+                delay: agentIndex * 0.08,
+                duration: 0.3,
+                ease: [0.23, 1, 0.32, 1]
               }}
+              className={`flex items-center p-4 rounded-xl border transition-all duration-300 ${
+                isCompleted
+                  ? 'border-gray-900 bg-gray-50'
+                  : isCurrent
+                  ? 'border-gray-900 bg-white shadow-lg'
+                  : 'border-gray-200 bg-gray-50/50'
+              }`}
             >
               {/* Icon/Status */}
-              <div className="flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-full mr-4"
-                style={{
-                  backgroundColor: isCompleted || isCurrent ? agent.color + '20' : '#F3F4F6'
-                }}
-              >
+              <div className={`flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-full mr-3 transition-all ${
+                isCompleted
+                  ? 'bg-gray-900'
+                  : isCurrent
+                  ? 'bg-gray-900'
+                  : 'bg-gray-200'
+              }`}>
                 {isCompleted ? (
                   <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ type: 'spring', stiffness: 200 }}
+                    initial={{ scale: 0, rotate: -180 }}
+                    animate={{ scale: 1, rotate: 0 }}
+                    transition={{
+                      type: 'spring',
+                      stiffness: 300,
+                      damping: 20
+                    }}
                   >
-                    <Check className="w-6 h-6 text-green-600" strokeWidth={3} />
+                    <Check className="w-5 h-5 text-white" strokeWidth={2.5} />
                   </motion.div>
                 ) : isCurrent ? (
                   <motion.div
                     animate={{ rotate: 360 }}
-                    transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+                    transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
                   >
-                    <Loader2 className="w-6 h-6" style={{ color: agent.color }} />
+                    <Loader2 className="w-5 h-5 text-white" strokeWidth={2.5} />
                   </motion.div>
                 ) : (
-                  <img
-                    src={agent.iconPath}
-                    alt={agent.name}
-                    className="w-6 h-6 opacity-40 object-contain"
-                  />
+                  <div className="w-2 h-2 rounded-full bg-gray-400" />
                 )}
               </div>
 
               {/* Agent Info */}
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2.5">
                   <img
                     src={agent.iconPath}
                     alt={agent.name}
-                    className="w-5 h-5 object-contain"
-                    style={{ opacity: isCompleted || isCurrent ? 1 : 0.4 }}
+                    className="w-5 h-5 object-contain transition-opacity"
+                    style={{ opacity: isCompleted || isCurrent ? 1 : 0.3 }}
                   />
-                  <span className="text-lg font-semibold" style={{
-                    color: isCompleted || isCurrent ? agent.color : '#6B7280'
-                  }}>
-                    {agent.name} Agent
+                  <span className={`text-base font-semibold transition-colors ${
+                    isCompleted || isCurrent ? 'text-gray-900' : 'text-gray-400'
+                  }`}>
+                    {agent.name}
                   </span>
                   {isCompleted && (
-                    <span className="text-xs font-medium text-green-600 bg-green-100 px-2 py-1 rounded">
+                    <motion.span
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="text-xs font-medium text-gray-600 bg-gray-200 px-2.5 py-0.5 rounded-full"
+                    >
                       Complete
-                    </span>
+                    </motion.span>
                   )}
                 </div>
 
                 {isCurrent && (
                   <motion.p
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="text-sm text-gray-600 mt-1"
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    transition={{ duration: 0.2 }}
+                    className="text-sm text-gray-600 mt-1.5"
                   >
                     {getCurrentAgentDescription()}
                   </motion.p>
@@ -231,21 +249,21 @@ export function RouteGenerationLoading({ progress, destination, agents }: RouteG
       </div>
 
       {/* Fun Facts */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6 border border-blue-100">
-        <div className="flex items-start gap-3">
-          <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center">
-            <span className="text-white text-lg">💡</span>
+      <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
+        <div className="flex items-start gap-4">
+          <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gray-900 flex items-center justify-center">
+            <span className="text-white text-base font-semibold">i</span>
           </div>
-          <div className="flex-1">
-            <h3 className="text-sm font-semibold text-gray-900 mb-1">Travel Tip</h3>
+          <div className="flex-1 pt-0.5">
+            <h3 className="text-sm font-semibold text-gray-900 mb-2 tracking-wide uppercase">Travel Tip</h3>
             <AnimatePresence mode="wait">
               <motion.p
                 key={currentFactIndex}
-                initial={{ opacity: 0, y: 10 }}
+                initial={{ opacity: 0, y: 5 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.3 }}
-                className="text-sm text-gray-700"
+                exit={{ opacity: 0, y: -5 }}
+                transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
+                className="text-sm text-gray-700 leading-relaxed"
               >
                 {travelFacts[currentFactIndex]}
               </motion.p>
@@ -255,20 +273,21 @@ export function RouteGenerationLoading({ progress, destination, agents }: RouteG
       </div>
 
       {/* Subtle animation indicator */}
-      <div className="mt-6 flex justify-center">
-        <div className="flex gap-2">
+      <div className="mt-8 flex justify-center">
+        <div className="flex gap-1.5">
           {[0, 1, 2].map((i) => (
             <motion.div
               key={i}
-              className="w-2 h-2 bg-gray-400 rounded-full"
+              className="w-1.5 h-1.5 bg-gray-900 rounded-full"
               animate={{
-                scale: [1, 1.5, 1],
+                scale: [1, 1.3, 1],
                 opacity: [0.3, 1, 0.3],
               }}
               transition={{
                 duration: 1.5,
                 repeat: Infinity,
-                delay: i * 0.2,
+                delay: i * 0.15,
+                ease: 'easeInOut'
               }}
             />
           ))}

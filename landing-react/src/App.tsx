@@ -15,6 +15,7 @@ import MyRoutes from './pages/MyRoutes'
 import SharedRoute from './pages/SharedRoute'
 import MarketplacePage from './pages/MarketplacePage'
 import RouteDetailPage from './pages/RouteDetailPage'
+import SpotlightPage from './pages/SpotlightPage'
 import './App.css'
 
 const queryClient = new QueryClient()
@@ -54,7 +55,8 @@ function HomePage() {
         : routeData
 
       localStorage.setItem('spotlightData', JSON.stringify(dataToStore))
-      window.location.href = `/spotlight-new/?routeId=${routeData.id || Date.now()}&agent=${agent || 'adventure'}`
+      // Use new React-based spotlight page
+      window.location.href = `/spotlight/${routeData.id || Date.now()}`
     }
   }
 
@@ -104,6 +106,7 @@ function App() {
             <Route path="/shared/:token" element={<SharedRoute />} />
             <Route path="/marketplace" element={<MarketplacePage />} />
             <Route path="/marketplace/:slug" element={<RouteDetailPage />} />
+            <Route path="/spotlight/:routeId" element={<SpotlightPage />} />
           </Routes>
           <Footer />
         </div>

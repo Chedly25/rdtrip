@@ -29,13 +29,6 @@ interface CityCardProps {
   onClick?: () => void
 }
 
-const themeColors: Record<string, string> = {
-  adventure: '#055948',
-  culture: '#a87600',
-  food: '#650411',
-  'hidden-gems': '#081d5b'
-}
-
 const themeNames: Record<string, string> = {
   adventure: 'Adventure',
   culture: 'Culture',
@@ -43,7 +36,7 @@ const themeNames: Record<string, string> = {
   'hidden-gems': 'Hidden Gems'
 }
 
-export function CityCard({ city, index, themeColor, showThemeBadges = false, themes = [], onClick }: CityCardProps) {
+export function CityCard({ city, index, showThemeBadges = false, themes = [], onClick }: CityCardProps) {
   const [imageUrl, setImageUrl] = useState<string | null>(city.image || city.imageUrl || null)
   const [loading, setLoading] = useState(!city.image && !city.imageUrl)
   const [showFallback, setShowFallback] = useState(false)
@@ -94,69 +87,59 @@ export function CityCard({ city, index, themeColor, showThemeBadges = false, the
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ delay: index * 0.1 }}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.05, duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
       onClick={onClick}
-      className="group overflow-hidden rounded-2xl bg-white shadow-lg transition-all hover:shadow-2xl hover:-translate-y-2 cursor-pointer"
+      className="group overflow-hidden rounded-2xl bg-white border border-gray-200 transition-all duration-300 ease-smooth hover:shadow-lg hover:-translate-y-1 cursor-pointer"
     >
       {/* City Image */}
-      <div className="relative h-64 w-full overflow-hidden">
+      <div className="relative h-56 w-full overflow-hidden">
         {loading ? (
-          <div
-            className="flex h-full items-center justify-center"
-            style={{
-              background: `linear-gradient(135deg, ${themeColor}, ${themeColor}dd)`
-            }}
-          >
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-white border-t-transparent" />
+          <div className="flex h-full items-center justify-center bg-gray-100">
+            <div className="h-8 w-8 animate-spin rounded-full border-3 border-gray-300 border-t-gray-900" />
           </div>
         ) : imageUrl && !showFallback ? (
-          <img
-            src={imageUrl}
-            alt={cityName}
-            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110"
-            onError={() => setShowFallback(true)}
-          />
+          <>
+            <img
+              src={imageUrl}
+              alt={cityName}
+              className="h-full w-full object-cover transition-transform duration-700 ease-smooth group-hover:scale-105"
+              onError={() => setShowFallback(true)}
+            />
+            {/* Subtle gradient overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          </>
         ) : (
-          <div
-            className="flex h-full items-center justify-center"
-            style={{
-              background: `linear-gradient(135deg, ${themeColor}, ${themeColor}dd)`
-            }}
-          >
-            <MapPin className="h-16 w-16 text-white/50" />
+          <div className="flex h-full items-center justify-center bg-gray-100">
+            <MapPin className="h-12 w-12 text-gray-400" />
           </div>
         )}
       </div>
 
       {/* City Content */}
       <div className="p-6">
-        <h4
-          className="mb-3 text-2xl font-bold transition-colors"
-          style={{ color: themeColor }}
-        >
-          {cityName}
-        </h4>
+        <div className="flex items-start justify-between mb-3">
+          <h4 className="text-xl font-bold text-gray-900 tracking-tight">
+            {cityName}
+          </h4>
 
-        {/* Duration Badge */}
-        {city.nights !== undefined && (
-          <div className="flex items-center gap-2 mb-3 text-sm">
-            <Calendar className="h-4 w-4" style={{ color: themeColor }} />
-            <span className="font-semibold text-gray-700">
-              {city.nights} {city.nights === 1 ? 'night' : 'nights'}
-            </span>
-          </div>
-        )}
+          {/* Duration Badge */}
+          {city.nights !== undefined && (
+            <div className="flex items-center gap-1.5 px-3 py-1 bg-gray-100 rounded-full text-xs font-semibold text-gray-700">
+              <Calendar className="h-3.5 w-3.5" />
+              <span>{city.nights}n</span>
+            </div>
+          )}
+        </div>
 
         {/* Theme Badges for Best Overall */}
         {showThemeBadges && themes.length > 0 && (
-          <div className="mb-3 flex flex-wrap gap-2">
+          <div className="mb-3 flex flex-wrap gap-1.5">
             {themes.map((theme) => (
               <span
                 key={theme}
-                className="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium text-white"
-                style={{ backgroundColor: themeColors[theme] || '#6b7280' }}
+                className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium bg-gray-100 text-gray-700"
               >
                 {themeNames[theme] || theme}
               </span>
@@ -165,14 +148,14 @@ export function CityCard({ city, index, themeColor, showThemeBadges = false, the
         )}
 
         {cityDescription && (
-          <p className="mb-4 text-sm text-gray-600 line-clamp-2">
+          <p className="mb-4 text-sm text-gray-600 line-clamp-2 leading-relaxed">
             {cityDescription}
           </p>
         )}
 
         {cityActivities && cityActivities.length > 0 && (
           <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+            <p className="mb-2.5 text-xs font-semibold uppercase tracking-wider text-gray-500">
               Highlights
             </p>
             <ul className="space-y-2">
@@ -184,13 +167,10 @@ export function CityCard({ city, index, themeColor, showThemeBadges = false, the
                 return (
                   <li
                     key={actIndex}
-                    className="flex items-start gap-2 text-sm text-gray-700"
+                    className="flex items-start gap-2.5 text-sm text-gray-700"
                   >
-                    <div
-                      className="mt-1.5 h-2 w-2 flex-shrink-0 rounded-full"
-                      style={{ backgroundColor: themeColor }}
-                    />
-                    <span>{activityText}</span>
+                    <div className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-gray-900" />
+                    <span className="leading-relaxed">{activityText}</span>
                   </li>
                 )
               })}

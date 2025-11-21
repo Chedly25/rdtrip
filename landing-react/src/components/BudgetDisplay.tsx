@@ -102,31 +102,28 @@ export function BudgetDisplay({ budgetData, loading, themeColor }: BudgetDisplay
   }
 
   return (
-    <div className="rounded-xl bg-white p-6 shadow-lg">
+    <div className="rounded-2xl bg-gray-50 p-6 border border-gray-200">
       {/* Summary Header */}
       <div className="flex items-start justify-between">
-        <div className="flex items-start gap-3 flex-1">
-          <div
-            className="flex h-12 w-12 items-center justify-center rounded-full"
-            style={{ backgroundColor: themeColor + '20' }}
-          >
-            <DollarSign className="h-6 w-6" style={{ color: themeColor }} />
+        <div className="flex items-start gap-4 flex-1">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gray-900">
+            <DollarSign className="h-6 w-6 text-white" />
           </div>
           <div className="flex-1">
-            <h4 className="text-sm font-semibold uppercase tracking-wide text-gray-600">
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-500">
               Estimated Cost
             </h4>
-            <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-3xl font-bold text-gray-900">
+            <div className="mt-1.5 flex items-baseline gap-2">
+              <span className="text-3xl font-bold text-gray-900 tracking-tight">
                 €{budgetData.summary.total.toLocaleString()}
               </span>
-              <span className="text-base text-gray-600">total</span>
+              <span className="text-sm text-gray-600">total</span>
             </div>
-            <div className="mt-1 flex items-center gap-2">
-              <span className="text-lg text-gray-700">
-                €{budgetData.summary.perPerson.toLocaleString()} <span className="text-sm text-gray-500">per person</span>
+            <div className="mt-1.5 flex items-center gap-2 flex-wrap">
+              <span className="text-base text-gray-700 font-medium">
+                €{budgetData.summary.perPerson.toLocaleString()} <span className="text-sm text-gray-500 font-normal">per person</span>
               </span>
-              <span className={`text-xs font-semibold px-2 py-1 rounded-full ${confidenceColors[budgetData.summary.confidence]}`}>
+              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${confidenceColors[budgetData.summary.confidence]}`}>
                 {confidenceLabels[budgetData.summary.confidence]}
               </span>
             </div>
@@ -136,7 +133,7 @@ export function BudgetDisplay({ budgetData, loading, themeColor }: BudgetDisplay
         {/* Expand/Collapse Button */}
         <button
           onClick={() => setShowDetails(!showDetails)}
-          className="ml-2 flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+          className="ml-2 flex items-center gap-1.5 rounded-xl bg-white border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition-all duration-200 ease-smooth hover:bg-gray-50 hover:border-gray-300"
         >
           {showDetails ? (
             <>
@@ -154,32 +151,32 @@ export function BudgetDisplay({ budgetData, loading, themeColor }: BudgetDisplay
 
       {/* Budget Breakdown Bar */}
       {budgetData.transportation && budgetData.accommodation && budgetData.dining && budgetData.activities && (
-        <div className="mt-4">
-          <div className="h-3 w-full overflow-hidden rounded-full bg-gray-100">
+        <div className="mt-5">
+          <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
             <div className="flex h-full">
               <div
-                className="bg-blue-500"
+                className="bg-gray-900"
                 style={{
                   width: `${((budgetData.transportation.fuel.total + budgetData.transportation.tolls.total + budgetData.transportation.parking.total) / budgetData.summary.total) * 100}%`
                 }}
                 title="Transportation"
               />
               <div
-                className="bg-purple-500"
+                className="bg-gray-700"
                 style={{
                   width: `${(budgetData.accommodation.total / budgetData.summary.total) * 100}%`
                 }}
                 title="Accommodation"
               />
               <div
-                className="bg-orange-500"
+                className="bg-gray-500"
                 style={{
                   width: `${(budgetData.dining.total / budgetData.summary.total) * 100}%`
                 }}
                 title="Dining"
               />
               <div
-                className="bg-green-500"
+                className="bg-gray-400"
                 style={{
                   width: `${(budgetData.activities.total / budgetData.summary.total) * 100}%`
                 }}
@@ -187,7 +184,7 @@ export function BudgetDisplay({ budgetData, loading, themeColor }: BudgetDisplay
               />
               {budgetData.misc && (
                 <div
-                  className="bg-gray-400"
+                  className="bg-gray-300"
                   style={{
                     width: `${(budgetData.misc.total / budgetData.summary.total) * 100}%`
                   }}
@@ -196,27 +193,27 @@ export function BudgetDisplay({ budgetData, loading, themeColor }: BudgetDisplay
               )}
             </div>
           </div>
-          <div className="mt-2 flex flex-wrap gap-3 text-xs">
-            <div className="flex items-center gap-1">
-              <div className="h-3 w-3 rounded-full bg-blue-500"></div>
-              <span className="text-gray-600">Transport</span>
+          <div className="mt-3 flex flex-wrap gap-4 text-xs font-medium">
+            <div className="flex items-center gap-1.5">
+              <div className="h-2.5 w-2.5 rounded-full bg-gray-900"></div>
+              <span className="text-gray-700">Transport</span>
             </div>
-            <div className="flex items-center gap-1">
-              <div className="h-3 w-3 rounded-full bg-purple-500"></div>
-              <span className="text-gray-600">Hotels</span>
+            <div className="flex items-center gap-1.5">
+              <div className="h-2.5 w-2.5 rounded-full bg-gray-700"></div>
+              <span className="text-gray-700">Hotels</span>
             </div>
-            <div className="flex items-center gap-1">
-              <div className="h-3 w-3 rounded-full bg-orange-500"></div>
-              <span className="text-gray-600">Food</span>
+            <div className="flex items-center gap-1.5">
+              <div className="h-2.5 w-2.5 rounded-full bg-gray-500"></div>
+              <span className="text-gray-700">Food</span>
             </div>
-            <div className="flex items-center gap-1">
-              <div className="h-3 w-3 rounded-full bg-green-500"></div>
-              <span className="text-gray-600">Activities</span>
+            <div className="flex items-center gap-1.5">
+              <div className="h-2.5 w-2.5 rounded-full bg-gray-400"></div>
+              <span className="text-gray-700">Activities</span>
             </div>
             {budgetData.misc && (
-              <div className="flex items-center gap-1">
-                <div className="h-3 w-3 rounded-full bg-gray-400"></div>
-                <span className="text-gray-600">Misc</span>
+              <div className="flex items-center gap-1.5">
+                <div className="h-2.5 w-2.5 rounded-full bg-gray-300"></div>
+                <span className="text-gray-700">Misc</span>
               </div>
             )}
           </div>
