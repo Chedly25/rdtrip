@@ -50,8 +50,8 @@ export default {
         },
       },
       fontFamily: {
-        // Revolut uses Aeonik Pro for marketing, Inter for UI
-        marketing: ['Aeonik Pro', 'Inter', 'system-ui', 'sans-serif'],
+        // Plus Jakarta Sans for marketing (similar to Aeonik Pro), Inter for UI
+        marketing: ['Plus Jakarta Sans', 'Inter', 'system-ui', 'sans-serif'],
         display: ['Inter', 'system-ui', 'sans-serif'],
         body: ['Inter', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono', 'SF Mono', 'monospace'],
