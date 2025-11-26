@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
+import { useEffect } from 'react'
+import { BrowserRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Navigation } from './components/Navigation'
 import { Hero } from './components/Hero'
@@ -8,7 +8,6 @@ import { BeforeAfterComparison } from './components/BeforeAfterComparison'
 import { DestinationShowcase } from './components/DestinationShowcase'
 import { Features } from './components/Features'
 import { RouteForm } from './components/RouteForm'
-import { RouteResults } from './components/RouteResults'
 import { About } from './components/About'
 import { Footer } from './components/Footer'
 import MyRoutes from './pages/MyRoutes'
@@ -21,155 +20,163 @@ import './App.css'
 const queryClient = new QueryClient()
 
 /**
- * Transform unified route format to legacy agentResults format
- * This allows RouteResults component to work without major changes
+ * Transform route data to Spotlight format
+ * Extracts cities with proper coordinate format [lng, lat] for Mapbox
  */
-function transformUnifiedToLegacy(data: any): any {
-  // If it already has agentResults, return as-is (old format)
-  if (data.agentResults && data.agentResults.length > 0) {
-    return data
-  }
+function transformToSpotlightFormat(data: any): {
+  id: string
+  cities: Array<{
+    name: string
+    country?: string
+    coordinates: [number, number] // [lng, lat] for Mapbox
+    nights?: number
+    description?: string
+    highlights?: string[]
+    activities?: any[]
+    restaurants?: any[]
+    hotels?: any[]
+  }>
+  origin: { name: string; country?: string; coordinates: [number, number] }
+  destination: { name: string; country?: string; coordinates: [number, number]; nights?: number }
+  totalNights: number
+  narrative?: string
+} {
+  const routeId = data.id || `route_${Date.now()}`
 
-  // Check if it's a unified format (has route.waypoints)
+  // Handle unified format (route.waypoints)
   if (data.route && data.route.waypoints) {
-    const { route, origin, destination, totalNights, budget, preferences, id } = data
+    const { route, origin, destination, totalNights } = data
 
-    // Build the recommendations object matching old format
-    const recommendations = {
+    // Convert coordinates from [lat, lng] to [lng, lat] for Mapbox
+    const toMapboxCoords = (coords: [number, number]): [number, number] => {
+      if (!coords || coords.length !== 2) return [0, 0]
+      return [coords[1], coords[0]] // Swap lat/lng to lng/lat
+    }
+
+    const cities = route.waypoints.map((wp: any) => ({
+      name: wp.name,
+      country: wp.country,
+      coordinates: toMapboxCoords(wp.coordinates),
+      nights: wp.nights || 2,
+      description: wp.why_this_stop || wp.description || '',
+      highlights: wp.highlights || [],
+      activities: wp.activities || [],
+      restaurants: wp.restaurants || [],
+      hotels: wp.hotels || []
+    }))
+
+    return {
+      id: routeId,
+      cities,
       origin: {
-        city: origin.name,
         name: origin.name,
         country: origin.country,
-        latitude: origin.coordinates?.[0],
-        longitude: origin.coordinates?.[1]
+        coordinates: toMapboxCoords(origin.coordinates)
       },
       destination: {
-        city: destination.name,
         name: destination.name,
         country: destination.country,
-        nights: route.destination?.nights || Math.ceil(totalNights * 0.2),
-        latitude: destination.coordinates?.[0],
-        longitude: destination.coordinates?.[1]
+        coordinates: toMapboxCoords(destination.coordinates),
+        nights: route.destination?.nights || Math.ceil(totalNights * 0.2)
       },
-      waypoints: route.waypoints.map((wp: any) => ({
-        city: wp.name,
-        name: wp.name,
-        country: wp.country,
-        nights: wp.nights || 2,
-        description: wp.why_this_stop || wp.description || '',
-        highlights: wp.highlights || [],
-        activities: wp.activities || [],
-        restaurants: wp.restaurants || [],
-        hotels: wp.hotels || [],
-        coordinates: wp.coordinates,
-        relevance_score: wp.relevance_score,
-        interest_matches: wp.interest_matches
-      })),
-      alternatives: [],
-      narrative: route.narrative || '',
-      metrics: route.metrics || {}
-    }
-
-    // Create a single "Your Route" agent result
-    return {
-      id,
-      origin: origin.name,
-      destination: destination.name,
       totalNights,
-      budget,
-      preferences,
-      agentResults: [
-        {
-          agent: 'your-route',
-          agentConfig: {
-            name: 'Your Perfect Route',
-            color: '#191C1F',
-            icon: '/images/icons/best_icon.png'
-          },
-          recommendations: JSON.stringify(recommendations),
-          metrics: route.metrics || {}
-        }
-      ]
+      narrative: route.narrative
     }
   }
 
-  // Fallback: return as-is
-  return data
+  // Handle legacy agentResults format
+  if (data.agentResults && data.agentResults.length > 0) {
+    const agentResult = data.agentResults[0]
+    let parsedRecs: any = {}
+
+    try {
+      parsedRecs = JSON.parse(agentResult.recommendations)
+    } catch {
+      parsedRecs = {}
+    }
+
+    const toMapboxCoords = (lat: number, lng: number): [number, number] => [lng, lat]
+
+    const waypoints = Array.isArray(parsedRecs.waypoints) ? parsedRecs.waypoints : []
+
+    const cities = waypoints.map((wp: any) => ({
+      name: wp.city || wp.name,
+      country: wp.country,
+      coordinates: wp.coordinates
+        ? [wp.coordinates[1], wp.coordinates[0]] as [number, number] // Swap if stored as [lat, lng]
+        : toMapboxCoords(wp.latitude || 0, wp.longitude || 0),
+      nights: wp.nights || 2,
+      description: wp.why || wp.description || '',
+      highlights: wp.highlights || [],
+      activities: wp.activities || [],
+      restaurants: wp.restaurants || [],
+      hotels: wp.hotels || []
+    }))
+
+    return {
+      id: routeId,
+      cities,
+      origin: {
+        name: parsedRecs.origin?.city || parsedRecs.origin?.name || data.origin,
+        country: parsedRecs.origin?.country,
+        coordinates: toMapboxCoords(
+          parsedRecs.origin?.latitude || 0,
+          parsedRecs.origin?.longitude || 0
+        )
+      },
+      destination: {
+        name: parsedRecs.destination?.city || parsedRecs.destination?.name || data.destination,
+        country: parsedRecs.destination?.country,
+        coordinates: toMapboxCoords(
+          parsedRecs.destination?.latitude || 0,
+          parsedRecs.destination?.longitude || 0
+        ),
+        nights: parsedRecs.destination?.nights
+      },
+      totalNights: data.totalNights || waypoints.reduce((sum: number, wp: any) => sum + (wp.nights || 2), 0),
+      narrative: parsedRecs.narrative
+    }
+  }
+
+  // Fallback empty response
+  return {
+    id: routeId,
+    cities: [],
+    origin: { name: 'Unknown', coordinates: [0, 0] },
+    destination: { name: 'Unknown', coordinates: [0, 0] },
+    totalNights: 0
+  }
 }
 
 function HomePage() {
   const location = useLocation()
-  const [routeData, setRouteData] = useState<any>(null)
-  const [showResults, setShowResults] = useState(false)
+  const navigate = useNavigate()
 
-  // Handle route data passed from MyRoutes page
+  // Handle route data passed from MyRoutes page - redirect to Spotlight
   useEffect(() => {
     if (location.state?.routeData) {
-      const transformed = transformUnifiedToLegacy(location.state.routeData)
-      setRouteData(transformed)
-      setShowResults(true)
-      window.scrollTo({ top: 0, behavior: 'smooth' })
+      const spotlightData = transformToSpotlightFormat(location.state.routeData)
+      localStorage.setItem('spotlightData', JSON.stringify(spotlightData))
+      navigate(`/spotlight/${spotlightData.id}`)
     }
-  }, [location.state])
+  }, [location.state, navigate])
 
   const handleRouteGenerated = (data: any) => {
-    // Transform unified format to legacy format for RouteResults compatibility
-    const transformed = transformUnifiedToLegacy(data)
-    setRouteData(transformed)
-    setShowResults(true)
-    // Scroll to results
-    setTimeout(() => {
-      window.scrollTo({ top: 0, behavior: 'smooth' })
-    }, 100)
-  }
-
-  const handleViewMap = (agent?: string) => {
-    if (routeData) {
-      // If agent is specified, filter the route data to only that agent
-      const dataToStore = agent
-        ? {
-            ...routeData,
-            agentResults: routeData.agentResults.filter((ar: any) => ar.agent === agent),
-            agent: agent // Set the primary agent
-          }
-        : routeData
-
-      localStorage.setItem('spotlightData', JSON.stringify(dataToStore))
-      // Use new React-based spotlight page
-      window.location.href = `/spotlight/${routeData.id || Date.now()}`
-    }
-  }
-
-  const handleStartOver = () => {
-    setShowResults(false)
-    setRouteData(null)
-    setTimeout(() => {
-      const formElement = document.getElementById('route-form')
-      formElement?.scrollIntoView({ behavior: 'smooth' })
-    }, 100)
+    // Transform to Spotlight format and navigate directly
+    const spotlightData = transformToSpotlightFormat(data)
+    localStorage.setItem('spotlightData', JSON.stringify(spotlightData))
+    navigate(`/spotlight/${spotlightData.id}`)
   }
 
   return (
     <>
-      {!showResults ? (
-        <>
-          <Hero />
-          <WorkflowShowcase />
-          <BeforeAfterComparison />
-          <DestinationShowcase />
-          <RouteForm onRouteGenerated={handleRouteGenerated} />
-          <Features />
-          <About />
-        </>
-      ) : (
-        <div className="pt-20">
-          <RouteResults
-            routeData={routeData}
-            onViewMap={handleViewMap}
-            onStartOver={handleStartOver}
-          />
-        </div>
-      )}
+      <Hero />
+      <WorkflowShowcase />
+      <BeforeAfterComparison />
+      <DestinationShowcase />
+      <RouteForm onRouteGenerated={handleRouteGenerated} />
+      <Features />
+      <About />
     </>
   )
 }
