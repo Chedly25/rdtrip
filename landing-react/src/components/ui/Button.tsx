@@ -1,12 +1,16 @@
-import { forwardRef, type ButtonHTMLAttributes } from 'react';
-import { cn } from '../../lib/utils';
+import { forwardRef, type ButtonHTMLAttributes } from 'react'
+import { cn } from '../../lib/utils'
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'ghost' | 'outline';
-  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
-  isLoading?: boolean;
+  variant?: 'primary' | 'secondary' | 'ghost' | 'outline' | 'accent'
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
+  isLoading?: boolean
+  rounded?: boolean
 }
 
+/**
+ * Button component with Revolut-style state layer hover effect
+ */
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   (
     {
@@ -14,6 +18,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       variant = 'primary',
       size = 'md',
       isLoading = false,
+      rounded = false,
       disabled,
       children,
       ...props
@@ -21,51 +26,62 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     ref
   ) => {
     const baseStyles = cn(
-      // Base styles
-      'relative overflow-hidden',
-      'font-medium tracking-wide',
-      'rounded-xl',
-      'transition-all duration-200 ease-smooth',
-      'transform active:scale-[0.98]',
-      'focus:outline-none focus:ring-2 focus:ring-offset-2',
-      'disabled:opacity-50 disabled:cursor-not-allowed',
-      // Ripple effect
-      'before:absolute before:inset-0',
-      'before:bg-white before:opacity-0',
-      'hover:before:opacity-10',
-      'before:transition-opacity before:duration-300'
-    );
+      // Base
+      'group relative inline-flex items-center justify-center gap-2',
+      'font-semibold',
+      'overflow-hidden',
+      // Transitions - Revolut easing
+      'transition-all duration-rui-sm ease-rui-default',
+      // Active state
+      'active:scale-[0.98]',
+      // Focus
+      'focus:outline-none focus-visible:ring-2 focus-visible:ring-rui-accent focus-visible:ring-offset-2',
+      // Disabled
+      'disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100',
+      // Border radius
+      rounded ? 'rounded-full' : 'rounded-rui-12'
+    )
 
     const variants = {
       primary: cn(
-        'bg-gray-900 text-white hover:bg-gray-800',
-        'focus:ring-gray-900',
-        'dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100'
+        'bg-rui-black text-rui-white',
+        'hover:shadow-rui-2',
+        // State layer
+        '[&>.state-layer]:bg-white [&>.state-layer]:group-hover:opacity-10'
       ),
       secondary: cn(
-        'bg-gray-100 text-gray-900 hover:bg-gray-200',
-        'focus:ring-gray-500',
-        'dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700'
+        'bg-rui-grey-5 text-rui-black',
+        'hover:bg-rui-grey-8',
+        // State layer
+        '[&>.state-layer]:bg-rui-black [&>.state-layer]:group-hover:opacity-[0.04]'
       ),
       ghost: cn(
-        'bg-transparent text-gray-700 hover:bg-gray-100',
-        'focus:ring-gray-500',
-        'dark:text-gray-300 dark:hover:bg-gray-800'
+        'bg-transparent text-rui-grey-50',
+        'hover:text-rui-black',
+        // State layer
+        '[&>.state-layer]:bg-rui-black [&>.state-layer]:group-hover:opacity-[0.04]'
       ),
       outline: cn(
-        'border border-gray-200 bg-transparent text-gray-900 hover:bg-gray-50',
-        'focus:ring-gray-500',
-        'dark:border-gray-700 dark:text-white dark:hover:bg-gray-900'
+        'border border-rui-grey-20 bg-transparent text-rui-black',
+        'hover:border-rui-grey-50',
+        // State layer
+        '[&>.state-layer]:bg-rui-black [&>.state-layer]:group-hover:opacity-[0.04]'
       ),
-    };
+      accent: cn(
+        'bg-rui-accent text-white',
+        'hover:shadow-accent',
+        // State layer
+        '[&>.state-layer]:bg-white [&>.state-layer]:group-hover:opacity-10'
+      ),
+    }
 
     const sizes = {
       xs: 'px-3 py-1.5 text-xs',
       sm: 'px-4 py-2 text-sm',
-      md: 'px-6 py-2.5 text-base',
-      lg: 'px-8 py-3 text-lg',
-      xl: 'px-10 py-4 text-xl',
-    };
+      md: 'px-6 py-3 text-sm',
+      lg: 'px-8 py-3.5 text-base',
+      xl: 'px-10 py-4 text-base',
+    }
 
     return (
       <button
@@ -74,8 +90,15 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         disabled={disabled || isLoading}
         {...props}
       >
+        {/* State layer - Revolut's hover effect */}
+        <span
+          className="state-layer absolute inset-0 opacity-0 transition-opacity duration-rui-sm pointer-events-none"
+          aria-hidden="true"
+        />
+
+        {/* Content */}
         {isLoading ? (
-          <span className="flex items-center justify-center gap-2">
+          <span className="relative flex items-center gap-2">
             <svg
               className="animate-spin h-4 w-4"
               xmlns="http://www.w3.org/2000/svg"
@@ -99,13 +122,13 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
             <span>Loading...</span>
           </span>
         ) : (
-          children
+          <span className="relative">{children}</span>
         )}
       </button>
-    );
+    )
   }
-);
+)
 
-Button.displayName = 'Button';
+Button.displayName = 'Button'
 
-export default Button;
+export default Button

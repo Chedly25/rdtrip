@@ -1,78 +1,127 @@
-import { motion } from 'framer-motion'
-import { ArrowRight } from 'lucide-react'
+import { motion, useScroll, useTransform } from 'framer-motion'
+import { ArrowRight, ChevronDown } from 'lucide-react'
+import { useRef } from 'react'
 import { StatsBar } from './StatsBar'
 import { RecentActivity } from './RecentActivity'
 
+// Revolut easing curve
+const ruiEasing = [0.15, 0.5, 0.5, 1] as const
+
 export function Hero() {
+  const containerRef = useRef<HTMLElement>(null)
+
+  // Parallax scroll effect like Revolut
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ["start start", "end start"]
+  })
+
+  // Parallax transforms
+  const backgroundY = useTransform(scrollYProgress, [0, 1], ['0%', '30%'])
+  const backgroundScale = useTransform(scrollYProgress, [0, 1], [1, 1.1])
+  const contentOpacity = useTransform(scrollYProgress, [0, 0.5], [1, 0])
+  const contentY = useTransform(scrollYProgress, [0, 0.5], ['0%', '20%'])
+
   const scrollToForm = () => {
     const formElement = document.getElementById('route-form')
     formElement?.scrollIntoView({ behavior: 'smooth' })
   }
 
   return (
-    <section className="relative min-h-[85vh] w-full overflow-hidden bg-gradient-to-b from-gray-50 to-white">
-      {/* Subtle accent gradient */}
-      <div className="absolute inset-0 bg-gradient-to-br from-gray-900/[0.02] via-transparent to-gray-900/[0.02]" />
-
-      {/* Subtle noise texture for depth */}
-      <div
-        className="absolute inset-0 opacity-[0.015] mix-blend-overlay pointer-events-none"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
-        }}
-      />
+    <section
+      ref={containerRef}
+      className="relative min-h-screen w-full overflow-hidden bg-rui-white"
+    >
+      {/* Animated background gradient - Revolut style */}
+      <motion.div
+        className="absolute inset-0 pointer-events-none"
+        style={{ y: backgroundY, scale: backgroundScale }}
+      >
+        {/* Primary gradient orb */}
+        <div
+          className="absolute top-0 left-1/2 -translate-x-1/2 w-[200%] h-[80%]"
+          style={{
+            background: 'radial-gradient(ellipse at center top, rgba(79, 85, 241, 0.08) 0%, rgba(79, 85, 241, 0.02) 40%, transparent 70%)',
+          }}
+        />
+        {/* Secondary accent */}
+        <div
+          className="absolute top-1/4 right-0 w-[60%] h-[60%]"
+          style={{
+            background: 'radial-gradient(ellipse at center, rgba(0, 184, 139, 0.04) 0%, transparent 60%)',
+          }}
+        />
+      </motion.div>
 
       {/* Content */}
-      <div className="relative z-10 flex min-h-[85vh] flex-col items-center justify-center px-4 text-center">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: [0.23, 1, 0.32, 1] }}
-          className="max-w-5xl"
-        >
-          <motion.h1
-            className="mb-6 text-5xl font-black leading-[1.1] tracking-tighter text-gray-900 md:text-6xl lg:text-7xl"
+      <motion.div
+        className="relative z-10 flex min-h-screen flex-col items-center justify-center px-6 pt-20 pb-32"
+        style={{ opacity: contentOpacity, y: contentY }}
+      >
+        <div className="w-full max-w-4xl mx-auto text-center">
+          {/* Badge */}
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.1, ease: [0.23, 1, 0.32, 1] }}
-            style={{
-              textShadow: '0 1px 2px rgba(0, 0, 0, 0.05)'
-            }}
+            transition={{ duration: 0.5, ease: ruiEasing }}
+            className="mb-8"
+          >
+            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-rui-accent-light text-rui-accent text-sm font-medium">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rui-accent opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-rui-accent"></span>
+              </span>
+              AI-Powered Trip Planning
+            </span>
+          </motion.div>
+
+          {/* Main headline - Aeonik Pro marketing style */}
+          <motion.h1
+            className="mb-6 font-marketing text-display-1 text-rui-black md:text-5xl lg:text-[4.5rem] leading-[1] tracking-tight"
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.1, ease: ruiEasing }}
           >
             Your Perfect European
             <br />
-            Road Trip in 2 Minutes
+            <span className="text-rui-grey-50">Road Trip in 2 Minutes</span>
           </motion.h1>
 
+          {/* Subheadline */}
           <motion.p
-            className="mx-auto mb-10 max-w-2xl text-lg font-medium text-gray-700 md:text-xl"
+            className="mx-auto mb-10 max-w-xl text-body-1 text-rui-grey-50 md:text-lg"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2, ease: [0.23, 1, 0.32, 1] }}
+            transition={{ duration: 0.5, delay: 0.2, ease: ruiEasing }}
           >
-            AI-powered route planning with four specialized agents.
+            Four specialized AI agents craft personalized routes.
             <br className="hidden sm:block" />
-            Choose your style: Adventure, Culture, Food, or Hidden Gems.
+            Adventure, Culture, Food, or Hidden Gems — you choose.
           </motion.p>
 
-          <motion.button
-            onClick={scrollToForm}
-            className="group inline-flex items-center gap-2 rounded-full bg-gray-900 px-10 py-4 text-base font-semibold tracking-wide text-white shadow-primary transition-all hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0"
+          {/* CTA Button - Revolut style with state layer */}
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.3, ease: [0.23, 1, 0.32, 1] }}
-            whileTap={{ scale: 0.98 }}
+            transition={{ duration: 0.5, delay: 0.3, ease: ruiEasing }}
           >
-            Generate My Route
-            <ArrowRight className="h-5 w-5 transition-transform duration-300 ease-smooth group-hover:translate-x-1" />
-          </motion.button>
+            <button
+              onClick={scrollToForm}
+              className="group relative inline-flex items-center gap-3 rounded-full bg-rui-black px-8 py-4 text-base font-semibold text-rui-white overflow-hidden transition-all duration-rui-sm ease-rui-default hover:shadow-rui-3 active:scale-[0.98]"
+            >
+              {/* State layer for hover */}
+              <span className="absolute inset-0 bg-white opacity-0 transition-opacity duration-rui-sm group-hover:opacity-10" />
+              <span className="relative">Start Planning</span>
+              <ArrowRight className="relative h-5 w-5 transition-transform duration-rui-sm ease-rui-default group-hover:translate-x-1" />
+            </button>
+          </motion.div>
 
           {/* Stats Bar */}
           <motion.div
             className="mt-16"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.4, ease: [0.23, 1, 0.32, 1] }}
+            transition={{ duration: 0.5, delay: 0.4, ease: ruiEasing }}
           >
             <StatsBar />
           </motion.div>
@@ -82,38 +131,30 @@ export function Hero() {
             className="mt-8 flex justify-center"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.5, ease: [0.23, 1, 0.32, 1] }}
+            transition={{ duration: 0.5, delay: 0.5, ease: ruiEasing }}
           >
             <RecentActivity />
           </motion.div>
-        </motion.div>
+        </div>
+      </motion.div>
 
-        {/* Simplified scroll indicator */}
-        <motion.div
-          className="absolute bottom-12 left-1/2 -translate-x-1/2"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.6, delay: 0.8 }}
+      {/* Scroll indicator - Revolut minimal style */}
+      <motion.div
+        className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5, delay: 1 }}
+      >
+        <motion.button
+          onClick={scrollToForm}
+          className="flex flex-col items-center gap-2 text-rui-grey-50 hover:text-rui-black transition-colors duration-rui-sm"
+          animate={{ y: [0, 6, 0] }}
+          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
         >
-          <motion.div
-            animate={{ y: [0, 8, 0] }}
-            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-            className="text-gray-900/40"
-          >
-            <svg
-              className="h-5 w-5"
-              fill="none"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-            </svg>
-          </motion.div>
-        </motion.div>
-      </div>
+          <span className="text-xs font-medium uppercase tracking-wider">Scroll</span>
+          <ChevronDown className="h-5 w-5" />
+        </motion.button>
+      </motion.div>
     </section>
   )
 }
