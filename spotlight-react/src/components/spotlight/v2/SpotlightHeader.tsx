@@ -1,28 +1,34 @@
-import { motion } from 'framer-motion';
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useSpotlightStoreV2 } from '../../../stores/spotlightStoreV2';
 import {
   ArrowLeft,
   Share2,
-  MapPin,
+  Download,
   Navigation,
-  Calendar
+  Bookmark,
+  Check,
+  Copy,
 } from 'lucide-react';
-import ExportMenu from './ExportMenu';
+import { Button, Badge } from '../../ui';
 
 interface SpotlightHeaderProps {
   onGenerateItinerary?: () => void;
+  onSave?: () => void;
 }
 
-const SpotlightHeader = ({ onGenerateItinerary }: SpotlightHeaderProps) => {
+const SpotlightHeader = ({ onGenerateItinerary, onSave }: SpotlightHeaderProps) => {
   const navigate = useNavigate();
-  const { route, getCityName, getAgentColors } = useSpotlightStoreV2();
-  const agentColors = getAgentColors();
+  const { route, getCityName } = useSpotlightStoreV2();
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   if (!route) return null;
 
   const originName = getCityName(route.origin);
   const destinationName = getCityName(route.destination);
+  const totalNights = route.cities.reduce((sum, city) => sum + (city.nights || 0), 0);
 
   const handleExportGoogleMaps = () => {
     const waypoints = route.cities
@@ -30,20 +36,18 @@ const SpotlightHeader = ({ onGenerateItinerary }: SpotlightHeaderProps) => {
       .filter(name => name !== originName && name !== destinationName);
 
     let url = `https://www.google.com/maps/dir/${encodeURIComponent(originName)}`;
-
     waypoints.forEach(city => {
       url += `/${encodeURIComponent(city)}`;
     });
-
     url += `/${encodeURIComponent(destinationName)}`;
-
     window.open(url, '_blank');
+    setShowExportMenu(false);
   };
 
   const handleExportWaze = () => {
-    // Waze only supports start and end, so use destination
     const url = `https://waze.com/ul?q=${encodeURIComponent(destinationName)}&navigate=yes`;
     window.open(url, '_blank');
+    setShowExportMenu(false);
   };
 
   const handleShare = async () => {
@@ -53,17 +57,16 @@ const SpotlightHeader = ({ onGenerateItinerary }: SpotlightHeaderProps) => {
       try {
         await navigator.share({
           title: `${originName} to ${destinationName} Route`,
-          text: `Check out this road trip route from ${originName} to ${destinationName}!`,
+          text: `Check out this road trip from ${originName} to ${destinationName}!`,
           url: shareUrl
         });
       } catch (err) {
-        // User cancelled or error occurred
         console.log('Share cancelled or failed:', err);
       }
     } else {
-      // Fallback: copy to clipboard
       await navigator.clipboard.writeText(shareUrl);
-      alert('Route link copied to clipboard!');
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     }
   };
 
@@ -71,77 +74,139 @@ const SpotlightHeader = ({ onGenerateItinerary }: SpotlightHeaderProps) => {
     <motion.header
       initial={{ y: -100, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.3 }}
-      className="absolute top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm"
+      transition={{ duration: 0.3, ease: [0.15, 0.5, 0.5, 1] }}
+      className="absolute top-0 left-0 right-0 z-50 h-14 bg-white/95 backdrop-blur-xl border-b border-rui-grey-10"
     >
-      <div className="max-w-screen-2xl mx-auto px-6 py-4 flex items-center justify-between">
+      <div className="h-full max-w-screen-2xl mx-auto px-4 flex items-center justify-between">
         {/* Left: Back button and route info */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <button
             onClick={() => navigate('/')}
-            className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors"
+            className="w-9 h-9 rounded-rui-12 bg-rui-grey-5 hover:bg-rui-grey-10 flex items-center justify-center transition-colors duration-rui-sm"
             aria-label="Back to home"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-4 h-4 text-rui-black" />
           </button>
 
-          <div>
-            <h1 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-              <MapPin className="w-5 h-5" style={{ color: agentColors.accent }} />
-              {originName} → {destinationName}
+          <div className="flex items-center gap-3">
+            <h1 className="text-emphasis-1 text-rui-black">
+              {originName} <span className="text-rui-grey-50">→</span> {destinationName}
             </h1>
-            <p className="text-sm text-gray-600">
-              {route.cities.length} {route.cities.length === 1 ? 'city' : 'cities'} •{' '}
-              {route.landmarks.length} {route.landmarks.length === 1 ? 'landmark' : 'landmarks'}
-            </p>
+            <Badge variant="secondary" size="sm">
+              {route.cities.length} cities
+            </Badge>
+            <Badge variant="outline" size="sm">
+              {totalNights} nights
+            </Badge>
           </div>
         </div>
 
-        {/* Right: Export and share buttons */}
-        <div className="flex items-center gap-3">
-          {/* Google Maps Export */}
-          <button
-            onClick={handleExportGoogleMaps}
-            className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors flex items-center gap-2 text-sm"
-            title="Open in Google Maps"
-          >
-            <Navigation className="w-4 h-4" />
-            Google Maps
-          </button>
-
-          {/* Waze Export */}
-          <button
-            onClick={handleExportWaze}
-            className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors flex items-center gap-2 text-sm"
-            title="Open in Waze"
-          >
-            <Navigation className="w-4 h-4" />
-            Waze
-          </button>
-
-          {/* Generate Itinerary Button */}
-          {onGenerateItinerary && (
-            <button
-              onClick={onGenerateItinerary}
-              className="px-4 py-2 rounded-lg border-2 border-blue-500 bg-blue-500 hover:bg-blue-600 hover:border-blue-600 text-white transition-colors flex items-center gap-2 text-sm font-medium"
-              title="Generate detailed day-by-day itinerary with 9 AI agents"
+        {/* Right: Actions */}
+        <div className="flex items-center gap-2">
+          {/* Save Button */}
+          {onSave && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onSave}
+              className="gap-1.5"
             >
-              <Calendar className="w-4 h-4" />
-              Generate Itinerary
-            </button>
+              <Bookmark className="w-4 h-4" />
+              Save
+            </Button>
           )}
 
-          {/* Export Menu */}
-          <ExportMenu />
-
           {/* Share Button */}
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={handleShare}
-            className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors"
+            className="relative"
             aria-label="Share route"
           >
-            <Share2 className="w-5 h-5" />
-          </button>
+            {copied ? (
+              <Check className="w-4 h-4 text-success" />
+            ) : (
+              <Share2 className="w-4 h-4" />
+            )}
+          </Button>
+
+          {/* Export Menu */}
+          <div className="relative">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowExportMenu(!showExportMenu)}
+              aria-label="Export options"
+            >
+              <Download className="w-4 h-4" />
+            </Button>
+
+            <AnimatePresence>
+              {showExportMenu && (
+                <>
+                  {/* Backdrop */}
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 z-40"
+                    onClick={() => setShowExportMenu(false)}
+                  />
+                  {/* Menu */}
+                  <motion.div
+                    initial={{ opacity: 0, y: -8, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -8, scale: 0.95 }}
+                    transition={{ duration: 0.15, ease: [0.15, 0.5, 0.5, 1] }}
+                    className="absolute right-0 top-full mt-2 w-48 bg-white rounded-rui-16 shadow-rui-3 border border-rui-grey-10 overflow-hidden z-50"
+                  >
+                    <div className="py-1">
+                      <button
+                        onClick={handleExportGoogleMaps}
+                        className="w-full px-4 py-2.5 text-left text-body-2 text-rui-black hover:bg-rui-grey-5 flex items-center gap-3 transition-colors"
+                      >
+                        <Navigation className="w-4 h-4 text-rui-grey-50" />
+                        Google Maps
+                      </button>
+                      <button
+                        onClick={handleExportWaze}
+                        className="w-full px-4 py-2.5 text-left text-body-2 text-rui-black hover:bg-rui-grey-5 flex items-center gap-3 transition-colors"
+                      >
+                        <Navigation className="w-4 h-4 text-rui-grey-50" />
+                        Waze
+                      </button>
+                      <div className="h-px bg-rui-grey-10 my-1" />
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(window.location.href);
+                          setCopied(true);
+                          setTimeout(() => setCopied(false), 2000);
+                          setShowExportMenu(false);
+                        }}
+                        className="w-full px-4 py-2.5 text-left text-body-2 text-rui-black hover:bg-rui-grey-5 flex items-center gap-3 transition-colors"
+                      >
+                        <Copy className="w-4 h-4 text-rui-grey-50" />
+                        Copy Link
+                      </button>
+                    </div>
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Generate Itinerary CTA */}
+          {onGenerateItinerary && (
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={onGenerateItinerary}
+              className="ml-2"
+            >
+              Generate Itinerary
+            </Button>
+          )}
         </div>
       </div>
     </motion.header>
