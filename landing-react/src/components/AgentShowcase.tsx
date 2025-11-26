@@ -1,5 +1,5 @@
-import { motion } from 'framer-motion'
-import { useState } from 'react'
+import { motion, useMotionValue, animate, type PanInfo } from 'framer-motion'
+import { useState, useRef, useEffect } from 'react'
 import { Eye } from 'lucide-react'
 import { SampleRouteModal } from './SampleRouteModal'
 
@@ -48,6 +48,53 @@ const agents = [
 export function AgentShowcase() {
   const [selectedAgent, setSelectedAgent] = useState(0)
   const [showSampleModal, setShowSampleModal] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [containerWidth, setContainerWidth] = useState(0)
+  const x = useMotionValue(0)
+  const [isMobile, setIsMobile] = useState(false)
+
+  const cardWidth = 280
+  const gap = 16
+  const scrollWidth = agents.length * (cardWidth + gap) - gap
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+      if (containerRef.current) {
+        setContainerWidth(containerRef.current.offsetWidth)
+      }
+    }
+
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  const handleDragEnd = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    const velocity = info.velocity.x
+    const currentX = x.get()
+    let targetX = currentX + velocity * 0.3
+
+    const maxX = 0
+    const minX = -(scrollWidth - containerWidth)
+    targetX = Math.max(minX, Math.min(maxX, targetX))
+
+    animate(x, targetX, {
+      type: 'spring',
+      stiffness: 300,
+      damping: 30
+    })
+  }
+
+  const scrollTo = (index: number) => {
+    const targetX = -(index * (cardWidth + gap))
+    animate(x, Math.max(-(scrollWidth - containerWidth), targetX), {
+      type: 'spring',
+      stiffness: 300,
+      damping: 30
+    })
+    setSelectedAgent(index)
+  }
 
   return (
     <>
@@ -55,116 +102,75 @@ export function AgentShowcase() {
         <div className="mx-auto max-w-7xl px-6">
           {/* Header */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.5, ease: ruiEasing }}
+            transition={{ duration: 0.6, ease: ruiEasing }}
             className="mb-16 text-center"
           >
-            <h2 className="mb-4 font-marketing text-display-2 text-rui-black md:text-display-1">
+            <h2 className="mb-4 font-marketing text-[2rem] sm:text-[2.5rem] md:text-[3rem] font-extrabold text-rui-black tracking-[-0.02em]">
               4 AI Travel Experts
             </h2>
-            <p className="mx-auto max-w-xl text-body-1 text-rui-grey-50">
+            <p className="mx-auto max-w-xl text-lg text-rui-grey-50">
               Pick your vibe. Each agent researches and plans a completely different route tailored to what you love.
             </p>
           </motion.div>
 
-          {/* Agent Cards Grid */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {agents.map((agent, index) => (
-              <motion.div
-                key={agent.id}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.4, delay: index * 0.1, ease: ruiEasing }}
-                onMouseEnter={() => setSelectedAgent(index)}
-                onClick={() => setSelectedAgent(index)}
-                className="group cursor-pointer"
-              >
+          {/* Mobile Carousel */}
+          {isMobile ? (
+            <div className="relative">
+              <div ref={containerRef} className="overflow-hidden">
                 <motion.div
-                  className={`relative h-full overflow-hidden rounded-rui-24 border-2 bg-rui-white p-6 transition-all duration-rui-md ease-rui-default ${
-                    selectedAgent === index
-                      ? 'shadow-rui-3 scale-[1.02]'
-                      : 'border-rui-grey-10 hover:border-rui-grey-20 hover:shadow-rui-2'
-                  }`}
-                  style={{
-                    borderColor: selectedAgent === index ? agent.color : undefined
+                  className="flex cursor-grab active:cursor-grabbing"
+                  style={{ x, gap: `${gap}px` }}
+                  drag="x"
+                  dragConstraints={{
+                    left: -(scrollWidth - containerWidth),
+                    right: 0
                   }}
+                  dragElastic={0.1}
+                  onDragEnd={handleDragEnd}
                 >
-                  {/* Subtle background when selected */}
-                  <motion.div
-                    className="absolute inset-0 opacity-0 transition-opacity duration-rui-md"
-                    style={{ backgroundColor: agent.color }}
-                    animate={{ opacity: selectedAgent === index ? 0.03 : 0 }}
-                  />
-
-                  {/* Icon */}
-                  <motion.div
-                    className="relative mb-4 flex items-center justify-center"
-                    animate={{
-                      scale: selectedAgent === index ? 1.1 : 1,
-                    }}
-                    transition={{ duration: 0.3, ease: ruiEasing }}
-                  >
-                    <img
-                      src={agent.icon}
-                      alt={`${agent.name} icon`}
-                      className="h-14 w-14 object-contain"
+                  {agents.map((agent, index) => (
+                    <AgentCard
+                      key={agent.id}
+                      agent={agent}
+                      index={index}
+                      isSelected={selectedAgent === index}
+                      onSelect={() => setSelectedAgent(index)}
+                      cardWidth={cardWidth}
                     />
-                  </motion.div>
-
-                  {/* Title */}
-                  <h3
-                    className="relative mb-2 text-heading-2 transition-colors duration-rui-sm"
-                    style={{
-                      color: selectedAgent === index ? agent.color : '#191C1F'
-                    }}
-                  >
-                    {agent.name}
-                  </h3>
-
-                  {/* Description */}
-                  <p className="relative mb-4 text-body-2 text-rui-grey-50">
-                    {agent.description}
-                  </p>
-
-                  {/* Features List */}
-                  <ul className="relative space-y-2">
-                    {agent.features.map((feature, i) => (
-                      <motion.li
-                        key={i}
-                        className="flex items-center text-sm text-rui-black"
-                        initial={{ opacity: 0.6 }}
-                        animate={{
-                          opacity: selectedAgent === index ? 1 : 0.6,
-                        }}
-                        transition={{ duration: 0.2, delay: i * 0.03 }}
-                      >
-                        <span
-                          className="mr-2 h-1.5 w-1.5 rounded-full transition-transform duration-rui-sm"
-                          style={{
-                            backgroundColor: agent.color,
-                            transform: selectedAgent === index ? 'scale(1.2)' : 'scale(1)'
-                          }}
-                        />
-                        {feature}
-                      </motion.li>
-                    ))}
-                  </ul>
-
-                  {/* Selected indicator bar */}
-                  <motion.div
-                    className="absolute bottom-0 left-0 right-0 h-1 rounded-b-rui-24"
-                    style={{ backgroundColor: agent.color }}
-                    initial={{ scaleX: 0 }}
-                    animate={{ scaleX: selectedAgent === index ? 1 : 0 }}
-                    transition={{ duration: 0.3, ease: ruiEasing }}
-                  />
+                  ))}
                 </motion.div>
-              </motion.div>
-            ))}
-          </div>
+              </div>
+
+              {/* Dots indicator */}
+              <div className="mt-6 flex justify-center gap-2">
+                {agents.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => scrollTo(index)}
+                    className={`h-2 rounded-full transition-all duration-300 ${
+                      selectedAgent === index ? 'w-6 bg-rui-black' : 'w-2 bg-rui-grey-20'
+                    }`}
+                  />
+                ))}
+              </div>
+            </div>
+          ) : (
+            /* Desktop Grid */
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              {agents.map((agent, index) => (
+                <AgentCard
+                  key={agent.id}
+                  agent={agent}
+                  index={index}
+                  isSelected={selectedAgent === index}
+                  onSelect={() => setSelectedAgent(index)}
+                />
+              ))}
+            </div>
+          )}
 
           {/* Bottom CTA */}
           <motion.div
@@ -174,22 +180,150 @@ export function AgentShowcase() {
             transition={{ duration: 0.5, delay: 0.4, ease: ruiEasing }}
             className="mt-12 text-center"
           >
-            <p className="mb-6 text-body-1 text-rui-black">
+            <p className="mb-6 text-lg text-rui-black">
               Get all 4 routes in one search.
               <span className="ml-1 text-rui-grey-50">Compare and choose your favorite.</span>
             </p>
-            <button
+            <motion.button
               onClick={() => setShowSampleModal(true)}
-              className="group relative inline-flex items-center gap-2 rounded-full border-2 border-rui-black bg-rui-white px-6 py-3 font-semibold text-rui-black overflow-hidden transition-all duration-rui-sm ease-rui-default hover:bg-rui-black hover:text-rui-white"
+              className="group relative inline-flex items-center gap-2 rounded-full border-2 border-rui-black bg-rui-white px-8 py-4 font-semibold text-rui-black overflow-hidden transition-all duration-300"
+              whileHover={{
+                backgroundColor: '#191C1F',
+                color: '#FFFFFF',
+                scale: 1.02
+              }}
+              whileTap={{ scale: 0.98 }}
             >
-              <Eye className="h-5 w-5 transition-transform duration-rui-sm group-hover:scale-110" />
+              <Eye className="h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
               <span>See Sample Route</span>
-            </button>
+            </motion.button>
           </motion.div>
         </div>
       </section>
 
       <SampleRouteModal isOpen={showSampleModal} onClose={() => setShowSampleModal(false)} />
     </>
+  )
+}
+
+function AgentCard({
+  agent,
+  index,
+  isSelected,
+  onSelect,
+  cardWidth
+}: {
+  agent: typeof agents[0]
+  index: number
+  isSelected: boolean
+  onSelect: () => void
+  cardWidth?: number
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 30 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.5, delay: index * 0.1, ease: ruiEasing }}
+      onMouseEnter={onSelect}
+      onClick={onSelect}
+      className="group cursor-pointer flex-shrink-0"
+      style={cardWidth ? { width: cardWidth } : undefined}
+    >
+      <motion.div
+        className={`relative h-full overflow-hidden rounded-rui-24 border-2 bg-rui-white p-6 transition-colors duration-300`}
+        style={{
+          borderColor: isSelected ? agent.color : '#E2E2E7'
+        }}
+        whileHover={{ y: -8, scale: 1.02 }}
+        animate={{
+          boxShadow: isSelected
+            ? '0 0.1875rem 1.875rem rgba(25, 28, 31, 0.12)'
+            : '0 0.125rem 0.1875rem rgba(25, 28, 31, 0.05)'
+        }}
+        transition={{ duration: 0.3, ease: ruiEasing }}
+      >
+        {/* Colored background glow when selected */}
+        <motion.div
+          className="absolute inset-0 opacity-0 transition-opacity duration-300"
+          style={{
+            background: `radial-gradient(circle at 50% 0%, ${agent.color}20, transparent 70%)`
+          }}
+          animate={{ opacity: isSelected ? 1 : 0 }}
+        />
+
+        {/* Icon */}
+        <motion.div
+          className="relative mb-4 flex items-center justify-center"
+          animate={{
+            scale: isSelected ? 1.15 : 1,
+            y: isSelected ? -4 : 0
+          }}
+          transition={{ duration: 0.3, ease: ruiEasing }}
+        >
+          <motion.div
+            className="p-3 rounded-rui-16"
+            style={{ backgroundColor: `${agent.color}15` }}
+            animate={{
+              backgroundColor: isSelected ? `${agent.color}25` : `${agent.color}15`
+            }}
+          >
+            <img
+              src={agent.icon}
+              alt={`${agent.name} icon`}
+              className="h-10 w-10 object-contain"
+            />
+          </motion.div>
+        </motion.div>
+
+        {/* Title */}
+        <motion.h3
+          className="relative mb-2 text-xl font-bold transition-colors duration-300"
+          animate={{ color: isSelected ? agent.color : '#191C1F' }}
+        >
+          {agent.name}
+        </motion.h3>
+
+        {/* Description */}
+        <p className="relative mb-4 text-sm text-rui-grey-50 leading-relaxed">
+          {agent.description}
+        </p>
+
+        {/* Features List */}
+        <ul className="relative space-y-2">
+          {agent.features.map((feature, i) => (
+            <motion.li
+              key={i}
+              className="flex items-center text-sm text-rui-black"
+              initial={{ opacity: 0.6, x: 0 }}
+              animate={{
+                opacity: isSelected ? 1 : 0.6,
+                x: isSelected ? 4 : 0
+              }}
+              transition={{ duration: 0.2, delay: i * 0.05 }}
+            >
+              <motion.span
+                className="mr-2 h-1.5 w-1.5 rounded-full"
+                style={{ backgroundColor: agent.color }}
+                animate={{
+                  scale: isSelected ? 1.3 : 1
+                }}
+                transition={{ duration: 0.2 }}
+              />
+              {feature}
+            </motion.li>
+          ))}
+        </ul>
+
+        {/* Bottom accent bar */}
+        <motion.div
+          className="absolute bottom-0 left-0 right-0 h-1"
+          style={{ backgroundColor: agent.color }}
+          initial={{ scaleX: 0 }}
+          animate={{ scaleX: isSelected ? 1 : 0 }}
+          transition={{ duration: 0.3, ease: ruiEasing }}
+        />
+      </motion.div>
+    </motion.div>
   )
 }

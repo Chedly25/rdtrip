@@ -1,5 +1,5 @@
-import { motion } from 'framer-motion'
-import { useEffect, useState } from 'react'
+import { motion, useInView } from 'framer-motion'
+import { useEffect, useState, useRef } from 'react'
 import { Route, Sparkles } from 'lucide-react'
 
 // Revolut easing
@@ -9,6 +9,56 @@ interface Stats {
   totalRoutes: number
   routesToday: number
   routesThisWeek: number
+}
+
+// Animated counter component
+function AnimatedCounter({
+  value,
+  suffix = '',
+  duration = 2000
+}: {
+  value: number | string
+  suffix?: string
+  duration?: number
+}) {
+  const ref = useRef<HTMLSpanElement>(null)
+  const isInView = useInView(ref, { once: true, margin: '-50px' })
+  const [displayValue, setDisplayValue] = useState(0)
+  const hasAnimated = useRef(false)
+
+  const numericValue = typeof value === 'string' ? parseInt(value) || 0 : value
+
+  useEffect(() => {
+    if (!isInView || hasAnimated.current) return
+    hasAnimated.current = true
+
+    const startTime = Date.now()
+    const endTime = startTime + duration
+
+    const tick = () => {
+      const now = Date.now()
+
+      if (now >= endTime) {
+        setDisplayValue(numericValue)
+        return
+      }
+
+      const progress = (now - startTime) / duration
+      // Ease-out cubic for smooth deceleration
+      const eased = 1 - Math.pow(1 - progress, 3)
+      const current = Math.round(numericValue * eased)
+      setDisplayValue(current)
+      requestAnimationFrame(tick)
+    }
+
+    requestAnimationFrame(tick)
+  }, [isInView, numericValue, duration])
+
+  return (
+    <span ref={ref}>
+      {displayValue}{suffix}
+    </span>
+  )
 }
 
 export function StatsBar() {
@@ -55,7 +105,8 @@ export function StatsBar() {
     },
     {
       icon: Route,
-      value: `${stats.totalRoutes}+`,
+      value: stats.totalRoutes,
+      suffix: '+',
       label: 'total planned',
     },
   ]
@@ -65,24 +116,40 @@ export function StatsBar() {
       {statItems.map((item, index) => (
         <motion.div
           key={item.label}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: index * 0.1, ease: ruiEasing }}
+          initial={{ opacity: 0, y: 20, scale: 0.9 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{
+            duration: 0.5,
+            delay: index * 0.15,
+            ease: ruiEasing
+          }}
           className="group"
         >
-          <div className="flex items-center gap-3 rounded-rui-16 bg-rui-grey-2 px-5 py-3 transition-all duration-rui-sm ease-rui-default hover:bg-rui-grey-5 hover:shadow-rui-1">
-            <div className="flex h-10 w-10 items-center justify-center rounded-rui-12 bg-rui-white shadow-rui-1">
+          <motion.div
+            className="flex items-center gap-3 rounded-rui-16 bg-rui-grey-2 px-5 py-3 transition-all duration-300 ease-rui-default hover:bg-rui-white hover:shadow-rui-2"
+            whileHover={{ scale: 1.02, y: -2 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <motion.div
+              className="flex h-10 w-10 items-center justify-center rounded-rui-12 bg-rui-white shadow-rui-1"
+              whileHover={{ rotate: [0, -10, 10, 0] }}
+              transition={{ duration: 0.4 }}
+            >
               <item.icon className="h-5 w-5 text-rui-black" />
-            </div>
+            </motion.div>
             <div className="text-left">
-              <div className="text-xl font-bold text-rui-black leading-tight">
-                {item.value}
+              <div className="text-2xl font-bold text-rui-black leading-tight tabular-nums">
+                <AnimatedCounter
+                  value={item.value}
+                  suffix={item.suffix || ''}
+                  duration={1500}
+                />
               </div>
               <div className="text-xs text-rui-grey-50 font-medium">
                 {item.label}
               </div>
             </div>
-          </div>
+          </motion.div>
         </motion.div>
       ))}
     </div>
