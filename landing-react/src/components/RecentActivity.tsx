@@ -2,6 +2,9 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useEffect, useState } from 'react'
 import { MapPin, Clock } from 'lucide-react'
 
+// Revolut easing
+const ruiEasing = [0.15, 0.5, 0.5, 1] as const
+
 interface RecentRoute {
   destination: string | { name: string; country?: string; coordinates?: number[] }
   createdAt: string
@@ -12,7 +15,6 @@ interface Stats {
   recentRoutes: RecentRoute[]
 }
 
-// Helper to get time ago string
 function getTimeAgo(dateString: string): string {
   const date = new Date(dateString)
   const now = new Date()
@@ -24,7 +26,6 @@ function getTimeAgo(dateString: string): string {
   return `${Math.floor(seconds / 86400)}d ago`
 }
 
-// Get agent icon path based on agent name
 function getAgentIconPath(agent: string): string {
   const icons: Record<string, string> = {
     adventure: '/images/icons/adventure_icon.png',
@@ -40,7 +41,6 @@ export function RecentActivity() {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
 
-  // Fetch stats from backend
   useEffect(() => {
     const fetchStats = async () => {
       try {
@@ -57,13 +57,10 @@ export function RecentActivity() {
     }
 
     fetchStats()
-
-    // Refresh every 30 seconds
     const interval = setInterval(fetchStats, 30000)
     return () => clearInterval(interval)
   }, [])
 
-  // Auto-rotate through routes every 4 seconds
   useEffect(() => {
     if (recentRoutes.length === 0) return
 
@@ -76,7 +73,7 @@ export function RecentActivity() {
 
   if (isLoading) {
     return (
-      <div className="h-12 w-full max-w-md animate-pulse rounded-lg bg-gray-200" />
+      <div className="h-16 w-full max-w-lg animate-pulse rounded-rui-16 bg-rui-grey-5" />
     )
   }
 
@@ -86,51 +83,50 @@ export function RecentActivity() {
 
   const currentRoute = recentRoutes[currentIndex]
 
-  // Handle destination being either string or object
   const getDestinationName = (dest: string | { name: string; country?: string }): string => {
     if (typeof dest === 'string') return dest
     return dest.name
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, delay: 0.5 }}
-      className="w-full max-w-2xl"
-    >
-      <div className="overflow-hidden rounded-xl bg-white border border-gray-200 shadow-md">
-        <div className="px-6 py-4">
-          <div className="mb-2 flex items-center gap-2">
-            <div className="h-2 w-2 animate-pulse rounded-full bg-green-500" />
-            <p className="text-xs font-semibold uppercase tracking-wider text-gray-600">
-              Recent Activity
+    <div className="w-full max-w-lg">
+      <div className="overflow-hidden rounded-rui-16 bg-rui-white border border-rui-grey-10 shadow-rui-1">
+        <div className="px-5 py-4">
+          {/* Header */}
+          <div className="mb-3 flex items-center gap-2">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
+            </span>
+            <p className="text-xs font-semibold uppercase tracking-wider text-rui-grey-50">
+              Live Activity
             </p>
           </div>
 
+          {/* Route display */}
           <AnimatePresence mode="wait">
             <motion.div
               key={currentIndex}
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.3 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.3, ease: ruiEasing }}
               className="flex items-center justify-between"
             >
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100">
-                  <MapPin className="h-5 w-5 text-gray-900" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-rui-12 bg-rui-grey-2">
+                  <MapPin className="h-5 w-5 text-rui-black" />
                 </div>
                 <div>
-                  <p className="font-semibold text-gray-900">
+                  <p className="font-semibold text-rui-black text-sm">
                     Aix-en-Provence → {getDestinationName(currentRoute.destination)}
                   </p>
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <div className="flex items-center gap-2 text-xs text-rui-grey-50">
                     <Clock className="h-3 w-3" />
                     <span>{getTimeAgo(currentRoute.createdAt)}</span>
                     {currentRoute.agents && currentRoute.agents.length > 0 && (
                       <>
-                        <span>•</span>
+                        <span className="text-rui-grey-20">•</span>
                         <div className="flex items-center gap-1">
                           {currentRoute.agents.map((agent, idx) => (
                             <img
@@ -149,17 +145,17 @@ export function RecentActivity() {
             </motion.div>
           </AnimatePresence>
 
-          {/* Dots indicator */}
+          {/* Progress dots */}
           {recentRoutes.length > 1 && (
-            <div className="mt-3 flex justify-center gap-1.5">
+            <div className="mt-4 flex justify-center gap-1.5">
               {recentRoutes.slice(0, 5).map((_, index) => (
                 <button
                   key={index}
                   onClick={() => setCurrentIndex(index)}
-                  className={`h-1.5 rounded-full transition-all ${
+                  className={`h-1.5 rounded-full transition-all duration-rui-sm ease-rui-default ${
                     index === currentIndex
-                      ? 'w-6 bg-gray-900'
-                      : 'w-1.5 bg-gray-300 hover:bg-gray-500'
+                      ? 'w-5 bg-rui-black'
+                      : 'w-1.5 bg-rui-grey-20 hover:bg-rui-grey-50'
                   }`}
                   aria-label={`View route ${index + 1}`}
                 />
@@ -168,6 +164,6 @@ export function RecentActivity() {
           )}
         </div>
       </div>
-    </motion.div>
+    </div>
   )
 }

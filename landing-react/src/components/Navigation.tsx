@@ -3,16 +3,19 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Menu, X } from 'lucide-react'
 import { AuthButton } from './auth/AuthButton'
 
+// Revolut easing
+const ruiEasing = [0.15, 0.5, 0.5, 1] as const
+
 export function Navigation() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 50)
+      setIsScrolled(window.scrollY > 20)
     }
 
-    window.addEventListener('scroll', handleScroll)
+    window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
@@ -23,131 +26,137 @@ export function Navigation() {
   }
 
   return (
-    <motion.nav
-      className={`fixed left-0 right-0 top-0 z-50 transition-all duration-300 ease-smooth ${
-        isScrolled
-          ? 'bg-white/90 shadow-sm border-b border-gray-200/50'
-          : 'bg-transparent'
-      } backdrop-blur-xl`}
-      initial={{ y: -100 }}
-      animate={{ y: 0 }}
-      transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
-    >
-      <div className="container mx-auto flex items-center justify-between px-6 py-4">
-        {/* Logo */}
-        <motion.a
-          href="/"
-          className={`text-xl font-bold tracking-tight transition-colors duration-200 ${
-            isScrolled
-              ? 'text-gray-900'
-              : 'text-gray-900'
-          }`}
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-        >
-          RoadTrip
-        </motion.a>
+    <>
+      <motion.header
+        className={`fixed left-0 right-0 top-0 z-50 transition-all duration-rui-md ease-rui-default ${
+          isScrolled
+            ? 'bg-rui-white/80 backdrop-blur-xl shadow-rui-1 border-b border-rui-grey-10'
+            : 'bg-transparent'
+        }`}
+        initial={{ y: -100, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.5, ease: ruiEasing }}
+      >
+        <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+          {/* Logo */}
+          <a
+            href="/"
+            className="flex items-center gap-2 text-rui-black transition-opacity duration-rui-sm hover:opacity-70"
+          >
+            <span className="font-marketing text-xl tracking-tight">RoadTrip</span>
+          </a>
 
-        {/* Desktop Menu */}
-        <div className="hidden items-center gap-2 md:flex">
-          <NavItem
-            onClick={() => scrollToSection('route-form')}
-            isScrolled={isScrolled}
-          >
-            Plan Route
-          </NavItem>
-          <NavItem
-            href="/marketplace"
-            isScrolled={isScrolled}
-          >
-            Marketplace
-          </NavItem>
-          <NavItem
-            onClick={() => scrollToSection('features')}
-            isScrolled={isScrolled}
-          >
-            Features
-          </NavItem>
-          <NavItem
-            onClick={() => scrollToSection('about')}
-            isScrolled={isScrolled}
-          >
-            About
-          </NavItem>
-          <div className="ml-4">
+          {/* Desktop Navigation */}
+          <div className="hidden items-center gap-1 md:flex">
+            <NavLink onClick={() => scrollToSection('route-form')}>
+              Plan Route
+            </NavLink>
+            <NavLink href="/marketplace">
+              Marketplace
+            </NavLink>
+            <NavLink onClick={() => scrollToSection('features')}>
+              Features
+            </NavLink>
+            <NavLink onClick={() => scrollToSection('about')}>
+              About
+            </NavLink>
+          </div>
+
+          {/* Right side - Auth */}
+          <div className="hidden items-center gap-3 md:flex">
             <AuthButton isScrolled={isScrolled} />
           </div>
-        </div>
 
-        {/* Mobile Menu Button */}
-        <motion.button
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className={`md:hidden p-2 rounded-lg transition-colors ${
-            isScrolled
-              ? 'text-gray-700 hover:bg-gray-100'
-              : 'text-gray-900 hover:bg-white/10'
-          }`}
-          whileTap={{ scale: 0.95 }}
-        >
-          {isMobileMenuOpen ? (
-            <X className="h-5 w-5" />
-          ) : (
-            <Menu className="h-5 w-5" />
-          )}
-        </motion.button>
-      </div>
+          {/* Mobile menu button */}
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="relative flex h-10 w-10 items-center justify-center rounded-rui-12 text-rui-black transition-colors duration-rui-sm hover:bg-rui-grey-5 md:hidden"
+            aria-label={isMobileMenuOpen ? 'Close menu' : 'Open menu'}
+          >
+            <AnimatePresence mode="wait">
+              {isMobileMenuOpen ? (
+                <motion.div
+                  key="close"
+                  initial={{ opacity: 0, rotate: -90 }}
+                  animate={{ opacity: 1, rotate: 0 }}
+                  exit={{ opacity: 0, rotate: 90 }}
+                  transition={{ duration: 0.2, ease: ruiEasing }}
+                >
+                  <X className="h-5 w-5" />
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="menu"
+                  initial={{ opacity: 0, rotate: 90 }}
+                  animate={{ opacity: 1, rotate: 0 }}
+                  exit={{ opacity: 0, rotate: -90 }}
+                  transition={{ duration: 0.2, ease: ruiEasing }}
+                >
+                  <Menu className="h-5 w-5" />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </button>
+        </nav>
+      </motion.header>
 
-      {/* Mobile Menu */}
+      {/* Mobile Menu Overlay */}
       <AnimatePresence>
         {isMobileMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.2 }}
-            className="bg-white/95 backdrop-blur-xl border-t border-gray-200/50 md:hidden"
-          >
-            <div className="container mx-auto flex flex-col gap-1 px-6 py-4">
-              <MobileNavItem
-                onClick={() => scrollToSection('route-form')}
-              >
-                Plan Route
-              </MobileNavItem>
-              <MobileNavItem href="/marketplace">
-                Marketplace
-              </MobileNavItem>
-              <MobileNavItem
-                onClick={() => scrollToSection('features')}
-              >
-                Features
-              </MobileNavItem>
-              <MobileNavItem
-                onClick={() => scrollToSection('about')}
-              >
-                About
-              </MobileNavItem>
-              <div className="mt-4 pt-4 border-t border-gray-200">
-                <AuthButton />
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 z-40 bg-rui-black/20 backdrop-blur-sm md:hidden"
+              onClick={() => setIsMobileMenuOpen(false)}
+            />
+
+            {/* Menu Panel */}
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3, ease: ruiEasing }}
+              className="fixed left-4 right-4 top-20 z-50 overflow-hidden rounded-rui-24 bg-rui-white shadow-rui-4 md:hidden"
+            >
+              <div className="flex flex-col p-4">
+                <MobileNavLink onClick={() => scrollToSection('route-form')}>
+                  Plan Route
+                </MobileNavLink>
+                <MobileNavLink href="/marketplace">
+                  Marketplace
+                </MobileNavLink>
+                <MobileNavLink onClick={() => scrollToSection('features')}>
+                  Features
+                </MobileNavLink>
+                <MobileNavLink onClick={() => scrollToSection('about')}>
+                  About
+                </MobileNavLink>
+
+                <div className="mt-4 border-t border-rui-grey-10 pt-4">
+                  <AuthButton />
+                </div>
               </div>
-            </div>
-          </motion.div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
-    </motion.nav>
+    </>
   )
 }
 
-// Desktop Navigation Item with pill hover
-function NavItem({
+// Desktop nav link with Revolut-style state layer
+function NavLink({
   children,
   onClick,
   href,
-  isScrolled
 }: {
   children: React.ReactNode
   onClick?: () => void
   href?: string
-  isScrolled: boolean
 }) {
   const Element = href ? 'a' : 'button'
 
@@ -155,27 +164,17 @@ function NavItem({
     <Element
       onClick={onClick}
       href={href}
-      className={`
-        relative px-4 py-2
-        text-sm font-medium
-        transition-all duration-200 ease-smooth
-        rounded-full
-        ${isScrolled ? 'text-gray-600 hover:text-gray-900' : 'text-gray-700 hover:text-gray-900'}
-        before:absolute before:inset-0
-        before:bg-gray-100 before:rounded-full
-        before:scale-0
-        hover:before:scale-100
-        before:transition-transform before:duration-300 before:ease-smooth
-        before:-z-10
-      `}
+      className="group relative px-4 py-2 text-sm font-medium text-rui-grey-50 transition-colors duration-rui-sm hover:text-rui-black"
     >
-      {children}
+      {/* State layer */}
+      <span className="absolute inset-0 rounded-rui-8 bg-rui-grey-5 opacity-0 transition-opacity duration-rui-sm group-hover:opacity-100" />
+      <span className="relative">{children}</span>
     </Element>
   )
 }
 
-// Mobile Navigation Item
-function MobileNavItem({
+// Mobile nav link
+function MobileNavLink({
   children,
   onClick,
   href,
@@ -190,14 +189,7 @@ function MobileNavItem({
     <Element
       onClick={onClick}
       href={href}
-      className="
-        text-left px-4 py-3
-        text-base font-medium
-        text-gray-700 hover:text-gray-900
-        hover:bg-gray-100
-        rounded-xl
-        transition-all duration-200 ease-smooth
-      "
+      className="flex w-full items-center rounded-rui-12 px-4 py-3 text-left text-base font-medium text-rui-black transition-colors duration-rui-sm hover:bg-rui-grey-5"
     >
       {children}
     </Element>

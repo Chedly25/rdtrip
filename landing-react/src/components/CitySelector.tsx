@@ -3,6 +3,9 @@ import { Search, MapPin, Loader2 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { CityData } from '../types'
 
+// Revolut easing
+const ruiEasing = [0.15, 0.5, 0.5, 1] as const
+
 interface CitySelectorProps {
   value: CityData | null
   placeholder: string
@@ -21,7 +24,6 @@ export function CitySelector({ value, placeholder, onCitySelect, error, label }:
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    // Update input when value changes externally
     if (value) {
       setInput(value.displayName)
       setSelectedCity(value)
@@ -35,12 +37,10 @@ export function CitySelector({ value, placeholder, onCitySelect, error, label }:
       return
     }
 
-    // Don't search if we already have this city selected
     if (selectedCity && input === selectedCity.displayName) {
       return
     }
 
-    // Debounce geocoding requests
     if (debounceTimer.current) {
       clearTimeout(debounceTimer.current)
     }
@@ -56,7 +56,6 @@ export function CitySelector({ value, placeholder, onCitySelect, error, label }:
     }
   }, [input, selectedCity])
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
@@ -103,7 +102,6 @@ export function CitySelector({ value, placeholder, onCitySelect, error, label }:
 
   const handleInputChange = (value: string) => {
     setInput(value)
-    // Clear selected city if input changes
     if (selectedCity && value !== selectedCity.displayName) {
       setSelectedCity(null)
     }
@@ -111,12 +109,12 @@ export function CitySelector({ value, placeholder, onCitySelect, error, label }:
 
   return (
     <div ref={containerRef} className="relative">
-      <label className="block text-sm font-medium text-gray-700 mb-2">
+      <label className="block text-sm font-semibold text-rui-black mb-2">
         {label}
       </label>
 
       <div className="relative">
-        <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400 pointer-events-none z-10" />
+        <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-rui-grey-50 pointer-events-none z-10" />
         <input
           type="text"
           value={input}
@@ -124,52 +122,55 @@ export function CitySelector({ value, placeholder, onCitySelect, error, label }:
           onFocus={() => suggestions.length > 0 && setIsOpen(true)}
           placeholder={placeholder}
           className={`
-            w-full rounded-xl border-2 pl-12 pr-12 py-4 text-lg
-            transition-all duration-200
+            w-full rounded-rui-12 border-2 pl-12 pr-12 py-3.5 text-base
+            bg-rui-grey-2 text-rui-black placeholder-rui-grey-50
+            transition-all duration-rui-sm ease-rui-default
+            focus:bg-rui-white focus:outline-none
             ${error
-              ? 'border-red-300 focus:border-red-500 focus:ring-red-100'
+              ? 'border-danger focus:border-danger'
               : selectedCity
-              ? 'border-green-300 focus:border-green-500 focus:ring-green-100'
-              : 'border-gray-200 focus:border-blue-500 focus:ring-blue-100'
+              ? 'border-success focus:border-success'
+              : 'border-transparent focus:border-rui-grey-20'
             }
-            focus:outline-none focus:ring-4
           `}
         />
         {isLoading && (
-          <Loader2 className="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 animate-spin text-blue-500" />
+          <Loader2 className="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 animate-spin text-rui-accent" />
         )}
         {selectedCity && !isLoading && (
-          <MapPin className="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-green-500" />
+          <MapPin className="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-success" />
         )}
       </div>
 
       {/* Error message */}
       {error && (
-        <p className="mt-2 text-sm text-red-600">{error}</p>
+        <p className="mt-2 text-sm text-danger">{error}</p>
       )}
 
       {/* Suggestions dropdown */}
       <AnimatePresence>
         {isOpen && suggestions.length > 0 && (
           <motion.div
-            initial={{ opacity: 0, y: -10 }}
+            initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2 }}
-            className="absolute z-50 mt-2 w-full rounded-xl border border-gray-200 bg-white shadow-xl"
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2, ease: ruiEasing }}
+            className="absolute z-50 mt-2 w-full rounded-rui-16 border border-rui-grey-10 bg-rui-white shadow-rui-3 overflow-hidden"
           >
-            <div className="max-h-64 overflow-y-auto p-2">
+            <div className="max-h-64 overflow-y-auto p-1.5">
               {suggestions.map((city, index) => (
                 <button
                   key={`${city.name}-${city.country}-${index}`}
                   onClick={() => handleCitySelect(city)}
-                  className="w-full rounded-lg px-4 py-3 text-left transition-colors hover:bg-blue-50 focus:bg-blue-50 focus:outline-none"
+                  className="w-full rounded-rui-12 px-4 py-3 text-left transition-colors duration-rui-sm hover:bg-rui-grey-2 focus:bg-rui-grey-2 focus:outline-none"
                 >
                   <div className="flex items-center gap-3">
-                    <MapPin className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                    <div className="flex h-8 w-8 items-center justify-center rounded-rui-8 bg-rui-grey-5 flex-shrink-0">
+                      <MapPin className="h-4 w-4 text-rui-grey-50" />
+                    </div>
                     <div className="min-w-0">
-                      <p className="font-medium text-gray-900 truncate">{city.name}</p>
-                      <p className="text-sm text-gray-500 truncate">{city.country}</p>
+                      <p className="font-medium text-rui-black truncate">{city.name}</p>
+                      <p className="text-sm text-rui-grey-50 truncate">{city.country}</p>
                     </div>
                   </div>
                 </button>
@@ -182,11 +183,12 @@ export function CitySelector({ value, placeholder, onCitySelect, error, label }:
       {/* No results message */}
       {!isLoading && input.length >= 2 && suggestions.length === 0 && isOpen && (
         <motion.div
-          initial={{ opacity: 0, y: -10 }}
+          initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="absolute z-50 mt-2 w-full rounded-xl border border-gray-200 bg-white shadow-xl p-4"
+          transition={{ duration: 0.2, ease: ruiEasing }}
+          className="absolute z-50 mt-2 w-full rounded-rui-16 border border-rui-grey-10 bg-rui-white shadow-rui-3 p-4"
         >
-          <p className="text-sm text-gray-500 text-center">
+          <p className="text-sm text-rui-grey-50 text-center">
             No cities found. Try a different spelling.
           </p>
         </motion.div>

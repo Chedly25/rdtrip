@@ -1,12 +1,15 @@
 import { motion } from 'framer-motion'
-import { DollarSign } from 'lucide-react'
+import { DollarSign, Check } from 'lucide-react'
 import type { BudgetLevel } from '../types'
 
-const budgets: { value: BudgetLevel; label: string; icon: string }[] = [
-  { value: 'budget', label: 'Budget', icon: '$' },
-  { value: 'moderate', label: 'Moderate', icon: '$$' },
-  { value: 'comfort', label: 'Comfort', icon: '$$$' },
-  { value: 'luxury', label: 'Luxury', icon: '$$$$' },
+// Revolut easing
+const ruiEasing = [0.15, 0.5, 0.5, 1] as const
+
+const budgets: { value: BudgetLevel; label: string; icon: string; description: string }[] = [
+  { value: 'budget', label: 'Budget', icon: '$', description: 'Hostels & street food' },
+  { value: 'moderate', label: 'Moderate', icon: '$$', description: '3-star hotels & cafes' },
+  { value: 'comfort', label: 'Comfort', icon: '$$$', description: '4-star hotels & restaurants' },
+  { value: 'luxury', label: 'Luxury', icon: '$$$$', description: '5-star & fine dining' },
 ]
 
 interface BudgetSelectorProps {
@@ -17,25 +20,25 @@ interface BudgetSelectorProps {
 export function BudgetSelector({ selected, onChange }: BudgetSelectorProps) {
   return (
     <div className="space-y-3">
-      <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-        <DollarSign className="h-4 w-4" />
+      <label className="flex items-center gap-2 text-sm font-semibold text-rui-black">
+        <DollarSign className="h-4 w-4 text-rui-grey-50" />
         Budget Level
       </label>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
         {budgets.map((budget) => {
           const isSelected = selected === budget.value
 
           return (
             <motion.button
               key={budget.value}
+              type="button"
               onClick={() => onChange(budget.value)}
-              className={`relative rounded-xl border-2 p-4 text-center transition-all ${
+              className={`relative rounded-rui-16 border-2 p-4 text-center transition-all duration-rui-sm ease-rui-default ${
                 isSelected
-                  ? 'border-purple-500 bg-purple-50 shadow-md'
-                  : 'border-gray-200 bg-white hover:border-purple-300 hover:bg-purple-50/50'
+                  ? 'border-rui-black bg-rui-grey-2 shadow-rui-2'
+                  : 'border-rui-grey-10 bg-rui-white hover:border-rui-grey-20 hover:bg-rui-grey-2'
               }`}
-              whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
               {/* Checkmark for selected */}
@@ -43,33 +46,25 @@ export function BudgetSelector({ selected, onChange }: BudgetSelectorProps) {
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-purple-500 text-white shadow-lg"
+                  transition={{ duration: 0.2, ease: ruiEasing }}
+                  className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-rui-black text-rui-white shadow-rui-2"
                 >
-                  <svg
-                    className="h-4 w-4"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={3}
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
+                  <Check className="h-3 w-3" strokeWidth={3} />
                 </motion.div>
               )}
 
-              <div className="mb-2 text-2xl font-bold text-purple-600">
+              <div className={`mb-1 text-xl font-bold transition-colors duration-rui-sm ${
+                isSelected ? 'text-rui-black' : 'text-rui-grey-50'
+              }`}>
                 {budget.icon}
               </div>
-              <div
-                className={`text-sm font-semibold ${
-                  isSelected ? 'text-purple-700' : 'text-gray-700'
-                }`}
-              >
+              <div className={`text-sm font-semibold transition-colors duration-rui-sm ${
+                isSelected ? 'text-rui-black' : 'text-rui-grey-50'
+              }`}>
                 {budget.label}
+              </div>
+              <div className="text-xs text-rui-grey-50 mt-0.5">
+                {budget.description}
               </div>
             </motion.button>
           )

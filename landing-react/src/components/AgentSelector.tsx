@@ -1,6 +1,9 @@
 import { motion } from 'framer-motion'
-import { Compass, Landmark, UtensilsCrossed, Eye } from 'lucide-react'
+import { Compass, Landmark, UtensilsCrossed, Eye, Check } from 'lucide-react'
 import type { AgentType } from '../types'
+
+// Revolut easing
+const ruiEasing = [0.15, 0.5, 0.5, 1] as const
 
 const agents: {
   type: AgentType
@@ -14,7 +17,7 @@ const agents: {
     type: 'adventure',
     label: 'Adventure',
     icon: Compass,
-    color: 'from-green-500 to-emerald-600',
+    color: '#09BE67',
     description: 'Hiking, outdoor activities, and thrilling experiences',
     image: '/images/travel_style/adventure.png',
   },
@@ -22,7 +25,7 @@ const agents: {
     type: 'culture',
     label: 'Culture',
     icon: Landmark,
-    color: 'from-blue-500 to-indigo-600',
+    color: '#805CF5',
     description: 'Museums, historic sites, and cultural landmarks',
     image: '/images/travel_style/culture.png',
   },
@@ -30,7 +33,7 @@ const agents: {
     type: 'food',
     label: 'Food',
     icon: UtensilsCrossed,
-    color: 'from-orange-500 to-red-600',
+    color: '#EE7A40',
     description: 'Local cuisine, restaurants, and food experiences',
     image: '/images/travel_style/food.png',
   },
@@ -38,7 +41,7 @@ const agents: {
     type: 'hidden-gems',
     label: 'Hidden Gems',
     icon: Eye,
-    color: 'from-purple-500 to-pink-600',
+    color: '#00BE90',
     description: 'Off-the-beaten-path spots and local secrets',
     image: '/images/travel_style/hidden-gem.png',
   },
@@ -62,14 +65,14 @@ export function AgentSelector({ selected, onChange }: AgentSelectorProps) {
 
   return (
     <div className="space-y-3">
-      <label className="text-sm font-semibold text-gray-700">
+      <label className="text-sm font-semibold text-rui-black">
         Select Your Travel Interests
-        <span className="ml-2 text-xs font-normal text-gray-500">
+        <span className="ml-2 text-xs font-normal text-rui-grey-50">
           (Choose at least one)
         </span>
       </label>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         {agents.map((agent) => {
           const isSelected = selected.includes(agent.type)
           const Icon = agent.icon
@@ -77,65 +80,71 @@ export function AgentSelector({ selected, onChange }: AgentSelectorProps) {
           return (
             <motion.button
               key={agent.type}
+              type="button"
               onClick={() => toggleAgent(agent.type)}
-              className={`relative overflow-hidden rounded-xl border-2 h-48 text-left transition-all ${
+              className={`relative overflow-hidden rounded-rui-16 h-40 text-left transition-all duration-rui-sm ease-rui-default ${
                 isSelected
-                  ? 'border-transparent shadow-2xl ring-4 ring-slate-900 ring-offset-2'
-                  : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
+                  ? 'ring-2 ring-rui-black ring-offset-2 shadow-rui-3'
+                  : 'hover:shadow-rui-2'
               }`}
-              whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
               {/* Background Image */}
               <div
-                className="absolute inset-0 bg-cover bg-center"
-                style={{ backgroundImage: `url(${agent.image})` }}
+                className="absolute inset-0 bg-cover bg-center transition-transform duration-rui-lg ease-rui-default"
+                style={{
+                  backgroundImage: `url(${agent.image})`,
+                  transform: isSelected ? 'scale(1.05)' : 'scale(1)'
+                }}
               />
 
               {/* Overlay */}
-              <div className={`absolute inset-0 transition-opacity ${
+              <div className={`absolute inset-0 transition-all duration-rui-sm ${
                 isSelected
-                  ? 'bg-black/40'
-                  : 'bg-black/60 hover:bg-black/50'
+                  ? 'bg-gradient-to-t from-black/70 via-black/30 to-black/20'
+                  : 'bg-gradient-to-t from-black/80 via-black/50 to-black/30'
               }`} />
 
               {/* Checkmark for selected */}
               {isSelected && (
                 <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  className="absolute right-4 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-lg"
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ duration: 0.2, ease: ruiEasing }}
+                  className="absolute right-3 top-3 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-rui-white shadow-rui-2"
                 >
-                  <svg
-                    className="h-5 w-5 text-green-600"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={3}
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
+                  <Check className="h-4 w-4 text-success" strokeWidth={3} />
                 </motion.div>
               )}
 
               {/* Content */}
-              <div className="relative z-10 flex h-full flex-col justify-end p-5">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/20 backdrop-blur-sm">
-                    <Icon className="h-5 w-5 text-white" />
+              <div className="relative z-10 flex h-full flex-col justify-end p-4">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <div
+                    className="flex h-8 w-8 items-center justify-center rounded-rui-8"
+                    style={{ backgroundColor: `${agent.color}30` }}
+                  >
+                    <Icon className="h-4 w-4 text-white" />
                   </div>
-                  <h3 className="text-xl font-bold text-white">
+                  <h3 className="text-lg font-bold text-white">
                     {agent.label}
                   </h3>
                 </div>
-                <p className="text-sm text-white/90">
+                <p className="text-sm text-white/80 line-clamp-2">
                   {agent.description}
                 </p>
               </div>
+
+              {/* Selected border accent */}
+              {isSelected && (
+                <motion.div
+                  className="absolute bottom-0 left-0 right-0 h-1"
+                  style={{ backgroundColor: agent.color }}
+                  initial={{ scaleX: 0 }}
+                  animate={{ scaleX: 1 }}
+                  transition={{ duration: 0.3, ease: ruiEasing }}
+                />
+              )}
             </motion.button>
           )
         })}

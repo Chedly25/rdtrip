@@ -15,12 +15,12 @@ export function Skeleton({
   height,
   animation = 'wave'
 }: SkeletonProps) {
-  const baseClasses = 'bg-gray-200 relative overflow-hidden'
+  const baseClasses = 'bg-rui-grey-8 relative overflow-hidden'
 
   const variantClasses = {
-    text: 'rounded h-4',
+    text: 'rounded-rui-4 h-4',
     circular: 'rounded-full',
-    rectangular: 'rounded-lg'
+    rectangular: 'rounded-rui-12'
   }
 
   const animationClasses = {
@@ -45,7 +45,7 @@ export function Skeleton({
     >
       {animation === 'wave' && (
         <motion.div
-          className="absolute inset-0 bg-gradient-to-r from-transparent via-gray-100 to-transparent"
+          className="absolute inset-0 bg-gradient-to-r from-transparent via-rui-grey-5 to-transparent"
           animate={{
             x: ['-100%', '200%']
           }}
@@ -60,17 +60,17 @@ export function Skeleton({
   )
 }
 
-// Pre-built skeleton patterns
+// Pre-built skeleton patterns with Revolut styling
 export function CardSkeleton({ className = '' }: { className?: string }) {
   return (
-    <div className={`p-6 bg-white rounded-xl border border-gray-200 ${className}`}>
+    <div className={`p-6 bg-rui-white rounded-rui-16 border border-rui-grey-10 ${className}`}>
       <Skeleton variant="rectangular" className="w-full h-40 mb-4" />
       <Skeleton className="w-3/4 mb-2" />
       <Skeleton className="w-full mb-2" />
       <Skeleton className="w-5/6" />
       <div className="flex gap-2 mt-4">
-        <Skeleton variant="rectangular" className="w-20 h-8" />
-        <Skeleton variant="rectangular" className="w-20 h-8" />
+        <Skeleton variant="rectangular" className="w-20 h-8 rounded-rui-8" />
+        <Skeleton variant="rectangular" className="w-20 h-8 rounded-rui-8" />
       </div>
     </div>
   )
@@ -80,7 +80,7 @@ export function ListSkeleton({ items = 3, className = '' }: { items?: number; cl
   return (
     <div className={`space-y-3 ${className}`}>
       {Array.from({ length: items }).map((_, i) => (
-        <div key={i} className="flex items-center gap-4 p-4 bg-white rounded-xl border border-gray-200">
+        <div key={i} className="flex items-center gap-4 p-4 bg-rui-white rounded-rui-16 border border-rui-grey-10">
           <Skeleton variant="circular" width={48} height={48} />
           <div className="flex-1">
             <Skeleton className="w-1/2 mb-2" />

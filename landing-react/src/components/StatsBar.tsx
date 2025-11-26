@@ -1,6 +1,9 @@
 import { motion } from 'framer-motion'
 import { useEffect, useState } from 'react'
-import { TrendingUp } from 'lucide-react'
+import { Route, Sparkles } from 'lucide-react'
+
+// Revolut easing
+const ruiEasing = [0.15, 0.5, 0.5, 1] as const
 
 interface Stats {
   totalRoutes: number
@@ -12,7 +15,6 @@ export function StatsBar() {
   const [stats, setStats] = useState<Stats>({ totalRoutes: 0, routesToday: 0, routesThisWeek: 0 })
   const [isLoading, setIsLoading] = useState(true)
 
-  // Fetch stats from backend
   useEffect(() => {
     const fetchStats = async () => {
       try {
@@ -27,8 +29,6 @@ export function StatsBar() {
     }
 
     fetchStats()
-
-    // Refresh every 30 seconds
     const interval = setInterval(fetchStats, 30000)
     return () => clearInterval(interval)
   }, [])
@@ -36,50 +36,55 @@ export function StatsBar() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center gap-8">
-        <div className="h-16 w-32 animate-pulse rounded-lg bg-white/10" />
-        <div className="h-16 w-32 animate-pulse rounded-lg bg-white/10" />
+        {[1, 2].map((i) => (
+          <div key={i} className="h-14 w-36 animate-pulse rounded-rui-16 bg-rui-grey-5" />
+        ))}
       </div>
     )
   }
 
-  // Don't show if no data
   if (stats.totalRoutes === 0) {
     return null
   }
 
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, delay: 0.3 }}
-      className="flex flex-wrap items-center justify-center gap-6 md:gap-12"
-    >
-      {/* Today's routes */}
-      <div className="group relative">
-        <div className="flex items-center gap-3 rounded-xl bg-white/10 px-6 py-3 backdrop-blur-sm transition-all hover:bg-white/15">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/20">
-            <TrendingUp className="h-5 w-5 text-white" />
-          </div>
-          <div>
-            <div className="text-2xl font-bold text-white">
-              {stats.routesToday}
-            </div>
-            <div className="text-xs text-white/80">routes today</div>
-          </div>
-        </div>
-      </div>
+  const statItems = [
+    {
+      icon: Sparkles,
+      value: stats.routesToday,
+      label: 'routes today',
+    },
+    {
+      icon: Route,
+      value: `${stats.totalRoutes}+`,
+      label: 'total planned',
+    },
+  ]
 
-      {/* Total routes */}
-      <div className="group relative">
-        <div className="flex items-center gap-3 rounded-xl bg-white/10 px-6 py-3 backdrop-blur-sm transition-all hover:bg-white/15">
-          <div>
-            <div className="text-2xl font-bold text-white">
-              {stats.totalRoutes}+
+  return (
+    <div className="flex flex-wrap items-center justify-center gap-4 md:gap-6">
+      {statItems.map((item, index) => (
+        <motion.div
+          key={item.label}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: index * 0.1, ease: ruiEasing }}
+          className="group"
+        >
+          <div className="flex items-center gap-3 rounded-rui-16 bg-rui-grey-2 px-5 py-3 transition-all duration-rui-sm ease-rui-default hover:bg-rui-grey-5 hover:shadow-rui-1">
+            <div className="flex h-10 w-10 items-center justify-center rounded-rui-12 bg-rui-white shadow-rui-1">
+              <item.icon className="h-5 w-5 text-rui-black" />
             </div>
-            <div className="text-xs text-white/80">total routes planned</div>
+            <div className="text-left">
+              <div className="text-xl font-bold text-rui-black leading-tight">
+                {item.value}
+              </div>
+              <div className="text-xs text-rui-grey-50 font-medium">
+                {item.label}
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
-    </motion.div>
+        </motion.div>
+      ))}
+    </div>
   )
 }

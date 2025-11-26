@@ -1,13 +1,16 @@
-import { forwardRef, type InputHTMLAttributes, useState } from 'react';
-import { cn } from '../../lib/utils';
+import { forwardRef, type InputHTMLAttributes, useState } from 'react'
+import { cn } from '../../lib/utils'
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
-  label?: string;
-  error?: string;
-  helperText?: string;
-  floatingLabel?: boolean;
+  label?: string
+  error?: string
+  helperText?: string
+  floatingLabel?: boolean
 }
 
+/**
+ * Input component with Revolut-style design
+ */
 const Input = forwardRef<HTMLInputElement, InputProps>(
   (
     {
@@ -21,38 +24,42 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
     },
     ref
   ) => {
-    const [isFocused, setIsFocused] = useState(false);
-    const [hasValue, setHasValue] = useState(!!props.value || !!props.defaultValue);
+    const [isFocused, setIsFocused] = useState(false)
+    const [hasValue, setHasValue] = useState(!!props.value || !!props.defaultValue)
 
-    const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`;
+    const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`
 
     const baseInputStyles = cn(
+      // Base styles
       'w-full px-4 py-3',
-      'bg-gray-50 border border-gray-200',
-      'rounded-xl',
-      'text-gray-900 placeholder-gray-400',
-      'transition-all duration-200 ease-smooth',
-      'focus:bg-white',
-      'focus:border-gray-900',
+      'bg-rui-grey-2 border border-transparent',
+      'rounded-rui-12',
+      'text-rui-black placeholder-rui-grey-50',
+      // Transitions - Revolut easing
+      'transition-all duration-rui-sm ease-rui-default',
+      // Focus states
+      'focus:bg-rui-white',
+      'focus:border-rui-grey-20',
       'focus:outline-none',
-      'focus:ring-2 focus:ring-gray-900/10',
-      'hover:border-gray-300',
-      'shadow-inner shadow-gray-100/50',
+      'focus:ring-2 focus:ring-rui-accent/10',
+      // Hover
+      'hover:bg-rui-grey-5',
+      // Disabled
       'disabled:opacity-50 disabled:cursor-not-allowed',
-      'dark:bg-gray-800 dark:border-gray-700',
-      'dark:text-white dark:placeholder-gray-500',
-      'dark:focus:bg-gray-900 dark:focus:border-white',
-      error && 'border-error focus:border-error focus:ring-error/10',
+      // Error state
+      error && 'border-danger bg-danger/5 focus:border-danger focus:ring-danger/10',
+      // Floating label adjustment
       floatingLabel && 'pt-6 pb-2'
-    );
+    )
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      setHasValue(!!e.target.value);
+      setHasValue(!!e.target.value)
       if (props.onChange) {
-        props.onChange(e);
+        props.onChange(e)
       }
-    };
+    }
 
+    // Floating label variant
     if (floatingLabel && label) {
       return (
         <div className="relative w-full">
@@ -61,12 +68,12 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             id={inputId}
             className={cn(baseInputStyles, className)}
             onFocus={(e) => {
-              setIsFocused(true);
-              props.onFocus?.(e);
+              setIsFocused(true)
+              props.onFocus?.(e)
             }}
             onBlur={(e) => {
-              setIsFocused(false);
-              props.onBlur?.(e);
+              setIsFocused(false)
+              props.onBlur?.(e)
             }}
             onChange={handleChange}
             placeholder=" "
@@ -75,13 +82,12 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
           <label
             htmlFor={inputId}
             className={cn(
-              'absolute left-4 transition-all duration-200',
-              'text-gray-500 pointer-events-none',
-              'peer-placeholder-shown:top-4 peer-placeholder-shown:text-base',
-              (isFocused || hasValue) && 'top-2 text-xs',
-              (isFocused || hasValue) && 'text-gray-900 dark:text-white',
-              !isFocused && !hasValue && 'top-4 text-base',
-              error && 'text-error'
+              'absolute left-4 pointer-events-none',
+              'transition-all duration-rui-sm ease-rui-default',
+              'text-rui-grey-50',
+              (isFocused || hasValue) ? 'top-2 text-xs font-medium' : 'top-3.5 text-sm',
+              (isFocused || hasValue) && 'text-rui-black',
+              error && 'text-danger'
             )}
           >
             {label}
@@ -89,17 +95,18 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
           {(error || helperText) && (
             <p
               className={cn(
-                'mt-1.5 text-xs',
-                error ? 'text-error' : 'text-gray-500 dark:text-gray-400'
+                'mt-2 text-xs',
+                error ? 'text-danger' : 'text-rui-grey-50'
               )}
             >
               {error || helperText}
             </p>
           )}
         </div>
-      );
+      )
     }
 
+    // Standard label variant
     return (
       <div className="w-full">
         {label && (
@@ -107,8 +114,8 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             htmlFor={inputId}
             className={cn(
               'block mb-2 text-sm font-medium',
-              'text-gray-700 dark:text-gray-300',
-              error && 'text-error'
+              'text-rui-black',
+              error && 'text-danger'
             )}
           >
             {label}
@@ -123,18 +130,18 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
         {(error || helperText) && (
           <p
             className={cn(
-              'mt-1.5 text-xs',
-              error ? 'text-error' : 'text-gray-500 dark:text-gray-400'
+              'mt-2 text-xs',
+              error ? 'text-danger' : 'text-rui-grey-50'
             )}
           >
             {error || helperText}
           </p>
         )}
       </div>
-    );
+    )
   }
-);
+)
 
-Input.displayName = 'Input';
+Input.displayName = 'Input'
 
-export default Input;
+export default Input
