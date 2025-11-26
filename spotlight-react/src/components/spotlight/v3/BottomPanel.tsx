@@ -35,6 +35,7 @@ const BottomPanel = ({ onCityDetailsClick, budget }: BottomPanelProps) => {
     setSelectedCity,
     getCityName,
     reorderCities,
+    updateCityNights,
     isAddingLandmark,
     setIsAddingLandmark,
   } = useSpotlightStoreV2();
@@ -83,9 +84,11 @@ const BottomPanel = ({ onCityDetailsClick, budget }: BottomPanelProps) => {
   };
 
   const handleNightsChange = (cityIndex: number, nights: number) => {
-    // Update nights in store - will need to add this action to the store
-    console.log('Update nights for city', cityIndex, 'to', nights);
-    // TODO: Implement updateCityNights in store
+    const city = route?.cities[cityIndex];
+    if (city) {
+      const cityName = getCityName(city.city);
+      updateCityNights(cityName, nights);
+    }
   };
 
   const activeCityIndex = activeId ? parseInt(activeId.replace('city-', '')) : null;

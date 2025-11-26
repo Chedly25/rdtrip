@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useSpotlightStoreV2, type SpotlightRoute, type CityData } from '../../../stores/spotlightStoreV2';
 import MapViewV2 from './MapViewV2';
 import { BottomPanel } from '../v3/BottomPanel';
+import { CityDetailModal } from '../v3/CityDetailModal';
+import { SaveRouteModal } from '../v3/SaveRouteModal';
 import SpotlightHeader from './SpotlightHeader';
 import { ItineraryView } from '../../itinerary/ItineraryView';
 import { Loader2, Users } from 'lucide-react';
@@ -18,6 +20,8 @@ const SpotlightV2 = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCollaboration, setShowCollaboration] = useState(false);
+  const [cityDetailIndex, setCityDetailIndex] = useState<number | null>(null);
+  const [showSaveModal, setShowSaveModal] = useState(false);
 
   const {
     route,
@@ -352,6 +356,50 @@ const SpotlightV2 = () => {
     navigate(`/generate?routeId=${routeId}`);
   };
 
+  // Handler for saving route
+  const handleSaveRoute = async (name: string) => {
+    if (!route) throw new Error('No route to save');
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+      throw new Error('Please log in to save routes');
+    }
+
+    const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/routes`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        name,
+        origin: route.origin,
+        destination: route.destination,
+        budget: route.budget,
+        selectedAgents: route.agent,
+        routeData: {
+          cities: route.cities,
+          landmarks: route.landmarks,
+          nightAllocations: route.nightAllocations,
+          agentResults: route.agentResults,
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to save route');
+    }
+
+    const savedRoute = await response.json();
+    console.log('✅ Route saved:', savedRoute);
+
+    // Update URL with new routeId
+    if (savedRoute.route?.id) {
+      navigate(`/spotlight-new/?routeId=${savedRoute.route.id}`, { replace: true });
+    }
+  };
+
   // If itinerary param exists, show ItineraryView instead of normal spotlight
   // Check this FIRST before loading/error states - ItineraryView loads its own data
   if (itineraryId) {
@@ -402,13 +450,29 @@ const SpotlightV2 = () => {
   return (
     <div className="h-screen w-screen overflow-hidden bg-rui-grey-2 relative">
       {/* Header */}
-      <SpotlightHeader onGenerateItinerary={handleGenerateItinerary} />
+      <SpotlightHeader
+        onGenerateItinerary={handleGenerateItinerary}
+        onSave={() => setShowSaveModal(true)}
+      />
 
       {/* Map - Fullscreen hero element */}
       <MapViewV2 />
 
       {/* Bottom Panel - Trip summary + City cards */}
-      <BottomPanel />
+      <BottomPanel onCityDetailsClick={setCityDetailIndex} />
+
+      {/* City Detail Modal */}
+      <CityDetailModal
+        cityIndex={cityDetailIndex}
+        onClose={() => setCityDetailIndex(null)}
+      />
+
+      {/* Save Route Modal */}
+      <SaveRouteModal
+        isOpen={showSaveModal}
+        onClose={() => setShowSaveModal(false)}
+        onSave={handleSaveRoute}
+      />
 
       {/* Collaborate Button - Fixed position */}
       {routeId && (
