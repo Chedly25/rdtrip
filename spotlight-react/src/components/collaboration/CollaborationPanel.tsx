@@ -366,23 +366,25 @@ export function CollaborationPanel({ routeId, currentUserId, onInviteClick, onCl
   }
 
   return (
-    <div className="flex flex-col h-full bg-white rounded-xl shadow-lg border border-gray-200">
+    <div className="flex flex-col h-full bg-white rounded-rui-24 shadow-rui-3 border border-rui-grey-10">
       {/* Header with tabs */}
-      <div className="flex items-center border-b border-gray-200 p-4 gap-3">
+      <div className="flex items-center border-b border-rui-grey-10 p-4 gap-3">
         {/* Tabs */}
         <div className="flex gap-2 flex-1 min-w-0">
           <button
             onClick={() => setActiveTab('chat')}
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm ${
+            className={`flex items-center gap-2 px-3 py-2 rounded-rui-12 transition-all duration-rui-sm text-sm ${
               activeTab === 'chat'
-                ? 'bg-blue-50 text-blue-600 font-medium'
-                : 'text-gray-600 hover:bg-gray-50'
+                ? 'bg-rui-black text-white font-medium'
+                : 'text-rui-grey-50 hover:bg-rui-grey-5'
             }`}
           >
             <MessageCircle className="h-4 w-4" />
             <span>Chat</span>
             {messages.length > 0 && (
-              <span className="ml-1 text-xs bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded-full">
+              <span className={`ml-1 text-xs px-1.5 py-0.5 rounded-full ${
+                activeTab === 'chat' ? 'bg-white/20 text-white' : 'bg-rui-grey-10 text-rui-grey-50'
+              }`}>
                 {messages.length}
               </span>
             )}
@@ -390,26 +392,28 @@ export function CollaborationPanel({ routeId, currentUserId, onInviteClick, onCl
 
           <button
             onClick={() => setActiveTab('collaborators')}
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm ${
+            className={`flex items-center gap-2 px-3 py-2 rounded-rui-12 transition-all duration-rui-sm text-sm ${
               activeTab === 'collaborators'
-                ? 'bg-blue-50 text-blue-600 font-medium'
-                : 'text-gray-600 hover:bg-gray-50'
+                ? 'bg-rui-black text-white font-medium'
+                : 'text-rui-grey-50 hover:bg-rui-grey-5'
             }`}
           >
             <Users className="h-4 w-4" />
             <span className="hidden sm:inline">Collaborators</span>
             <span className="sm:hidden">Team</span>
-            <span className="ml-1 text-xs bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded-full">
+            <span className={`ml-1 text-xs px-1.5 py-0.5 rounded-full ${
+              activeTab === 'collaborators' ? 'bg-white/20 text-white' : 'bg-rui-grey-10 text-rui-grey-50'
+            }`}>
               {collaborators.length}
             </span>
           </button>
 
           <button
             onClick={() => setActiveTab('tasks')}
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm ${
+            className={`flex items-center gap-2 px-3 py-2 rounded-rui-12 transition-all duration-rui-sm text-sm ${
               activeTab === 'tasks'
-                ? 'bg-blue-50 text-blue-600 font-medium'
-                : 'text-gray-600 hover:bg-gray-50'
+                ? 'bg-rui-black text-white font-medium'
+                : 'text-rui-grey-50 hover:bg-rui-grey-5'
             }`}
           >
             <ListTodo className="h-4 w-4" />
@@ -419,18 +423,18 @@ export function CollaborationPanel({ routeId, currentUserId, onInviteClick, onCl
 
         {/* Connection status indicator */}
         <div className="flex items-center gap-2 flex-shrink-0">
-          <div className={`h-2 w-2 rounded-full ${isOpen ? 'bg-green-500' : 'bg-gray-400'}`} />
-          <span className="text-xs text-gray-500 hidden md:inline">{isOpen ? 'Connected' : 'Connecting...'}</span>
+          <div className={`h-2 w-2 rounded-full ${isOpen ? 'bg-success' : 'bg-rui-grey-50'}`} />
+          <span className="text-xs text-rui-grey-50 hidden md:inline">{isOpen ? 'Connected' : 'Connecting...'}</span>
         </div>
 
         {/* Close button */}
         {onClose && (
           <button
             onClick={onClose}
-            className="flex-shrink-0 p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+            className="flex-shrink-0 p-1.5 rounded-rui-8 hover:bg-rui-grey-5 transition-colors duration-rui-sm"
             aria-label="Close panel"
           >
-            <X className="w-5 h-5 text-gray-500" />
+            <X className="w-5 h-5 text-rui-grey-50" />
           </button>
         )}
       </div>
@@ -446,8 +450,8 @@ export function CollaborationPanel({ routeId, currentUserId, onInviteClick, onCl
                   <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
                 </div>
               ) : messages.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-center text-gray-500">
-                  <MessageCircle className="h-12 w-12 mb-2 text-gray-300" />
+                <div className="flex flex-col items-center justify-center h-full text-center text-rui-grey-50">
+                  <MessageCircle className="h-12 w-12 mb-2 text-rui-grey-10" />
                   <p className="text-sm">No messages yet</p>
                   <p className="text-xs mt-1">Start the conversation!</p>
                 </div>
@@ -464,7 +468,7 @@ export function CollaborationPanel({ routeId, currentUserId, onInviteClick, onCl
                     >
                       {/* Avatar */}
                       <div className="flex-shrink-0">
-                        <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-sm font-medium">
+                        <div className="h-8 w-8 rounded-full bg-rui-black flex items-center justify-center text-white text-sm font-medium">
                           {message.userName.charAt(0).toUpperCase()}
                         </div>
                       </div>
@@ -476,16 +480,16 @@ export function CollaborationPanel({ routeId, currentUserId, onInviteClick, onCl
                         }`}
                       >
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-medium text-gray-700">
+                          <span className="text-xs font-medium text-rui-black">
                             {message.userId === currentUserId ? 'You' : message.userName}
                           </span>
-                          <span className="text-xs text-gray-400">{formatTime(message.createdAt)}</span>
+                          <span className="text-xs text-rui-grey-50">{formatTime(message.createdAt)}</span>
                         </div>
                         <div
-                          className={`px-4 py-2 rounded-2xl ${
+                          className={`px-4 py-2 rounded-rui-16 ${
                             message.userId === currentUserId
-                              ? 'bg-blue-500 text-white'
-                              : 'bg-gray-100 text-gray-900'
+                              ? 'bg-rui-black text-white'
+                              : 'bg-rui-grey-5 text-rui-black'
                           }`}
                         >
                           {/* Parent message indicator (if this is a reply) */}
@@ -496,8 +500,8 @@ export function CollaborationPanel({ routeId, currentUserId, onInviteClick, onCl
                                 <div
                                   className={`mb-2 pb-2 border-l-2 pl-2 text-xs ${
                                     message.userId === currentUserId
-                                      ? 'border-blue-300 text-blue-100'
-                                      : 'border-gray-300 text-gray-500'
+                                      ? 'border-white/30 text-white/70'
+                                      : 'border-rui-grey-10 text-rui-grey-50'
                                   }`}
                                 >
                                   <div className="flex items-center gap-1 mb-0.5">
@@ -539,7 +543,7 @@ export function CollaborationPanel({ routeId, currentUserId, onInviteClick, onCl
                           />
                           <button
                             onClick={() => setReplyingTo(message)}
-                            className="p-1 rounded-full hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+                            className="p-1 rounded-full hover:bg-rui-grey-5 text-rui-grey-50 hover:text-rui-black transition-colors duration-rui-sm"
                             title="Reply to this message"
                           >
                             <Reply className="w-3.5 h-3.5" />
@@ -556,12 +560,12 @@ export function CollaborationPanel({ routeId, currentUserId, onInviteClick, onCl
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0 }}
-                        className="flex items-center gap-2 text-xs text-gray-500"
+                        className="flex items-center gap-2 text-xs text-rui-grey-50"
                       >
                         <div className="flex gap-1">
-                          <div className="h-2 w-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                          <div className="h-2 w-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                          <div className="h-2 w-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                          <div className="h-2 w-2 bg-rui-grey-50 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                          <div className="h-2 w-2 bg-rui-grey-50 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                          <div className="h-2 w-2 bg-rui-grey-50 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                         </div>
                         <span>Someone is typing...</span>
                       </motion.div>
@@ -574,7 +578,7 @@ export function CollaborationPanel({ routeId, currentUserId, onInviteClick, onCl
             </div>
 
             {/* Message input */}
-            <div className="border-t border-gray-200 p-4">
+            <div className="border-t border-rui-grey-10 p-4">
               {/* Reply indicator */}
               <AnimatePresence>
                 {replyingTo && (
@@ -583,23 +587,23 @@ export function CollaborationPanel({ routeId, currentUserId, onInviteClick, onCl
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.15 }}
-                    className="mb-2 p-2 bg-blue-50 border-l-4 border-blue-500 rounded flex items-start justify-between"
+                    className="mb-2 p-2 bg-rui-grey-5 border-l-4 border-rui-black rounded-rui-8 flex items-start justify-between"
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <Reply className="w-3.5 h-3.5 text-blue-600" />
-                        <span className="text-xs font-medium text-blue-700">
+                        <Reply className="w-3.5 h-3.5 text-rui-black" />
+                        <span className="text-xs font-medium text-rui-black">
                           Replying to {replyingTo.userId === currentUserId ? 'yourself' : replyingTo.userName}
                         </span>
                       </div>
-                      <p className="text-sm text-gray-700 truncate">{replyingTo.message}</p>
+                      <p className="text-sm text-rui-grey-50 truncate">{replyingTo.message}</p>
                     </div>
                     <button
                       onClick={() => setReplyingTo(null)}
-                      className="ml-2 p-1 hover:bg-blue-100 rounded transition-colors"
+                      className="ml-2 p-1 hover:bg-rui-grey-10 rounded-rui-8 transition-colors duration-rui-sm"
                       title="Cancel reply"
                     >
-                      <X className="w-3.5 h-3.5 text-blue-600" />
+                      <X className="w-3.5 h-3.5 text-rui-black" />
                     </button>
                   </motion.div>
                 )}
@@ -633,12 +637,12 @@ export function CollaborationPanel({ routeId, currentUserId, onInviteClick, onCl
                   }}
                   placeholder="Type a message... (use @ to mention)"
                   disabled={!isOpen}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-400"
+                  className="flex-1 px-4 py-2.5 border border-rui-grey-10 rounded-rui-12 bg-rui-grey-2 focus:outline-none focus:ring-2 focus:ring-rui-black focus:border-transparent disabled:bg-rui-grey-5 disabled:text-rui-grey-50 transition-all duration-rui-sm"
                 />
                 <button
                   onClick={sendMessage}
                   disabled={!messageInput.trim() || isSending || !isOpen}
-                  className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                  className="px-4 py-2.5 bg-rui-black text-white rounded-rui-12 hover:bg-rui-grey-50 disabled:bg-rui-grey-10 disabled:text-rui-grey-50 disabled:cursor-not-allowed transition-all duration-rui-sm flex items-center gap-2"
                 >
                   {isSending ? (
                     <Loader2 className="h-5 w-5 animate-spin" />
@@ -651,11 +655,11 @@ export function CollaborationPanel({ routeId, currentUserId, onInviteClick, onCl
           </div>
         ) : activeTab === 'collaborators' ? (
           /* Collaborators list */
-          <div className="p-4 space-y-2">
+          <div className="p-4 space-y-3">
             {/* Invite button */}
             <button
               onClick={onInviteClick}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-gray-600 hover:text-blue-600"
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-rui-grey-10 rounded-rui-16 hover:border-rui-black hover:bg-rui-grey-5 transition-all duration-rui-sm text-rui-grey-50 hover:text-rui-black"
             >
               <UserPlus className="h-5 w-5" />
               <span className="font-medium">Invite Collaborator</span>
@@ -664,11 +668,11 @@ export function CollaborationPanel({ routeId, currentUserId, onInviteClick, onCl
             {/* Collaborators */}
             {isLoadingCollaborators ? (
               <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+                <Loader2 className="h-6 w-6 animate-spin text-rui-grey-50" />
               </div>
             ) : collaborators.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <Users className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+              <div className="text-center py-8 text-rui-grey-50">
+                <Users className="h-12 w-12 mx-auto mb-2 text-rui-grey-10" />
                 <p className="text-sm">No collaborators yet</p>
               </div>
             ) : (
@@ -676,12 +680,12 @@ export function CollaborationPanel({ routeId, currentUserId, onInviteClick, onCl
                 {collaborators.map((collaborator) => (
                   <div
                     key={collaborator.id}
-                    className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors"
+                    className="flex items-center justify-between p-3 rounded-rui-12 hover:bg-rui-grey-5 transition-colors duration-rui-sm"
                   >
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       {/* Avatar with presence indicator */}
                       <div className="relative flex-shrink-0">
-                        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-medium">
+                        <div className="h-10 w-10 rounded-full bg-rui-black flex items-center justify-center text-white font-medium">
                           {collaborator.name.charAt(0).toUpperCase()}
                         </div>
                         <div
@@ -694,17 +698,17 @@ export function CollaborationPanel({ routeId, currentUserId, onInviteClick, onCl
                       {/* Name and email */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <p className="text-sm font-medium text-gray-900 truncate">
+                          <p className="text-sm font-medium text-rui-black truncate">
                             {collaborator.name}
                             {collaborator.userId === currentUserId && (
-                              <span className="ml-1 text-gray-500">(You)</span>
+                              <span className="ml-1 text-rui-grey-50">(You)</span>
                             )}
                           </p>
                           {getRoleIcon(collaborator.role)}
                         </div>
-                        <p className="text-xs text-gray-500 truncate">{collaborator.email}</p>
+                        <p className="text-xs text-rui-grey-50 truncate">{collaborator.email}</p>
                         {collaborator.presence?.status && collaborator.presence.status !== 'offline' && (
-                          <p className="text-xs text-gray-400 mt-0.5">
+                          <p className="text-xs text-rui-grey-50 mt-0.5">
                             {collaborator.presence.currentSection || collaborator.presence.status}
                           </p>
                         )}
@@ -713,8 +717,8 @@ export function CollaborationPanel({ routeId, currentUserId, onInviteClick, onCl
 
                     {/* Options menu (could expand for owner/editor) */}
                     {collaborator.role !== 'owner' && (
-                      <button className="p-1 hover:bg-gray-200 rounded transition-colors">
-                        <MoreVertical className="h-4 w-4 text-gray-400" />
+                      <button className="p-1 hover:bg-rui-grey-10 rounded-rui-8 transition-colors duration-rui-sm">
+                        <MoreVertical className="h-4 w-4 text-rui-grey-50" />
                       </button>
                     )}
                   </div>
