@@ -79,9 +79,9 @@ export function Hero() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2, ease: ruiEasing }}
           >
-            Four specialized AI agents craft personalized routes.
+            Tell us what you love. Our AI crafts one perfect route
             <br className="hidden sm:block" />
-            Adventure, Culture, Food, or Hidden Gems — you choose.
+            tailored to your interests, pace, and travel style.
           </motion.p>
 
           {/* CTA Button - Revolut style with state layer */}
