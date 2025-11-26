@@ -67,14 +67,64 @@ export default function SpotlightPage() {
     const storedData = localStorage.getItem('spotlightData')
 
     if (storedData) {
-      const data = JSON.parse(storedData)
-      // Transform data to match our interface
-      // This is a simplified version - you'll need to adapt based on your actual data structure
-      const transformedCities: City[] = data.cities || []
-      const transformedItinerary: DayPlan[] = data.itinerary || []
+      try {
+        const data = JSON.parse(storedData)
 
-      setCities(transformedCities)
-      setItinerary(transformedItinerary)
+        // Build cities array from origin + waypoints + destination
+        const allCities: City[] = []
+
+        // Add origin
+        if (data.origin?.name && data.origin?.coordinates) {
+          allCities.push({
+            name: data.origin.name,
+            country: data.origin.country,
+            coordinates: data.origin.coordinates,
+            nights: 0, // Origin is starting point
+            description: 'Starting point'
+          })
+        }
+
+        // Add waypoints (cities)
+        if (data.cities && Array.isArray(data.cities)) {
+          data.cities.forEach((city: City) => {
+            if (city.name && city.coordinates) {
+              allCities.push(city)
+            }
+          })
+        }
+
+        // Add destination
+        if (data.destination?.name && data.destination?.coordinates) {
+          allCities.push({
+            name: data.destination.name,
+            country: data.destination.country,
+            coordinates: data.destination.coordinates,
+            nights: data.destination.nights || 2,
+            description: 'Final destination'
+          })
+        }
+
+        setCities(allCities)
+
+        // Generate simple itinerary from cities
+        const generatedItinerary: DayPlan[] = []
+        let dayCounter = 1
+
+        allCities.forEach((city) => {
+          const nights = city.nights || 1
+          for (let i = 0; i < Math.max(1, nights); i++) {
+            generatedItinerary.push({
+              day: dayCounter++,
+              city: city.name,
+              activities: [] // Activities would need to be populated separately
+            })
+          }
+        })
+
+        setItinerary(generatedItinerary)
+      } catch (error) {
+        console.error('Error parsing spotlight data:', error)
+      }
     } else if (routeId) {
       // Fetch from API if not in localStorage
       fetchRouteData(routeId)

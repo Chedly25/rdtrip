@@ -1,5 +1,6 @@
-import { useRef, useState, useCallback, useEffect } from 'react'
-import Map, { Marker, NavigationControl, ScaleControl } from 'react-map-gl/mapbox'
+import { useRef, useState, useCallback, useEffect, useMemo } from 'react'
+import Map, { Marker, NavigationControl, ScaleControl, Source, Layer } from 'react-map-gl/mapbox'
+import type { LayerProps } from 'react-map-gl/mapbox'
 import { motion, AnimatePresence } from 'framer-motion'
 import { MapPin, X } from 'lucide-react'
 import 'mapbox-gl/dist/mapbox-gl.css'
@@ -103,6 +104,35 @@ export function MapView({
     [onCitySelect]
   )
 
+  // Create GeoJSON for route line connecting all cities
+  const routeGeoJSON = useMemo(() => {
+    if (cities.length < 2) return null
+
+    return {
+      type: 'Feature' as const,
+      properties: {},
+      geometry: {
+        type: 'LineString' as const,
+        coordinates: cities.map(city => city.coordinates)
+      }
+    }
+  }, [cities])
+
+  // Route line layer style
+  const routeLayerStyle: LayerProps = {
+    id: 'route-line',
+    type: 'line',
+    paint: {
+      'line-color': '#191C1F',
+      'line-width': 3,
+      'line-opacity': 0.8
+    },
+    layout: {
+      'line-cap': 'round',
+      'line-join': 'round'
+    }
+  }
+
   return (
     <div className={`relative w-full h-full ${className}`}>
       <Map
@@ -117,6 +147,13 @@ export function MapView({
         attributionControl={false}
         logoPosition="bottom-right"
       >
+        {/* Route Line */}
+        {routeGeoJSON && (
+          <Source id="route" type="geojson" data={routeGeoJSON}>
+            <Layer {...routeLayerStyle} />
+          </Source>
+        )}
+
         {/* City Markers */}
         {cities.map((city, index) => (
           <Marker
