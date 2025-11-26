@@ -70,6 +70,7 @@ interface RouteResultsProps {
 }
 
 const agentThemes: Record<string, { color: string; icon: string }> = {
+  'your-route': { color: '#191C1F', icon: '/images/icons/best_icon.png' },
   'best-overall': { color: '#064d51', icon: '/images/icons/best_icon.png' },
   adventure: { color: '#055948', icon: '/images/icons/adventure_icon.png' },
   culture: { color: '#a87600', icon: '/images/icons/culture_icon.png' },

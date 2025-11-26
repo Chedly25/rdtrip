@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Navigation } from './components/Navigation'
 import { Hero } from './components/Hero'
-import { AgentShowcase } from './components/AgentShowcase'
+import { WorkflowShowcase } from './components/WorkflowShowcase'
 import { BeforeAfterComparison } from './components/BeforeAfterComparison'
 import { DestinationShowcase } from './components/DestinationShowcase'
 import { Features } from './components/Features'
@@ -20,6 +20,83 @@ import './App.css'
 
 const queryClient = new QueryClient()
 
+/**
+ * Transform unified route format to legacy agentResults format
+ * This allows RouteResults component to work without major changes
+ */
+function transformUnifiedToLegacy(data: any): any {
+  // If it already has agentResults, return as-is (old format)
+  if (data.agentResults && data.agentResults.length > 0) {
+    return data
+  }
+
+  // Check if it's a unified format (has route.waypoints)
+  if (data.route && data.route.waypoints) {
+    const { route, origin, destination, totalNights, budget, preferences, id } = data
+
+    // Build the recommendations object matching old format
+    const recommendations = {
+      origin: {
+        city: origin.name,
+        name: origin.name,
+        country: origin.country,
+        latitude: origin.coordinates?.[0],
+        longitude: origin.coordinates?.[1]
+      },
+      destination: {
+        city: destination.name,
+        name: destination.name,
+        country: destination.country,
+        nights: route.destination?.nights || Math.ceil(totalNights * 0.2),
+        latitude: destination.coordinates?.[0],
+        longitude: destination.coordinates?.[1]
+      },
+      waypoints: route.waypoints.map((wp: any) => ({
+        city: wp.name,
+        name: wp.name,
+        country: wp.country,
+        nights: wp.nights || 2,
+        description: wp.why_this_stop || wp.description || '',
+        highlights: wp.highlights || [],
+        activities: wp.activities || [],
+        restaurants: wp.restaurants || [],
+        hotels: wp.hotels || [],
+        coordinates: wp.coordinates,
+        relevance_score: wp.relevance_score,
+        interest_matches: wp.interest_matches
+      })),
+      alternatives: [],
+      narrative: route.narrative || '',
+      metrics: route.metrics || {}
+    }
+
+    // Create a single "Your Route" agent result
+    return {
+      id,
+      origin: origin.name,
+      destination: destination.name,
+      totalNights,
+      budget,
+      preferences,
+      agentResults: [
+        {
+          agent: 'your-route',
+          agentConfig: {
+            name: 'Your Perfect Route',
+            color: '#191C1F',
+            icon: '/images/icons/best_icon.png'
+          },
+          recommendations: JSON.stringify(recommendations),
+          metrics: route.metrics || {}
+        }
+      ]
+    }
+  }
+
+  // Fallback: return as-is
+  return data
+}
+
 function HomePage() {
   const location = useLocation()
   const [routeData, setRouteData] = useState<any>(null)
@@ -28,14 +105,17 @@ function HomePage() {
   // Handle route data passed from MyRoutes page
   useEffect(() => {
     if (location.state?.routeData) {
-      setRouteData(location.state.routeData)
+      const transformed = transformUnifiedToLegacy(location.state.routeData)
+      setRouteData(transformed)
       setShowResults(true)
       window.scrollTo({ top: 0, behavior: 'smooth' })
     }
   }, [location.state])
 
   const handleRouteGenerated = (data: any) => {
-    setRouteData(data)
+    // Transform unified format to legacy format for RouteResults compatibility
+    const transformed = transformUnifiedToLegacy(data)
+    setRouteData(transformed)
     setShowResults(true)
     // Scroll to results
     setTimeout(() => {
@@ -74,7 +154,7 @@ function HomePage() {
       {!showResults ? (
         <>
           <Hero />
-          <AgentShowcase />
+          <WorkflowShowcase />
           <BeforeAfterComparison />
           <DestinationShowcase />
           <RouteForm onRouteGenerated={handleRouteGenerated} />

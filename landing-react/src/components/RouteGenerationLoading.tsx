@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Loader2, Check, Clock } from 'lucide-react'
+import { Loader2, Check, Clock, Search, MapPin, Calendar, Sparkles, CheckCircle, Route } from 'lucide-react'
+import type { TripPreferences } from '../types'
+import { AVAILABLE_INTERESTS } from '../types'
 
 interface RouteGenerationLoadingProps {
   progress: {
@@ -11,36 +13,48 @@ interface RouteGenerationLoadingProps {
     estimatedTimeRemaining: number
   }
   destination: string
-  agents: string[]
+  preferences: TripPreferences
 }
 
-// Agent metadata for display
-const agentMetadata: Record<string, { name: string; color: string; iconPath: string; description: string }> = {
-  adventure: {
-    name: 'Adventure',
-    color: '#0f5132', // dark green from spotlight theme
-    iconPath: '/images/icons/adventure_icon.png',
-    description: 'Discovering outdoor activities and scenic routes'
+// Workflow phases for unified generation
+const workflowPhases = [
+  {
+    id: 'research',
+    name: 'Research',
+    icon: Search,
+    description: 'Analyzing the route corridor and options'
   },
-  culture: {
-    name: 'Culture',
-    color: '#d4a017', // yellow/gold from spotlight theme
-    iconPath: '/images/icons/culture_icon.png',
-    description: 'Finding museums, historic sites, and cultural gems'
+  {
+    id: 'discovery',
+    name: 'Discovery',
+    icon: MapPin,
+    description: 'Finding perfect stops based on your interests'
   },
-  food: {
-    name: 'Food',
-    color: '#8b0000', // dark red from spotlight theme
-    iconPath: '/images/icons/food_icon.png',
-    description: 'Locating best restaurants and local cuisine'
+  {
+    id: 'planning',
+    name: 'Planning',
+    icon: Calendar,
+    description: 'Optimizing route order and timing'
   },
-  'hidden-gems': {
-    name: 'Hidden Gems',
-    color: '#1e3a8a', // dark blue from spotlight theme
-    iconPath: '/images/icons/hidden_gem_icon.png',
-    description: 'Uncovering charming villages and secret spots'
+  {
+    id: 'enrichment',
+    name: 'Enrichment',
+    icon: Sparkles,
+    description: 'Adding activities, restaurants, and hotels'
+  },
+  {
+    id: 'validation',
+    name: 'Validation',
+    icon: CheckCircle,
+    description: 'Verifying feasibility and quality'
+  },
+  {
+    id: 'optimization',
+    name: 'Optimization',
+    icon: Route,
+    description: 'Final refinements for your perfect trip'
   }
-}
+]
 
 // Fun facts about destinations and travel
 const travelFacts = [
@@ -48,7 +62,7 @@ const travelFacts = [
   'Try to learn a few key phrases in the local language',
   'The best photos often happen during golden hour (sunrise/sunset)',
   'Local markets are great for authentic experiences and budget meals',
-  'Download offline maps before you go - you\'ll thank yourself later',
+  "Download offline maps before you go - you'll thank yourself later",
   'Pack layers - mountain weather can change in minutes',
   'Book popular restaurants at least a week in advance',
   'Many museums offer free admission on certain days',
@@ -56,7 +70,7 @@ const travelFacts = [
   'Stay hydrated while exploring - bring a reusable water bottle'
 ]
 
-export function RouteGenerationLoading({ progress, destination, agents }: RouteGenerationLoadingProps) {
+export function RouteGenerationLoading({ progress, destination, preferences }: RouteGenerationLoadingProps) {
   const [currentFactIndex, setCurrentFactIndex] = useState(0)
 
   // Rotate facts every 5 seconds
@@ -76,14 +90,17 @@ export function RouteGenerationLoading({ progress, destination, agents }: RouteG
     return `About ${minutes} minute${minutes !== 1 ? 's' : ''} remaining`
   }
 
-  // Get current agent metadata
-  const getCurrentAgentDescription = (): string => {
-    if (!progress.currentAgent) return 'Preparing your route...'
-    const agentKey = agents.find(a =>
-      agentMetadata[a]?.name === progress.currentAgent
-    )
-    return agentKey ? agentMetadata[agentKey].description : 'Processing...'
-  }
+  // Get selected interest labels
+  const selectedInterestLabels = preferences.interests
+    .slice(0, 3)
+    .map((i) => AVAILABLE_INTERESTS.find((ai) => ai.id === i.id)?.label || i.id)
+    .join(', ')
+
+  // Determine current phase based on progress
+  const currentPhaseIndex = Math.min(
+    Math.floor((progress.percentComplete / 100) * workflowPhases.length),
+    workflowPhases.length - 1
+  )
 
   return (
     <motion.div
@@ -100,7 +117,7 @@ export function RouteGenerationLoading({ progress, destination, agents }: RouteG
           transition={{ delay: 0.1 }}
           className="text-3xl font-bold text-gray-900 mb-3 tracking-tight"
         >
-          Creating your perfect route to {destination}
+          Planning your trip to {destination}
         </motion.h2>
         <motion.p
           initial={{ opacity: 0 }}
@@ -108,7 +125,7 @@ export function RouteGenerationLoading({ progress, destination, agents }: RouteG
           transition={{ delay: 0.2 }}
           className="text-base text-gray-600"
         >
-          Our AI agents are crafting the ideal itinerary for you
+          Crafting a personalized route based on {selectedInterestLabels}
         </motion.p>
       </div>
 
@@ -147,23 +164,20 @@ export function RouteGenerationLoading({ progress, destination, agents }: RouteG
         </div>
       </div>
 
-      {/* Agent Status Cards */}
+      {/* Workflow Phases */}
       <div className="mb-8 space-y-2">
-        {agents.map((agentKey) => {
-          const agent = agentMetadata[agentKey]
-          if (!agent) return null
-
-          const agentIndex = agents.indexOf(agentKey)
-          const isCompleted = progress.completed > agentIndex
-          const isCurrent = progress.currentAgent === agent.name
+        {workflowPhases.map((phase, index) => {
+          const isCompleted = index < currentPhaseIndex
+          const isCurrent = index === currentPhaseIndex
+          const Icon = phase.icon
 
           return (
             <motion.div
-              key={agentKey}
+              key={phase.id}
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{
-                delay: agentIndex * 0.08,
+                delay: index * 0.08,
                 duration: 0.3,
                 ease: [0.23, 1, 0.32, 1]
               }}
@@ -203,23 +217,17 @@ export function RouteGenerationLoading({ progress, destination, agents }: RouteG
                     <Loader2 className="w-5 h-5 text-white" strokeWidth={2.5} />
                   </motion.div>
                 ) : (
-                  <div className="w-2 h-2 rounded-full bg-gray-400" />
+                  <Icon className="w-5 h-5 text-gray-400" />
                 )}
               </div>
 
-              {/* Agent Info */}
+              {/* Phase Info */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2.5">
-                  <img
-                    src={agent.iconPath}
-                    alt={agent.name}
-                    className="w-5 h-5 object-contain transition-opacity"
-                    style={{ opacity: isCompleted || isCurrent ? 1 : 0.3 }}
-                  />
                   <span className={`text-base font-semibold transition-colors ${
                     isCompleted || isCurrent ? 'text-gray-900' : 'text-gray-400'
                   }`}>
-                    {agent.name}
+                    {phase.name}
                   </span>
                   {isCompleted && (
                     <motion.span
@@ -239,7 +247,7 @@ export function RouteGenerationLoading({ progress, destination, agents }: RouteG
                     transition={{ duration: 0.2 }}
                     className="text-sm text-gray-600 mt-1.5"
                   >
-                    {getCurrentAgentDescription()}
+                    {phase.description}
                   </motion.p>
                 )}
               </div>

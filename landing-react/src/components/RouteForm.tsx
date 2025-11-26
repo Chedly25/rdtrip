@@ -3,7 +3,9 @@ import { motion } from 'framer-motion'
 import { Calendar, Zap } from 'lucide-react'
 import { useFormStore } from '../stores/formStore'
 import { BudgetSelector } from './BudgetSelector'
-import { AgentSelector } from './AgentSelector'
+import { CompanionSelector } from './CompanionSelector'
+import { InterestSelector } from './InterestSelector'
+import { TripStyleSlider } from './TripStyleSlider'
 import { RouteGenerationLoading } from './RouteGenerationLoading'
 import { CitySelector } from './CitySelector'
 
@@ -41,9 +43,9 @@ export function RouteForm({ onRouteGenerated }: RouteFormProps) {
     origin,
     destination,
     budget,
-    agents,
     totalNights,
     tripPace,
+    preferences,
     isLoading,
     error,
     originError,
@@ -53,9 +55,12 @@ export function RouteForm({ onRouteGenerated }: RouteFormProps) {
     setOriginError,
     setDestinationError,
     setBudget,
-    setAgents,
     setTotalNights,
     setTripPace,
+    setCompanions,
+    toggleInterest,
+    setInterestWeight,
+    setTripStyle,
     setLoading,
     setError,
   } = useFormStore()
@@ -100,8 +105,8 @@ export function RouteForm({ onRouteGenerated }: RouteFormProps) {
       return
     }
 
-    if (agents.length === 0) {
-      setError('Please select at least one travel interest')
+    if (preferences.interests.length === 0) {
+      setError('Please select at least one interest')
       return
     }
 
@@ -112,8 +117,8 @@ export function RouteForm({ onRouteGenerated }: RouteFormProps) {
     setIsSubmitting(true)
 
     try {
-      // Start route generation job with NEW nights-based endpoint
-      const response = await fetch('/api/generate-route-nights-based', {
+      // Start unified route generation
+      const response = await fetch('/api/generate-unified-route', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -130,7 +135,7 @@ export function RouteForm({ onRouteGenerated }: RouteFormProps) {
           totalNights,
           tripPace,
           budget,
-          agents,
+          preferences,
         }),
       })
 
@@ -229,7 +234,7 @@ export function RouteForm({ onRouteGenerated }: RouteFormProps) {
           <RouteGenerationLoading
             progress={progress}
             destination={destination?.name || ''}
-            agents={agents}
+            preferences={preferences}
           />
         )}
 
@@ -353,11 +358,27 @@ export function RouteForm({ onRouteGenerated }: RouteFormProps) {
               </div>
             </div>
 
+            {/* Who's Traveling */}
+            <CompanionSelector
+              selected={preferences.companions}
+              onChange={setCompanions}
+            />
+
+            {/* Interests */}
+            <InterestSelector
+              selected={preferences.interests}
+              onToggle={toggleInterest}
+              onWeightChange={setInterestWeight}
+            />
+
+            {/* Trip Style */}
+            <TripStyleSlider
+              value={preferences.tripStyle}
+              onChange={setTripStyle}
+            />
+
             {/* Budget Selector */}
             <BudgetSelector selected={budget} onChange={setBudget} />
-
-            {/* Agent Selector */}
-            <AgentSelector selected={agents} onChange={setAgents} />
 
             {/* Error Message */}
             {error && (

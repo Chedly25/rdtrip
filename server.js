@@ -9,6 +9,7 @@ const cheerio = require('cheerio');
 const ItineraryAgentOrchestrator = require('./server/agents/ItineraryAgentOrchestrator');
 const RouteDiscoveryAgentV2 = require('./server/agents/RouteDiscoveryAgentV2');
 const RoutePlanningAgent = require('./server/agents/RoutePlanningAgent');
+const UnifiedRouteAgent = require('./server/agents/UnifiedRouteAgent');
 const GooglePlacesService = require('./server/services/googlePlacesService');
 const ReceiptScannerService = require('./server/services/ReceiptScannerService');
 const CurrencyService = require('./server/services/CurrencyService');
@@ -1635,6 +1636,164 @@ app.post('/api/geocode', async (req, res) => {
   }
 });
 
+// =====================================================
+// UNIFIED ROUTE GENERATION (New preference-based system)
+// =====================================================
+
+// Start unified route generation job (returns immediately with job ID)
+app.post('/api/generate-unified-route', async (req, res) => {
+  try {
+    const {
+      origin,
+      destination,
+      totalNights,
+      tripPace = 'balanced',
+      budget = 'mid',
+      preferences
+    } = req.body;
+
+    // ============= VALIDATION =============
+
+    // Validate destination exists
+    if (!destination) {
+      return res.status(400).json({ error: 'Destination is required' });
+    }
+
+    // Validate origin exists
+    if (!origin) {
+      return res.status(400).json({ error: 'Origin is required' });
+    }
+
+    // Validate origin has required fields
+    if (!origin.name || !origin.coordinates || !origin.country) {
+      return res.status(400).json({
+        error: 'Origin must include name, coordinates, and country'
+      });
+    }
+
+    // Validate destination has required fields
+    if (!destination.name || !destination.coordinates || !destination.country) {
+      return res.status(400).json({
+        error: 'Destination must include name, coordinates, and country'
+      });
+    }
+
+    // Validate coordinates format
+    if (!Array.isArray(origin.coordinates) || origin.coordinates.length !== 2 ||
+        typeof origin.coordinates[0] !== 'number' || typeof origin.coordinates[1] !== 'number') {
+      return res.status(400).json({
+        error: 'Origin coordinates must be [latitude, longitude]'
+      });
+    }
+
+    if (!Array.isArray(destination.coordinates) || destination.coordinates.length !== 2 ||
+        typeof destination.coordinates[0] !== 'number' || typeof destination.coordinates[1] !== 'number') {
+      return res.status(400).json({
+        error: 'Destination coordinates must be [latitude, longitude]'
+      });
+    }
+
+    // Calculate distance
+    const distance = calculateDistance(
+      { lat: origin.coordinates[0], lng: origin.coordinates[1] },
+      { lat: destination.coordinates[0], lng: destination.coordinates[1] }
+    );
+
+    // Validate distance constraints
+    if (distance < 50) {
+      return res.status(400).json({
+        error: `Destination too close to origin (${distance.toFixed(0)} km). Minimum distance is 50 km.`,
+        distance: Math.round(distance)
+      });
+    }
+
+    if (distance > 3000) {
+      return res.status(400).json({
+        error: `Destination too far from origin (${distance.toFixed(0)} km). Maximum distance is 3000 km.`,
+        distance: Math.round(distance)
+      });
+    }
+
+    // Validate nights
+    if (!totalNights || totalNights < 2 || totalNights > 30) {
+      return res.status(400).json({ error: 'Total nights must be between 2 and 30' });
+    }
+
+    // Validate trip pace
+    if (!['leisurely', 'balanced', 'fast-paced'].includes(tripPace)) {
+      return res.status(400).json({ error: 'Trip pace must be leisurely, balanced, or fast-paced' });
+    }
+
+    // Validate preferences
+    if (!preferences || !preferences.companions || !preferences.interests || preferences.interests.length === 0) {
+      return res.status(400).json({ error: 'Preferences with companions and at least one interest are required' });
+    }
+
+    console.log(`\n🗺️  === UNIFIED ROUTE GENERATION ===`);
+    console.log(`   Origin: ${origin.name}, ${origin.country}`);
+    console.log(`   Destination: ${destination.name}, ${destination.country}`);
+    console.log(`   Distance: ${distance.toFixed(0)} km`);
+    console.log(`   Total nights: ${totalNights}`);
+    console.log(`   Trip pace: ${tripPace}`);
+    console.log(`   Budget: ${budget}`);
+    console.log(`   Companions: ${preferences.companions}`);
+    console.log(`   Interests: ${preferences.interests.map(i => i.id).join(', ')}`);
+
+    // Create unique job ID
+    const jobId = `unified_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    // Initialize job status
+    const job = {
+      id: jobId,
+      status: 'processing',
+      origin,
+      destination,
+      totalNights,
+      tripPace,
+      budget,
+      preferences,
+      progress: {
+        phase: 'research',
+        message: 'Analyzing route corridor...',
+        total: 6, // 6 phases
+        completed: 0,
+        currentAgent: null,
+        percentComplete: 0,
+        startTime: Date.now(),
+        estimatedTimeRemaining: 60000 // 60s estimate
+      },
+      route: null,
+      error: null,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    routeJobs.set(jobId, job);
+
+    // Return immediately with job ID
+    res.json({
+      jobId,
+      status: 'processing',
+      message: 'Unified route generation started. Poll /api/route-status/:jobId for progress.'
+    });
+
+    // Start processing in background (don't await)
+    processUnifiedRouteJob(jobId, origin, destination, totalNights, tripPace, budget, preferences).catch(error => {
+      console.error(`Job ${jobId} failed:`, error);
+      const failedJob = routeJobs.get(jobId);
+      if (failedJob) {
+        failedJob.status = 'failed';
+        failedJob.error = error.message;
+        failedJob.updatedAt = new Date();
+      }
+    });
+
+  } catch (error) {
+    console.error('Error starting unified route generation:', error);
+    res.status(500).json({ error: 'Failed to start route generation', details: error.message });
+  }
+});
+
 // POST /api/geocode/autocomplete - Get city suggestions for autocomplete
 // Returns European cities only with full details (name, country, coordinates)
 app.post('/api/geocode/autocomplete', async (req, res) => {
@@ -1851,21 +2010,92 @@ app.get('/api/route-status/:jobId', (req, res) => {
   // NEW: Use origin directly from job (no more hardcoded fallback!)
   // Origin is now stored as full object {name, country, coordinates} in job
 
+  // Determine the route data based on job type
+  let routeData = null;
+  if (job.status === 'completed') {
+    // Check for unified job format (has job.route)
+    if (job.route) {
+      routeData = job.route;
+    }
+    // Check for nights-based job format (has job.result)
+    else if (job.result) {
+      routeData = job.result;
+    }
+    // Fallback to old agent format
+    else {
+      routeData = {
+        origin: job.origin,
+        destination: job.destination,
+        totalStops: job.stops,
+        budget: job.budget,
+        agentResults: job.agentResults
+      };
+    }
+  }
+
   res.json({
     jobId: job.id,
     status: job.status,
     progress: job.progress,
-    route: job.status === 'completed' ? (job.result || {
-      // Fallback to old format if job.result doesn't exist (for old jobs)
-      origin: job.origin,  // Full object or string (backward compatible)
-      destination: job.destination,
-      totalStops: job.stops,
-      budget: job.budget,
-      agentResults: job.agentResults
-    }) : null,
+    route: routeData,
     error: job.error
   });
 });
+
+// UNIFIED Background Job Processor - Uses UnifiedRouteAgent (6-phase workflow)
+async function processUnifiedRouteJob(jobId, origin, destination, totalNights, tripPace, budget, preferences) {
+  const job = routeJobs.get(jobId);
+  if (!job) return;
+
+  console.log(`\n🎯 === Starting UNIFIED route job ${jobId} ===`);
+
+  try {
+    // Initialize the Unified Route Agent
+    const googleApiKey = process.env.GOOGLE_PLACES_API_KEY;
+    const unifiedAgent = new UnifiedRouteAgent(pool, googleApiKey);
+
+    // Progress callback to update job status
+    const onProgress = (progress) => {
+      job.progress.phase = progress.phase;
+      job.progress.message = progress.message;
+      job.progress.percentComplete = progress.percentComplete;
+      job.progress.estimatedTimeRemaining = progress.estimatedTimeRemaining;
+      job.updatedAt = new Date();
+    };
+
+    // Run the unified route generation
+    const result = await unifiedAgent.generateRoute({
+      origin,
+      destination,
+      totalNights,
+      tripPace,
+      budget,
+      preferences,
+      onProgress
+    });
+
+    // Mark job as completed
+    job.status = 'completed';
+    job.progress.percentComplete = 100;
+    job.progress.phase = 'completed';
+    job.progress.message = 'Route generation complete!';
+    job.route = result;
+    job.updatedAt = new Date();
+
+    const duration = (Date.now() - job.progress.startTime) / 1000;
+    console.log(`\n✅ === Unified route job ${jobId} completed in ${duration.toFixed(1)}s ===`);
+
+  } catch (error) {
+    console.error(`\n❌ === Unified route job ${jobId} failed ===`);
+    console.error(error);
+
+    job.status = 'failed';
+    job.error = error.message;
+    job.updatedAt = new Date();
+
+    throw error;
+  }
+}
 
 // NIGHTS-BASED Background Job Processor - Uses RoutePlanningAgent
 async function processRouteJobNightsBased(jobId, origin, destination, totalNights, tripPace, selectedAgents, budget) {
