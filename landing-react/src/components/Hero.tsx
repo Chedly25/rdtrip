@@ -32,26 +32,11 @@ export function Hero() {
       ref={containerRef}
       className="relative min-h-screen w-full overflow-hidden bg-rui-white"
     >
-      {/* Animated background gradient - Revolut style */}
+      {/* Clean background - Revolut uses subtle, clean whites */}
       <motion.div
-        className="absolute inset-0 pointer-events-none"
+        className="absolute inset-0 pointer-events-none bg-gradient-to-b from-rui-grey-2 to-white"
         style={{ y: backgroundY, scale: backgroundScale }}
-      >
-        {/* Primary gradient orb */}
-        <div
-          className="absolute top-0 left-1/2 -translate-x-1/2 w-[200%] h-[80%]"
-          style={{
-            background: 'radial-gradient(ellipse at center top, rgba(79, 85, 241, 0.08) 0%, rgba(79, 85, 241, 0.02) 40%, transparent 70%)',
-          }}
-        />
-        {/* Secondary accent */}
-        <div
-          className="absolute top-1/4 right-0 w-[60%] h-[60%]"
-          style={{
-            background: 'radial-gradient(ellipse at center, rgba(0, 184, 139, 0.04) 0%, transparent 60%)',
-          }}
-        />
-      </motion.div>
+      />
 
       {/* Content */}
       <motion.div
@@ -75,21 +60,21 @@ export function Hero() {
             </span>
           </motion.div>
 
-          {/* Main headline - Aeonik Pro marketing style */}
+          {/* Main headline - Bold, impactful, Revolut style */}
           <motion.h1
-            className="mb-6 font-marketing text-display-1 text-rui-black md:text-5xl lg:text-[4.5rem] leading-[1] tracking-tight"
+            className="mb-6 font-marketing text-[2.75rem] sm:text-[3.5rem] md:text-[4rem] lg:text-[5rem] font-extrabold text-rui-black leading-[1.05] tracking-[-0.02em]"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1, ease: ruiEasing }}
           >
             Your Perfect European
             <br />
-            <span className="text-rui-grey-50">Road Trip in 2 Minutes</span>
+            Road Trip in 2 Minutes
           </motion.h1>
 
           {/* Subheadline */}
           <motion.p
-            className="mx-auto mb-10 max-w-xl text-body-1 text-rui-grey-50 md:text-lg"
+            className="mx-auto mb-12 max-w-2xl text-lg md:text-xl text-rui-grey-50 leading-relaxed"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2, ease: ruiEasing }}
@@ -107,12 +92,12 @@ export function Hero() {
           >
             <button
               onClick={scrollToForm}
-              className="group relative inline-flex items-center gap-3 rounded-full bg-rui-black px-8 py-4 text-base font-semibold text-rui-white overflow-hidden transition-all duration-rui-sm ease-rui-default hover:shadow-rui-3 active:scale-[0.98]"
+              className="group relative inline-flex items-center gap-3 rounded-full bg-rui-black px-10 py-5 text-lg font-semibold text-rui-white overflow-hidden transition-all duration-rui-sm ease-rui-default hover:shadow-rui-4 active:scale-[0.98]"
             >
               {/* State layer for hover */}
               <span className="absolute inset-0 bg-white opacity-0 transition-opacity duration-rui-sm group-hover:opacity-10" />
               <span className="relative">Start Planning</span>
-              <ArrowRight className="relative h-5 w-5 transition-transform duration-rui-sm ease-rui-default group-hover:translate-x-1" />
+              <ArrowRight className="relative h-6 w-6 transition-transform duration-rui-sm ease-rui-default group-hover:translate-x-1" />
             </button>
           </motion.div>
 
