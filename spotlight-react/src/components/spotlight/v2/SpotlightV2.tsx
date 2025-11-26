@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSpotlightStoreV2, type SpotlightRoute, type CityData } from '../../../stores/spotlightStoreV2';
 import MapViewV2 from './MapViewV2';
-import FloatingCityCards from './FloatingCityCards';
+import { BottomPanel } from '../v3/BottomPanel';
 import SpotlightHeader from './SpotlightHeader';
 import { ItineraryView } from '../../itinerary/ItineraryView';
 import { Loader2, Users } from 'lucide-react';
@@ -400,26 +400,26 @@ const SpotlightV2 = () => {
   }
 
   return (
-    <div className="h-screen w-screen overflow-hidden bg-gray-50 relative">
+    <div className="h-screen w-screen overflow-hidden bg-rui-grey-2 relative">
       {/* Header */}
       <SpotlightHeader onGenerateItinerary={handleGenerateItinerary} />
 
       {/* Map - Fullscreen hero element */}
       <MapViewV2 />
 
-      {/* Floating City Cards - Bottom overlay */}
-      <FloatingCityCards />
+      {/* Bottom Panel - Trip summary + City cards */}
+      <BottomPanel />
 
-      {/* Collaborate Button - Fixed position (top-left corner) */}
+      {/* Collaborate Button - Fixed position */}
       {routeId && (
         <motion.button
           onClick={() => setShowCollaboration(!showCollaboration)}
-          className="fixed top-24 left-6 z-50 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 shadow-lg transition-all flex items-center gap-2"
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
+          className="fixed top-20 left-4 z-50 bg-rui-black hover:bg-rui-grey-50 text-white rounded-rui-16 px-4 py-2.5 shadow-rui-3 transition-all duration-rui-sm ease-rui-default flex items-center gap-2"
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
         >
-          <Users className="w-6 h-6" />
-          <span className="font-medium">Collaborate</span>
+          <Users className="w-4 h-4" />
+          <span className="text-emphasis-2">Collaborate</span>
         </motion.button>
       )}
 
@@ -443,13 +443,6 @@ const SpotlightV2 = () => {
         )}
       </AnimatePresence>
 
-      {/* Background gradient overlay for visual polish */}
-      <div
-        className="absolute inset-0 pointer-events-none z-0"
-        style={{
-          background: `radial-gradient(circle at 50% 0%, ${agentColors.primary}05 0%, transparent 50%)`
-        }}
-      />
     </div>
   );
 };
