@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSpotlightStoreV2, type SpotlightRoute, type CityData } from '../../../stores/spotlightStoreV2';
 import MapViewV2 from './MapViewV2';
-import { BottomPanel } from '../v3/BottomPanel';
+import { BottomSheet } from '../v3/BottomSheet';
 import { CityDetailModal } from '../v3/CityDetailModal';
 import { SaveRouteModal } from '../v3/SaveRouteModal';
 import SpotlightHeader from './SpotlightHeader';
@@ -458,8 +458,8 @@ const SpotlightV2 = () => {
       {/* Map - Fullscreen hero element */}
       <MapViewV2 />
 
-      {/* Bottom Panel - Trip summary + City cards */}
-      <BottomPanel onCityDetailsClick={setCityDetailIndex} />
+      {/* Bottom Sheet - Apple Maps style */}
+      <BottomSheet onCityDetailsClick={setCityDetailIndex} />
 
       {/* City Detail Modal */}
       <CityDetailModal
