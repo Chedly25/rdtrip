@@ -104,8 +104,8 @@ export function WorkflowShowcase() {
         {/* Workflow Steps - Desktop */}
         <div className="hidden lg:block">
           <div className="relative">
-            {/* Connection Line */}
-            <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-rui-grey-10 -translate-y-1/2 z-0" />
+            {/* Connection Line - positioned through icon centers */}
+            <div className="absolute top-8 left-0 right-0 h-0.5 bg-rui-grey-10 z-0" />
 
             {/* Steps */}
             <div className="relative z-10 grid grid-cols-6 gap-4">
