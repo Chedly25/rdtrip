@@ -6,10 +6,10 @@ const ruiEasing = [0.15, 0.5, 0.5, 1] as const
 
 // Category colors and icons
 const categoryConfig: Record<Interest['category'], { color: string; icon: React.ElementType; label: string }> = {
-  nature: { color: '#09BE67', icon: Mountain, label: 'Nature & Adventure' },
-  culture: { color: '#805CF5', icon: Landmark, label: 'Culture & History' },
-  food: { color: '#EE7A40', icon: UtensilsCrossed, label: 'Food & Drink' },
-  experience: { color: '#00BE90', icon: Compass, label: 'Experiences' }
+  nature: { color: '#166534', icon: Mountain, label: 'Nature & Adventure' },      // Dark green
+  culture: { color: '#a16207', icon: Landmark, label: 'Culture & History' },      // Dark yellow/amber
+  food: { color: '#991b1b', icon: UtensilsCrossed, label: 'Food & Drink' },       // Dark red
+  experience: { color: '#1e40af', icon: Compass, label: 'Experiences' }           // Dark blue
 }
 
 interface InterestSelectorProps {
