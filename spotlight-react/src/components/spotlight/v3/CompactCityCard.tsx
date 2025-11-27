@@ -68,7 +68,7 @@ const CompactCityCard = ({
       transition={{ delay: index * 0.03, duration: 0.2 }}
       onClick={onSelect}
       className={`
-        flex-shrink-0 w-[180px] bg-white rounded-2xl p-3 cursor-pointer
+        flex-shrink-0 w-[140px] bg-white rounded-xl cursor-pointer overflow-hidden
         transition-all duration-200 ease-out select-none
         ${isSelected
           ? 'shadow-md ring-2 ring-neutral-900 scale-[1.02]'
@@ -77,58 +77,58 @@ const CompactCityCard = ({
         ${isDragging ? 'shadow-lg z-50 cursor-grabbing' : 'cursor-pointer'}
       `}
     >
-      <div className="flex gap-3">
-        {/* Image Thumbnail */}
-        <div className="relative w-[60px] h-[60px] flex-shrink-0 rounded-xl overflow-hidden bg-neutral-100">
-          {cityImage && (
-            <img
-              src={cityImage}
-              alt={cityName}
-              className={`w-full h-full object-cover transition-opacity duration-300 ${
-                imageLoaded ? 'opacity-100' : 'opacity-0'
-              }`}
-              onLoad={() => setImageLoaded(true)}
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = 'none';
-              }}
-            />
-          )}
+      {/* Image - Full width, fixed height */}
+      <div className="relative w-full h-[80px] bg-neutral-100">
+        {cityImage && (
+          <img
+            src={cityImage}
+            alt={cityName}
+            className={`w-full h-full object-cover transition-opacity duration-300 ${
+              imageLoaded ? 'opacity-100' : 'opacity-0'
+            }`}
+            onLoad={() => setImageLoaded(true)}
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = 'none';
+            }}
+          />
+        )}
 
-          {/* City number badge - positioned on image */}
-          <div className="absolute top-1 left-1 w-5 h-5 bg-white/90 backdrop-blur-sm rounded-md flex items-center justify-center shadow-sm">
-            <span className="text-[11px] font-semibold text-neutral-900">{index + 1}</span>
-          </div>
+        {/* Gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+
+        {/* City number badge */}
+        <div className="absolute top-2 left-2 w-5 h-5 bg-white/90 backdrop-blur-sm rounded-md flex items-center justify-center shadow-sm">
+          <span className="text-[10px] font-bold text-neutral-900">{index + 1}</span>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
-          {/* City Name */}
-          <div>
-            <h3 className="text-[15px] font-semibold text-neutral-900 truncate leading-tight">
-              {cityName}
-            </h3>
-            {subtitle && (
-              <p className="text-[12px] text-neutral-500 truncate leading-tight mt-0.5">
-                {subtitle}
-              </p>
-            )}
+        {/* Activity indicator */}
+        {hasActivities && (
+          <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center shadow-sm">
+            <Check className="w-3 h-3 text-white" strokeWidth={3} />
           </div>
+        )}
 
-          {/* Bottom row: nights + activity indicator */}
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1 text-neutral-600">
-              <Moon className="w-3 h-3" />
-              <span className="text-[12px] font-medium">
-                {nights} {nights === 1 ? 'night' : 'nights'}
-              </span>
-            </div>
+        {/* City name on image */}
+        <h3 className="absolute bottom-2 left-2 right-2 text-sm font-semibold text-white truncate drop-shadow-md">
+          {cityName}
+        </h3>
+      </div>
 
-            {hasActivities && (
-              <div className="w-4 h-4 rounded-full bg-emerald-50 flex items-center justify-center">
-                <Check className="w-2.5 h-2.5 text-emerald-600" />
-              </div>
-            )}
-          </div>
+      {/* Content - Compact */}
+      <div className="p-2.5">
+        {/* Subtitle */}
+        {subtitle && (
+          <p className="text-[11px] text-neutral-500 truncate mb-1.5 leading-tight">
+            {subtitle}
+          </p>
+        )}
+
+        {/* Nights */}
+        <div className="flex items-center gap-1 text-neutral-700">
+          <Moon className="w-3 h-3" />
+          <span className="text-[11px] font-medium">
+            {nights} {nights === 1 ? 'night' : 'nights'}
+          </span>
         </div>
       </div>
     </motion.div>
