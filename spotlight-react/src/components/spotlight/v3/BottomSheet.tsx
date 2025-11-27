@@ -27,8 +27,8 @@ interface BottomSheetProps {
   onCityDetailsClick?: (cityIndex: number) => void;
 }
 
-const COLLAPSED_HEIGHT = 160;
-const EXPANDED_HEIGHT = 420;
+const COLLAPSED_HEIGHT = 200;
+const EXPANDED_HEIGHT = 480;
 
 const BottomSheet = ({ onCityDetailsClick }: BottomSheetProps) => {
   const {
@@ -50,7 +50,7 @@ const BottomSheet = ({ onCityDetailsClick }: BottomSheetProps) => {
   const y = useMotionValue(0);
   const height = useTransform(
     y,
-    [-260, 0],
+    [-280, 0],
     [EXPANDED_HEIGHT, COLLAPSED_HEIGHT]
   );
 
@@ -70,7 +70,7 @@ const BottomSheet = ({ onCityDetailsClick }: BottomSheetProps) => {
   useEffect(() => {
     if (selectedCityIndex !== null && !isExpanded) {
       setIsExpanded(true);
-      animate(y, -260, { type: 'spring', stiffness: 300, damping: 30 });
+      animate(y, -280, { type: 'spring', stiffness: 300, damping: 30 });
     }
   }, [selectedCityIndex]);
 
@@ -85,7 +85,7 @@ const BottomSheet = ({ onCityDetailsClick }: BottomSheetProps) => {
 
     if (shouldExpand) {
       setIsExpanded(true);
-      animate(y, -260, { type: 'spring', stiffness: 300, damping: 30 });
+      animate(y, -280, { type: 'spring', stiffness: 300, damping: 30 });
     } else {
       setIsExpanded(false);
       animate(y, 0, { type: 'spring', stiffness: 300, damping: 30 });
@@ -103,7 +103,7 @@ const BottomSheet = ({ onCityDetailsClick }: BottomSheetProps) => {
       setSelectedCity(null);
     } else {
       setIsExpanded(true);
-      animate(y, -260, { type: 'spring', stiffness: 300, damping: 30 });
+      animate(y, -280, { type: 'spring', stiffness: 300, damping: 30 });
     }
   };
 
@@ -164,7 +164,7 @@ const BottomSheet = ({ onCityDetailsClick }: BottomSheetProps) => {
         {/* Drag Handle */}
         <motion.div
           drag="y"
-          dragConstraints={{ top: -260, bottom: 0 }}
+          dragConstraints={{ top: -280, bottom: 0 }}
           dragElastic={0.1}
           onDragEnd={handleDragEnd}
           style={{ y }}
@@ -245,10 +245,10 @@ const BottomSheet = ({ onCityDetailsClick }: BottomSheetProps) => {
                     );
                   })}
 
-                  {/* Add City Button */}
+                  {/* Add City Button - matches card height */}
                   <button
                     onClick={() => setIsAddingLandmark(true)}
-                    className="flex-shrink-0 w-[60px] h-[84px] rounded-2xl border-2 border-dashed border-neutral-200 flex items-center justify-center text-neutral-400 hover:border-neutral-400 hover:text-neutral-600 transition-colors snap-start"
+                    className="flex-shrink-0 w-[60px] h-[132px] rounded-xl border-2 border-dashed border-neutral-200 flex items-center justify-center text-neutral-400 hover:border-neutral-400 hover:text-neutral-600 transition-colors snap-start"
                   >
                     <Plus className="w-6 h-6" />
                   </button>
@@ -258,16 +258,14 @@ const BottomSheet = ({ onCityDetailsClick }: BottomSheetProps) => {
               {/* Drag Overlay */}
               <DragOverlay>
                 {activeId && activeCity && activeCityIndex !== null ? (
-                  <div className="w-[180px] bg-white rounded-2xl shadow-xl p-3 opacity-90">
-                    <div className="flex gap-3">
-                      <div className="w-[60px] h-[60px] rounded-xl bg-neutral-200 flex items-center justify-center">
-                        <span className="text-lg font-semibold text-neutral-600">{activeCityIndex + 1}</span>
-                      </div>
-                      <div className="flex-1 min-w-0 flex flex-col justify-center">
-                        <h3 className="text-[15px] font-semibold text-neutral-900 truncate">
-                          {getCityName(activeCity.city)}
-                        </h3>
-                      </div>
+                  <div className="w-[140px] bg-white rounded-xl shadow-xl overflow-hidden opacity-90">
+                    <div className="h-[80px] bg-neutral-200 flex items-center justify-center">
+                      <span className="text-2xl font-bold text-neutral-400">{activeCityIndex + 1}</span>
+                    </div>
+                    <div className="p-2.5">
+                      <h3 className="text-sm font-semibold text-neutral-900 truncate">
+                        {getCityName(activeCity.city)}
+                      </h3>
                     </div>
                   </div>
                 ) : null}
@@ -290,6 +288,7 @@ const BottomSheet = ({ onCityDetailsClick }: BottomSheetProps) => {
                   cityIndex={selectedCityIndex}
                   onNightsChange={(nights) => handleNightsChange(selectedCityIndex, nights)}
                   onViewDetails={() => onCityDetailsClick?.(selectedCityIndex)}
+                  onClose={() => setSelectedCity(null)}
                 />
               ) : (
                 <div className="h-full flex items-center justify-center text-neutral-400 text-sm">
