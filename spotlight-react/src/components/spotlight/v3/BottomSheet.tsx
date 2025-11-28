@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, useMotionValue, useTransform, animate, type PanInfo } from 'framer-motion';
-import { Plus, ChevronRight } from 'lucide-react';
+import { Plus, ChevronRight, Compass } from 'lucide-react';
 import {
   DndContext,
   closestCenter,
@@ -27,8 +27,8 @@ interface BottomSheetProps {
   onCityDetailsClick?: (cityIndex: number) => void;
 }
 
-const COLLAPSED_HEIGHT = 280;
-const EXPANDED_HEIGHT = 560;
+const COLLAPSED_HEIGHT = 240;
+const EXPANDED_HEIGHT = 520;
 
 const BottomSheet = ({ onCityDetailsClick }: BottomSheetProps) => {
   const {
@@ -53,6 +53,7 @@ const BottomSheet = ({ onCityDetailsClick }: BottomSheetProps) => {
     [-280, 0],
     [EXPANDED_HEIGHT, COLLAPSED_HEIGHT]
   );
+  const dragAmount = -280;
 
   // Drag sensors for reordering cards
   const sensors = useSensors(
@@ -159,12 +160,12 @@ const BottomSheet = ({ onCityDetailsClick }: BottomSheetProps) => {
       <motion.div
         ref={sheetRef}
         style={{ height }}
-        className="fixed bottom-0 left-0 right-0 z-40 bg-rui-white rounded-t-3xl shadow-[0_-4px_30px_rgba(44,36,23,0.12)]"
+        className="fixed bottom-0 left-0 right-0 z-40 bg-[#FFFBF5] rounded-t-[28px] shadow-[0_-8px_40px_rgba(44,36,23,0.15)]"
       >
         {/* Drag Handle */}
         <motion.div
           drag="y"
-          dragConstraints={{ top: -280, bottom: 0 }}
+          dragConstraints={{ top: dragAmount, bottom: 0 }}
           dragElastic={0.1}
           onDragEnd={handleDragEnd}
           style={{ y }}
@@ -173,45 +174,51 @@ const BottomSheet = ({ onCityDetailsClick }: BottomSheetProps) => {
           <div className="flex justify-center pt-3">
             <div
               onClick={toggleExpanded}
-              className="w-10 h-1 bg-neutral-300 rounded-full hover:bg-neutral-400 transition-colors"
+              className="w-12 h-1.5 bg-[#D4C4B0] rounded-full hover:bg-[#C45830] transition-colors"
             />
           </div>
         </motion.div>
 
         {/* Content Container */}
-        <div className="h-full flex flex-col pt-6">
-          {/* Header: Trip Summary */}
-          <div className="px-5 pb-3 flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm">
-              <span className="font-marketing font-semibold text-rui-black">
-                {originName}
-              </span>
-              <ChevronRight className="w-4 h-4 text-rui-accent" />
-              <span className="font-marketing font-semibold text-rui-black">
-                {destinationName}
-              </span>
-              <span className="text-rui-grey-20 mx-1">·</span>
-              <span className="text-rui-grey-50">
-                {route.cities.length} cities
-              </span>
-              <span className="text-rui-grey-20 mx-1">·</span>
-              <span className="text-rui-grey-50">
-                {totalNights} nights
-              </span>
+        <div className="h-full flex flex-col pt-7">
+          {/* Header: Trip Summary - Editorial style */}
+          <div className="px-5 pb-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {/* Route text */}
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-[15px] text-[#2C2417]">
+                  {originName}
+                </span>
+                <ChevronRight className="w-4 h-4 text-[#C45830]" />
+                <span className="font-semibold text-[15px] text-[#2C2417]">
+                  {destinationName}
+                </span>
+              </div>
+
+              {/* Stats pills */}
+              <div className="flex items-center gap-2 ml-2">
+                <span className="px-2.5 py-1 bg-[#F5F0E8] rounded-full text-xs font-medium text-[#8B7355]">
+                  {route.cities.length} stops
+                </span>
+                <span className="px-2.5 py-1 bg-[#F5F0E8] rounded-full text-xs font-medium text-[#8B7355]">
+                  {totalNights} nights
+                </span>
+              </div>
             </div>
 
             {/* Expand indicator */}
-            <motion.div
+            <motion.button
+              onClick={toggleExpanded}
               animate={{ rotate: isExpanded ? 180 : 0 }}
               transition={{ duration: 0.2 }}
-              className="text-rui-grey-50"
+              className="w-8 h-8 rounded-full bg-[#F5F0E8] flex items-center justify-center text-[#8B7355] hover:bg-[#E8DFD3] transition-colors"
             >
-              <ChevronRight className="w-5 h-5 rotate-90" />
-            </motion.div>
+              <ChevronRight className="w-4 h-4 rotate-90" />
+            </motion.button>
           </div>
 
           {/* City Cards Carousel */}
-          <div className="px-5 pb-4">
+          <div className="px-5 pb-3">
             <DndContext
               sensors={sensors}
               collisionDetection={closestCenter}
@@ -245,12 +252,15 @@ const BottomSheet = ({ onCityDetailsClick }: BottomSheetProps) => {
                     );
                   })}
 
-                  {/* Add City Button - matches card height */}
+                  {/* Add City Button */}
                   <button
                     onClick={() => setIsAddingLandmark(true)}
-                    className="flex-shrink-0 w-[60px] h-[132px] rounded-xl border-2 border-dashed border-rui-grey-10 flex items-center justify-center text-rui-grey-50 hover:border-rui-accent hover:text-rui-accent transition-colors snap-start"
+                    className="flex-shrink-0 w-[180px] h-[176px] rounded-2xl border-2 border-dashed border-[#D4C4B0] bg-[#FAF7F2] flex flex-col items-center justify-center gap-2 text-[#8B7355] hover:border-[#C45830] hover:text-[#C45830] hover:bg-[#FFF8F5] transition-all snap-start"
                   >
-                    <Plus className="w-6 h-6" />
+                    <div className="w-10 h-10 rounded-full bg-[#F5F0E8] flex items-center justify-center">
+                      <Plus className="w-5 h-5" />
+                    </div>
+                    <span className="text-xs font-medium">Add City</span>
                   </button>
                 </div>
               </SortableContext>
@@ -258,12 +268,12 @@ const BottomSheet = ({ onCityDetailsClick }: BottomSheetProps) => {
               {/* Drag Overlay */}
               <DragOverlay>
                 {activeId && activeCity && activeCityIndex !== null ? (
-                  <div className="w-[140px] bg-white rounded-xl shadow-xl overflow-hidden opacity-90">
-                    <div className="h-[80px] bg-neutral-200 flex items-center justify-center">
-                      <span className="text-2xl font-bold text-neutral-400">{activeCityIndex + 1}</span>
+                  <div className="w-[180px] bg-[#FFFBF5] rounded-2xl shadow-xl overflow-hidden opacity-90">
+                    <div className="h-[120px] bg-[#F5F0E8] flex items-center justify-center">
+                      <span className="text-2xl font-bold text-[#D4C4B0]">{activeCityIndex + 1}</span>
                     </div>
-                    <div className="p-2.5">
-                      <h3 className="text-sm font-semibold text-neutral-900 truncate">
+                    <div className="p-3">
+                      <h3 className="text-[15px] font-semibold text-[#2C2417] truncate">
                         {getCityName(activeCity.city)}
                       </h3>
                     </div>
@@ -291,8 +301,17 @@ const BottomSheet = ({ onCityDetailsClick }: BottomSheetProps) => {
                   onClose={() => setSelectedCity(null)}
                 />
               ) : (
-                <div className="h-full flex items-center justify-center text-rui-grey-50 text-body-2">
-                  Select a city to see details
+                /* Editorial Empty State */
+                <div className="h-full flex flex-col items-center justify-center text-center">
+                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#F5F0E8] to-[#E8DFD3] flex items-center justify-center mb-4">
+                    <Compass className="w-7 h-7 text-[#C45830]" />
+                  </div>
+                  <h3 className="text-[15px] font-semibold text-[#2C2417] mb-1">
+                    Explore Your Journey
+                  </h3>
+                  <p className="text-sm text-[#8B7355] max-w-[200px]">
+                    Tap a destination card to view details and customize your stay
+                  </p>
                 </div>
               )}
             </motion.div>
