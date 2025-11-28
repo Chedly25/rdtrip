@@ -75,7 +75,7 @@ const SpotlightHeader = ({ onGenerateItinerary, onSave }: SpotlightHeaderProps) 
       initial={{ y: -100, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.3, ease: [0.15, 0.5, 0.5, 1] }}
-      className="absolute top-0 left-0 right-0 z-50 h-14 bg-white/95 backdrop-blur-xl border-b border-rui-grey-10"
+      className="absolute top-0 left-0 right-0 z-50 h-14 bg-rui-white/95 backdrop-blur-xl border-b border-rui-grey-10"
     >
       <div className="h-full max-w-screen-2xl mx-auto px-4 flex items-center justify-between">
         {/* Left: Back button and route info */}
@@ -89,8 +89,8 @@ const SpotlightHeader = ({ onGenerateItinerary, onSave }: SpotlightHeaderProps) 
           </button>
 
           <div className="flex items-center gap-3">
-            <h1 className="text-emphasis-1 text-rui-black">
-              {originName} <span className="text-rui-grey-50">→</span> {destinationName}
+            <h1 className="font-marketing text-heading-3 text-rui-black">
+              {originName} <span className="text-rui-accent">→</span> {destinationName}
             </h1>
             <Badge variant="secondary" size="sm">
               {route.cities.length} cities

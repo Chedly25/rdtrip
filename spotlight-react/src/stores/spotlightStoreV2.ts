@@ -1,15 +1,15 @@
 import { create } from 'zustand';
 import type { Landmark } from '../services/landmarks';
 
-// Agent theme colors (NO VIOLET!)
+// Agent theme colors - Warm Editorial Palette
 export const AGENT_COLORS = {
-  'best-overall': { primary: '#064d51', secondary: '#0a7075', accent: '#0fc5d1' },
-  adventure: { primary: '#055948', secondary: '#067d64', accent: '#08b894' },
-  culture: { primary: '#a87600', secondary: '#c99400', accent: '#f5b800' },
-  food: { primary: '#650411', secondary: '#8a0519', accent: '#c70a2a' },
-  'hidden-gems': { primary: '#081d5b', secondary: '#0c2877', accent: '#1a4ed8' },
-  scenic: { primary: '#055948', secondary: '#067d64', accent: '#08b894' },
-  'photo-stops': { primary: '#a87600', secondary: '#c99400', accent: '#f5b800' }
+  'best-overall': { primary: '#8B4513', secondary: '#A0522D', accent: '#C45830' }, // Terracotta
+  adventure: { primary: '#3A6247', secondary: '#4A7C59', accent: '#4A7C59' }, // Earthy green
+  culture: { primary: '#8B6914', secondary: '#A87600', accent: '#D4A853' }, // Golden
+  food: { primary: '#8B3A3A', secondary: '#A04040', accent: '#B54A4A' }, // Brick red
+  'hidden-gems': { primary: '#3A7284', secondary: '#4A90A4', accent: '#4A90A4' }, // Mediterranean blue
+  scenic: { primary: '#3A6247', secondary: '#4A7C59', accent: '#4A7C59' }, // Earthy green
+  'photo-stops': { primary: '#8B6914', secondary: '#A87600', accent: '#D4A853' } // Golden
 };
 
 export interface CityCoordinates {

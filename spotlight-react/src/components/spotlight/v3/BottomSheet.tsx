@@ -159,7 +159,7 @@ const BottomSheet = ({ onCityDetailsClick }: BottomSheetProps) => {
       <motion.div
         ref={sheetRef}
         style={{ height }}
-        className="fixed bottom-0 left-0 right-0 z-40 bg-white rounded-t-3xl shadow-[0_-4px_30px_rgba(0,0,0,0.1)]"
+        className="fixed bottom-0 left-0 right-0 z-40 bg-rui-white rounded-t-3xl shadow-[0_-4px_30px_rgba(44,36,23,0.12)]"
       >
         {/* Drag Handle */}
         <motion.div
@@ -183,19 +183,19 @@ const BottomSheet = ({ onCityDetailsClick }: BottomSheetProps) => {
           {/* Header: Trip Summary */}
           <div className="px-5 pb-3 flex items-center justify-between">
             <div className="flex items-center gap-2 text-sm">
-              <span className="font-semibold text-neutral-900">
+              <span className="font-marketing font-semibold text-rui-black">
                 {originName}
               </span>
-              <ChevronRight className="w-4 h-4 text-neutral-400" />
-              <span className="font-semibold text-neutral-900">
+              <ChevronRight className="w-4 h-4 text-rui-accent" />
+              <span className="font-marketing font-semibold text-rui-black">
                 {destinationName}
               </span>
-              <span className="text-neutral-400 mx-1">·</span>
-              <span className="text-neutral-500">
+              <span className="text-rui-grey-20 mx-1">·</span>
+              <span className="text-rui-grey-50">
                 {route.cities.length} cities
               </span>
-              <span className="text-neutral-400 mx-1">·</span>
-              <span className="text-neutral-500">
+              <span className="text-rui-grey-20 mx-1">·</span>
+              <span className="text-rui-grey-50">
                 {totalNights} nights
               </span>
             </div>
@@ -204,7 +204,7 @@ const BottomSheet = ({ onCityDetailsClick }: BottomSheetProps) => {
             <motion.div
               animate={{ rotate: isExpanded ? 180 : 0 }}
               transition={{ duration: 0.2 }}
-              className="text-neutral-400"
+              className="text-rui-grey-50"
             >
               <ChevronRight className="w-5 h-5 rotate-90" />
             </motion.div>
@@ -248,7 +248,7 @@ const BottomSheet = ({ onCityDetailsClick }: BottomSheetProps) => {
                   {/* Add City Button - matches card height */}
                   <button
                     onClick={() => setIsAddingLandmark(true)}
-                    className="flex-shrink-0 w-[60px] h-[132px] rounded-xl border-2 border-dashed border-neutral-200 flex items-center justify-center text-neutral-400 hover:border-neutral-400 hover:text-neutral-600 transition-colors snap-start"
+                    className="flex-shrink-0 w-[60px] h-[132px] rounded-xl border-2 border-dashed border-rui-grey-10 flex items-center justify-center text-rui-grey-50 hover:border-rui-accent hover:text-rui-accent transition-colors snap-start"
                   >
                     <Plus className="w-6 h-6" />
                   </button>
@@ -291,7 +291,7 @@ const BottomSheet = ({ onCityDetailsClick }: BottomSheetProps) => {
                   onClose={() => setSelectedCity(null)}
                 />
               ) : (
-                <div className="h-full flex items-center justify-center text-neutral-400 text-sm">
+                <div className="h-full flex items-center justify-center text-rui-grey-50 text-body-2">
                   Select a city to see details
                 </div>
               )}
