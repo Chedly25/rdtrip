@@ -1,48 +1,55 @@
+/* Font Imports - Must come first */
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&display=swap');
+@import url('https://api.fontshare.com/v2/css?f[]=satoshi@400,500,600,700&display=swap');
+
 @import 'tailwindcss';
 
 /* ==========================================================================
-   REVOLUT DESIGN SYSTEM - CSS Variables & Global Styles
+   RDTRIP DESIGN SYSTEM - "Wanderlust Editorial"
+   A travel app that feels like flipping through a beautiful magazine
    ========================================================================== */
-
-/* Font Imports - Plus Jakarta Sans + Inter */
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
   /* ==========================================================================
-     TYPOGRAPHY
+     TYPOGRAPHY - Editorial Character
      ========================================================================== */
-  --font-system: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  --font-brand: 'Inter', var(--font-system);
-  --font-marketing: 'Plus Jakarta Sans', var(--font-brand);
+  --font-system: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-body: 'Satoshi', var(--font-system);
+  --font-display: 'Fraunces', Georgia, serif;
 
-  font-family: var(--font-brand);
-  line-height: 1.5;
+  font-family: var(--font-body);
+  line-height: 1.6;
   font-weight: 400;
 
   /* ==========================================================================
-     COLORS - Monochrome Theme
+     COLORS - Warm Earth Tones
      ========================================================================== */
-  --rui-color-black: #191C1F;
-  --rui-color-foreground: #191C1F;
-  --rui-color-grey-50: #717173;
-  --rui-color-grey-20: #C9C9CD;
-  --rui-color-grey-10: #E2E2E7;
-  --rui-color-grey-8: #EBEBF0;
-  --rui-color-grey-5: #F1F2F4;
-  --rui-color-grey-2: #F7F7F7;
-  --rui-color-white: #FFFFFF;
+  --rui-color-black: #2C2417;
+  --rui-color-foreground: #2C2417;
+  --rui-color-grey-50: #8B7355;
+  --rui-color-grey-20: #C4B8A5;
+  --rui-color-grey-10: #E5DDD0;
+  --rui-color-grey-8: #EDE6DB;
+  --rui-color-grey-5: #F5F0E8;
+  --rui-color-grey-2: #FAF7F2;
+  --rui-color-white: #FFFBF5;
 
-  --rui-color-accent: #191C1F;
-  --rui-color-on-accent: #FFFFFF;
+  --rui-color-accent: #C45830;
+  --rui-color-accent-light: #FEF3EE;
+  --rui-color-on-accent: #FFFBF5;
 
-  --rui-color-success: #00B88B;
-  --rui-color-warning: #EC7E00;
-  --rui-color-danger: #E23B4A;
-  --rui-color-info: #0666EB;
+  --rui-color-success: #4A7C59;
+  --rui-color-warning: #D4A853;
+  --rui-color-danger: #B54A4A;
+  --rui-color-info: #4A6FA5;
 
-  --rui-color-background: #FFFFFF;
-  --rui-color-background-grouped: #F7F7F7;
-  --rui-color-background-elevated: #FFFFFF;
+  --rui-color-background: #FAF7F2;
+  --rui-color-background-grouped: #F5F0E8;
+  --rui-color-background-elevated: #FFFBF5;
+
+  /* Secondary accent - Mediterranean blue */
+  --rui-color-secondary: #4A90A4;
+  --rui-color-secondary-light: #E8F4F7;
 
   /* ==========================================================================
      ANIMATION TIMING
@@ -88,12 +95,13 @@
   --rui-radius-round: 9999px;
 
   /* ==========================================================================
-     SHADOWS
+     SHADOWS - Warm tinted
      ========================================================================== */
-  --rui-shadow-1: 0 0.125rem 0.1875rem rgba(25, 28, 31, 0.05);
-  --rui-shadow-2: 0 0.1875rem 0.5rem rgba(25, 28, 31, 0.1);
-  --rui-shadow-3: 0 0.1875rem 1.875rem rgba(25, 28, 31, 0.08);
-  --rui-shadow-4: 0 1rem 4rem rgba(25, 28, 31, 0.12);
+  --rui-shadow-1: 0 0.125rem 0.25rem rgba(44, 36, 23, 0.06);
+  --rui-shadow-2: 0 0.25rem 0.75rem rgba(44, 36, 23, 0.08);
+  --rui-shadow-3: 0 0.5rem 2rem rgba(44, 36, 23, 0.1);
+  --rui-shadow-4: 0 1.5rem 4rem rgba(44, 36, 23, 0.14);
+  --rui-shadow-accent: 0 0.5rem 2rem rgba(196, 88, 48, 0.25);
 
   /* ==========================================================================
      RENDERING
@@ -116,14 +124,14 @@
   }
 
   body {
-    background-color: var(--rui-color-white);
+    background-color: var(--rui-color-background);
     color: var(--rui-color-black);
-    font-family: var(--font-brand);
+    font-family: var(--font-body);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Scrollbar styling */
+  /* Scrollbar styling - warm tones */
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
@@ -151,6 +159,12 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
+
+  /* Selection - warm terracotta */
+  ::selection {
+    background-color: rgba(196, 88, 48, 0.15);
+    color: var(--rui-color-foreground);
+  }
 }
 
 /* ==========================================================================
@@ -159,6 +173,18 @@
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+
+  /* Display typography - Editorial headlines */
+  .font-display {
+    font-family: var(--font-display);
+  }
+
+  .text-display {
+    font-family: var(--font-display);
+    font-weight: 600;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
   }
 
   /* Shimmer animation for loading skeletons */
@@ -175,14 +201,15 @@
     animation: shimmer 2s infinite;
   }
 
-  /* Glass morphism effect */
+  /* Glass morphism effect - Warm tinted */
   .glass {
-    background: rgba(255, 255, 255, 0.9);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    background: rgba(255, 251, 245, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(44, 36, 23, 0.08);
   }
 
-  /* Revolut button state layer */
+  /* State layer - Button hover pattern */
   .state-layer {
     position: relative;
     overflow: hidden;
@@ -204,21 +231,81 @@
   .state-layer:active::before {
     opacity: 0.12;
   }
+
+  /* Grain texture overlay - adds atmosphere */
+  .grain {
+    position: relative;
+  }
+
+  .grain::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    opacity: 0.025;
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  /* Warm gradient backgrounds */
+  .warm-gradient {
+    background: linear-gradient(
+      165deg,
+      #FAF7F2 0%,
+      #F5F0E8 40%,
+      #FEF3EE 100%
+    );
+  }
+
+  /* Accent gradient for CTAs */
+  .accent-gradient {
+    background: linear-gradient(
+      135deg,
+      #C45830 0%,
+      #D4A853 100%
+    );
+  }
+
+  /* Editorial card style */
+  .card-editorial {
+    background: var(--rui-color-white);
+    border-radius: var(--rui-radius-24);
+    box-shadow: var(--rui-shadow-2);
+    transition: transform var(--rui-timing-md), box-shadow var(--rui-timing-md);
+  }
+
+  .card-editorial:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--rui-shadow-3);
+  }
+
+  /* Image hover zoom effect */
+  .img-zoom {
+    overflow: hidden;
+  }
+
+  .img-zoom img {
+    transition: transform 0.7s var(--rui-easing-default);
+  }
+
+  .img-zoom:hover img {
+    transform: scale(1.05);
+  }
 }
 
 /* ==========================================================================
    COMPONENT STYLES
    ========================================================================== */
 
-/* Revolut-style input focus ring */
+/* Input focus ring - warm accent */
 input:focus,
 textarea:focus,
 select:focus {
   outline: none;
-  box-shadow: 0 0 0 2px var(--rui-color-black);
+  box-shadow: 0 0 0 2px var(--rui-color-accent);
 }
 
-/* Revolut-style button transitions */
+/* Button transitions */
 button {
   transition: all var(--rui-timing-sm);
 }
@@ -233,6 +320,6 @@ button:active {
 }
 
 .card-hover:hover {
-  transform: translateY(-2px);
+  transform: translateY(-4px);
   box-shadow: var(--rui-shadow-3);
 }
