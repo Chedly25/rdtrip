@@ -40,10 +40,10 @@ export function Hero() {
 
       {/* Content */}
       <motion.div
-        className="relative z-10 flex min-h-screen flex-col items-center justify-center px-6 pt-20 pb-32"
+        className="relative z-10 flex min-h-screen flex-col items-center justify-center px-4 pt-20 pb-32"
         style={{ opacity: contentOpacity, y: contentY }}
       >
-        <div className="w-full max-w-4xl mx-auto text-center">
+        <div className="w-full max-w-6xl mx-auto text-center">
           {/* Badge */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -92,10 +92,10 @@ export function Hero() {
           >
             <button
               onClick={scrollToForm}
-              className="group relative inline-flex items-center gap-3 rounded-full bg-rui-black px-10 py-5 text-lg font-semibold text-rui-white overflow-hidden transition-all duration-rui-sm ease-rui-default hover:shadow-rui-4 active:scale-[0.98]"
+              className="group relative inline-flex items-center gap-3 rounded-full bg-rui-accent px-10 py-5 text-lg font-semibold text-rui-white overflow-hidden transition-all duration-rui-sm ease-rui-default hover:shadow-accent active:scale-[0.98]"
             >
               {/* State layer for hover */}
-              <span className="absolute inset-0 bg-white opacity-0 transition-opacity duration-rui-sm group-hover:opacity-10" />
+              <span className="absolute inset-0 bg-white opacity-0 transition-opacity duration-rui-sm group-hover:opacity-15" />
               <span className="relative">Start Planning</span>
               <ArrowRight className="relative h-6 w-6 transition-transform duration-rui-sm ease-rui-default group-hover:translate-x-1" />
             </button>
