@@ -34,13 +34,13 @@ const SelectedCityPanel = ({
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="h-full bg-neutral-50 rounded-2xl p-4 overflow-hidden relative"
+      className="h-full bg-rui-grey-2 rounded-rui-24 p-4 overflow-hidden relative"
     >
       {/* Close Button */}
       {onClose && (
         <button
           onClick={onClose}
-          className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition-colors z-10"
+          className="absolute top-3 right-3 w-8 h-8 rounded-full bg-rui-white shadow-rui-1 flex items-center justify-center text-rui-grey-50 hover:text-rui-black hover:bg-rui-grey-5 transition-colors z-10"
         >
           <X className="w-4 h-4" />
         </button>
@@ -50,39 +50,39 @@ const SelectedCityPanel = ({
       <div className="flex items-start justify-between mb-4 pr-10">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="w-6 h-6 rounded-lg bg-neutral-900 text-white text-xs font-semibold flex items-center justify-center">
+            <span className="w-6 h-6 rounded-rui-8 bg-rui-accent text-white text-xs font-semibold flex items-center justify-center">
               {cityIndex + 1}
             </span>
-            <h3 className="text-lg font-semibold text-neutral-900">{cityName}</h3>
+            <h3 className="font-marketing text-heading-3 text-rui-black">{cityName}</h3>
             {country && (
-              <span className="text-sm text-neutral-400">· {country}</span>
+              <span className="text-body-2 text-rui-grey-50">· {country}</span>
             )}
           </div>
-          <p className="text-sm text-neutral-500">{highlight}</p>
+          <p className="text-body-2 text-rui-grey-50">{highlight}</p>
         </div>
       </div>
 
       {/* Night Stepper - Full Width */}
-      <div className="flex items-center justify-between bg-white rounded-xl p-3 shadow-sm mb-4">
+      <div className="flex items-center justify-between bg-rui-white rounded-rui-16 p-3 shadow-rui-1 mb-4">
         <div className="flex items-center gap-2">
-          <Moon className="w-4 h-4 text-neutral-400" />
-          <span className="text-sm font-medium text-neutral-700">Nights in {cityName}</span>
+          <Moon className="w-4 h-4 text-rui-grey-50" />
+          <span className="text-body-2 font-medium text-rui-black">Nights in {cityName}</span>
         </div>
         <div className="flex items-center gap-1">
           <button
             onClick={() => onNightsChange(Math.max(0, nights - 1))}
             disabled={nights === 0}
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-neutral-600 hover:bg-neutral-100 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+            className="w-8 h-8 rounded-rui-8 flex items-center justify-center text-rui-grey-50 hover:bg-rui-grey-5 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
           >
             <Minus className="w-4 h-4" />
           </button>
-          <span className="text-base font-semibold text-neutral-900 min-w-[32px] text-center">
+          <span className="text-emphasis-1 text-rui-black min-w-[32px] text-center">
             {nights}
           </span>
           <button
             onClick={() => onNightsChange(Math.min(14, nights + 1))}
             disabled={nights >= 14}
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-neutral-600 hover:bg-neutral-100 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+            className="w-8 h-8 rounded-rui-8 flex items-center justify-center text-rui-grey-50 hover:bg-rui-grey-5 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
           >
             <Plus className="w-4 h-4" />
           </button>
@@ -90,18 +90,18 @@ const SelectedCityPanel = ({
       </div>
 
       {/* Stats Row */}
-      <div className="flex items-center gap-4 mb-4 pb-4 border-b border-neutral-200">
-        <div className="flex items-center gap-1.5 text-sm text-neutral-600">
-          <MapPin className="w-4 h-4 text-neutral-400" />
+      <div className="flex items-center gap-4 mb-4 pb-4 border-b border-rui-grey-10">
+        <div className="flex items-center gap-1.5 text-body-2 text-rui-black">
+          <MapPin className="w-4 h-4 text-rui-grey-50" />
           <span>{activitiesCount} {activitiesCount === 1 ? 'activity' : 'activities'}</span>
         </div>
-        <div className="flex items-center gap-1.5 text-sm text-neutral-600">
-          <Utensils className="w-4 h-4 text-neutral-400" />
+        <div className="flex items-center gap-1.5 text-body-2 text-rui-black">
+          <Utensils className="w-4 h-4 text-rui-grey-50" />
           <span>{restaurantsCount} {restaurantsCount === 1 ? 'restaurant' : 'restaurants'}</span>
         </div>
         {nights > 0 && (
-          <div className="flex items-center gap-1.5 text-sm text-neutral-600">
-            <Clock className="w-4 h-4 text-neutral-400" />
+          <div className="flex items-center gap-1.5 text-body-2 text-rui-black">
+            <Clock className="w-4 h-4 text-rui-grey-50" />
             <span>{nights} {nights === 1 ? 'night' : 'nights'}</span>
           </div>
         )}
@@ -110,7 +110,7 @@ const SelectedCityPanel = ({
       {/* Content Area */}
       {topActivities.length > 0 ? (
         <div className="mb-4">
-          <h4 className="text-xs font-semibold text-neutral-400 uppercase tracking-wide mb-2">
+          <h4 className="text-body-3 font-semibold text-rui-grey-50 uppercase tracking-wide mb-2">
             Highlights
           </h4>
           <div className="space-y-2">
@@ -120,24 +120,24 @@ const SelectedCityPanel = ({
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.05 }}
-                className="flex items-center gap-3 bg-white rounded-xl px-3 py-2.5 shadow-sm"
+                className="flex items-center gap-3 bg-rui-white rounded-rui-12 px-3 py-2.5 shadow-rui-1"
               >
-                <div className="w-8 h-8 rounded-lg bg-neutral-100 flex items-center justify-center flex-shrink-0">
-                  <MapPin className="w-4 h-4 text-neutral-500" />
+                <div className="w-8 h-8 rounded-rui-8 bg-rui-accent-light flex items-center justify-center flex-shrink-0">
+                  <MapPin className="w-4 h-4 text-rui-accent" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-neutral-900 truncate">
+                  <p className="text-body-2 font-medium text-rui-black truncate">
                     {activity.name || activity}
                   </p>
                   {activity.description && (
-                    <p className="text-xs text-neutral-500 truncate">
+                    <p className="text-body-3 text-rui-grey-50 truncate">
                       {activity.description}
                     </p>
                   )}
                 </div>
                 {activity.rating && (
-                  <div className="flex items-center gap-0.5 text-xs text-amber-600">
-                    <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                  <div className="flex items-center gap-0.5 text-body-3 text-warning">
+                    <Star className="w-3 h-3 fill-warning text-warning" />
                     <span>{activity.rating}</span>
                   </div>
                 )}
@@ -147,18 +147,18 @@ const SelectedCityPanel = ({
         </div>
       ) : (
         /* Empty State */
-        <div className="mb-4 bg-white rounded-xl p-4 text-center">
-          <div className="w-12 h-12 rounded-full bg-neutral-100 flex items-center justify-center mx-auto mb-3">
-            <Sparkles className="w-6 h-6 text-neutral-400" />
+        <div className="mb-4 bg-rui-white rounded-rui-16 p-4 text-center">
+          <div className="w-12 h-12 rounded-full bg-rui-accent-light flex items-center justify-center mx-auto mb-3">
+            <Sparkles className="w-6 h-6 text-rui-accent" />
           </div>
-          <p className="text-sm font-medium text-neutral-700 mb-1">No activities yet</p>
-          <p className="text-xs text-neutral-500 mb-3">
+          <p className="text-body-2 font-medium text-rui-black mb-1">No activities yet</p>
+          <p className="text-body-3 text-rui-grey-50 mb-3">
             Add activities to make the most of your time in {cityName}
           </p>
           {onViewDetails && (
             <button
               onClick={onViewDetails}
-              className="text-xs font-medium text-neutral-900 underline underline-offset-2 hover:text-neutral-600 transition-colors"
+              className="text-body-3 font-medium text-rui-accent underline underline-offset-2 hover:text-rui-accent/80 transition-colors"
             >
               Add activities
             </button>
@@ -170,7 +170,7 @@ const SelectedCityPanel = ({
       {onViewDetails && (
         <button
           onClick={onViewDetails}
-          className="w-full py-3 flex items-center justify-center gap-2 bg-neutral-900 text-white rounded-xl font-medium hover:bg-neutral-800 transition-colors"
+          className="w-full py-3 flex items-center justify-center gap-2 bg-rui-accent text-white rounded-rui-12 font-medium hover:bg-rui-accent/90 shadow-accent transition-colors"
         >
           View Full Details
           <ChevronRight className="w-4 h-4" />
