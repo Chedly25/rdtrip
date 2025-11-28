@@ -27,8 +27,8 @@ interface BottomSheetProps {
   onCityDetailsClick?: (cityIndex: number) => void;
 }
 
-const COLLAPSED_HEIGHT = 200;
-const EXPANDED_HEIGHT = 480;
+const COLLAPSED_HEIGHT = 280;
+const EXPANDED_HEIGHT = 560;
 
 const BottomSheet = ({ onCityDetailsClick }: BottomSheetProps) => {
   const {
