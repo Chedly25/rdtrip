@@ -29,11 +29,8 @@ const AddCityLandmarkModal = ({ isOpen, onClose }: AddCityLandmarkModalProps) =>
     updateCities,
     getCityCoordinates,
     getCityName,
-    getAgentColors,
     setIsCalculatingDetour
   } = useSpotlightStoreV2();
-
-  const agentColors = getAgentColors();
 
   // Reset state when modal opens/closes
   useEffect(() => {
@@ -151,14 +148,14 @@ const AddCityLandmarkModal = ({ isOpen, onClose }: AddCityLandmarkModalProps) =>
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[100] flex items-center justify-center">
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
         {/* Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
-          className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+          className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         />
 
         {/* Modal */}
@@ -166,55 +163,44 @@ const AddCityLandmarkModal = ({ isOpen, onClose }: AddCityLandmarkModalProps) =>
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="relative w-full max-w-2xl mx-4 bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden"
+          transition={{ duration: 0.2 }}
+          className="relative w-full max-w-lg bg-white rounded-2xl shadow-xl overflow-hidden"
         >
           {/* Header */}
-          <div
-            className="px-6 py-4 border-b border-gray-200 bg-gray-50"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold text-gray-900">Add to Route</h2>
+          <div className="px-6 py-5 border-b border-neutral-100">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold text-neutral-900">Add to Route</h2>
               <button
                 onClick={onClose}
-                className="p-2 rounded-lg hover:bg-gray-200 transition-colors text-gray-600 hover:text-gray-900"
+                className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition-colors"
               >
-                <X className="w-6 h-6" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Tabs */}
-            <div className="flex gap-2">
+            <div className="flex gap-2 mt-4">
               <button
                 onClick={() => setActiveTab('landmark')}
-                className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
+                className={`flex-1 px-4 py-2.5 rounded-xl font-medium text-sm transition-all ${
                   activeTab === 'landmark'
-                    ? 'text-white'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                    ? 'bg-neutral-900 text-white shadow-md'
+                    : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
                 }`}
-                style={{
-                  background: activeTab === 'landmark'
-                    ? `linear-gradient(135deg, ${agentColors.primary}, ${agentColors.secondary})`
-                    : 'transparent'
-                }}
               >
                 <Star className="w-4 h-4 inline mr-2" />
-                Add Landmark
+                Landmark
               </button>
               <button
                 onClick={() => setActiveTab('city')}
-                className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
+                className={`flex-1 px-4 py-2.5 rounded-xl font-medium text-sm transition-all ${
                   activeTab === 'city'
-                    ? 'text-white'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                    ? 'bg-neutral-900 text-white shadow-md'
+                    : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
                 }`}
-                style={{
-                  background: activeTab === 'city'
-                    ? `linear-gradient(135deg, ${agentColors.primary}, ${agentColors.secondary})`
-                    : 'transparent'
-                }}
               >
                 <MapPin className="w-4 h-4 inline mr-2" />
-                Add City
+                City
               </button>
             </div>
           </div>
@@ -222,50 +208,50 @@ const AddCityLandmarkModal = ({ isOpen, onClose }: AddCityLandmarkModalProps) =>
           {/* Content */}
           <div className="p-6">
             {/* Search Box */}
-            <div className="relative mb-4">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={`Search for a ${activeTab}...`}
-                className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 transition-all"
-                style={{
-                  '--tw-ring-color': agentColors.accent
-                } as any}
+                className="w-full pl-12 pr-4 py-3.5 bg-neutral-50 border border-neutral-200 rounded-xl text-neutral-900 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent transition-all"
                 autoFocus
               />
               {isSearching && (
-                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 animate-spin" />
+                <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400 animate-spin" />
               )}
             </div>
 
             {/* Search Results */}
             {searchResults.length > 0 && !selectedPlace && (
-              <div className="mb-4 max-h-60 overflow-y-auto bg-white rounded-lg border border-gray-200 shadow-sm">
+              <div className="mt-3 max-h-64 overflow-y-auto rounded-xl border border-neutral-200 bg-white divide-y divide-neutral-100">
                 {searchResults.map((result, index) => (
                   <button
                     key={index}
                     onClick={() => handleSelectPlace(result)}
-                    className="w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0"
+                    className="w-full px-4 py-3 text-left hover:bg-neutral-50 transition-colors"
                   >
                     <div className="flex items-center gap-3">
-                      {/* Show photo for landmarks if available */}
                       {result.photoUrl && activeTab === 'landmark' ? (
                         <img
                           src={result.photoUrl}
                           alt={result.name}
                           className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
                         />
-                      ) : activeTab === 'landmark' ? (
-                        <Star className="w-5 h-5 text-gray-400 flex-shrink-0" />
                       ) : (
-                        <MapPin className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                        <div className="w-10 h-10 rounded-lg bg-neutral-100 flex items-center justify-center flex-shrink-0">
+                          {activeTab === 'landmark' ? (
+                            <Star className="w-5 h-5 text-neutral-400" />
+                          ) : (
+                            <MapPin className="w-5 h-5 text-neutral-400" />
+                          )}
+                        </div>
                       )}
                       <div className="flex-1 min-w-0">
-                        <p className="text-gray-900 font-medium truncate">{result.name}</p>
+                        <p className="text-neutral-900 font-medium truncate">{result.name}</p>
                         {result.country && (
-                          <p className="text-gray-600 text-sm">{result.country}</p>
+                          <p className="text-neutral-500 text-sm">{result.country}</p>
                         )}
                       </div>
                     </div>
@@ -276,28 +262,30 @@ const AddCityLandmarkModal = ({ isOpen, onClose }: AddCityLandmarkModalProps) =>
 
             {/* Selected Place */}
             {selectedPlace && (
-              <div className="mb-4 bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
+              <div className="mt-4 bg-neutral-50 rounded-xl overflow-hidden">
                 {/* Photo header for landmarks */}
                 {selectedPlace.photoUrl && activeTab === 'landmark' && (
                   <img
                     src={selectedPlace.photoUrl}
                     alt={selectedPlace.name}
-                    className="w-full h-12 object-cover"
+                    className="w-full h-32 object-cover"
                   />
                 )}
 
                 <div className="p-4">
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3">
-                      {activeTab === 'landmark' ? (
-                        <Star className="w-6 h-6" style={{ color: agentColors.accent }} />
-                      ) : (
-                        <MapPin className="w-6 h-6" style={{ color: agentColors.accent }} />
-                      )}
+                      <div className="w-10 h-10 rounded-lg bg-neutral-900 flex items-center justify-center flex-shrink-0">
+                        {activeTab === 'landmark' ? (
+                          <Star className="w-5 h-5 text-white" />
+                        ) : (
+                          <MapPin className="w-5 h-5 text-white" />
+                        )}
+                      </div>
                       <div>
-                        <h3 className="text-gray-900 font-semibold">{selectedPlace.displayName}</h3>
+                        <h3 className="text-neutral-900 font-semibold">{selectedPlace.displayName}</h3>
                         {selectedPlace.country && (
-                          <p className="text-gray-600 text-sm">{selectedPlace.country}</p>
+                          <p className="text-neutral-500 text-sm">{selectedPlace.country}</p>
                         )}
                       </div>
                     </div>
@@ -306,51 +294,50 @@ const AddCityLandmarkModal = ({ isOpen, onClose }: AddCityLandmarkModalProps) =>
                         setSelectedPlace(null);
                         setDetourInfo(null);
                       }}
-                      className="p-1 rounded hover:bg-gray-200 transition-colors text-gray-600 hover:text-gray-900"
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-400 hover:text-neutral-600 hover:bg-neutral-200 transition-colors"
                     >
-                      <X className="w-5 h-5" />
+                      <X className="w-4 h-4" />
                     </button>
                   </div>
 
-                {/* Detour Info */}
-                {activeTab === 'landmark' && (
-                  <>
-                    {isCalculating ? (
-                      <div className="flex items-center gap-2 text-gray-400">
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span className="text-sm">Calculating optimal position...</span>
-                      </div>
-                    ) : detourInfo && (
-                      <div className="mt-3 pt-3 border-t border-gray-200">
-                        <div className="flex items-center gap-2 text-sm">
-                          <Navigation className="w-4 h-4" style={{ color: agentColors.accent }} />
-                          <span className="text-gray-900">
-                            Detour: <strong>+{detourInfo.detourKm.toFixed(1)} km</strong> • <strong>+{Math.round(detourInfo.detourMinutes)} min</strong>
-                          </span>
+                  {/* Detour Info */}
+                  {activeTab === 'landmark' && (
+                    <>
+                      {isCalculating ? (
+                        <div className="flex items-center gap-2 text-neutral-400 mt-4 pt-4 border-t border-neutral-200">
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span className="text-sm">Calculating optimal position...</span>
                         </div>
-                        <p className="text-gray-600 text-xs mt-1">
-                          Will be added after {getCityName(route?.cities[detourInfo.insertAfterIndex]?.city || '')}
-                        </p>
-                      </div>
-                    )}
-                  </>
-                )}
+                      ) : detourInfo && (
+                        <div className="mt-4 pt-4 border-t border-neutral-200">
+                          <div className="flex items-center gap-2 text-sm">
+                            <Navigation className="w-4 h-4 text-neutral-500" />
+                            <span className="text-neutral-700">
+                              Detour: <span className="font-semibold text-neutral-900">+{detourInfo.detourKm.toFixed(1)} km</span> · <span className="font-semibold text-neutral-900">+{Math.round(detourInfo.detourMinutes)} min</span>
+                            </span>
+                          </div>
+                          <p className="text-neutral-500 text-xs mt-1.5">
+                            Will be added after {getCityName(route?.cities[detourInfo.insertAfterIndex]?.city || '')}
+                          </p>
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
               </div>
             )}
 
-            {/* Info Text */}
+            {/* Empty State */}
             {!selectedPlace && searchQuery.length < 2 && (
-              <div className="text-center py-8">
-                <div className="w-16 h-16 rounded-full mx-auto mb-3 flex items-center justify-center bg-gray-100"
-                >
+              <div className="text-center py-12">
+                <div className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center bg-neutral-100">
                   {activeTab === 'landmark' ? (
-                    <Star className="w-8 h-8" style={{ color: agentColors.accent }} />
+                    <Star className="w-7 h-7 text-neutral-400" />
                   ) : (
-                    <MapPin className="w-8 h-8" style={{ color: agentColors.accent }} />
+                    <MapPin className="w-7 h-7 text-neutral-400" />
                   )}
                 </div>
-                <p className="text-gray-600 text-sm">
+                <p className="text-neutral-500 text-sm">
                   {activeTab === 'landmark'
                     ? 'Search for a landmark to add to your route'
                     : 'Search for a city to add as a waypoint'}
@@ -360,25 +347,20 @@ const AddCityLandmarkModal = ({ isOpen, onClose }: AddCityLandmarkModalProps) =>
           </div>
 
           {/* Footer */}
-          <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex gap-3 justify-end">
+          <div className="px-6 py-4 border-t border-neutral-100 bg-neutral-50 flex gap-3">
             <button
               onClick={onClose}
-              className="px-6 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 transition-colors"
+              className="flex-1 px-6 py-3 rounded-xl bg-white border border-neutral-200 text-neutral-700 font-medium hover:bg-neutral-50 transition-colors"
             >
               Cancel
             </button>
             <button
               onClick={handleAdd}
               disabled={!selectedPlace || (activeTab === 'landmark' && (!detourInfo || isCalculating))}
-              className="px-6 py-2 rounded-lg text-white font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{
-                background: selectedPlace && (!isCalculating && (activeTab === 'city' || detourInfo))
-                  ? `linear-gradient(135deg, ${agentColors.primary}, ${agentColors.secondary})`
-                  : '#9ca3af'
-              }}
+              className="flex-1 px-6 py-3 rounded-xl bg-neutral-900 text-white font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:bg-neutral-800"
             >
               {isCalculating ? (
-                <span className="flex items-center gap-2">
+                <span className="flex items-center justify-center gap-2">
                   <Loader2 className="w-4 h-4 animate-spin" />
                   Calculating...
                 </span>
