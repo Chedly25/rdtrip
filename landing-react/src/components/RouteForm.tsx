@@ -211,7 +211,7 @@ export function RouteForm({ onRouteGenerated }: RouteFormProps) {
 
   return (
     <section id="route-form" className="relative bg-rui-white py-24">
-      <div className="mx-auto max-w-4xl px-6">
+      <div className="mx-auto max-w-5xl px-4">
         {!isLoading && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -336,7 +336,7 @@ export function RouteForm({ onRouteGenerated }: RouteFormProps) {
                   onChange={(e) => setTotalNights(Number(e.target.value))}
                   className="w-full cursor-pointer"
                   style={{
-                    background: `linear-gradient(to right, #191C1F 0%, #191C1F ${((totalNights - 3) / 27) * 100}%, #E2E2E7 ${((totalNights - 3) / 27) * 100}%, #E2E2E7 100%)`,
+                    background: `linear-gradient(to right, var(--rui-color-accent) 0%, var(--rui-color-accent) ${((totalNights - 3) / 27) * 100}%, var(--rui-color-grey-10) ${((totalNights - 3) / 27) * 100}%, var(--rui-color-grey-10) 100%)`,
                   }}
                 />
                 <div className="flex justify-between text-xs text-rui-grey-50">
@@ -396,7 +396,7 @@ export function RouteForm({ onRouteGenerated }: RouteFormProps) {
             <button
               type="submit"
               disabled={isLoading || isSubmitting}
-              className="group relative w-full overflow-hidden rounded-rui-16 bg-rui-black px-8 py-4 text-base font-semibold text-rui-white transition-all duration-rui-sm ease-rui-default hover:shadow-rui-3 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100"
+              className="group relative w-full overflow-hidden rounded-rui-16 bg-rui-accent px-8 py-4 text-base font-semibold text-rui-white transition-all duration-rui-sm ease-rui-default hover:shadow-accent active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100"
             >
               {/* State layer */}
               <span className="absolute inset-0 bg-white opacity-0 transition-opacity duration-rui-sm group-hover:opacity-10 group-disabled:group-hover:opacity-0" />

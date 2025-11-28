@@ -98,7 +98,7 @@ export function DestinationShowcase() {
 
   return (
     <section className="relative overflow-hidden bg-rui-grey-2 py-20">
-      <div className="mx-auto max-w-7xl px-6">
+      <div className="mx-auto max-w-[90rem] px-4">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
