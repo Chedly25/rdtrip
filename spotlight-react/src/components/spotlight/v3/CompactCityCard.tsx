@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Moon, Check } from 'lucide-react';
+import { Moon } from 'lucide-react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { fetchCityImage } from '../../../services/cityImages';
@@ -23,8 +23,6 @@ const CompactCityCard = ({
   country,
   index,
   nights,
-  highlight,
-  hasActivities = false,
   isSelected,
   onSelect,
 }: CompactCityCardProps) => {
@@ -54,9 +52,6 @@ const CompactCityCard = ({
     loadImage();
   }, [cityName]);
 
-  // Display text - highlight or country fallback
-  const subtitle = highlight || country || '';
-
   return (
     <motion.div
       ref={setNodeRef}
@@ -68,17 +63,17 @@ const CompactCityCard = ({
       transition={{ delay: index * 0.03, duration: 0.2 }}
       onClick={onSelect}
       className={`
-        flex-shrink-0 w-[260px] bg-rui-white rounded-rui-24 cursor-pointer overflow-hidden
+        flex-shrink-0 w-[180px] bg-[#FFFBF5] rounded-2xl cursor-pointer overflow-hidden
         transition-all duration-200 ease-out select-none
         ${isSelected
-          ? 'shadow-rui-3 ring-2 ring-rui-accent scale-[1.02]'
-          : 'shadow-rui-2 hover:shadow-rui-3 hover:scale-[1.01]'
+          ? 'shadow-lg ring-2 ring-[#C45830] scale-[1.02]'
+          : 'shadow-md hover:shadow-lg hover:scale-[1.01]'
         }
-        ${isDragging ? 'shadow-rui-4 z-50 cursor-grabbing' : 'cursor-pointer'}
+        ${isDragging ? 'shadow-xl z-50 cursor-grabbing' : 'cursor-pointer'}
       `}
     >
-      {/* Image - Full width, taller */}
-      <div className="relative w-full h-[140px] bg-rui-grey-5">
+      {/* Image Container */}
+      <div className="relative w-full h-[120px] bg-[#F5F0E8] overflow-hidden">
         {cityImage && (
           <img
             src={cityImage}
@@ -93,53 +88,48 @@ const CompactCityCard = ({
           />
         )}
 
-        {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-
-        {/* Country badge */}
-        {country && (
-          <div className="absolute top-3 left-3 flex items-center gap-1.5 rounded-full bg-rui-white/95 backdrop-blur-sm px-2.5 py-1 shadow-sm">
-            <span className="text-xs font-semibold text-rui-black">{country}</span>
-          </div>
-        )}
-
-        {/* City number badge */}
-        <div className="absolute top-3 right-3 w-7 h-7 bg-rui-accent rounded-rui-8 flex items-center justify-center shadow-accent">
-          <span className="text-xs font-bold text-white">{index + 1}</span>
+        {/* City number badge - top right */}
+        <div className="absolute top-2 right-2 w-6 h-6 bg-[#C45830] rounded-lg flex items-center justify-center shadow-md">
+          <span className="text-[11px] font-bold text-white">{index + 1}</span>
         </div>
 
-        {/* City name on image */}
-        <h3 className="absolute bottom-3 left-3 right-3 font-marketing text-xl font-bold text-white drop-shadow-lg">
+        {/* Subtle vignette for depth */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
+      </div>
+
+      {/* Content - Clean and minimal */}
+      <div className="p-3">
+        {/* City name */}
+        <h3 className="font-semibold text-[15px] text-[#2C2417] leading-tight mb-1 truncate">
           {cityName}
         </h3>
-      </div>
 
-      {/* Content */}
-      <div className="p-4">
-        {/* Subtitle */}
-        {subtitle && (
-          <p className="text-body-2 text-rui-grey-50 mb-3 line-clamp-1">
-            {subtitle}
-          </p>
-        )}
-
-        {/* Bottom row */}
+        {/* Country + Nights row */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5 text-rui-black">
-            <Moon className="w-4 h-4 text-rui-grey-50" />
-            <span className="text-body-2 font-medium">
-              {nights} {nights === 1 ? 'night' : 'nights'}
+          {country && (
+            <span className="text-xs text-[#8B7355] truncate max-w-[80px]">
+              {country}
+            </span>
+          )}
+          <div className="flex items-center gap-1 text-[#8B7355]">
+            <Moon className="w-3 h-3" />
+            <span className="text-xs font-medium">
+              {nights}
             </span>
           </div>
-
-          {hasActivities && (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rui-accent-light">
-              <Check className="w-3.5 h-3.5 text-rui-accent" strokeWidth={3} />
-              <span className="text-body-3 font-medium text-rui-accent">Activities</span>
-            </div>
-          )}
         </div>
       </div>
+
+      {/* Selection indicator - left accent bar */}
+      {isSelected && (
+        <motion.div
+          layoutId="selection-bar"
+          className="absolute left-0 top-0 bottom-0 w-1 bg-[#C45830]"
+          initial={{ scaleY: 0 }}
+          animate={{ scaleY: 1 }}
+          transition={{ duration: 0.2 }}
+        />
+      )}
     </motion.div>
   );
 };
