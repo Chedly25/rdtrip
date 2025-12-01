@@ -10,7 +10,7 @@ import SpotlightHeader from './SpotlightHeader';
 import { ItineraryView } from '../../itinerary/ItineraryView';
 import { Loader2, Users } from 'lucide-react';
 import { CollaborationPanel } from '../../collaboration/CollaborationPanel';
-import { CompanionPanel, CompanionTab, ProactiveBubble } from '../../companion/CompanionPanel';
+import { CompanionPanel, CompanionTab, ProactiveBubble, MobileCompanionDrawer } from '../../companion/CompanionPanel';
 import { useCompanion } from '../../../contexts/CompanionProvider';
 import { useAgent } from '../../../contexts/AgentProvider';
 
@@ -25,6 +25,7 @@ const SpotlightV2 = () => {
   const [showCollaboration, setShowCollaboration] = useState(false);
   const [cityDetailIndex, setCityDetailIndex] = useState<number | null>(null);
   const [showSaveModal, setShowSaveModal] = useState(false);
+  const [mobileCompanionOpen, setMobileCompanionOpen] = useState(false);
 
   // Companion state
   const {
@@ -489,7 +490,7 @@ const SpotlightV2 = () => {
       </div>
 
       {/* Companion Panel - Desktop Sidebar (hidden on mobile) */}
-      <div className="hidden md:block h-full">
+      <div className="hidden md:flex h-full flex-shrink-0">
         <AnimatePresence mode="wait">
           {isPanelExpanded ? (
             <CompanionPanel
@@ -564,6 +565,13 @@ const SpotlightV2 = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Mobile Companion Drawer */}
+      <MobileCompanionDrawer
+        isOpen={mobileCompanionOpen}
+        onOpen={() => setMobileCompanionOpen(true)}
+        onClose={() => setMobileCompanionOpen(false)}
+      />
 
     </div>
   );
