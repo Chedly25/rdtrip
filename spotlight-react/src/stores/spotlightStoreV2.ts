@@ -104,6 +104,12 @@ interface SpotlightStoreV2 {
   setMapZoom: (zoom: number) => void;
   setHoveredMarker: (markerId: string | null) => void;
 
+  // Animation triggers (used by companion to animate map)
+  pendingFlyTo: { center: [number, number]; zoom?: number } | null;
+  triggerFlyTo: (center: [number, number], zoom?: number) => void;
+  clearFlyTo: () => void;
+  focusCityByName: (cityName: string) => void;
+
   // Loading actions
   setIsCalculatingDetour: (isCalculating: boolean) => void;
   setIsLoadingRoute: (isLoading: boolean) => void;
@@ -126,6 +132,7 @@ export const useSpotlightStoreV2 = create<SpotlightStoreV2>((set, get) => ({
   hoveredMarker: null,
   isCalculatingDetour: false,
   isLoadingRoute: false,
+  pendingFlyTo: null,
 
   // Core actions
   setRoute: (route) => {
@@ -485,6 +492,33 @@ export const useSpotlightStoreV2 = create<SpotlightStoreV2>((set, get) => ({
   setMapCenter: (center) => set({ mapCenter: center }),
   setMapZoom: (zoom) => set({ mapZoom: zoom }),
   setHoveredMarker: (markerId) => set({ hoveredMarker: markerId }),
+
+  // Animation triggers (used by companion to animate map)
+  triggerFlyTo: (center, zoom = 10) => set({ pendingFlyTo: { center, zoom } }),
+  clearFlyTo: () => set({ pendingFlyTo: null }),
+  focusCityByName: (cityName) => {
+    const state = get();
+    if (!state.route?.cities) return;
+
+    // Find city by name (case insensitive)
+    const cityIndex = state.route.cities.findIndex(city => {
+      const name = typeof city.city === 'object' ? city.city.name : city.city;
+      return name.toLowerCase() === cityName.toLowerCase();
+    });
+
+    if (cityIndex === -1) return;
+
+    const city = state.route.cities[cityIndex];
+    const coords = city.coordinates;
+
+    if (coords) {
+      // Select the city and trigger fly animation
+      set({
+        selectedCityIndex: cityIndex,
+        pendingFlyTo: { center: [coords.lng, coords.lat], zoom: 12 }
+      });
+    }
+  },
 
   // Loading actions
   setIsCalculatingDetour: (isCalculating) => set({ isCalculatingDetour: isCalculating }),

@@ -22,6 +22,7 @@ import { CompactCityCard } from './CompactCityCard';
 import { SelectedCityPanel } from './SelectedCityPanel';
 import { getCityHighlight } from '../../../utils/cityHighlights';
 import AddCityLandmarkModal from '../v2/AddCityLandmarkModal';
+import { useCompanion } from '../../../contexts/CompanionProvider';
 
 interface BottomSheetProps {
   onCityDetailsClick?: (cityIndex: number) => void;
@@ -41,6 +42,9 @@ const BottomSheet = ({ onCityDetailsClick }: BottomSheetProps) => {
     isAddingLandmark,
     setIsAddingLandmark,
   } = useSpotlightStoreV2();
+
+  // Get companion context for updating when city selection changes
+  const { onCitySelect } = useCompanion();
 
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -246,7 +250,12 @@ const BottomSheet = ({ onCityDetailsClick }: BottomSheetProps) => {
                           highlight={highlight}
                           hasActivities={(city.activities?.length || 0) > 0}
                           isSelected={selectedCityIndex === index}
-                          onSelect={() => setSelectedCity(index === selectedCityIndex ? null : index)}
+                          onSelect={() => {
+                            const newSelectedIndex = index === selectedCityIndex ? null : index;
+                            setSelectedCity(newSelectedIndex);
+                            // Notify companion of city selection
+                            onCitySelect(newSelectedIndex !== null ? cityName : null);
+                          }}
                         />
                       </div>
                     );

@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Moon } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Moon, Sparkles } from 'lucide-react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { fetchCityImage } from '../../../services/cityImages';
+import { useCompanion } from '../../../contexts/CompanionProvider';
 
 interface CompactCityCardProps {
   id: string;
@@ -28,6 +29,10 @@ const CompactCityCard = ({
 }: CompactCityCardProps) => {
   const [cityImage, setCityImage] = useState<string | null>(null);
   const [imageLoaded, setImageLoaded] = useState(false);
+
+  // Get companion highlight state
+  const { isEntityHighlighted } = useCompanion();
+  const isHighlightedByCompanion = isEntityHighlighted('city', cityName);
 
   const {
     attributes,
@@ -64,8 +69,10 @@ const CompactCityCard = ({
       onClick={onSelect}
       className={`
         flex-shrink-0 w-[180px] bg-[#FFFBF5] rounded-2xl cursor-pointer overflow-hidden
-        transition-all duration-200 ease-out select-none
-        ${isSelected
+        transition-all duration-200 ease-out select-none relative
+        ${isHighlightedByCompanion
+          ? 'shadow-xl ring-2 ring-[#D4A853] scale-[1.03] animate-pulse'
+          : isSelected
           ? 'shadow-lg ring-2 ring-[#C45830] scale-[1.02]'
           : 'shadow-md hover:shadow-lg hover:scale-[1.01]'
         }
@@ -130,6 +137,20 @@ const CompactCityCard = ({
           transition={{ duration: 0.2 }}
         />
       )}
+
+      {/* Companion highlight indicator */}
+      <AnimatePresence>
+        {isHighlightedByCompanion && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            className="absolute -top-1 -right-1 w-7 h-7 bg-gradient-to-br from-[#D4A853] to-[#C45830] rounded-full flex items-center justify-center shadow-lg z-10"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-white" />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };

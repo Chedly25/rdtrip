@@ -55,6 +55,8 @@ export type ArtifactType =
   | 'directions_map'     // getDirections results
   | 'city_info'          // getCityInfo results
   | 'restaurant_list'    // searchRestaurants results (future)
+  | 'route_comparison'   // What-if route comparison (companion)
+  | 'day_comparison'     // Day schedule optimization (companion)
   | 'none';              // No artifact, just chat
 
 /**

@@ -31,6 +31,10 @@ const MapViewV2 = () => {
   const getCityName = useSpotlightStoreV2((state) => state.getCityName);
   const getAgentColors = useSpotlightStoreV2((state) => state.getAgentColors);
 
+  // Animation triggers from companion
+  const pendingFlyTo = useSpotlightStoreV2((state) => state.pendingFlyTo);
+  const clearFlyTo = useSpotlightStoreV2((state) => state.clearFlyTo);
+
   const agentColors = getAgentColors();
 
   console.log('🔍 MapViewV2 render - Landmarks in route:', route?.landmarks.length || 0);
@@ -81,6 +85,26 @@ const MapViewV2 = () => {
       map.current = null;
     };
   }, []);
+
+  // Handle animated fly-to requests from companion
+  useEffect(() => {
+    if (!pendingFlyTo || !map.current || !isMapLoaded) return;
+
+    // Execute fly animation with smooth easing
+    map.current.flyTo({
+      center: pendingFlyTo.center,
+      zoom: pendingFlyTo.zoom || 10,
+      duration: 2000,
+      essential: true,
+      easing: (t) => {
+        // Smooth ease-in-out curve
+        return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+      }
+    });
+
+    // Clear the pending fly-to after animation starts
+    clearFlyTo();
+  }, [pendingFlyTo, isMapLoaded, clearFlyTo]);
 
   // Fetch nearby landmarks when route changes
   useEffect(() => {
