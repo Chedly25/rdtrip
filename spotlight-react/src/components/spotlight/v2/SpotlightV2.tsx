@@ -10,6 +10,9 @@ import SpotlightHeader from './SpotlightHeader';
 import { ItineraryView } from '../../itinerary/ItineraryView';
 import { Loader2, Users } from 'lucide-react';
 import { CollaborationPanel } from '../../collaboration/CollaborationPanel';
+import { CompanionPanel, CompanionTab, ProactiveBubble } from '../../companion/CompanionPanel';
+import { useCompanion } from '../../../contexts/CompanionProvider';
+import { useAgent } from '../../../contexts/AgentProvider';
 
 const SpotlightV2 = () => {
   // Get routeId from query params (?routeId=123) not path params
@@ -22,6 +25,19 @@ const SpotlightV2 = () => {
   const [showCollaboration, setShowCollaboration] = useState(false);
   const [cityDetailIndex, setCityDetailIndex] = useState<number | null>(null);
   const [showSaveModal, setShowSaveModal] = useState(false);
+
+  // Companion state
+  const {
+    isPanelExpanded,
+    togglePanel,
+    showProactiveBubble,
+    currentSuggestion,
+    dismissSuggestion,
+    acceptSuggestion,
+    hasUnreadMessages,
+  } = useCompanion();
+
+  const { sendMessage } = useAgent();
 
   const {
     route,
@@ -447,19 +463,61 @@ const SpotlightV2 = () => {
     return null;
   }
 
+  // Handle accepting a proactive suggestion
+  const handleAcceptSuggestion = () => {
+    if (currentSuggestion) {
+      acceptSuggestion();
+      sendMessage(currentSuggestion.prompt);
+    }
+  };
+
   return (
-    <div className="h-screen w-screen overflow-hidden bg-rui-grey-2 relative">
-      {/* Header */}
-      <SpotlightHeader
-        onGenerateItinerary={handleGenerateItinerary}
-        onSave={() => setShowSaveModal(true)}
-      />
+    <div className="h-screen w-screen overflow-hidden bg-[#FFFBF5] relative flex">
+      {/* Main Content Area - Takes remaining space when companion is open */}
+      <div className={`flex-1 h-full relative transition-all duration-300 ${isPanelExpanded ? 'mr-0' : ''}`}>
+        {/* Header */}
+        <SpotlightHeader
+          onGenerateItinerary={handleGenerateItinerary}
+          onSave={() => setShowSaveModal(true)}
+        />
 
-      {/* Map - Fullscreen hero element */}
-      <MapViewV2 />
+        {/* Map - Fullscreen hero element */}
+        <MapViewV2 />
 
-      {/* Bottom Sheet - Apple Maps style */}
-      <BottomSheet onCityDetailsClick={setCityDetailIndex} />
+        {/* Bottom Sheet - Apple Maps style */}
+        <BottomSheet onCityDetailsClick={setCityDetailIndex} />
+      </div>
+
+      {/* Companion Panel - Desktop Sidebar (hidden on mobile) */}
+      <div className="hidden md:block h-full">
+        <AnimatePresence mode="wait">
+          {isPanelExpanded ? (
+            <CompanionPanel
+              key="companion-panel"
+              isExpanded={isPanelExpanded}
+              onToggleExpand={togglePanel}
+            />
+          ) : (
+            <CompanionTab
+              key="companion-tab"
+              onClick={togglePanel}
+              hasUnread={hasUnreadMessages}
+            />
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Proactive Bubble - Shows when companion suggests something */}
+      <AnimatePresence>
+        {showProactiveBubble && currentSuggestion && (
+          <ProactiveBubble
+            message={currentSuggestion.message}
+            onAccept={handleAcceptSuggestion}
+            onDismiss={dismissSuggestion}
+            priority={currentSuggestion.priority}
+          />
+        )}
+      </AnimatePresence>
 
       {/* City Detail Modal */}
       <CityDetailModal
@@ -478,24 +536,24 @@ const SpotlightV2 = () => {
       {routeId && (
         <motion.button
           onClick={() => setShowCollaboration(!showCollaboration)}
-          className="fixed top-20 left-4 z-50 bg-rui-black hover:bg-rui-grey-50 text-white rounded-rui-16 px-4 py-2.5 shadow-rui-3 transition-all duration-rui-sm ease-rui-default flex items-center gap-2"
+          className="fixed top-20 left-4 z-50 bg-[#2C2417] hover:bg-[#3D3328] text-white rounded-xl px-4 py-2.5 shadow-lg transition-all duration-200 flex items-center gap-2"
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
         >
           <Users className="w-4 h-4" />
-          <span className="text-emphasis-2">Collaborate</span>
+          <span className="text-sm font-medium">Collaborate</span>
         </motion.button>
       )}
 
-      {/* Collaboration Panel - Slide in from right */}
+      {/* Collaboration Panel - Slide in from left (moved to avoid companion overlap) */}
       <AnimatePresence>
         {showCollaboration && routeId && (
           <motion.div
-            initial={{ x: '100%' }}
+            initial={{ x: '-100%' }}
             animate={{ x: 0 }}
-            exit={{ x: '100%' }}
+            exit={{ x: '-100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed right-0 top-0 h-full w-96 z-50 shadow-2xl"
+            className="fixed left-0 top-0 h-full w-96 z-50 shadow-2xl"
           >
             <CollaborationPanel
               routeId={routeId}
