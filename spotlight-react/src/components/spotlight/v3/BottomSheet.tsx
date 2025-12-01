@@ -31,8 +31,11 @@ interface BottomSheetProps {
   onCityDetailsClick?: (cityIndex: number) => void;
 }
 
-const COLLAPSED_HEIGHT = 240;
-const EXPANDED_HEIGHT = 520;
+// Card height: 120px image + ~56px content = 176px
+// Header: ~50px, drag handle area: ~28px, padding: ~16px
+// Total needed for collapsed: ~270px
+const COLLAPSED_HEIGHT = 280;
+const EXPANDED_HEIGHT = 560;
 
 const BottomSheet = ({ onCityDetailsClick }: BottomSheetProps) => {
   const {
