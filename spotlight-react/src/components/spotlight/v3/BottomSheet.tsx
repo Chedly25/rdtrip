@@ -24,6 +24,9 @@ import { getCityHighlight } from '../../../utils/cityHighlights';
 import AddCityLandmarkModal from '../v2/AddCityLandmarkModal';
 import { useCompanion } from '../../../contexts/CompanionProvider';
 
+// Companion panel width for desktop layout
+const COMPANION_PANEL_WIDTH = 340;
+
 interface BottomSheetProps {
   onCityDetailsClick?: (cityIndex: number) => void;
 }
@@ -44,11 +47,20 @@ const BottomSheet = ({ onCityDetailsClick }: BottomSheetProps) => {
   } = useSpotlightStoreV2();
 
   // Get companion context for updating when city selection changes
-  const { onCitySelect } = useCompanion();
+  const { onCitySelect, isPanelExpanded: isCompanionExpanded } = useCompanion();
 
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [isDesktop, setIsDesktop] = useState(false);
   const sheetRef = useRef<HTMLDivElement>(null);
+
+  // Track if we're on desktop for companion panel offset
+  useEffect(() => {
+    const checkDesktop = () => setIsDesktop(window.innerWidth >= 768);
+    checkDesktop();
+    window.addEventListener('resize', checkDesktop);
+    return () => window.removeEventListener('resize', checkDesktop);
+  }, []);
 
   // Motion values for drag
   const y = useMotionValue(0);
@@ -163,8 +175,12 @@ const BottomSheet = ({ onCityDetailsClick }: BottomSheetProps) => {
       {/* Bottom Sheet */}
       <motion.div
         ref={sheetRef}
-        style={{ height }}
-        className="fixed bottom-0 left-0 right-0 z-40 bg-[#FFFBF5] rounded-t-[28px] shadow-[0_-8px_40px_rgba(44,36,23,0.15)]"
+        style={{
+          height,
+          // On desktop (md+), leave space for companion panel when expanded
+          right: isDesktop && isCompanionExpanded ? COMPANION_PANEL_WIDTH : 0,
+        }}
+        className="fixed bottom-0 left-0 z-40 bg-[#FFFBF5] rounded-t-[28px] shadow-[0_-8px_40px_rgba(44,36,23,0.15)] transition-[right] duration-300"
       >
         {/* Drag Handle */}
         <motion.div
