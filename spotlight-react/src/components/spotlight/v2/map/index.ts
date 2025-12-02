@@ -16,3 +16,6 @@ export * from './overlays/MapOverlays';
 
 // Layers
 export * from './layers/AnimatedRouteLine';
+
+// Markers
+export { default as TravelStampMarker } from './markers/TravelStampMarker';

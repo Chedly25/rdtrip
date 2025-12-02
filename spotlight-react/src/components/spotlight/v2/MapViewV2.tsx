@@ -3,7 +3,8 @@ import { createRoot } from 'react-dom/client';
 import { useSpotlightStoreV2 } from '../../../stores/spotlightStoreV2';
 import { fetchMapboxRoute, formatDistance, formatDuration } from '../../../services/mapboxRoutes';
 import { fetchLandmarksInRegion, calculateBoundingBox, getLandmarkImagePath, type Landmark } from '../../../services/landmarks';
-import CityMarker from './CityMarker';
+// Legacy marker - keeping for reference, now using TravelStampMarker
+// import CityMarker from './CityMarker';
 import LandmarkMarker from './LandmarkMarker';
 import LandmarkDetailsModal from './LandmarkDetailsModal';
 import mapboxgl from 'mapbox-gl';
@@ -17,6 +18,7 @@ import {
   MAP_CONFIG,
   addRouteLayersToMap,
   ROUTE_LAYER_IDS,
+  TravelStampMarker,
 } from './map';
 
 // Mapbox access token
@@ -222,46 +224,30 @@ const MapViewV2 = () => {
       console.log(`📍 Route: ${formatDistance(mapboxRoute.distance)}, ${formatDuration(mapboxRoute.duration)}`);
     }
 
-    // Add city markers
+    // Add city markers with Travel Stamp design
     route.cities.forEach((city, index) => {
-      console.log(`🎯 Adding marker for city ${index}:`, {
-        cityObject: city.city,
-        topLevelCoords: city.coordinates
-      });
-      // Use top-level coordinates directly
       const coords = city.coordinates;
-      console.log(`  → Using coords:`, coords);
-      console.log(`  → coords type check:`, {
-        isArray: Array.isArray(coords),
-        hasLat: coords && 'lat' in coords,
-        hasLng: coords && 'lng' in coords,
-        latValue: coords?.lat,
-        lngValue: coords?.lng
-      });
       if (!coords) {
-        console.warn(`  ⚠️ No coordinates for city ${index}`);
+        console.warn(`⚠️ No coordinates for city ${index}`);
         return;
       }
 
       const cityName = getCityName(city.city);
+      const country = typeof city.city === 'object' ? city.city.country : undefined;
       const markerId = `city-${index}`;
-      console.log(`  📍 Placing marker at [lng=${coords.lng}, lat=${coords.lat}]`);
-      console.log(`  📍 Geographic check: ${cityName} should be at latitude ${coords.lat}° (positive = north of equator)`);
-      console.log(`  📍 Geographic check: ${cityName} should be at longitude ${coords.lng}° (negative = west, positive = east)`);
-
-      // VERIFY: Mapbox uses [lng, lat] format, not [lat, lng]
       const mapboxCoords: [number, number] = [coords.lng, coords.lat];
-      console.log(`  📍 Final Mapbox coords for ${cityName}: [${mapboxCoords[0]}, ${mapboxCoords[1]}]`);
 
-      // Create a div for the marker
+      // Create a div for the Travel Stamp marker
       const el = document.createElement('div');
       const root = createRoot(el);
 
-      // Render CityMarker component
+      // Render TravelStampMarker - the new editorial design
       root.render(
-        <CityMarker
+        <TravelStampMarker
           index={index}
           cityName={cityName}
+          country={country}
+          nights={city.nights || 0}
           isSelected={selectedCityIndex === index}
           isHovered={hoveredMarkerId === markerId}
           agentColors={agentColors}
