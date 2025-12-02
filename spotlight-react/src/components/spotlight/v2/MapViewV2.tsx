@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
 import { useSpotlightStoreV2 } from '../../../stores/spotlightStoreV2';
 import { fetchMapboxRoute, formatDistance, formatDuration } from '../../../services/mapboxRoutes';
@@ -19,6 +19,8 @@ import {
   addRouteLayersToMap,
   ROUTE_LAYER_IDS,
   TravelStampMarker,
+  useJourneyOrchestrator,
+  CelebrationParticles,
 } from './map';
 
 // Mapbox access token
@@ -32,6 +34,15 @@ const MapViewV2 = () => {
   const [hoveredMarkerId, setHoveredMarkerId] = useState<string | null>(null);
   const [nearbyLandmarks, setNearbyLandmarks] = useState<Landmark[]>([]);
   const [selectedLandmark, setSelectedLandmark] = useState<Landmark | null>(null);
+
+  // Orchestration state
+  const [routeGeometry, setRouteGeometry] = useState<GeoJSON.LineString | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_visibleMarkerIndices, setVisibleMarkerIndices] = useState<Set<number>>(new Set());
+  const [celebrationTrigger, setCelebrationTrigger] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [celebrationPosition, _setCelebrationPosition] = useState({ x: 0, y: 0 });
+  const hasPlayedInitialAnimation = useRef(false);
 
   // Use explicit selectors to ensure proper reactivity
   const route = useSpotlightStoreV2((state) => state.route);
@@ -48,6 +59,24 @@ const MapViewV2 = () => {
   const clearFlyTo = useSpotlightStoreV2((state) => state.clearFlyTo);
 
   const agentColors = getAgentColors();
+
+  // Marker drop callback for orchestration
+  const handleMarkerDrop = useCallback((index: number, type: 'city' | 'landmark') => {
+    setVisibleMarkerIndices(prev => new Set([...prev, type === 'city' ? index : index + 100]));
+  }, []);
+
+  // Journey orchestrator hook
+  const orchestrator = useJourneyOrchestrator({
+    map: map.current,
+    isMapLoaded,
+    routeGeometry,
+    cityCount: route?.cities.length || 0,
+    landmarkCount: route?.landmarks.length || 0,
+    onMarkerDrop: handleMarkerDrop,
+    onPhaseChange: (phase) => {
+      console.log(`🎬 Orchestration phase: ${phase}`);
+    },
+  });
 
   console.log('🔍 MapViewV2 render - Landmarks in route:', route?.landmarks.length || 0);
 
@@ -216,12 +245,28 @@ const MapViewV2 = () => {
     const mapboxRoute = await fetchMapboxRoute(waypoints);
 
     if (mapboxRoute && mapboxRoute.geometry) {
+      // Store geometry for orchestration
+      setRouteGeometry(mapboxRoute.geometry as GeoJSON.LineString);
+
       // Add animated route line with glow effect
       // This replaces the old simple route layer with our editorial design
       addRouteLayersToMap(map.current, mapboxRoute.geometry, agentColors);
 
       // Store total distance and duration in route
       console.log(`📍 Route: ${formatDistance(mapboxRoute.distance)}, ${formatDuration(mapboxRoute.duration)}`);
+
+      // Trigger initial orchestration on first route load
+      if (!hasPlayedInitialAnimation.current && waypoints.length >= 2) {
+        hasPlayedInitialAnimation.current = true;
+        const bounds: [[number, number], [number, number]] = [
+          [Math.min(...waypoints.map(w => w[0])), Math.min(...waypoints.map(w => w[1]))],
+          [Math.max(...waypoints.map(w => w[0])), Math.max(...waypoints.map(w => w[1]))]
+        ];
+        // Small delay to let markers render first
+        setTimeout(() => {
+          orchestrator.playSequence(bounds);
+        }, 100);
+      }
     }
 
     // Add city markers with Travel Stamp design
@@ -435,6 +480,13 @@ const MapViewV2 = () => {
 
       {/* Editorial Cartography Atmospheric Overlays */}
       <MapOverlays showDecorations={true} />
+
+      {/* Celebration Particles for landmark additions */}
+      <CelebrationParticles
+        trigger={celebrationTrigger}
+        position={celebrationPosition}
+        onComplete={() => setCelebrationTrigger(false)}
+      />
 
       {/* Landmark Details Modal */}
       <LandmarkDetailsModal

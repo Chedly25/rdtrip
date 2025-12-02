@@ -19,3 +19,10 @@ export * from './layers/AnimatedRouteLine';
 
 // Markers
 export { default as TravelStampMarker } from './markers/TravelStampMarker';
+
+// Orchestration
+export {
+  default as useJourneyOrchestrator,
+  easings,
+} from './orchestration/JourneyOrchestrator';
+export { default as CelebrationParticles } from './orchestration/CelebrationParticles';
