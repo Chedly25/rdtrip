@@ -30,10 +30,55 @@ interface UseItineraryGenerationReturn {
   itinerary: Itinerary | null;
   error: string | null;
   isGenerating: boolean;
+  isLoading: boolean;
   progress: GenerationProgress;
   generate: (routeData: any, preferences: any) => Promise<void>;
   loadFromId: (itineraryId: string) => Promise<void>;
   reset: () => void;
+}
+
+// Helper to get the stored itinerary ID for the current route
+const ITINERARY_STORAGE_KEY = 'spotlight_itinerary_id';
+
+export function getStoredItineraryId(): string | null {
+  try {
+    const stored = localStorage.getItem(ITINERARY_STORAGE_KEY);
+    if (stored) {
+      const { itineraryId, timestamp } = JSON.parse(stored);
+      // Itinerary IDs are valid for 30 days
+      const thirtyDays = 30 * 24 * 60 * 60 * 1000;
+      if (Date.now() - timestamp < thirtyDays) {
+        return itineraryId;
+      } else {
+        // Expired, remove it
+        localStorage.removeItem(ITINERARY_STORAGE_KEY);
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to read stored itinerary ID:', e);
+  }
+  return null;
+}
+
+function storeItineraryId(itineraryId: string): void {
+  try {
+    localStorage.setItem(ITINERARY_STORAGE_KEY, JSON.stringify({
+      itineraryId,
+      timestamp: Date.now()
+    }));
+    console.log(`📌 Stored itinerary ID: ${itineraryId}`);
+  } catch (e) {
+    console.warn('Failed to store itinerary ID:', e);
+  }
+}
+
+export function clearStoredItineraryId(): void {
+  try {
+    localStorage.removeItem(ITINERARY_STORAGE_KEY);
+    console.log('🗑️ Cleared stored itinerary ID');
+  } catch (e) {
+    console.warn('Failed to clear stored itinerary ID:', e);
+  }
 }
 
 const initialAgents: AgentStatus[] = [
@@ -81,6 +126,7 @@ export function useItineraryGeneration(): UseItineraryGenerationReturn {
   const [itinerary, setItinerary] = useState<Itinerary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgress] = useState<GenerationProgress>(initialProgress);
 
   // Reset function to clear all state
@@ -325,10 +371,11 @@ export function useItineraryGeneration(): UseItineraryGenerationReturn {
                 practicalInfo: fullItinerary.practicalInfo
               });
 
-              // Update URL to include itinerary ID for persistence
-              const newUrl = `${window.location.pathname}?itinerary=${itineraryId}`;
-              window.history.pushState({ itineraryId }, '', newUrl);
-              console.log(`📌 URL updated to persist itinerary: ${newUrl}`);
+              // Store itinerary ID in localStorage for persistence across refreshes
+              storeItineraryId(itineraryId);
+
+              // Keep URL clean - don't add itinerary param since we have localStorage
+              console.log(`📌 Itinerary stored for persistence: ${itineraryId}`);
             }
 
             setIsGenerating(false);
@@ -361,6 +408,7 @@ export function useItineraryGeneration(): UseItineraryGenerationReturn {
   const loadFromId = useCallback(async (itineraryId: string) => {
     try {
       setError(null);
+      setIsLoading(true);
       console.log(`📥 Loading itinerary from ID: ${itineraryId}`);
 
       const response = await fetch(`/api/itinerary/${itineraryId}`);
@@ -387,12 +435,16 @@ export function useItineraryGeneration(): UseItineraryGenerationReturn {
 
       // Mark all agents as completed since itinerary is already generated
       setAgents(prev => prev.map(agent => ({ ...agent, status: 'completed' })));
+      setIsLoading(false);
 
     } catch (err) {
       console.error('Failed to load itinerary:', err);
       setError(err instanceof Error ? err.message : 'Failed to load itinerary');
+      setIsLoading(false);
+      // Clear the stored ID if it's invalid
+      clearStoredItineraryId();
     }
   }, []);
 
-  return { agents, agentNodes, partialResults, itinerary, error, isGenerating, progress, generate, loadFromId, reset };
+  return { agents, agentNodes, partialResults, itinerary, error, isGenerating, isLoading, progress, generate, loadFromId, reset };
 }

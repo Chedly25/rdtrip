@@ -7,13 +7,13 @@ import { BottomSheet } from '../v3/BottomSheet';
 import { CityDetailModal } from '../v3/CityDetailModal';
 import { SaveRouteModal } from '../v3/SaveRouteModal';
 import SpotlightHeader from './SpotlightHeader';
-import { ItineraryView } from '../../itinerary/ItineraryView';
 import { EditorialItineraryPanel } from '../../itinerary/editorial';
-import { Loader2, Users } from 'lucide-react';
+import { Loader2, Users, CalendarDays } from 'lucide-react';
 import { CollaborationPanel } from '../../collaboration/CollaborationPanel';
 import { CompanionPanel, CompanionTab, ProactiveBubble, MobileCompanionDrawer } from '../../companion/CompanionPanel';
 import { useCompanion } from '../../../contexts/CompanionProvider';
 import { useAgent } from '../../../contexts/AgentProvider';
+import { getStoredItineraryId } from '../../../hooks/useItineraryGeneration';
 
 const SpotlightV2 = () => {
   // Get routeId from query params (?routeId=123) not path params
@@ -28,6 +28,7 @@ const SpotlightV2 = () => {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [mobileCompanionOpen, setMobileCompanionOpen] = useState(false);
   const [showItineraryPanel, setShowItineraryPanel] = useState(false);
+  const [hasStoredItinerary, setHasStoredItinerary] = useState(false);
 
   // Companion state
   const {
@@ -51,14 +52,42 @@ const SpotlightV2 = () => {
   } = useSpotlightStoreV2();
 
   useEffect(() => {
-    // Skip loading route data if we're viewing an itinerary
-    // ItineraryView loads its own data independently
-    if (!itineraryId) {
-      loadRouteData();
-    } else {
-      setIsLoading(false);
+    // Always load route data - we need it for the Spotlight view
+    loadRouteData();
+  }, [routeId]);
+
+  // Check for stored itinerary on mount AND handle URL param migration
+  useEffect(() => {
+    // If there's an ?itinerary= URL param, migrate it to localStorage and clean URL
+    if (itineraryId) {
+      console.log(`🔄 Migrating itinerary ID from URL to localStorage: ${itineraryId}`);
+      // Store in localStorage
+      try {
+        localStorage.setItem('spotlight_itinerary_id', JSON.stringify({
+          itineraryId: itineraryId,
+          timestamp: Date.now()
+        }));
+      } catch (e) {
+        console.warn('Failed to store itinerary ID:', e);
+      }
+
+      // Clean the URL - remove the itinerary param but keep routeId if present
+      const newUrl = routeId
+        ? `${window.location.pathname}?routeId=${routeId}`
+        : window.location.pathname;
+      window.history.replaceState({}, '', newUrl);
+
+      // Set hasStoredItinerary and auto-open panel
+      setHasStoredItinerary(true);
+      setShowItineraryPanel(true);
+      return;
     }
-  }, [routeId, itineraryId]);
+
+    // Otherwise just check localStorage
+    const storedId = getStoredItineraryId();
+    setHasStoredItinerary(!!storedId);
+    console.log('📋 Stored itinerary check:', storedId ? `Found: ${storedId}` : 'None found');
+  }, [itineraryId, routeId]);
 
   const loadRouteData = async () => {
     try {
@@ -422,6 +451,14 @@ const SpotlightV2 = () => {
     setShowItineraryPanel(true);
   };
 
+  // Handler for when itinerary panel closes - re-check for stored itinerary
+  const handleItineraryPanelClose = () => {
+    setShowItineraryPanel(false);
+    // Re-check for stored itinerary (in case one was just generated)
+    const storedId = getStoredItineraryId();
+    setHasStoredItinerary(!!storedId);
+  };
+
   // Handler for saving route
   const handleSaveRoute = async (name: string) => {
     if (!route) throw new Error('No route to save');
@@ -466,11 +503,8 @@ const SpotlightV2 = () => {
     }
   };
 
-  // If itinerary param exists, show ItineraryView instead of normal spotlight
-  // Check this FIRST before loading/error states - ItineraryView loads its own data
-  if (itineraryId) {
-    return <ItineraryView itineraryId={itineraryId} routeData={route} />;
-  }
+  // NOTE: We no longer redirect to ItineraryView - instead we use the Editorial Panel
+  // The URL param migration happens in the useEffect above
 
   if (isLoading) {
     return (
@@ -585,21 +619,39 @@ const SpotlightV2 = () => {
       {/* Editorial Itinerary Panel */}
       <EditorialItineraryPanel
         isOpen={showItineraryPanel}
-        onClose={() => setShowItineraryPanel(false)}
+        onClose={handleItineraryPanelClose}
       />
 
-      {/* Collaborate Button - Fixed position */}
-      {routeId && (
-        <motion.button
-          onClick={() => setShowCollaboration(!showCollaboration)}
-          className="fixed top-20 left-4 z-50 bg-[#2C2417] hover:bg-[#3D3328] text-white rounded-xl px-4 py-2.5 shadow-lg transition-all duration-200 flex items-center gap-2"
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-        >
-          <Users className="w-4 h-4" />
-          <span className="text-sm font-medium">Collaborate</span>
-        </motion.button>
-      )}
+      {/* Floating Action Buttons - Fixed position */}
+      <div className="fixed top-20 left-4 z-50 flex flex-col gap-2">
+        {/* View Itinerary Button - Shows when stored itinerary exists */}
+        {hasStoredItinerary && (
+          <motion.button
+            onClick={() => setShowItineraryPanel(true)}
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="bg-gradient-to-r from-[#C45830] to-[#D4A853] hover:from-[#B04726] hover:to-[#C49843] text-white rounded-xl px-4 py-2.5 shadow-lg transition-all duration-200 flex items-center gap-2"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <CalendarDays className="w-4 h-4" />
+            <span className="text-sm font-medium">View Itinerary</span>
+          </motion.button>
+        )}
+
+        {/* Collaborate Button */}
+        {routeId && (
+          <motion.button
+            onClick={() => setShowCollaboration(!showCollaboration)}
+            className="bg-[#2C2417] hover:bg-[#3D3328] text-white rounded-xl px-4 py-2.5 shadow-lg transition-all duration-200 flex items-center gap-2"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <Users className="w-4 h-4" />
+            <span className="text-sm font-medium">Collaborate</span>
+          </motion.button>
+        )}
+      </div>
 
       {/* Collaboration Panel - Slide in from left (moved to avoid companion overlap) */}
       <AnimatePresence>

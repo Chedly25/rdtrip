@@ -5,7 +5,7 @@
  * within the Spotlight view. Follows the Wanderlust Editorial design system.
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
@@ -21,10 +21,11 @@ import {
   Star,
   ArrowRight,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Loader2
 } from 'lucide-react';
 import { useSpotlightStoreV2 } from '../../../stores/spotlightStoreV2';
-import { useItineraryGeneration } from '../../../hooks/useItineraryGeneration';
+import { useItineraryGeneration, getStoredItineraryId } from '../../../hooks/useItineraryGeneration';
 import { EditorialDayCard } from './EditorialDayCard';
 import { EditorialLoadingScreen } from './EditorialLoadingScreen';
 
@@ -33,42 +34,64 @@ interface EditorialItineraryPanelProps {
   onClose: () => void;
 }
 
-type PanelState = 'trigger' | 'generating' | 'complete' | 'error';
+type PanelState = 'trigger' | 'loading' | 'generating' | 'complete' | 'error';
 
 export const EditorialItineraryPanel = ({ isOpen, onClose }: EditorialItineraryPanelProps) => {
   const [panelState, setPanelState] = useState<PanelState>('trigger');
+  const hasLoadedRef = useRef(false);
   const { route, getCityName } = useSpotlightStoreV2();
 
   const {
     generate,
+    loadFromId,
     itinerary,
     isGenerating,
+    isLoading,
     progress,
     error,
     reset
   } = useItineraryGeneration();
 
-  // Handle generation state changes
+  // Auto-load stored itinerary when panel opens
   useEffect(() => {
-    if (isGenerating) {
+    if (isOpen && !hasLoadedRef.current && !itinerary && !isGenerating) {
+      const storedId = getStoredItineraryId();
+      if (storedId) {
+        console.log(`📂 Found stored itinerary ID: ${storedId}, loading...`);
+        hasLoadedRef.current = true;
+        setPanelState('loading');
+        loadFromId(storedId);
+      }
+    }
+  }, [isOpen, itinerary, isGenerating, loadFromId]);
+
+  // Handle generation/loading state changes
+  useEffect(() => {
+    if (isLoading) {
+      setPanelState('loading');
+    } else if (isGenerating) {
       setPanelState('generating');
     } else if (error) {
       setPanelState('error');
     } else if (itinerary) {
       setPanelState('complete');
     }
-  }, [isGenerating, error, itinerary]);
+  }, [isGenerating, isLoading, error, itinerary]);
 
-  // Reset when panel closes
+  // Reset hasLoadedRef when panel closes, but don't reset panel state if itinerary exists
   useEffect(() => {
     if (!isOpen) {
       // Small delay before resetting to allow exit animation
       const timer = setTimeout(() => {
-        setPanelState('trigger');
+        // Only reset to trigger if no itinerary was loaded
+        if (!itinerary) {
+          setPanelState('trigger');
+        }
+        hasLoadedRef.current = false;
       }, 300);
       return () => clearTimeout(timer);
     }
-  }, [isOpen]);
+  }, [isOpen, itinerary]);
 
   const handleStartGeneration = useCallback(async () => {
     if (!route) return;
@@ -184,9 +207,13 @@ export const EditorialItineraryPanel = ({ isOpen, onClose }: EditorialItineraryP
                   />
                 )}
 
+                {panelState === 'loading' && (
+                  <LoadingContent key="loading-stored" />
+                )}
+
                 {panelState === 'generating' && (
                   <EditorialLoadingScreen
-                    key="loading"
+                    key="generating"
                     progress={progress}
                     totalCities={totalCities}
                     totalNights={totalNights}
@@ -215,6 +242,29 @@ export const EditorialItineraryPanel = ({ isOpen, onClose }: EditorialItineraryP
     </AnimatePresence>
   );
 };
+
+// Loading Content - Shown when loading a stored itinerary
+const LoadingContent = () => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    exit={{ opacity: 0, y: -20 }}
+    transition={{ duration: 0.4 }}
+    className="p-6 flex flex-col items-center justify-center min-h-[400px] text-center"
+  >
+    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#C45830] to-[#D4A853] flex items-center justify-center mb-4">
+      <Loader2 className="w-8 h-8 text-white animate-spin" />
+    </div>
+
+    <h3 className="font-serif text-xl text-[#2C2417] font-semibold mb-2">
+      Loading Your Itinerary
+    </h3>
+
+    <p className="text-[#8B7355] max-w-sm">
+      Retrieving your saved itinerary...
+    </p>
+  </motion.div>
+);
 
 // Trigger Content - The initial "Generate" screen
 const TriggerContent = ({
