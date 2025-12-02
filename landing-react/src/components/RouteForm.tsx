@@ -301,10 +301,15 @@ export function RouteForm({ onRouteGenerated }: RouteFormProps) {
             {/* Advanced Personalization - Collapsed by default */}
             <PersonalizationAccordion
               value={{
+                occasion: personalization.occasion,
+                travelStyle: personalization.travelStyle,
+                pace: personalization.pace,
+                interests: personalization.interests,
                 diningStyle: personalization.diningStyle,
                 dietary: personalization.dietary,
+                budget: personalization.budget,
+                accommodation: personalization.accommodation,
                 accessibility: personalization.accessibility,
-                occasion: personalization.occasion,
                 avoidCrowds: personalization.avoidCrowds,
                 preferOutdoor: personalization.preferOutdoor,
               }}
