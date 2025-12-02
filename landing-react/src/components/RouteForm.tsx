@@ -9,9 +9,28 @@ import { TripStyleSlider } from './TripStyleSlider'
 import { RouteGenerationLoading } from './RouteGenerationLoading'
 import { CitySelector } from './CitySelector'
 import { TripStoryInput, PersonalizationAccordion } from './personalization'
+import type { TripPersonalization } from '../types'
 
 // Revolut easing
 const ruiEasing = [0.15, 0.5, 0.5, 1] as const
+
+// Check if any personalization field has a value
+function hasPersonalization(p: TripPersonalization): boolean {
+  return !!(
+    p.tripStory ||
+    p.occasion ||
+    p.travelStyle ||
+    p.pace !== undefined ||
+    (p.interests && p.interests.length > 0) ||
+    p.diningStyle ||
+    (p.dietary && p.dietary.length > 0) ||
+    p.budget ||
+    p.accommodation ||
+    (p.accessibility && p.accessibility.length > 0) ||
+    p.avoidCrowds ||
+    p.preferOutdoor
+  )
+}
 
 // Helper function for distance calculation (Haversine formula)
 function calculateDistance(coords1: [number, number], coords2: [number, number]): number {
@@ -141,7 +160,8 @@ export function RouteForm({ onRouteGenerated }: RouteFormProps) {
           budget,
           preferences,
           // Include personalization for AI-enhanced route generation
-          personalization: personalization.tripStory ? personalization : undefined,
+          // Send if any personalization field has a value (not just tripStory)
+          personalization: hasPersonalization(personalization) ? personalization : undefined,
         }),
       })
 
