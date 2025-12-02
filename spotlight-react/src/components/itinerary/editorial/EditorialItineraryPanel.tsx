@@ -517,12 +517,17 @@ const ItineraryContent = ({ itinerary }: { itinerary: any }) => {
       return;
     }
 
-    // Get coordinates from stop
-    const lat = stop.lat || stop.coordinates?.lat;
-    const lng = stop.lng || stop.coordinates?.lng;
+    // Debug: log raw stop data
+    console.log('🎯 Adding scenic stop - raw data:', JSON.stringify(stop, null, 2));
 
-    if (!lat || !lng) {
-      console.warn('Scenic stop has no coordinates:', stop.name);
+    // Get coordinates from stop - check multiple possible locations
+    const lat = stop.lat || stop.coordinates?.lat || stop.geometry?.location?.lat;
+    const lng = stop.lng || stop.coordinates?.lng || stop.geometry?.location?.lng;
+
+    console.log(`📍 Extracted coordinates: lat=${lat}, lng=${lng}`);
+
+    if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
+      console.warn('Scenic stop has no valid coordinates:', stop.name, { lat, lng });
       return;
     }
 
@@ -531,8 +536,8 @@ const ItineraryContent = ({ itinerary }: { itinerary: any }) => {
       id: Date.now(),
       name: stop.name,
       type: stop.type || 'scenic',
-      lat,
-      lng,
+      lat: Number(lat),
+      lng: Number(lng),
       country: '',
       city: '',
       icon_type: 'scenic',
@@ -542,11 +547,13 @@ const ItineraryContent = ({ itinerary }: { itinerary: any }) => {
       visit_duration: 30
     };
 
+    console.log('🗺️ Creating landmark with coordinates:', landmark.lat, landmark.lng);
+
     try {
       await addLandmarkToRoute(landmark);
       // Mark as added
       setAddedScenicStopIds(prev => [...prev, stop.id || stop.name]);
-      console.log(`✅ Added scenic stop to route: ${stop.name}`);
+      console.log(`✅ Added scenic stop to route: ${stop.name} at [${landmark.lng}, ${landmark.lat}]`);
     } catch (error) {
       console.error('Failed to add scenic stop to route:', error);
     }

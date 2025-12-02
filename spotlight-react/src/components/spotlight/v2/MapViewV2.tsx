@@ -367,14 +367,25 @@ const MapViewV2 = () => {
 
       console.log(`     🎨 Created landmark pin with ${landmarkImagePath ? 'image' : 'star icon'}`);
 
+      // Validate coordinates before creating marker
+      const lng = landmark.coordinates?.lng;
+      const lat = landmark.coordinates?.lat;
+
+      if (!lng || !lat || isNaN(lng) || isNaN(lat)) {
+        console.error(`     ❌ Invalid coordinates for landmark ${landmark.name}:`, landmark.coordinates);
+        return;
+      }
+
+      console.log(`     📍 Setting marker at [${lng}, ${lat}]`);
+
       const marker = new mapboxgl.Marker({
         element: el,
         anchor: 'bottom'
       })
-        .setLngLat([landmark.coordinates.lng, landmark.coordinates.lat])
+        .setLngLat([lng, lat])
         .addTo(map.current!);
 
-      console.log(`     ✅ Marker created and added to map!`);
+      console.log(`     ✅ Marker created and added to map at [${lng}, ${lat}]`);
       markersRef.current.push(marker);
     });
 
