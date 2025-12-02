@@ -347,43 +347,60 @@ const TriggerContent = ({
 );
 
 // Itinerary Content - The final view with day cards
-const ItineraryContent = ({ itinerary }: { itinerary: any }) => (
-  <motion.div
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    exit={{ opacity: 0, y: -20 }}
-    transition={{ duration: 0.4 }}
-    className="p-6 space-y-6"
-  >
-    {/* Success Header */}
-    <div className="flex items-center gap-4 p-4 rounded-2xl bg-gradient-to-r from-[#4A7C59]/10 to-[#4A7C59]/5 border border-[#4A7C59]/20">
-      <div className="w-12 h-12 rounded-full bg-[#4A7C59] flex items-center justify-center flex-shrink-0">
-        <CheckCircle2 className="w-6 h-6 text-white" />
-      </div>
-      <div>
-        <h3 className="font-serif text-lg text-[#2C2417] font-semibold">
-          Your Itinerary is Ready!
-        </h3>
-        <p className="text-sm text-[#8B7355]">
-          {itinerary.dayStructure?.length || 0} days of adventure await
-        </p>
-      </div>
-    </div>
+const ItineraryContent = ({ itinerary }: { itinerary: any }) => {
+  // dayStructure can be EITHER an array OR an object with .days property
+  const dayStructure = itinerary.dayStructure;
+  const daysArray = Array.isArray(dayStructure)
+    ? dayStructure
+    : (Array.isArray(dayStructure?.days) ? dayStructure.days : []);
 
-    {/* Day Cards */}
-    <div className="space-y-4">
-      {itinerary.dayStructure?.map((day: any, index: number) => (
-        <EditorialDayCard
-          key={day.date || index}
-          day={day}
-          dayNumber={index + 1}
-          activities={itinerary.activities?.[day.city] || []}
-          restaurants={itinerary.restaurants?.[day.city] || []}
-        />
-      ))}
-    </div>
-  </motion.div>
-);
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ duration: 0.4 }}
+      className="p-6 space-y-6"
+    >
+      {/* Success Header */}
+      <div className="flex items-center gap-4 p-4 rounded-2xl bg-gradient-to-r from-[#4A7C59]/10 to-[#4A7C59]/5 border border-[#4A7C59]/20">
+        <div className="w-12 h-12 rounded-full bg-[#4A7C59] flex items-center justify-center flex-shrink-0">
+          <CheckCircle2 className="w-6 h-6 text-white" />
+        </div>
+        <div>
+          <h3 className="font-serif text-lg text-[#2C2417] font-semibold">
+            Your Itinerary is Ready!
+          </h3>
+          <p className="text-sm text-[#8B7355]">
+            {daysArray.length} days of adventure await
+          </p>
+        </div>
+      </div>
+
+      {/* Day Cards */}
+      <div className="space-y-4">
+        {daysArray.length > 0 ? (
+          daysArray.map((day: any, index: number) => (
+            <EditorialDayCard
+              key={day.date || index}
+              day={{
+                ...day,
+                city: day.location || day.city || 'Day ' + (index + 1)
+              }}
+              dayNumber={index + 1}
+              activities={itinerary.activities?.[day.location || day.city] || []}
+              restaurants={itinerary.restaurants?.[day.location || day.city] || []}
+            />
+          ))
+        ) : (
+          <div className="text-center py-8 text-[#8B7355]">
+            <p>No day structure available yet.</p>
+          </div>
+        )}
+      </div>
+    </motion.div>
+  );
+};
 
 // Error Content
 const ErrorContent = ({
