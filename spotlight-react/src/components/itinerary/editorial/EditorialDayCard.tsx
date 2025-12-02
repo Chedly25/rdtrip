@@ -107,13 +107,22 @@ export const EditorialDayCard = ({
   const afternoonActivities = day.activities?.afternoon || activities.filter((a: any) => a.timeOfDay === 'afternoon');
   const eveningActivities = day.activities?.evening || activities.filter((a: any) => a.timeOfDay === 'evening');
 
+  // Check if activities have time categorization - if not, show all as uncategorized
+  const hasCategorizedActivities = morningActivities.length > 0 || afternoonActivities.length > 0 || eveningActivities.length > 0;
+  const uncategorizedActivities = !hasCategorizedActivities ? activities : [];
+
   // Organize restaurants by meal
   const breakfastPlaces = day.restaurants?.breakfast || restaurants.filter((r: any) => r.mealType === 'breakfast');
   const lunchPlaces = day.restaurants?.lunch || restaurants.filter((r: any) => r.mealType === 'lunch');
   const dinnerPlaces = day.restaurants?.dinner || restaurants.filter((r: any) => r.mealType === 'dinner');
 
-  const hasActivities = morningActivities.length > 0 || afternoonActivities.length > 0 || eveningActivities.length > 0;
-  const hasRestaurants = breakfastPlaces.length > 0 || lunchPlaces.length > 0 || dinnerPlaces.length > 0;
+  // Check if restaurants have meal categorization
+  const hasCategorizedRestaurants = breakfastPlaces.length > 0 || lunchPlaces.length > 0 || dinnerPlaces.length > 0;
+  const uncategorizedRestaurants = !hasCategorizedRestaurants ? restaurants : [];
+
+  const hasActivities = hasCategorizedActivities || uncategorizedActivities.length > 0;
+  const hasRestaurants = hasCategorizedRestaurants || uncategorizedRestaurants.length > 0;
+  const totalActivityCount = morningActivities.length + afternoonActivities.length + eveningActivities.length + uncategorizedActivities.length;
 
   return (
     <motion.div
@@ -150,7 +159,7 @@ export const EditorialDayCard = ({
             <div className="flex items-center gap-2 text-sm text-[#8B7355]">
               {dateStr && <span>{dayName}, {dateStr}</span>}
               <span className="text-[#E8DFD3]">•</span>
-              <span>{(morningActivities.length + afternoonActivities.length + eveningActivities.length)} activities</span>
+              <span>{totalActivityCount} activities</span>
             </div>
           </div>
         </div>
@@ -205,6 +214,21 @@ export const EditorialDayCard = ({
                       activities={eveningActivities}
                     />
                   )}
+
+                  {/* Uncategorized Activities (when no timeOfDay) */}
+                  {uncategorizedActivities.length > 0 && (
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-[#C45830]" />
+                        <span className="text-sm font-medium text-[#2C2417]">Planned</span>
+                      </div>
+                      <div className="grid grid-cols-1 gap-2">
+                        {uncategorizedActivities.map((activity, idx) => (
+                          <ActivityCard key={idx} activity={activity} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -240,6 +264,39 @@ export const EditorialDayCard = ({
                       />
                     )}
                   </div>
+
+                  {/* Uncategorized Restaurants */}
+                  {uncategorizedRestaurants.length > 0 && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+                      {uncategorizedRestaurants.map((restaurant: any, idx: number) => (
+                        <div key={idx} className="p-4 rounded-2xl bg-[#FAF7F2] border border-[#E8DFD3]">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Utensils className="w-4 h-4 text-[#C45830]" />
+                            <span className="text-xs font-medium text-[#C45830] uppercase tracking-wide">
+                              Recommended
+                            </span>
+                          </div>
+                          <h5 className="font-medium text-[#2C2417] text-sm">{restaurant.name}</h5>
+                          {restaurant.cuisine && (
+                            <p className="text-xs text-[#8B7355] mt-1">{restaurant.cuisine}</p>
+                          )}
+                          <div className="flex items-center gap-2 mt-2">
+                            {restaurant.rating && (
+                              <div className="flex items-center gap-1">
+                                <Star className="w-3 h-3 text-[#D4A853] fill-[#D4A853]" />
+                                <span className="text-xs text-[#8B7355]">{restaurant.rating}</span>
+                              </div>
+                            )}
+                            {restaurant.priceLevel && (
+                              <span className="text-xs text-[#8B7355]">
+                                {'€'.repeat(restaurant.priceLevel)}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 
