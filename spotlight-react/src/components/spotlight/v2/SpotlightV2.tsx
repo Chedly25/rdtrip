@@ -8,6 +8,7 @@ import { CityDetailModal } from '../v3/CityDetailModal';
 import { SaveRouteModal } from '../v3/SaveRouteModal';
 import SpotlightHeader from './SpotlightHeader';
 import { ItineraryView } from '../../itinerary/ItineraryView';
+import { EditorialItineraryPanel } from '../../itinerary/editorial';
 import { Loader2, Users } from 'lucide-react';
 import { CollaborationPanel } from '../../collaboration/CollaborationPanel';
 import { CompanionPanel, CompanionTab, ProactiveBubble, MobileCompanionDrawer } from '../../companion/CompanionPanel';
@@ -26,6 +27,7 @@ const SpotlightV2 = () => {
   const [cityDetailIndex, setCityDetailIndex] = useState<number | null>(null);
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [mobileCompanionOpen, setMobileCompanionOpen] = useState(false);
+  const [showItineraryPanel, setShowItineraryPanel] = useState(false);
 
   // Companion state
   const {
@@ -414,10 +416,10 @@ const SpotlightV2 = () => {
 
   const agentColors = getAgentColors();
 
-  // Handler for Generate Itinerary button - navigate to full-screen experience
+  // Handler for Generate Itinerary button - open the editorial panel
   const handleGenerateItinerary = () => {
-    console.log('🎯 Navigating to itinerary generation');
-    navigate(`/generate?routeId=${routeId}`);
+    console.log('🎯 Opening itinerary panel');
+    setShowItineraryPanel(true);
   };
 
   // Handler for saving route
@@ -578,6 +580,12 @@ const SpotlightV2 = () => {
         isOpen={showSaveModal}
         onClose={() => setShowSaveModal(false)}
         onSave={handleSaveRoute}
+      />
+
+      {/* Editorial Itinerary Panel */}
+      <EditorialItineraryPanel
+        isOpen={showItineraryPanel}
+        onClose={() => setShowItineraryPanel(false)}
       />
 
       {/* Collaborate Button - Fixed position */}

@@ -16,6 +16,13 @@ interface Itinerary {
   budget: any;
 }
 
+interface GenerationProgress {
+  total: number;
+  completed: number;
+  currentAgent: string | null;
+  percentComplete: number;
+}
+
 interface UseItineraryGenerationReturn {
   agents: AgentStatus[];
   agentNodes: AgentNode[];
@@ -23,8 +30,10 @@ interface UseItineraryGenerationReturn {
   itinerary: Itinerary | null;
   error: string | null;
   isGenerating: boolean;
+  progress: GenerationProgress;
   generate: (routeData: any, preferences: any) => Promise<void>;
   loadFromId: (itineraryId: string) => Promise<void>;
+  reset: () => void;
 }
 
 const initialAgents: AgentStatus[] = [
@@ -58,6 +67,13 @@ const initialAgentNodes: AgentNode[] = [
   { id: 'budget', name: 'budget', label: 'Budget', status: 'waiting', progress: 0, dependencies: ['activities', 'restaurants', 'accommodations'], phase: 4 },
 ];
 
+const initialProgress: GenerationProgress = {
+  total: 9,
+  completed: 0,
+  currentAgent: null,
+  percentComplete: 0
+};
+
 export function useItineraryGeneration(): UseItineraryGenerationReturn {
   const [agents, setAgents] = useState<AgentStatus[]>(initialAgents);
   const [agentNodes, setAgentNodes] = useState<AgentNode[]>(initialAgentNodes);
@@ -65,6 +81,18 @@ export function useItineraryGeneration(): UseItineraryGenerationReturn {
   const [itinerary, setItinerary] = useState<Itinerary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [progress, setProgress] = useState<GenerationProgress>(initialProgress);
+
+  // Reset function to clear all state
+  const reset = useCallback(() => {
+    setAgents(initialAgents);
+    setAgentNodes(initialAgentNodes);
+    setPartialResults({});
+    setItinerary(null);
+    setError(null);
+    setIsGenerating(false);
+    setProgress(initialProgress);
+  }, []);
 
   const generate = useCallback(async (routeData: any, preferences: any) => {
     try {
@@ -248,6 +276,18 @@ export function useItineraryGeneration(): UseItineraryGenerationReturn {
               }
               return node;
             }));
+
+            // Update progress state for UI
+            const completedCount = Object.values(statusData.progress).filter(s => s === 'completed').length;
+            const runningAgent = Object.entries(statusData.progress).find(([_, s]) => s === 'running');
+            const totalAgents = Object.keys(statusData.progress).length || 9;
+
+            setProgress({
+              total: totalAgents,
+              completed: completedCount,
+              currentAgent: runningAgent ? runningAgent[0] : null,
+              percentComplete: Math.round((completedCount / totalAgents) * 100)
+            });
           }
 
           // Check if generation is complete
@@ -354,5 +394,5 @@ export function useItineraryGeneration(): UseItineraryGenerationReturn {
     }
   }, []);
 
-  return { agents, agentNodes, partialResults, itinerary, error, isGenerating, generate, loadFromId };
+  return { agents, agentNodes, partialResults, itinerary, error, isGenerating, progress, generate, loadFromId, reset };
 }
