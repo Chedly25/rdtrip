@@ -21,6 +21,7 @@ import {
   TravelStampMarker,
   useJourneyOrchestrator,
   CelebrationParticles,
+  RouteOverviewBadge,
 } from './map';
 
 // Mapbox access token
@@ -43,6 +44,12 @@ const MapViewV2 = () => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [celebrationPosition, _setCelebrationPosition] = useState({ x: 0, y: 0 });
   const hasPlayedInitialAnimation = useRef(false);
+
+  // Route statistics for overview badge
+  const [routeStats, setRouteStats] = useState<{
+    totalDistance: string;
+    totalDuration: string;
+  } | null>(null);
 
   // Use explicit selectors to ensure proper reactivity
   const route = useSpotlightStoreV2((state) => state.route);
@@ -252,8 +259,14 @@ const MapViewV2 = () => {
       // This replaces the old simple route layer with our editorial design
       addRouteLayersToMap(map.current, mapboxRoute.geometry, agentColors);
 
-      // Store total distance and duration in route
-      console.log(`📍 Route: ${formatDistance(mapboxRoute.distance)}, ${formatDuration(mapboxRoute.duration)}`);
+      // Store route stats for the overview badge
+      const formattedDistance = formatDistance(mapboxRoute.distance);
+      const formattedDuration = formatDuration(mapboxRoute.duration);
+      setRouteStats({
+        totalDistance: formattedDistance,
+        totalDuration: formattedDuration,
+      });
+      console.log(`📍 Route: ${formattedDistance}, ${formattedDuration}`);
 
       // Trigger initial orchestration on first route load
       if (!hasPlayedInitialAnimation.current && waypoints.length >= 2) {
@@ -487,6 +500,17 @@ const MapViewV2 = () => {
         position={celebrationPosition}
         onComplete={() => setCelebrationTrigger(false)}
       />
+
+      {/* Route Overview Badge */}
+      {routeStats && route && (
+        <RouteOverviewBadge
+          totalDistance={routeStats.totalDistance}
+          totalDuration={routeStats.totalDuration}
+          cityCount={route.cities.length}
+          landmarkCount={route.landmarks.length}
+          isVisible={orchestrator.isComplete || !orchestrator.isPlaying}
+        />
+      )}
 
       {/* Landmark Details Modal */}
       <LandmarkDetailsModal

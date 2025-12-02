@@ -26,3 +26,6 @@ export {
   easings,
 } from './orchestration/JourneyOrchestrator';
 export { default as CelebrationParticles } from './orchestration/CelebrationParticles';
+
+// Annotations
+export { JourneyLegLabel, CityNameAnnotation, RouteOverviewBadge } from './annotations';
