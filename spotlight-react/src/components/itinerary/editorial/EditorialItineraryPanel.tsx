@@ -387,6 +387,19 @@ const getDayRestaurants = (restaurants: any, dayNumber: number) => {
   return [];
 };
 
+// Helper to get accommodation for a specific day
+const getDayAccommodation = (accommodations: any, dayNumber: number) => {
+  if (!accommodations) return null;
+
+  // Accommodations are stored as: [{day: 1, ...}, {day: 2, ...}] or [{night: 1, ...}]
+  if (Array.isArray(accommodations)) {
+    const dayObj = accommodations.find((a: any) => a.day === dayNumber || a.night === dayNumber);
+    return dayObj || null;
+  }
+
+  return null;
+};
+
 // Itinerary Content - The final view with day cards
 const ItineraryContent = ({ itinerary }: { itinerary: any }) => {
   // dayStructure can be EITHER an array OR an object with .days property
@@ -430,6 +443,7 @@ const ItineraryContent = ({ itinerary }: { itinerary: any }) => {
             const dayNumber = index + 1;
             const dayActivities = getDayActivities(itinerary.activities, dayNumber);
             const dayRestaurants = getDayRestaurants(itinerary.restaurants, dayNumber);
+            const dayAccommodation = getDayAccommodation(itinerary.accommodations, dayNumber);
 
             return (
               <EditorialDayCard
@@ -441,6 +455,7 @@ const ItineraryContent = ({ itinerary }: { itinerary: any }) => {
                 dayNumber={dayNumber}
                 activities={dayActivities}
                 restaurants={dayRestaurants}
+                accommodation={dayAccommodation}
               />
             );
           })

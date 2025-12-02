@@ -1,7 +1,7 @@
 /**
  * Editorial Day Card
  *
- * A beautiful, expandable day card that displays activities and restaurants
+ * A beautiful, expandable day card that displays activities, restaurants, and accommodations
  * in the Wanderlust Editorial design style.
  */
 
@@ -17,8 +17,16 @@ import {
   Coffee,
   Utensils,
   Star,
-  Sparkles
+  Sparkles,
+  ExternalLink,
+  Hotel
 } from 'lucide-react';
+
+// Photo can be either a string URL or an object with url/thumbnail
+interface Photo {
+  url: string;
+  thumbnail?: string;
+}
 
 interface Activity {
   name: string;
@@ -27,9 +35,13 @@ interface Activity {
   duration?: string;
   suggestedTime?: string;
   rating?: number;
-  photos?: string[];
+  photos?: (string | Photo)[];
+  place_id?: string;
   placeId?: string;
+  google_maps_url?: string;
+  googleMapsUrl?: string;
   category?: string;
+  timeOfDay?: string;
 }
 
 interface Restaurant {
@@ -39,8 +51,26 @@ interface Restaurant {
   rating?: number;
   priceLevel?: number;
   mealType?: string;
-  photos?: string[];
+  photos?: (string | Photo)[];
+  place_id?: string;
   placeId?: string;
+  google_maps_url?: string;
+  googleMapsUrl?: string;
+}
+
+interface Accommodation {
+  name: string;
+  type?: string;
+  address?: string;
+  rating?: number;
+  priceLevel?: number;
+  stars?: number;
+  photos?: (string | Photo)[];
+  place_id?: string;
+  placeId?: string;
+  google_maps_url?: string;
+  googleMapsUrl?: string;
+  amenities?: string[];
 }
 
 interface DayData {
@@ -69,6 +99,7 @@ interface EditorialDayCardProps {
   dayNumber: number;
   activities?: any[];
   restaurants?: any[];
+  accommodation?: Accommodation | null;
 }
 
 const timeIcons = {
@@ -89,11 +120,30 @@ const mealColors = {
   dinner: { bg: 'bg-[#4A6FA5]/10', text: 'text-[#4A6FA5]', border: 'border-[#4A6FA5]/30' },
 };
 
+// Helper to get photo URL from various formats
+const getPhotoUrl = (photo: string | Photo | undefined): string | null => {
+  if (!photo) return null;
+  if (typeof photo === 'string') return photo;
+  return photo.thumbnail || photo.url || null;
+};
+
+// Helper to get Google Maps URL
+const getGoogleMapsUrl = (item: { place_id?: string; placeId?: string; google_maps_url?: string; googleMapsUrl?: string; name?: string; address?: string }): string | null => {
+  if (item.google_maps_url) return item.google_maps_url;
+  if (item.googleMapsUrl) return item.googleMapsUrl;
+  if (item.place_id) return `https://www.google.com/maps/place/?q=place_id:${item.place_id}`;
+  if (item.placeId) return `https://www.google.com/maps/place/?q=place_id:${item.placeId}`;
+  // Fallback to search by name
+  if (item.name) return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.name + (item.address ? ' ' + item.address : ''))}`;
+  return null;
+};
+
 export const EditorialDayCard = ({
   day,
   dayNumber,
   activities = [],
-  restaurants = []
+  restaurants = [],
+  accommodation
 }: EditorialDayCardProps) => {
   const [isExpanded, setIsExpanded] = useState(dayNumber === 1); // First day expanded by default
 
@@ -122,6 +172,7 @@ export const EditorialDayCard = ({
 
   const hasActivities = hasCategorizedActivities || uncategorizedActivities.length > 0;
   const hasRestaurants = hasCategorizedRestaurants || uncategorizedRestaurants.length > 0;
+  const hasAccommodation = !!accommodation;
   const totalActivityCount = morningActivities.length + afternoonActivities.length + eveningActivities.length + uncategorizedActivities.length;
 
   return (
@@ -269,39 +320,25 @@ export const EditorialDayCard = ({
                   {uncategorizedRestaurants.length > 0 && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
                       {uncategorizedRestaurants.map((restaurant: any, idx: number) => (
-                        <div key={idx} className="p-4 rounded-2xl bg-[#FAF7F2] border border-[#E8DFD3]">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Utensils className="w-4 h-4 text-[#C45830]" />
-                            <span className="text-xs font-medium text-[#C45830] uppercase tracking-wide">
-                              Recommended
-                            </span>
-                          </div>
-                          <h5 className="font-medium text-[#2C2417] text-sm">{restaurant.name}</h5>
-                          {restaurant.cuisine && (
-                            <p className="text-xs text-[#8B7355] mt-1">{restaurant.cuisine}</p>
-                          )}
-                          <div className="flex items-center gap-2 mt-2">
-                            {restaurant.rating && (
-                              <div className="flex items-center gap-1">
-                                <Star className="w-3 h-3 text-[#D4A853] fill-[#D4A853]" />
-                                <span className="text-xs text-[#8B7355]">{restaurant.rating}</span>
-                              </div>
-                            )}
-                            {restaurant.priceLevel && (
-                              <span className="text-xs text-[#8B7355]">
-                                {'€'.repeat(restaurant.priceLevel)}
-                              </span>
-                            )}
-                          </div>
-                        </div>
+                        <RestaurantCard key={idx} restaurant={restaurant} />
                       ))}
                     </div>
                   )}
                 </div>
               )}
 
+              {/* Accommodation Section */}
+              {hasAccommodation && accommodation && (
+                <div className="pt-2 space-y-4">
+                  <h4 className="text-xs font-semibold text-[#8B7355] uppercase tracking-wider">
+                    Where You're Staying
+                  </h4>
+                  <AccommodationCard accommodation={accommodation} />
+                </div>
+              )}
+
               {/* Empty State */}
-              {!hasActivities && !hasRestaurants && (
+              {!hasActivities && !hasRestaurants && !hasAccommodation && (
                 <div className="pt-6 text-center py-8">
                   <Sparkles className="w-8 h-8 text-[#D4A853] mx-auto mb-3" />
                   <p className="text-[#8B7355]">
@@ -350,20 +387,22 @@ const TimePeriodSection = ({
 
 // Activity Card Component
 const ActivityCard = ({ activity }: { activity: Activity }) => {
-  const photo = activity.photos?.[0];
+  const photoUrl = getPhotoUrl(activity.photos?.[0]);
+  const mapsUrl = getGoogleMapsUrl(activity);
 
-  return (
-    <motion.div
-      whileHover={{ y: -2 }}
-      className="group flex items-start gap-3 p-3 rounded-2xl bg-[#FAF7F2] hover:bg-[#F5F0E8] transition-colors cursor-pointer"
-    >
+  const CardContent = () => (
+    <>
       {/* Photo */}
-      {photo && (
-        <div className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0">
+      {photoUrl && (
+        <div className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-[#E8DFD3]">
           <img
-            src={photo}
+            src={photoUrl}
             alt={activity.name}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            onError={(e) => {
+              // Hide broken images
+              (e.target as HTMLImageElement).style.display = 'none';
+            }}
           />
         </div>
       )}
@@ -374,12 +413,17 @@ const ActivityCard = ({ activity }: { activity: Activity }) => {
           <h5 className="font-medium text-[#2C2417] text-sm line-clamp-1">
             {activity.name}
           </h5>
-          {activity.rating && (
-            <div className="flex items-center gap-1 flex-shrink-0">
-              <Star className="w-3 h-3 text-[#D4A853] fill-[#D4A853]" />
-              <span className="text-xs text-[#8B7355]">{activity.rating}</span>
-            </div>
-          )}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {activity.rating && (
+              <div className="flex items-center gap-1">
+                <Star className="w-3 h-3 text-[#D4A853] fill-[#D4A853]" />
+                <span className="text-xs text-[#8B7355]">{activity.rating}</span>
+              </div>
+            )}
+            {mapsUrl && (
+              <ExternalLink className="w-3 h-3 text-[#8B7355] opacity-0 group-hover:opacity-100 transition-opacity" />
+            )}
+          </div>
         </div>
 
         {activity.description && (
@@ -403,7 +447,96 @@ const ActivityCard = ({ activity }: { activity: Activity }) => {
           )}
         </div>
       </div>
-    </motion.div>
+    </>
+  );
+
+  if (mapsUrl) {
+    return (
+      <a
+        href={mapsUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="group flex items-start gap-3 p-3 rounded-2xl bg-[#FAF7F2] hover:bg-[#F5F0E8] transition-colors"
+      >
+        <CardContent />
+      </a>
+    );
+  }
+
+  return (
+    <div className="group flex items-start gap-3 p-3 rounded-2xl bg-[#FAF7F2]">
+      <CardContent />
+    </div>
+  );
+};
+
+// Restaurant Card Component (for uncategorized)
+const RestaurantCard = ({ restaurant }: { restaurant: Restaurant }) => {
+  const photoUrl = getPhotoUrl(restaurant.photos?.[0]);
+  const mapsUrl = getGoogleMapsUrl(restaurant);
+
+  const CardContent = () => (
+    <>
+      {photoUrl && (
+        <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-[#E8DFD3]">
+          <img
+            src={photoUrl}
+            alt={restaurant.name}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = 'none';
+            }}
+          />
+        </div>
+      )}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-1">
+          <Utensils className="w-3 h-3 text-[#C45830]" />
+          <span className="text-xs font-medium text-[#C45830] uppercase tracking-wide">
+            Recommended
+          </span>
+          {mapsUrl && (
+            <ExternalLink className="w-3 h-3 text-[#8B7355] opacity-0 group-hover:opacity-100 transition-opacity ml-auto" />
+          )}
+        </div>
+        <h5 className="font-medium text-[#2C2417] text-sm line-clamp-1">{restaurant.name}</h5>
+        {restaurant.cuisine && (
+          <p className="text-xs text-[#8B7355] mt-1">{restaurant.cuisine}</p>
+        )}
+        <div className="flex items-center gap-2 mt-2">
+          {restaurant.rating && (
+            <div className="flex items-center gap-1">
+              <Star className="w-3 h-3 text-[#D4A853] fill-[#D4A853]" />
+              <span className="text-xs text-[#8B7355]">{restaurant.rating}</span>
+            </div>
+          )}
+          {restaurant.priceLevel && (
+            <span className="text-xs text-[#8B7355]">
+              {'€'.repeat(restaurant.priceLevel)}
+            </span>
+          )}
+        </div>
+      </div>
+    </>
+  );
+
+  if (mapsUrl) {
+    return (
+      <a
+        href={mapsUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="group flex items-start gap-3 p-4 rounded-2xl bg-[#FAF7F2] border border-[#E8DFD3] hover:bg-[#F5F0E8] transition-colors"
+      >
+        <CardContent />
+      </a>
+    );
+  }
+
+  return (
+    <div className="group flex items-start gap-3 p-4 rounded-2xl bg-[#FAF7F2] border border-[#E8DFD3]">
+      <CardContent />
+    </div>
   );
 };
 
@@ -424,18 +557,35 @@ const MealSection = ({
   };
 
   const restaurant = restaurants[0]; // Show primary recommendation
+  const photoUrl = getPhotoUrl(restaurant?.photos?.[0]);
+  const mapsUrl = restaurant ? getGoogleMapsUrl(restaurant) : null;
 
-  return (
-    <div className={`p-4 rounded-2xl ${colors.bg} border ${colors.border}`}>
+  const CardContent = () => (
+    <>
       <div className="flex items-center gap-2 mb-3">
         <Icon className={`w-4 h-4 ${colors.text}`} />
         <span className={`text-xs font-medium ${colors.text} uppercase tracking-wide`}>
           {labels[meal]}
         </span>
+        {mapsUrl && (
+          <ExternalLink className="w-3 h-3 text-[#8B7355] opacity-0 group-hover:opacity-100 transition-opacity ml-auto" />
+        )}
       </div>
 
       {restaurant && (
         <div className="space-y-2">
+          {photoUrl && (
+            <div className="w-full h-20 rounded-xl overflow-hidden bg-[#E8DFD3] mb-2">
+              <img
+                src={photoUrl}
+                alt={restaurant.name}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).parentElement!.style.display = 'none';
+                }}
+              />
+            </div>
+          )}
           <h5 className="font-medium text-[#2C2417] text-sm line-clamp-1">
             {restaurant.name}
           </h5>
@@ -461,6 +611,123 @@ const MealSection = ({
           </div>
         </div>
       )}
+    </>
+  );
+
+  if (mapsUrl) {
+    return (
+      <a
+        href={mapsUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={`group block p-4 rounded-2xl ${colors.bg} border ${colors.border} hover:opacity-90 transition-opacity`}
+      >
+        <CardContent />
+      </a>
+    );
+  }
+
+  return (
+    <div className={`group p-4 rounded-2xl ${colors.bg} border ${colors.border}`}>
+      <CardContent />
+    </div>
+  );
+};
+
+// Accommodation Card Component
+const AccommodationCard = ({ accommodation }: { accommodation: Accommodation }) => {
+  const photoUrl = getPhotoUrl(accommodation.photos?.[0]);
+  const mapsUrl = getGoogleMapsUrl(accommodation);
+
+  const CardContent = () => (
+    <div className="flex gap-4">
+      {/* Photo */}
+      {photoUrl && (
+        <div className="w-24 h-24 rounded-xl overflow-hidden flex-shrink-0 bg-[#E8DFD3]">
+          <img
+            src={photoUrl}
+            alt={accommodation.name}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = 'none';
+            }}
+          />
+        </div>
+      )}
+
+      {/* Content */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-2">
+          <Hotel className="w-4 h-4 text-[#4A6FA5]" />
+          <span className="text-xs font-medium text-[#4A6FA5] uppercase tracking-wide">
+            {accommodation.type || 'Hotel'}
+          </span>
+          {mapsUrl && (
+            <ExternalLink className="w-3 h-3 text-[#8B7355] opacity-0 group-hover:opacity-100 transition-opacity ml-auto" />
+          )}
+        </div>
+
+        <h5 className="font-medium text-[#2C2417] text-base line-clamp-1">
+          {accommodation.name}
+        </h5>
+
+        {accommodation.address && (
+          <div className="flex items-center gap-1 text-xs text-[#8B7355] mt-1">
+            <MapPin className="w-3 h-3" />
+            <span className="truncate">{accommodation.address}</span>
+          </div>
+        )}
+
+        <div className="flex items-center gap-3 mt-2">
+          {accommodation.stars && (
+            <div className="flex items-center gap-0.5">
+              {Array.from({ length: accommodation.stars }).map((_, i) => (
+                <Star key={i} className="w-3 h-3 text-[#D4A853] fill-[#D4A853]" />
+              ))}
+            </div>
+          )}
+          {accommodation.rating && (
+            <div className="flex items-center gap-1">
+              <Star className="w-3 h-3 text-[#D4A853] fill-[#D4A853]" />
+              <span className="text-xs text-[#8B7355]">{accommodation.rating}</span>
+            </div>
+          )}
+          {accommodation.priceLevel && (
+            <span className="text-xs text-[#8B7355]">
+              {'€'.repeat(accommodation.priceLevel)}
+            </span>
+          )}
+        </div>
+
+        {accommodation.amenities && accommodation.amenities.length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-2">
+            {accommodation.amenities.slice(0, 3).map((amenity, idx) => (
+              <span key={idx} className="text-xs px-2 py-0.5 bg-[#F5F0E8] text-[#8B7355] rounded-full">
+                {amenity}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  if (mapsUrl) {
+    return (
+      <a
+        href={mapsUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="group block p-4 rounded-2xl bg-[#4A6FA5]/5 border border-[#4A6FA5]/20 hover:bg-[#4A6FA5]/10 transition-colors"
+      >
+        <CardContent />
+      </a>
+    );
+  }
+
+  return (
+    <div className="group p-4 rounded-2xl bg-[#4A6FA5]/5 border border-[#4A6FA5]/20">
+      <CardContent />
     </div>
   );
 };
