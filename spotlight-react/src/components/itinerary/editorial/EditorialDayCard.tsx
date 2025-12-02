@@ -450,14 +450,15 @@ const ActivityCard = ({ activity }: { activity: Activity }) => {
     <>
       {/* Photo */}
       {photoUrl && (
-        <div className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-[#E8DFD3]">
+        <div className="w-16 h-16 min-w-[64px] min-h-[64px] max-w-[64px] max-h-[64px] rounded-xl overflow-hidden flex-shrink-0 bg-[#E8DFD3]">
           <img
             src={photoUrl}
             alt={activity.name}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            loading="lazy"
             onError={(e) => {
               // Hide broken images
-              (e.target as HTMLImageElement).style.display = 'none';
+              (e.target as HTMLImageElement).parentElement!.style.display = 'none';
             }}
           />
         </div>
@@ -534,13 +535,14 @@ const RestaurantCard = ({ restaurant }: { restaurant: Restaurant }) => {
   const CardContent = () => (
     <>
       {photoUrl && (
-        <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-[#E8DFD3]">
+        <div className="w-12 h-12 min-w-[48px] min-h-[48px] max-w-[48px] max-h-[48px] rounded-lg overflow-hidden flex-shrink-0 bg-[#E8DFD3]">
           <img
             src={photoUrl}
             alt={restaurant.name}
             className="w-full h-full object-cover"
+            loading="lazy"
             onError={(e) => {
-              (e.target as HTMLImageElement).style.display = 'none';
+              (e.target as HTMLImageElement).parentElement!.style.display = 'none';
             }}
           />
         </div>
@@ -631,11 +633,12 @@ const MealSection = ({
       {restaurant && (
         <div className="space-y-2">
           {photoUrl && (
-            <div className="w-full h-20 rounded-xl overflow-hidden bg-[#E8DFD3] mb-2">
+            <div className="w-full h-20 rounded-xl overflow-hidden bg-[#E8DFD3] mb-2 relative">
               <img
                 src={photoUrl}
                 alt={restaurant.name}
-                className="w-full h-full object-cover"
+                className="absolute inset-0 w-full h-full object-cover"
+                loading="lazy"
                 onError={(e) => {
                   (e.target as HTMLImageElement).parentElement!.style.display = 'none';
                 }}
@@ -699,13 +702,14 @@ const AccommodationCard = ({ accommodation }: { accommodation: Accommodation }) 
     <div className="flex gap-4">
       {/* Photo */}
       {photoUrl && (
-        <div className="w-24 h-24 rounded-xl overflow-hidden flex-shrink-0 bg-[#E8DFD3]">
+        <div className="w-24 h-24 min-w-[96px] min-h-[96px] max-w-[96px] max-h-[96px] rounded-xl overflow-hidden flex-shrink-0 bg-[#E8DFD3] relative">
           <img
             src={photoUrl}
             alt={accommodation.name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            loading="lazy"
             onError={(e) => {
-              (e.target as HTMLImageElement).style.display = 'none';
+              (e.target as HTMLImageElement).parentElement!.style.display = 'none';
             }}
           />
         </div>
@@ -825,13 +829,14 @@ const ScenicStopCard = ({
     <div className="flex gap-4">
       {/* Photo */}
       {photoUrl && (
-        <div className="w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 bg-[#E8DFD3]">
+        <div className="w-20 h-20 min-w-[80px] min-h-[80px] max-w-[80px] max-h-[80px] rounded-xl overflow-hidden flex-shrink-0 bg-[#E8DFD3] relative">
           <img
             src={photoUrl}
             alt={stop.name}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            loading="lazy"
             onError={(e) => {
-              (e.target as HTMLImageElement).style.display = 'none';
+              (e.target as HTMLImageElement).parentElement!.style.display = 'none';
             }}
           />
         </div>
