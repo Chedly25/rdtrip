@@ -454,8 +454,35 @@ const getDayAccommodation = (accommodations: any, dayNumber: number) => {
 const getDayScenicStops = (scenicStops: any, dayNumber: number) => {
   if (!scenicStops) return [];
 
-  // Scenic stops are stored as: [{day: 1, ...}, {day: 2, ...}]
+  // Scenic stops from backend are stored as:
+  // [{day: 1, segment: "...", stops: [{name: "...", coordinates: {...}, ...}]}, ...]
+  // We need to extract the nested stops array and flatten it
   if (Array.isArray(scenicStops)) {
+    const dayData = scenicStops.find((s: any) => s.day === dayNumber);
+
+    // If we found a day entry with nested stops array, return those
+    if (dayData?.stops && Array.isArray(dayData.stops)) {
+      return dayData.stops.map((stop: any) => ({
+        ...stop,
+        day: dayNumber,
+        // Normalize field names for the frontend
+        name: stop.verifiedName || stop.name || 'Scenic Stop',
+        description: stop.why || stop.description || stop.whatToDo,
+        type: stop.type || 'scenic',
+        duration: stop.suggestedDuration || stop.duration,
+        // Handle coordinates - they may come from Google Places validation
+        lat: stop.coordinates?.lat || stop.lat,
+        lng: stop.coordinates?.lng || stop.lng,
+        coordinates: stop.coordinates,
+        // Google Maps linking
+        place_id: stop.placeId || stop.place_id,
+        google_maps_url: stop.urls?.googleMaps || stop.google_maps_url,
+        // Photos from Google Places
+        photos: stop.photos || []
+      }));
+    }
+
+    // Fallback: maybe stops are already flat with day property
     return scenicStops.filter((s: any) => s.day === dayNumber);
   }
 
