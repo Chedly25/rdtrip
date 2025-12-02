@@ -164,7 +164,7 @@ const TravelStampMarker = memo(({
                 <img
                   src={imageUrl}
                   alt={cityName}
-                  className="w-full h-full object-cover"
+                  className="absolute inset-0 w-full h-full object-cover"
                   style={{
                     filter: 'saturate(0.9) contrast(1.05)',
                     opacity: imageLoaded ? 1 : 0,
