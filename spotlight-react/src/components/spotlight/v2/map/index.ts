@@ -13,3 +13,6 @@ export * from './mapStyle';
 // Overlays
 export { default as MapOverlays } from './overlays/MapOverlays';
 export * from './overlays/MapOverlays';
+
+// Layers
+export * from './layers/AnimatedRouteLine';

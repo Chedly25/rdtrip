@@ -15,6 +15,8 @@ import {
   injectMapCSSVariables,
   MapOverlays,
   MAP_CONFIG,
+  addRouteLayersToMap,
+  ROUTE_LAYER_IDS,
 } from './map';
 
 // Mapbox access token
@@ -155,7 +157,17 @@ const MapViewV2 = () => {
     markersRef.current.forEach(marker => marker.remove());
     markersRef.current = [];
 
-    // Remove existing route layers
+    // Remove existing route layers (all animated layers)
+    Object.values(ROUTE_LAYER_IDS).forEach(layerId => {
+      if (map.current!.getLayer(layerId)) {
+        try {
+          map.current!.removeLayer(layerId);
+        } catch {
+          // Ignore
+        }
+      }
+    });
+    // Also check for legacy 'route' layer
     if (map.current.getLayer('route')) {
       map.current.removeLayer('route');
     }
@@ -202,40 +214,9 @@ const MapViewV2 = () => {
     const mapboxRoute = await fetchMapboxRoute(waypoints);
 
     if (mapboxRoute && mapboxRoute.geometry) {
-      // Double-check and remove existing route source/layer before adding
-      // (in case another render started during the async fetch)
-      if (map.current!.getLayer('route')) {
-        map.current!.removeLayer('route');
-      }
-      if (map.current!.getSource('route')) {
-        map.current!.removeSource('route');
-      }
-
-      // Add route as a source
-      map.current!.addSource('route', {
-        type: 'geojson',
-        data: {
-          type: 'Feature',
-          properties: {},
-          geometry: mapboxRoute.geometry
-        }
-      });
-
-      // Add route line layer
-      map.current!.addLayer({
-        id: 'route',
-        type: 'line',
-        source: 'route',
-        layout: {
-          'line-join': 'round',
-          'line-cap': 'round'
-        },
-        paint: {
-          'line-color': agentColors.accent,
-          'line-width': 6,
-          'line-opacity': 0.8
-        }
-      });
+      // Add animated route line with glow effect
+      // This replaces the old simple route layer with our editorial design
+      addRouteLayersToMap(map.current, mapboxRoute.geometry, agentColors);
 
       // Store total distance and duration in route
       console.log(`📍 Route: ${formatDistance(mapboxRoute.distance)}, ${formatDuration(mapboxRoute.duration)}`);
