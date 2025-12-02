@@ -82,23 +82,7 @@ const TravelStampMarker = memo(({
     },
   };
 
-  const infoVariants = {
-    hidden: {
-      opacity: 0,
-      height: 0,
-      marginTop: 0,
-    },
-    visible: {
-      opacity: 1,
-      height: 'auto',
-      marginTop: 8,
-      transition: {
-        opacity: { delay: 0.1, duration: 0.2 },
-        height: { duration: 0.3 },
-      },
-    },
-  };
-
+  
   return (
     <div
       className="flex flex-col items-center cursor-pointer"
@@ -134,10 +118,11 @@ const TravelStampMarker = memo(({
           )}
         </AnimatePresence>
 
-        {/* Stamp body */}
-        <motion.div
+        {/* Stamp body - explicit size to contain photo */}
+        <div
           className="relative overflow-hidden"
           style={{
+            width: isExpanded ? MARKER_STYLE.city.expandedWidth : MARKER_STYLE.city.collapsedSize,
             backgroundColor: 'yellow', // DEBUG: stamp body
             borderRadius: MARKER_STYLE.city.borderRadius,
             border: `${MARKER_STYLE.city.borderWidth}px solid green`, // DEBUG: green border
@@ -222,46 +207,43 @@ const TravelStampMarker = memo(({
             </div>
           </div>
 
-          {/* Expandable info section */}
-          <AnimatePresence>
-            {isExpanded && (
-              <motion.div
-                initial="hidden"
-                animate="visible"
-                exit="hidden"
-                variants={infoVariants}
-                className="px-3 pb-3"
+          {/* Expandable info section - only rendered when expanded */}
+          {isExpanded && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="px-3 pb-3"
+            >
+              {/* Decorative divider */}
+              <div
+                className="w-full h-px mb-2 mt-2"
+                style={{
+                  background: `linear-gradient(90deg, transparent, ${MAP_COLORS.roads.highway}, transparent)`,
+                }}
+              />
+
+              {/* City name */}
+              <h3
+                className="font-semibold text-sm tracking-tight truncate"
+                style={{
+                  color: MAP_COLORS.labels.city,
+                  fontFamily: 'Playfair Display, Georgia, serif',
+                }}
               >
-                {/* Decorative divider */}
-                <div
-                  className="w-full h-px mb-2"
-                  style={{
-                    background: `linear-gradient(90deg, transparent, ${MAP_COLORS.roads.highway}, transparent)`,
-                  }}
-                />
+                {cityName}
+              </h3>
 
-                {/* City name */}
-                <h3
-                  className="font-semibold text-sm tracking-tight truncate"
-                  style={{
-                    color: MAP_COLORS.labels.city,
-                    fontFamily: 'Playfair Display, Georgia, serif',
-                  }}
-                >
-                  {cityName}
-                </h3>
-
-                {/* Country and nights */}
-                <p
-                  className="text-xs truncate"
-                  style={{ color: MAP_COLORS.labels.town }}
-                >
-                  {country && `${country} · `}{nights} {nights === 1 ? 'night' : 'nights'}
-                </p>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.div>
+              {/* Country and nights */}
+              <p
+                className="text-xs truncate"
+                style={{ color: MAP_COLORS.labels.town }}
+              >
+                {country && `${country} · `}{nights} {nights === 1 ? 'night' : 'nights'}
+              </p>
+            </motion.div>
+          )}
+        </div>
       </motion.div>
 
       {/* Pin pointer */}
