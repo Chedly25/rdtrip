@@ -23,6 +23,7 @@ import { SelectedCityPanel } from './SelectedCityPanel';
 import { getCityHighlight } from '../../../utils/cityHighlights';
 import AddCityLandmarkModal from '../v2/AddCityLandmarkModal';
 import { useCompanion } from '../../../contexts/CompanionProvider';
+import { PersonalizationBadge } from '../v2/PersonalizationBadge';
 
 // Companion panel width for desktop layout
 const COMPANION_PANEL_WIDTH = 340;
@@ -226,6 +227,10 @@ const BottomSheet = ({ onCityDetailsClick }: BottomSheetProps) => {
                 <span className="px-2.5 py-1 bg-[#F5F0E8] rounded-full text-xs font-medium text-[#8B7355]">
                   {totalNights} nights
                 </span>
+                {/* Personalization badge - shows when route has personalization context */}
+                {route.personalization && (
+                  <PersonalizationBadge personalization={route.personalization} />
+                )}
               </div>
             </div>
 

@@ -367,7 +367,9 @@ const SpotlightV2 = () => {
       cities,
       landmarks: data.landmarks || [],  // Load landmarks from localStorage if they exist
       nightAllocations: data.nightAllocations || {},
-      agentResults: data.agentResults || []
+      agentResults: data.agentResults || [],
+      // Include personalization data if present
+      personalization: data.personalization || undefined
     };
   };
 

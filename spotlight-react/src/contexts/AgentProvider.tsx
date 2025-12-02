@@ -36,10 +36,22 @@ export interface RouteContext {
   startDate: string | null;
 }
 
+// Personalization context for AI-enhanced responses
+export interface PersonalizationContext {
+  tripStory?: string;
+  diningStyle?: string;
+  dietary?: string[];
+  accessibility?: string[];
+  occasion?: string;
+  avoidCrowds?: boolean;
+  preferOutdoor?: boolean;
+}
+
 export interface PageContext {
   path: string;
   name: 'landing' | 'spotlight' | 'itinerary' | 'unknown';
   route: RouteContext | null;
+  personalization?: PersonalizationContext | null;
 }
 
 // ==================== ARTIFACT SYSTEM ====================
@@ -204,6 +216,7 @@ export function AgentProvider({ children }: AgentProviderProps) {
     const routeId = searchParams.get('routeId');
 
     // Try to get route from localStorage (spotlight data)
+    let personalizationContext: any = null;
     try {
       const spotlightDataStr = localStorage.getItem('spotlightData');
       if (spotlightDataStr) {
@@ -224,6 +237,12 @@ export function AgentProvider({ children }: AgentProviderProps) {
           duration: spotlightData.duration || null,
           startDate: spotlightData.startDate || null
         };
+
+        // Extract personalization context if present
+        if (spotlightData.personalization) {
+          personalizationContext = spotlightData.personalization;
+          console.log('📝 Loaded personalization context:', personalizationContext);
+        }
       }
     } catch (e) {
       console.warn('Failed to parse spotlight data:', e);
@@ -232,7 +251,8 @@ export function AgentProvider({ children }: AgentProviderProps) {
     return {
       path,
       name: pageName,
-      route: routeContext
+      route: routeContext,
+      personalization: personalizationContext
     };
   }, [location, searchParams]);
 
@@ -486,15 +506,19 @@ export function AgentProvider({ children }: AgentProviderProps) {
         // Add current day if viewing itinerary
         currentDay: pageContext.name === 'itinerary' ? getCurrentDayNumber() : null,
         // Add route info if available
-        route: pageContext.route || null
+        route: pageContext.route || null,
+        // Add personalization context if available
+        personalization: pageContext.personalization || null
       };
 
       const payload = {
         message: messageText.trim(),
         sessionId: sessionId,
-        pageContext: enrichedPageContext,  // ✅ SEND RICH CONTEXT
+        pageContext: enrichedPageContext,  // ✅ SEND RICH CONTEXT (now includes personalization)
         routeId: pageContext.route?.routeId || null,
-        itineraryId: itineraryId || null  // ✅ ADD ITINERARY ID
+        itineraryId: itineraryId || null,  // ✅ ADD ITINERARY ID
+        // Also send personalization at top level for easier backend access
+        personalization: pageContext.personalization || null
       };
 
       console.log('📤 [AGENT] Sending fetch to:', `${apiUrl}/api/agent/query`);

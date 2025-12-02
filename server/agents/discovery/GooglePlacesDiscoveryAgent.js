@@ -297,10 +297,11 @@ class GooglePlacesDiscoveryAgent {
 
   /**
    * Calculate quality score for ranking
-   * NOW WITH AGENT PERSONALITY SCORING
+   * NOW WITH AGENT PERSONALITY SCORING AND PERSONALIZATION
    */
   calculateQualityScore(candidate, preferences) {
     const agentType = preferences?.agentType || preferences?.travelStyle || 'best-overall';
+    const personalization = preferences?.personalization || {};
     let score = 0;
 
     // Rating (40 points max)
@@ -310,8 +311,8 @@ class GooglePlacesDiscoveryAgent {
 
     // Number of ratings - AGENT-SPECIFIC LOGIC
     if (candidate.ratingCount) {
-      if (agentType === 'hidden-gems') {
-        // HIDDEN GEMS: Prefer LOWER rating counts (undiscovered places)
+      if (agentType === 'hidden-gems' || personalization.avoidCrowds) {
+        // HIDDEN GEMS or AVOID CROWDS: Prefer LOWER rating counts (undiscovered places)
         // Inverse scoring: fewer ratings = higher score
         const hiddenGemScore = Math.max(0, 20 - Math.min(candidate.ratingCount / 50, 1) * 20);
         score += hiddenGemScore;
@@ -341,7 +342,7 @@ class GooglePlacesDiscoveryAgent {
     }
 
     // Price level match (5 points)
-    if (this.matchesBudget(candidate.priceLevel, preferences.budget)) {
+    if (this.matchesBudget(candidate.priceLevel, preferences.budget || personalization.budget)) {
       score += 5;
     }
 
@@ -370,7 +371,88 @@ class GooglePlacesDiscoveryAgent {
       }
     }
 
+    // PERSONALIZATION BONUSES (up to 30 points)
+    score += this.calculatePersonalizationBonus(candidate, personalization);
+
     return score;
+  }
+
+  /**
+   * Calculate bonus score based on user personalization preferences
+   */
+  calculatePersonalizationBonus(candidate, personalization) {
+    if (!personalization || Object.keys(personalization).length === 0) {
+      return 0;
+    }
+
+    let bonus = 0;
+    const place_types = candidate.place_types || [];
+    const name = (candidate.name || '').toLowerCase();
+
+    // Interest matching (up to 15 points)
+    if (personalization.interests && personalization.interests.length > 0) {
+      const interestTypeMap = {
+        'history': ['museum', 'historic_site', 'monument', 'landmark'],
+        'art': ['art_gallery', 'museum'],
+        'architecture': ['church', 'cathedral', 'historic_site', 'landmark'],
+        'nature': ['park', 'natural_feature', 'hiking_area', 'garden'],
+        'food': ['restaurant', 'cafe', 'bakery', 'food'],
+        'wine': ['bar', 'winery', 'liquor_store'],
+        'nightlife': ['bar', 'night_club', 'casino'],
+        'shopping': ['shopping_mall', 'store', 'market'],
+        'photography': ['scenic_lookout', 'park', 'landmark', 'tourist_attraction'],
+        'adventure': ['park', 'hiking_area', 'amusement_park', 'stadium'],
+        'wellness': ['spa', 'gym', 'health'],
+        'local-culture': ['local_government_office', 'market', 'cafe'],
+        'beaches': ['beach'],
+        'mountains': ['natural_feature', 'hiking_area', 'park'],
+        'museums': ['museum', 'art_gallery']
+      };
+
+      for (const interest of personalization.interests) {
+        const matchingTypes = interestTypeMap[interest] || [];
+        if (matchingTypes.some(t => place_types.includes(t))) {
+          bonus += 5; // 5 points per matched interest
+        }
+      }
+      bonus = Math.min(bonus, 15); // Cap at 15 points
+    }
+
+    // Travel style bonus (up to 10 points)
+    if (personalization.travelStyle) {
+      const styleMatch = {
+        'explorer': ['tourist_attraction', 'landmark', 'museum', 'park'],
+        'relaxer': ['spa', 'cafe', 'park', 'garden'],
+        'culture': ['museum', 'art_gallery', 'historic_site', 'church'],
+        'adventurer': ['park', 'hiking_area', 'amusement_park', 'stadium'],
+        'foodie': ['restaurant', 'cafe', 'bakery', 'bar']
+      };
+
+      const matchingTypes = styleMatch[personalization.travelStyle] || [];
+      if (matchingTypes.some(t => place_types.includes(t))) {
+        bonus += 10;
+      }
+    }
+
+    // Outdoor preference bonus (5 points)
+    if (personalization.preferOutdoor) {
+      if (place_types.includes('park') || place_types.includes('garden') ||
+          place_types.includes('hiking_area') || place_types.includes('beach') ||
+          place_types.includes('natural_feature')) {
+        bonus += 5;
+      }
+    }
+
+    // Accessibility consideration - prefer accessible venues
+    if (personalization.accessibility && personalization.accessibility.length > 0) {
+      // Google Places doesn't have great accessibility data, but we can prefer
+      // larger, established venues which tend to be more accessible
+      if (candidate.ratingCount > 500 && candidate.rating >= 4.0) {
+        bonus += 3; // Established venues often have better accessibility
+      }
+    }
+
+    return bonus;
   }
 
   /**
