@@ -130,7 +130,32 @@ const SpotlightV2 = () => {
     const selectedAgent = data.agent || 'best-overall';
     console.log('🎯 Selected agent:', selectedAgent);
 
-    if (data.agentResults && Array.isArray(data.agentResults)) {
+    // ============================================================
+    // PRIORITY 1: Check for NEW UnifiedRouteAgent format (data.route.waypoints)
+    // ============================================================
+    if (data.route && data.route.waypoints && Array.isArray(data.route.waypoints)) {
+      console.log('✅ Found UNIFIED route format (data.route.waypoints)');
+      agentWaypoints = data.route.waypoints;
+      console.log('✅ Unified waypoints:', agentWaypoints.map((w: any) => w.name));
+
+      // Build cityDataMap from unified waypoints
+      agentWaypoints.forEach((waypoint: any) => {
+        const cityName = getCityName(waypoint.name || waypoint.city || waypoint);
+        if (!cityDataMap.has(cityName)) {
+          cityDataMap.set(cityName, waypoint);
+        }
+      });
+
+      // Also add destination from route object (has nights allocated)
+      if (data.route.destination) {
+        const destName = getCityName(data.route.destination.name || data.route.destination);
+        cityDataMap.set(destName, data.route.destination);
+      }
+    }
+    // ============================================================
+    // PRIORITY 2: Check for OLD multi-agent format (agentResults)
+    // ============================================================
+    else if (data.agentResults && Array.isArray(data.agentResults)) {
       const agentResult = data.agentResults.find((result: any) => result.agent === selectedAgent);
       console.log('📊 Agent result found:', agentResult?.agent);
 
@@ -160,7 +185,9 @@ const SpotlightV2 = () => {
       }
     }
 
-    // Fallback: check global waypoints if agent waypoints not found
+    // ============================================================
+    // PRIORITY 3: Fallback to global waypoints
+    // ============================================================
     if (agentWaypoints.length === 0 && data.waypoints && Array.isArray(data.waypoints)) {
       console.log('⚠️ Using global waypoints as fallback');
       agentWaypoints = data.waypoints;
@@ -175,20 +202,34 @@ const SpotlightV2 = () => {
     console.log('📍 City data map size:', cityDataMap.size, 'entries:', Array.from(cityDataMap.keys()));
 
     // Build ordered cities from agent's waypoints
+    // Handle both unified format (data.route.origin) and old format (data.origin)
+    const originData = data.route?.origin || data.origin;
+    const destinationData = data.route?.destination || data.destination;
+    const originName = getCityName(originData);
+    const destinationName = getCityName(destinationData);
+
     let orderedCities: string[] = [];
 
     if (agentWaypoints.length > 0) {
       // Use agent-specific waypoints
       orderedCities = [
-        getCityName(data.origin),
+        originName,
         ...agentWaypoints.map((w: any) => getCityName(w.city || w.name || w)),
-        getCityName(data.destination)
+        destinationName
       ];
       console.log('✅ Using agent waypoints:', orderedCities);
     } else {
       // Last fallback: just origin and destination
-      orderedCities = [getCityName(data.origin), getCityName(data.destination)];
+      orderedCities = [originName, destinationName];
       console.log('⚠️ Using origin/destination only:', orderedCities);
+    }
+
+    // Store origin/destination data in cityDataMap for coordinate/night lookup
+    if (!cityDataMap.has(originName)) {
+      cityDataMap.set(originName, originData);
+    }
+    if (!cityDataMap.has(destinationName)) {
+      cityDataMap.set(destinationName, destinationData);
     }
 
     console.log('🏙️ Processing cities in order:', orderedCities);
@@ -197,49 +238,55 @@ const SpotlightV2 = () => {
       orderedCities.forEach((cityName: string) => {
         console.log(`  🌆 ${cityName}`);
 
-        // Get city data from cityDataMap (built from agent's waypoints)
-        let cityData = cityDataMap.get(cityName);
+        // Get city data from cityDataMap (built from agent's waypoints + origin/destination)
+        const cityData = cityDataMap.get(cityName);
         let coordinates = { lat: 0, lng: 0 };
 
-        // Try to get coordinates from origin/destination first
-        if (cityName === getCityName(data.origin)) {
-          coordinates = extractCoordinates(data.origin);
-          console.log(`    ✅ Using origin coordinates:`, coordinates);
-        } else if (cityName === getCityName(data.destination)) {
-          coordinates = extractCoordinates(data.destination);
-          console.log(`    ✅ Using destination coordinates:`, coordinates);
-        } else if (cityData) {
-          // Check if cityData has coordinates directly (from agent recommendations)
+        // Extract coordinates from cityData (works for all city types now)
+        if (cityData) {
           if (cityData.coordinates) {
             coordinates = extractCoordinates(cityData);
-            console.log(`    ✅ Using agent waypoint coordinates:`, coordinates);
-          } else {
-            coordinates = extractCoordinates(cityData.city || cityData);
             console.log(`    ✅ Using cityData coordinates:`, coordinates);
+          } else if (cityData.city?.coordinates) {
+            coordinates = extractCoordinates(cityData.city);
+            console.log(`    ✅ Using nested city coordinates:`, coordinates);
           }
-        } else {
+        }
+
+        if (coordinates.lat === 0 && coordinates.lng === 0) {
           console.log(`    ⚠️ No coordinates found for ${cityName}`);
         }
 
-        // Get nights from nightAllocations or agent's waypoint data
+        // Get nights from multiple sources:
+        // 1. nightAllocations (from old format)
+        // 2. cityData.nights (from unified format waypoints)
+        // 3. recommended_nights (from AI)
+        // 4. recommended_min_nights (fallback)
         let nights = data.nightAllocations?.[cityName] || 0;
 
-        // If not in nightAllocations, check the agent's waypoint data
-        if (!nights && cityData?.nights) {
+        // If not in nightAllocations, check the cityData directly
+        if (!nights && cityData?.nights !== undefined) {
           nights = cityData.nights;
         }
 
-        // Fallback to recommended_min_nights or default to 1
+        // Fallback to recommended_nights
+        if (!nights && cityData?.recommended_nights) {
+          nights = cityData.recommended_nights;
+        }
+
+        // Fallback to recommended_min_nights
         if (!nights && cityData?.recommended_min_nights) {
           nights = cityData.recommended_min_nights;
         }
 
-        // Default to 1 night for waypoints, 0 for origin/destination
+        // Default to 2 nights for waypoints, 0 for origin (but keep destination nights)
         if (!nights) {
-          if (cityName === getCityName(data.origin) || cityName === getCityName(data.destination)) {
-            nights = 0;
+          if (cityName === originName) {
+            nights = 0; // Origin has 0 nights (starting point)
+          } else if (cityName === destinationName) {
+            nights = 2; // Default 2 nights at destination
           } else {
-            nights = 1; // Default for waypoints
+            nights = 2; // Default 2 nights for waypoints
           }
         }
 
