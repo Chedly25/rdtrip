@@ -9,6 +9,14 @@ import LandmarkDetailsModal from './LandmarkDetailsModal';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 
+// Editorial Cartography Map System
+import {
+  initializeEditorialMap,
+  injectMapCSSVariables,
+  MapOverlays,
+  MAP_CONFIG,
+} from './map';
+
 // Mapbox access token
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || '';
 
@@ -39,38 +47,40 @@ const MapViewV2 = () => {
 
   console.log('🔍 MapViewV2 render - Landmarks in route:', route?.landmarks.length || 0);
 
-  // Initialize map
+  // Inject CSS variables for map styling on mount
+  useEffect(() => {
+    injectMapCSSVariables();
+  }, []);
+
+  // Initialize map with Editorial Cartography style
   useEffect(() => {
     if (!mapContainer.current || !MAPBOX_TOKEN || map.current) return;
 
     mapboxgl.accessToken = MAPBOX_TOKEN;
 
     const initialCenter: [number, number] = mapCenter || [2.3522, 48.8566]; // Default to Paris
-    const initialZoom = mapZoom || 6;
+    const initialZoom = mapZoom || MAP_CONFIG.defaultZoom;
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/streets-v12',
+      style: 'mapbox://styles/mapbox/streets-v12', // Base style, will be transformed
       center: initialCenter,
       zoom: initialZoom,
       pitch: 0,
       bearing: 0,
-      // Disable 3D features for strictly 2D map
       projection: { name: 'mercator' },
-      minPitch: 0,
-      maxPitch: 0
+      minPitch: MAP_CONFIG.defaultPitch,
+      maxPitch: MAP_CONFIG.maxPitch,
+      minZoom: MAP_CONFIG.minZoom,
+      maxZoom: MAP_CONFIG.maxZoom,
     });
 
-    map.current.on('load', () => {
-      console.log('✅ Map loaded (2D mode)');
-      setIsMapLoaded(true);
+    // Apply editorial cartography style transformations
+    initializeEditorialMap(map.current);
 
-      // Disable 3D buildings layer if it exists
-      const layers = map.current!.getStyle().layers;
-      const buildingLayer = layers?.find(l => l.id === 'building');
-      if (buildingLayer) {
-        map.current!.removeLayer('building');
-      }
+    map.current.on('load', () => {
+      console.log('✨ Map loaded with Editorial Cartography style');
+      setIsMapLoaded(true);
     });
 
     map.current.on('move', () => {
@@ -453,7 +463,11 @@ const MapViewV2 = () => {
 
   return (
     <div className="absolute inset-0 z-0">
+      {/* Map Container */}
       <div ref={mapContainer} className="w-full h-full" />
+
+      {/* Editorial Cartography Atmospheric Overlays */}
+      <MapOverlays showDecorations={true} />
 
       {/* Landmark Details Modal */}
       <LandmarkDetailsModal
