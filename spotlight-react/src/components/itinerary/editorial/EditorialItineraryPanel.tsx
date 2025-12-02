@@ -400,8 +400,23 @@ const getDayAccommodation = (accommodations: any, dayNumber: number) => {
   return null;
 };
 
+// Helper to get scenic stops for a specific day
+const getDayScenicStops = (scenicStops: any, dayNumber: number) => {
+  if (!scenicStops) return [];
+
+  // Scenic stops are stored as: [{day: 1, ...}, {day: 2, ...}]
+  if (Array.isArray(scenicStops)) {
+    return scenicStops.filter((s: any) => s.day === dayNumber);
+  }
+
+  return [];
+};
+
 // Itinerary Content - The final view with day cards
 const ItineraryContent = ({ itinerary }: { itinerary: any }) => {
+  const [addedScenicStopIds, setAddedScenicStopIds] = useState<string[]>([]);
+  const { addLandmarkToRoute, route } = useSpotlightStoreV2();
+
   // dayStructure can be EITHER an array OR an object with .days property
   const dayStructure = itinerary.dayStructure;
   const daysArray = Array.isArray(dayStructure)
@@ -412,6 +427,53 @@ const ItineraryContent = ({ itinerary }: { itinerary: any }) => {
   const totalActivities = daysArray.reduce((sum: number, _: any, idx: number) => {
     return sum + getDayActivities(itinerary.activities, idx + 1).length;
   }, 0);
+
+  // Count total scenic stops
+  const totalScenicStops = daysArray.reduce((sum: number, _: any, idx: number) => {
+    return sum + getDayScenicStops(itinerary.scenicStops, idx + 1).length;
+  }, 0);
+
+  // Handler to add scenic stop to route
+  const handleAddScenicStopToRoute = useCallback(async (stop: any) => {
+    if (!route) {
+      console.warn('No route available to add scenic stop');
+      return;
+    }
+
+    // Get coordinates from stop
+    const lat = stop.lat || stop.coordinates?.lat;
+    const lng = stop.lng || stop.coordinates?.lng;
+
+    if (!lat || !lng) {
+      console.warn('Scenic stop has no coordinates:', stop.name);
+      return;
+    }
+
+    // Convert to Landmark format for addLandmarkToRoute
+    const landmark = {
+      id: Date.now(),
+      name: stop.name,
+      type: stop.type || 'scenic',
+      lat,
+      lng,
+      country: '',
+      city: '',
+      icon_type: 'scenic',
+      description: stop.description || '',
+      image_url: '',
+      rating: stop.rating || 0,
+      visit_duration: 30
+    };
+
+    try {
+      await addLandmarkToRoute(landmark);
+      // Mark as added
+      setAddedScenicStopIds(prev => [...prev, stop.id || stop.name]);
+      console.log(`✅ Added scenic stop to route: ${stop.name}`);
+    } catch (error) {
+      console.error('Failed to add scenic stop to route:', error);
+    }
+  }, [route, addLandmarkToRoute]);
 
   return (
     <motion.div
@@ -431,7 +493,8 @@ const ItineraryContent = ({ itinerary }: { itinerary: any }) => {
             Your Itinerary is Ready!
           </h3>
           <p className="text-sm text-[#8B7355]">
-            {daysArray.length} days • {totalActivities} activities planned
+            {daysArray.length} days • {totalActivities} activities
+            {totalScenicStops > 0 && ` • ${totalScenicStops} scenic stops`}
           </p>
         </div>
       </div>
@@ -444,6 +507,7 @@ const ItineraryContent = ({ itinerary }: { itinerary: any }) => {
             const dayActivities = getDayActivities(itinerary.activities, dayNumber);
             const dayRestaurants = getDayRestaurants(itinerary.restaurants, dayNumber);
             const dayAccommodation = getDayAccommodation(itinerary.accommodations, dayNumber);
+            const dayScenicStops = getDayScenicStops(itinerary.scenicStops, dayNumber);
 
             return (
               <EditorialDayCard
@@ -456,6 +520,9 @@ const ItineraryContent = ({ itinerary }: { itinerary: any }) => {
                 activities={dayActivities}
                 restaurants={dayRestaurants}
                 accommodation={dayAccommodation}
+                scenicStops={dayScenicStops}
+                onAddScenicStopToRoute={handleAddScenicStopToRoute}
+                addedScenicStopIds={addedScenicStopIds}
               />
             );
           })

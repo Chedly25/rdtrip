@@ -19,7 +19,12 @@ import {
   Star,
   Sparkles,
   ExternalLink,
-  Hotel
+  Hotel,
+  Mountain,
+  Route,
+  Plus,
+  Check,
+  Loader2
 } from 'lucide-react';
 
 // Photo can be either a string URL or an object with url/thumbnail
@@ -73,6 +78,26 @@ interface Accommodation {
   amenities?: string[];
 }
 
+interface ScenicStop {
+  id?: string;
+  name: string;
+  description?: string;
+  type?: string;
+  photos?: (string | Photo)[];
+  place_id?: string;
+  placeId?: string;
+  google_maps_url?: string;
+  googleMapsUrl?: string;
+  // Coordinates for adding to route
+  lat?: number;
+  lng?: number;
+  coordinates?: { lat: number; lng: number };
+  // Additional metadata
+  rating?: number;
+  duration?: string;
+  distance?: string;
+}
+
 interface DayData {
   date?: string;
   city: string;
@@ -100,6 +125,9 @@ interface EditorialDayCardProps {
   activities?: any[];
   restaurants?: any[];
   accommodation?: Accommodation | null;
+  scenicStops?: ScenicStop[];
+  onAddScenicStopToRoute?: (stop: ScenicStop) => Promise<void>;
+  addedScenicStopIds?: string[];
 }
 
 const timeIcons = {
@@ -143,7 +171,10 @@ export const EditorialDayCard = ({
   dayNumber,
   activities = [],
   restaurants = [],
-  accommodation
+  accommodation,
+  scenicStops = [],
+  onAddScenicStopToRoute,
+  addedScenicStopIds = []
 }: EditorialDayCardProps) => {
   const [isExpanded, setIsExpanded] = useState(dayNumber === 1); // First day expanded by default
 
@@ -173,6 +204,7 @@ export const EditorialDayCard = ({
   const hasActivities = hasCategorizedActivities || uncategorizedActivities.length > 0;
   const hasRestaurants = hasCategorizedRestaurants || uncategorizedRestaurants.length > 0;
   const hasAccommodation = !!accommodation;
+  const hasScenicStops = scenicStops.length > 0;
   const totalActivityCount = morningActivities.length + afternoonActivities.length + eveningActivities.length + uncategorizedActivities.length;
 
   return (
@@ -337,8 +369,32 @@ export const EditorialDayCard = ({
                 </div>
               )}
 
+              {/* Scenic Stops Section */}
+              {hasScenicStops && (
+                <div className="pt-2 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-semibold text-[#8B7355] uppercase tracking-wider">
+                      Scenic Detours
+                    </h4>
+                    <span className="text-xs text-[#8B7355]">
+                      {scenicStops.length} stop{scenicStops.length !== 1 ? 's' : ''} nearby
+                    </span>
+                  </div>
+                  <div className="space-y-3">
+                    {scenicStops.map((stop, idx) => (
+                      <ScenicStopCard
+                        key={stop.id || idx}
+                        stop={stop}
+                        onAddToRoute={onAddScenicStopToRoute}
+                        isAdded={addedScenicStopIds.includes(stop.id || stop.name)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Empty State */}
-              {!hasActivities && !hasRestaurants && !hasAccommodation && (
+              {!hasActivities && !hasRestaurants && !hasAccommodation && !hasScenicStops && (
                 <div className="pt-6 text-center py-8">
                   <Sparkles className="w-8 h-8 text-[#D4A853] mx-auto mb-3" />
                   <p className="text-[#8B7355]">
@@ -727,6 +783,160 @@ const AccommodationCard = ({ accommodation }: { accommodation: Accommodation }) 
 
   return (
     <div className="group p-4 rounded-2xl bg-[#4A6FA5]/5 border border-[#4A6FA5]/20">
+      <CardContent />
+    </div>
+  );
+};
+
+// Scenic Stop Card Component
+const ScenicStopCard = ({
+  stop,
+  onAddToRoute,
+  isAdded
+}: {
+  stop: ScenicStop;
+  onAddToRoute?: (stop: ScenicStop) => Promise<void>;
+  isAdded: boolean;
+}) => {
+  const [isAdding, setIsAdding] = useState(false);
+  const photoUrl = getPhotoUrl(stop.photos?.[0]);
+  const mapsUrl = getGoogleMapsUrl(stop);
+
+  // Check if stop has coordinates for adding to route
+  const hasCoordinates = !!(
+    (stop.lat && stop.lng) ||
+    (stop.coordinates?.lat && stop.coordinates?.lng)
+  );
+
+  const handleAddToRoute = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!onAddToRoute || isAdded || isAdding) return;
+
+    setIsAdding(true);
+    try {
+      await onAddToRoute(stop);
+    } finally {
+      setIsAdding(false);
+    }
+  };
+
+  const CardContent = () => (
+    <div className="flex gap-4">
+      {/* Photo */}
+      {photoUrl && (
+        <div className="w-20 h-20 rounded-xl overflow-hidden flex-shrink-0 bg-[#E8DFD3]">
+          <img
+            src={photoUrl}
+            alt={stop.name}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = 'none';
+            }}
+          />
+        </div>
+      )}
+
+      {/* Content */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-2 mb-1">
+            <Mountain className="w-4 h-4 text-[#4A7C59]" />
+            <span className="text-xs font-medium text-[#4A7C59] uppercase tracking-wide">
+              {stop.type || 'Scenic Stop'}
+            </span>
+          </div>
+          {mapsUrl && (
+            <ExternalLink className="w-3 h-3 text-[#8B7355] opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+          )}
+        </div>
+
+        <h5 className="font-medium text-[#2C2417] text-sm line-clamp-1">
+          {stop.name}
+        </h5>
+
+        {stop.description && (
+          <p className="text-xs text-[#8B7355] line-clamp-2 mt-1">
+            {stop.description}
+          </p>
+        )}
+
+        <div className="flex items-center gap-3 mt-2">
+          {stop.rating && (
+            <div className="flex items-center gap-1">
+              <Star className="w-3 h-3 text-[#D4A853] fill-[#D4A853]" />
+              <span className="text-xs text-[#8B7355]">{stop.rating}</span>
+            </div>
+          )}
+          {stop.duration && (
+            <div className="flex items-center gap-1 text-xs text-[#8B7355]">
+              <Clock className="w-3 h-3" />
+              <span>{stop.duration}</span>
+            </div>
+          )}
+          {stop.distance && (
+            <div className="flex items-center gap-1 text-xs text-[#8B7355]">
+              <Route className="w-3 h-3" />
+              <span>{stop.distance}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Add to Route Button */}
+        {hasCoordinates && onAddToRoute && (
+          <div className="mt-3">
+            <button
+              onClick={handleAddToRoute}
+              disabled={isAdded || isAdding}
+              className={`
+                inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium
+                transition-all duration-200
+                ${isAdded
+                  ? 'bg-[#4A7C59]/10 text-[#4A7C59] cursor-default'
+                  : isAdding
+                    ? 'bg-[#C45830]/10 text-[#C45830] cursor-wait'
+                    : 'bg-[#C45830] text-white hover:bg-[#B04726] shadow-sm hover:shadow'
+                }
+              `}
+            >
+              {isAdded ? (
+                <>
+                  <Check className="w-3.5 h-3.5" />
+                  Added to Route
+                </>
+              ) : isAdding ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  Adding...
+                </>
+              ) : (
+                <>
+                  <Plus className="w-3.5 h-3.5" />
+                  Add to Route
+                </>
+              )}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  if (mapsUrl) {
+    return (
+      <a
+        href={mapsUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="group block p-4 rounded-2xl bg-[#4A7C59]/5 border border-[#4A7C59]/20 hover:bg-[#4A7C59]/10 transition-colors"
+      >
+        <CardContent />
+      </a>
+    );
+  }
+
+  return (
+    <div className="group p-4 rounded-2xl bg-[#4A7C59]/5 border border-[#4A7C59]/20">
       <CardContent />
     </div>
   );
