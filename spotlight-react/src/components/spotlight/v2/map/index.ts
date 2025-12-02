@@ -29,3 +29,6 @@ export { default as CelebrationParticles } from './orchestration/CelebrationPart
 
 // Annotations
 export { JourneyLegLabel, CityNameAnnotation, RouteOverviewBadge } from './annotations';
+
+// Interactions
+export { useMapInteractions, HoverPreview } from './interactions';

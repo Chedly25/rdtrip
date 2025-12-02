@@ -22,6 +22,7 @@ import {
   useJourneyOrchestrator,
   CelebrationParticles,
   RouteOverviewBadge,
+  useMapInteractions,
 } from './map';
 
 // Mapbox access token
@@ -83,6 +84,12 @@ const MapViewV2 = () => {
     onPhaseChange: (phase) => {
       console.log(`🎬 Orchestration phase: ${phase}`);
     },
+  });
+
+  // Map interactions hook for micro-interactions
+  const mapInteractions = useMapInteractions({
+    map: map.current,
+    isMapLoaded,
   });
 
   console.log('🔍 MapViewV2 render - Landmarks in route:', route?.landmarks.length || 0);
@@ -310,8 +317,17 @@ const MapViewV2 = () => {
           isHovered={hoveredMarkerId === markerId}
           agentColors={agentColors}
           onClick={() => setSelectedCity(index)}
-          onMouseEnter={() => setHoveredMarkerId(markerId)}
-          onMouseLeave={() => setHoveredMarkerId(null)}
+          onMouseEnter={() => {
+            setHoveredMarkerId(markerId);
+            // Highlight route segment on hover
+            if (index < route.cities.length - 1) {
+              mapInteractions.highlightRouteSegment(index, index + 1);
+            }
+          }}
+          onMouseLeave={() => {
+            setHoveredMarkerId(null);
+            mapInteractions.resetRouteHighlight();
+          }}
         />
       );
 
