@@ -147,8 +147,8 @@ const TravelStampMarker = memo(({
           <div
             className="relative overflow-hidden"
             style={{
-              aspectRatio: isExpanded ? `${MARKER_STYLE.city.photoAspectRatio}` : '1',
-              minHeight: isExpanded ? 80 : MARKER_STYLE.city.collapsedSize - MARKER_STYLE.city.borderWidth * 2,
+              width: '100%',
+              height: isExpanded ? 80 : MARKER_STYLE.city.collapsedSize - MARKER_STYLE.city.borderWidth * 2,
             }}
           >
             {/* Photo or placeholder */}
