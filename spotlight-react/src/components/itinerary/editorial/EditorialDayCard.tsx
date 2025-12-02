@@ -96,6 +96,10 @@ interface ScenicStop {
   rating?: number;
   duration?: string;
   distance?: string;
+  // Scenic route specific
+  approximateKmFromStart?: number;
+  segmentFrom?: string;
+  segmentTo?: string;
 }
 
 interface DayData {
@@ -866,11 +870,12 @@ const ScenicStopCard = ({
           </p>
         )}
 
-        <div className="flex items-center gap-3 mt-2">
-          {stop.rating && (
+        <div className="flex items-center flex-wrap gap-3 mt-2">
+          {/* Only show rating if it's a valid number between 1-5 */}
+          {stop.rating && typeof stop.rating === 'number' && stop.rating >= 1 && stop.rating <= 5 && (
             <div className="flex items-center gap-1">
               <Star className="w-3 h-3 text-[#D4A853] fill-[#D4A853]" />
-              <span className="text-xs text-[#8B7355]">{stop.rating}</span>
+              <span className="text-xs text-[#8B7355]">{stop.rating.toFixed(1)}</span>
             </div>
           )}
           {stop.duration && (
@@ -883,6 +888,13 @@ const ScenicStopCard = ({
             <div className="flex items-center gap-1 text-xs text-[#8B7355]">
               <Route className="w-3 h-3" />
               <span>{stop.distance}</span>
+            </div>
+          )}
+          {/* Show approximate km from start if available */}
+          {stop.approximateKmFromStart && (
+            <div className="flex items-center gap-1 text-xs text-[#8B7355]">
+              <MapPin className="w-3 h-3" />
+              <span>~{stop.approximateKmFromStart}km along route</span>
             </div>
           )}
         </div>
