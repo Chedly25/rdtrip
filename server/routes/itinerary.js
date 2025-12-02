@@ -60,8 +60,26 @@ router.post('/generate', async (req, res) => {
       hasWaypoints: !!routeData?.waypoints,
       waypointCount: routeData?.waypoints?.length || 0,
       waypoints: routeData?.waypoints,
-      preferences: preferences
+      preferences: preferences,
+      hasPersonalization: !!preferences?.personalization,
+      personalizationKeys: preferences?.personalization ? Object.keys(preferences.personalization) : []
     });
+
+    // Log personalization details if present
+    if (preferences?.personalization) {
+      console.log('✨ Personalization context received:', {
+        hasTripStory: !!preferences.personalization.tripStory,
+        tripStoryLength: preferences.personalization.tripStory?.length || 0,
+        occasion: preferences.personalization.occasion,
+        travelStyle: preferences.personalization.travelStyle,
+        pace: preferences.personalization.pace,
+        interests: preferences.personalization.interests,
+        diningStyle: preferences.personalization.diningStyle,
+        budget: preferences.personalization.budget,
+        avoidCrowds: preferences.personalization.avoidCrowds,
+        preferOutdoor: preferences.personalization.preferOutdoor
+      });
+    }
 
     // Validate input
     if (!routeData || !routeData.waypoints) {

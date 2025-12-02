@@ -4,7 +4,8 @@ import type {
   CityData,
   TravelCompanion,
   SelectedInterest,
-  TripPreferences
+  TripPreferences,
+  TripPersonalization
 } from '../types'
 
 export type TripPace = 'leisurely' | 'balanced' | 'fast-paced'
@@ -23,6 +24,9 @@ interface FormState {
 
   // New unified preferences
   preferences: TripPreferences
+
+  // Personalization (new)
+  personalization: TripPersonalization
 
   // UI state
   isLoading: boolean
@@ -47,6 +51,11 @@ interface FormState {
   setTripStyle: (style: number) => void
   setConstraints: (constraints: TripPreferences['constraints']) => void
 
+  // Actions - Personalization (new)
+  setTripStory: (story: string) => void
+  setPersonalization: (data: Partial<TripPersonalization>) => void
+  clearPersonalization: () => void
+
   // Actions - UI state
   setLoading: (isLoading: boolean) => void
   setError: (error: string | null) => void
@@ -64,6 +73,10 @@ const defaultPreferences: TripPreferences = {
   constraints: {}
 }
 
+const defaultPersonalization: TripPersonalization = {
+  tripStory: '',
+}
+
 const initialState = {
   origin: null,
   destination: null,
@@ -73,6 +86,7 @@ const initialState = {
   totalNights: 10,
   tripPace: 'balanced' as TripPace,
   preferences: defaultPreferences,
+  personalization: defaultPersonalization,
   isLoading: false,
   error: null,
 }
@@ -143,6 +157,20 @@ export const useFormStore = create<FormState>((set) => ({
     set((state) => ({
       preferences: { ...state.preferences, constraints }
     })),
+
+  // Personalization actions
+  setTripStory: (tripStory) =>
+    set((state) => ({
+      personalization: { ...state.personalization, tripStory }
+    })),
+
+  setPersonalization: (data) =>
+    set((state) => ({
+      personalization: { ...state.personalization, ...data }
+    })),
+
+  clearPersonalization: () =>
+    set({ personalization: defaultPersonalization }),
 
   // UI state actions
   setLoading: (isLoading) => set({ isLoading }),

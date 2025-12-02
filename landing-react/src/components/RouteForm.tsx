@@ -8,6 +8,7 @@ import { InterestSelector } from './InterestSelector'
 import { TripStyleSlider } from './TripStyleSlider'
 import { RouteGenerationLoading } from './RouteGenerationLoading'
 import { CitySelector } from './CitySelector'
+import { TripStoryInput, PersonalizationAccordion } from './personalization'
 
 // Revolut easing
 const ruiEasing = [0.15, 0.5, 0.5, 1] as const
@@ -46,6 +47,7 @@ export function RouteForm({ onRouteGenerated }: RouteFormProps) {
     totalNights,
     tripPace,
     preferences,
+    personalization,
     isLoading,
     error,
     originError,
@@ -61,6 +63,8 @@ export function RouteForm({ onRouteGenerated }: RouteFormProps) {
     toggleInterest,
     setInterestWeight,
     setTripStyle,
+    setTripStory,
+    setPersonalization,
     setLoading,
     setError,
   } = useFormStore()
@@ -136,6 +140,8 @@ export function RouteForm({ onRouteGenerated }: RouteFormProps) {
           tripPace,
           budget,
           preferences,
+          // Include personalization for AI-enhanced route generation
+          personalization: personalization.tripStory ? personalization : undefined,
         }),
       })
 
@@ -285,6 +291,25 @@ export function RouteForm({ onRouteGenerated }: RouteFormProps) {
                 </p>
               </motion.div>
             )}
+
+            {/* Trip Story - Free-form personalization */}
+            <TripStoryInput
+              value={personalization.tripStory}
+              onChange={setTripStory}
+            />
+
+            {/* Advanced Personalization - Collapsed by default */}
+            <PersonalizationAccordion
+              value={{
+                diningStyle: personalization.diningStyle,
+                dietary: personalization.dietary,
+                accessibility: personalization.accessibility,
+                occasion: personalization.occasion,
+                avoidCrowds: personalization.avoidCrowds,
+                preferOutdoor: personalization.preferOutdoor,
+              }}
+              onChange={(data) => setPersonalization(data)}
+            />
 
             {/* Trip Pace */}
             <div className="space-y-3">

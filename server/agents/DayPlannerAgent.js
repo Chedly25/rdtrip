@@ -44,10 +44,13 @@ class DayPlannerAgent {
 
   buildPrompt() {
     const { waypoints, agent, origin, destination } = this.routeData;
-    const { startDate, endDate, pace = 'moderate' } = this.preferences;
+    const { startDate, endDate, pace = 'moderate', personalization } = this.preferences;
 
     // Calculate total distance
     const totalDistance = this.calculateTotalDistance(waypoints);
+
+    // Build personalization context for the AI
+    const personalizationContext = this.buildPersonalizationContext(personalization);
 
     // Build city list - handle both formats (name/location for old, city for new)
     // CRITICAL FIX: Add logging to debug missing city names
@@ -74,6 +77,7 @@ ROUTE DETAILS:
 
 AGENT PERSONALITY:
 ${this.getAgentDescription(agent)}
+${personalizationContext}
 
 TASK: Create a realistic day-by-day structure for this road trip.
 
@@ -307,6 +311,155 @@ IMPORTANT: Return ONLY the JSON object, no other text.`;
     };
 
     return descriptions[agent] || descriptions['best-overall'];
+  }
+
+  /**
+   * Build personalization context for AI prompts
+   * Transforms the personalization object into natural language guidance
+   */
+  buildPersonalizationContext(personalization) {
+    if (!personalization) return '';
+
+    const sections = [];
+
+    // Trip story - the most important context
+    if (personalization.tripStory && personalization.tripStory.trim()) {
+      sections.push(`
+TRAVELER'S STORY:
+"${personalization.tripStory.trim()}"
+(Use this context to deeply personalize the experience)`);
+    }
+
+    // Build structured preferences
+    const preferences = [];
+
+    // Occasion
+    if (personalization.occasion) {
+      const occasionLabels = {
+        'honeymoon': 'This is a honeymoon trip - prioritize romantic experiences, intimate settings, and special moments',
+        'anniversary': 'This is an anniversary celebration - include romantic restaurants, scenic spots for couples, and memorable experiences',
+        'birthday': 'This is a birthday trip - include celebratory venues, special experiences, and fun activities',
+        'graduation': 'This is a graduation celebration - include vibrant venues, social spots, and memorable experiences',
+        'retirement': 'This is a retirement trip - focus on relaxation, comfort, scenic beauty, and leisurely pace',
+        'babymoon': 'This is a babymoon - prioritize relaxation, comfort, spa experiences, and easy-going activities',
+        'reunion': 'This is a group reunion - include venues good for groups, social dining, and shared experiences',
+        'solo-adventure': 'This is a solo adventure - include social hostels, walking tours, and solo-friendly experiences',
+        'girls-trip': 'This is a girls trip - include spa days, trendy restaurants, shopping, and social venues',
+        'guys-trip': 'This is a guys trip - include adventure activities, sports bars, and group-friendly venues',
+        'family-vacation': 'This is a family vacation - prioritize kid-friendly activities, family restaurants, and safe areas',
+        'just-because': 'This is a spontaneous getaway - create a balanced, enjoyable experience'
+      };
+      preferences.push(occasionLabels[personalization.occasion] || `Trip occasion: ${personalization.occasion}`);
+    }
+
+    // Travel style
+    if (personalization.travelStyle) {
+      const styleLabels = {
+        'explorer': 'Travel style: Explorer - they want to cover ground, see as much as possible, and check off must-sees',
+        'relaxer': 'Travel style: Relaxer - they prefer slow mornings, leisurely meals, and deep experiences over quantity',
+        'culture': 'Travel style: Culture Seeker - prioritize museums, historical sites, art, and cultural immersion',
+        'adventurer': 'Travel style: Adventurer - focus on outdoor activities, physical experiences, and adrenaline',
+        'foodie': 'Travel style: Foodie - culinary experiences should be the centerpiece of each day'
+      };
+      preferences.push(styleLabels[personalization.travelStyle] || `Travel style: ${personalization.travelStyle}`);
+    }
+
+    // Pace (1-5 scale)
+    if (personalization.pace !== undefined) {
+      const paceLabels = {
+        1: 'Trip pace: Very Relaxed - slow mornings, 2-3 activities max per day, lots of downtime',
+        2: 'Trip pace: Relaxed - comfortable pace, 3 activities per day, time to breathe',
+        3: 'Trip pace: Balanced - moderate pace, 3-4 activities per day, good mix',
+        4: 'Trip pace: Active - fuller days, 4-5 activities, efficient but not rushed',
+        5: 'Trip pace: Packed - maximize every hour, see everything possible, early starts and late finishes'
+      };
+      preferences.push(paceLabels[personalization.pace] || `Trip pace: ${personalization.pace}/5`);
+    }
+
+    // Interests
+    if (personalization.interests && personalization.interests.length > 0) {
+      const interestLabels = {
+        'history': 'history & heritage',
+        'art': 'art & galleries',
+        'architecture': 'architecture & design',
+        'nature': 'nature & outdoors',
+        'food': 'culinary experiences',
+        'wine': 'wine & vineyards',
+        'nightlife': 'nightlife & entertainment',
+        'shopping': 'shopping & markets',
+        'photography': 'photography spots',
+        'adventure': 'adventure activities',
+        'wellness': 'wellness & spa',
+        'local-culture': 'local culture & traditions',
+        'beaches': 'beaches & coastal areas',
+        'mountains': 'mountains & hiking',
+        'museums': 'museums & exhibits'
+      };
+      const interests = personalization.interests.map(i => interestLabels[i] || i).join(', ');
+      preferences.push(`Key interests: ${interests} - prioritize activities in these areas`);
+    }
+
+    // Dining preferences
+    if (personalization.diningStyle) {
+      const diningLabels = {
+        'street': 'Dining preference: Street food and casual local eateries - authentic, budget-friendly spots',
+        'casual': 'Dining preference: Casual restaurants - good food without formality',
+        'mix': 'Dining preference: Mix of everything - variety from casual to nice dinners',
+        'fine': 'Dining preference: Fine dining - upscale restaurants, Michelin-starred when available'
+      };
+      preferences.push(diningLabels[personalization.diningStyle] || `Dining style: ${personalization.diningStyle}`);
+    }
+
+    // Dietary restrictions
+    if (personalization.dietary && personalization.dietary.length > 0) {
+      preferences.push(`Dietary requirements: ${personalization.dietary.join(', ')} - ensure restaurant recommendations accommodate this`);
+    }
+
+    // Budget
+    if (personalization.budget) {
+      const budgetLabels = {
+        'budget': 'Budget level: Budget-conscious - prioritize free attractions, affordable eats, value accommodations',
+        'mid': 'Budget level: Mid-range - comfortable spending on good experiences without excess',
+        'luxury': 'Budget level: Luxury - premium experiences, 5-star accommodations, fine dining, VIP access'
+      };
+      preferences.push(budgetLabels[personalization.budget] || `Budget: ${personalization.budget}`);
+    }
+
+    // Accommodation preference
+    if (personalization.accommodation) {
+      const accomLabels = {
+        'budget': 'Accommodation: Budget - hostels, budget hotels, basic but clean',
+        'mid': 'Accommodation: Mid-range - comfortable hotels with good amenities',
+        'luxury': 'Accommodation: Luxury - 5-star hotels, boutique luxury properties',
+        'unique': 'Accommodation: Unique stays - interesting properties like historic hotels, unusual venues'
+      };
+      preferences.push(accomLabels[personalization.accommodation] || `Accommodation: ${personalization.accommodation}`);
+    }
+
+    // Accessibility needs
+    if (personalization.accessibility && personalization.accessibility.length > 0) {
+      preferences.push(`Accessibility needs: ${personalization.accessibility.join(', ')} - ensure venues and activities accommodate these requirements`);
+    }
+
+    // Additional preferences
+    if (personalization.avoidCrowds) {
+      preferences.push('IMPORTANT: Avoid crowded tourist spots - suggest early morning visits, off-peak times, or lesser-known alternatives');
+    }
+
+    if (personalization.preferOutdoor) {
+      preferences.push('Preference: Outdoor activities - prioritize open-air venues, gardens, terraces, and nature');
+    }
+
+    // Combine all preferences
+    if (preferences.length > 0) {
+      sections.push(`
+PERSONALIZATION PREFERENCES:
+${preferences.map(p => `• ${p}`).join('\n')}
+
+IMPORTANT: Use these preferences to tailor every recommendation. The traveler has specifically shared these details to get a personalized experience.`);
+    }
+
+    return sections.join('\n');
   }
 }
 

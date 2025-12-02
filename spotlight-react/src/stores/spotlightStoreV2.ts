@@ -33,6 +33,86 @@ export interface LandmarkStop {
   insertAfterCityIndex?: number;
 }
 
+// Travel style options
+export type TravelStyle = 'explorer' | 'relaxer' | 'culture' | 'adventurer' | 'foodie';
+
+// Dining style options
+export type DiningStyle = 'street' | 'casual' | 'mix' | 'fine';
+
+// Accommodation preference options
+export type AccommodationStyle = 'budget' | 'mid' | 'luxury' | 'unique';
+
+// Budget level for personalization
+export type PersonalizationBudget = 'budget' | 'mid' | 'luxury';
+
+// Trip occasion options
+export type TripOccasion =
+  | 'honeymoon'
+  | 'anniversary'
+  | 'birthday'
+  | 'graduation'
+  | 'retirement'
+  | 'babymoon'
+  | 'reunion'
+  | 'solo-adventure'
+  | 'girls-trip'
+  | 'guys-trip'
+  | 'family-vacation'
+  | 'just-because';
+
+// Interest categories for trip personalization
+export type PersonalizationInterest =
+  | 'history'
+  | 'art'
+  | 'architecture'
+  | 'nature'
+  | 'food'
+  | 'wine'
+  | 'nightlife'
+  | 'shopping'
+  | 'photography'
+  | 'adventure'
+  | 'wellness'
+  | 'local-culture'
+  | 'beaches'
+  | 'mountains'
+  | 'museums';
+
+// Personalization data for deeply customized routes
+export interface TripPersonalization {
+  // Free-form context from user
+  tripStory: string;
+
+  // Travel style (single select)
+  travelStyle?: TravelStyle;
+
+  // Pace (1-5 scale: 1 = very relaxed, 5 = packed)
+  pace?: number;
+
+  // Interests (multi-select)
+  interests?: PersonalizationInterest[];
+
+  // Dining preferences
+  diningStyle?: DiningStyle;
+  dietary?: string[];
+
+  // Accommodation preference
+  accommodation?: AccommodationStyle;
+
+  // Budget level
+  budget?: PersonalizationBudget;
+
+  // Accessibility needs (multi-select)
+  accessibility?: string[];
+
+  // Trip occasion
+  occasion?: TripOccasion;
+
+  // Additional preferences
+  avoidCrowds?: boolean;
+  preferOutdoor?: boolean;
+}
+
 export interface CityData {
   city: string | CityObject;
   coordinates: CityCoordinates;
@@ -64,6 +144,8 @@ export interface SpotlightRoute {
     recommendations: string;
     metrics: Record<string, any>;
   }>;
+  // Personalization data from user input
+  personalization?: TripPersonalization;
 }
 
 interface SpotlightStoreV2 {

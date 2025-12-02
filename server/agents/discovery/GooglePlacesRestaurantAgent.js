@@ -264,10 +264,11 @@ class GooglePlacesRestaurantAgent {
 
   /**
    * Calculate restaurant quality score
-   * NOW WITH AGENT PERSONALITY SCORING
+   * NOW WITH AGENT PERSONALITY SCORING AND PERSONALIZATION
    */
   calculateRestaurantScore(restaurant, preferences, mealType) {
     const agentType = preferences?.agentType || preferences?.travelStyle || 'best-overall';
+    const personalization = preferences?.personalization || {};
     let score = 0;
 
     // Rating (40 points)
@@ -277,8 +278,8 @@ class GooglePlacesRestaurantAgent {
 
     // Number of ratings - AGENT-SPECIFIC LOGIC
     if (restaurant.ratingCount) {
-      if (agentType === 'hidden-gems') {
-        // HIDDEN GEMS: Prefer fewer ratings (local secrets)
+      if (agentType === 'hidden-gems' || personalization.avoidCrowds) {
+        // HIDDEN GEMS or AVOID CROWDS: Prefer fewer ratings (local secrets)
         const hiddenScore = Math.max(0, 20 - Math.min(restaurant.ratingCount / 50, 1) * 20);
         score += hiddenScore;
         if (restaurant.ratingCount < 50) {
@@ -300,8 +301,9 @@ class GooglePlacesRestaurantAgent {
       score += 15;
     }
 
-    // Price match (10 points)
-    if (this.matchesBudget(restaurant.priceLevel, preferences.budget)) {
+    // Price match - check both preferences.budget and personalization.budget (10 points)
+    const effectiveBudget = preferences.budget || personalization.budget;
+    if (this.matchesBudget(restaurant.priceLevel, effectiveBudget)) {
       score += 10;
     }
 
@@ -326,7 +328,83 @@ class GooglePlacesRestaurantAgent {
       }
     }
 
+    // PERSONALIZATION BONUSES (up to 25 points)
+    score += this.calculatePersonalizationBonus(restaurant, personalization);
+
     return score;
+  }
+
+  /**
+   * Calculate personalization bonus for restaurant scoring
+   */
+  calculatePersonalizationBonus(restaurant, personalization) {
+    if (!personalization || Object.keys(personalization).length === 0) {
+      return 0;
+    }
+
+    let bonus = 0;
+
+    // Dining style preference (up to 15 points)
+    if (personalization.diningStyle) {
+      const styleScores = {
+        'street': { idealPriceLevel: 1, description: 'casual and cheap' },
+        'casual': { idealPriceLevel: 2, description: 'relaxed atmosphere' },
+        'mix': { idealPriceLevel: null, description: 'variety' }, // No preference
+        'fine': { idealPriceLevel: [3, 4], description: 'upscale' }
+      };
+
+      const style = styleScores[personalization.diningStyle];
+      if (style && style.idealPriceLevel) {
+        if (Array.isArray(style.idealPriceLevel)) {
+          if (style.idealPriceLevel.includes(restaurant.priceLevel)) {
+            bonus += 15;
+          }
+        } else if (restaurant.priceLevel === style.idealPriceLevel) {
+          bonus += 15;
+        } else if (Math.abs((restaurant.priceLevel || 2) - style.idealPriceLevel) === 1) {
+          bonus += 8; // Close match
+        }
+      }
+    }
+
+    // Budget alignment (5 points)
+    if (personalization.budget) {
+      const budgetPriceLevels = {
+        'budget': [1, 2],
+        'mid': [2, 3],
+        'luxury': [3, 4]
+      };
+      const acceptableLevels = budgetPriceLevels[personalization.budget] || [2, 3];
+      if (acceptableLevels.includes(restaurant.priceLevel)) {
+        bonus += 5;
+      }
+    }
+
+    // Occasion-based preferences (5 points)
+    if (personalization.occasion) {
+      const romanticOccasions = ['honeymoon', 'anniversary'];
+      const celebratoryOccasions = ['birthday', 'graduation', 'retirement'];
+      const familyOccasions = ['family-vacation', 'reunion'];
+
+      if (romanticOccasions.includes(personalization.occasion)) {
+        // Prefer higher-end, atmospheric restaurants for romantic occasions
+        if (restaurant.priceLevel >= 3 && restaurant.rating >= 4.0) {
+          bonus += 5;
+        }
+      } else if (celebratoryOccasions.includes(personalization.occasion)) {
+        // Prefer well-rated restaurants good for celebrations
+        if (restaurant.rating >= 4.2) {
+          bonus += 5;
+        }
+      } else if (familyOccasions.includes(personalization.occasion)) {
+        // Prefer mid-range family-friendly options
+        if (restaurant.priceLevel <= 3) {
+          bonus += 5;
+        }
+      }
+    }
+
+    return bonus;
   }
 
   /**
