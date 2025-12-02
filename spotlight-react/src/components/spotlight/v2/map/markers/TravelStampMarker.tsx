@@ -105,7 +105,10 @@ const TravelStampMarker = memo(({
       onClick={onClick}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
-      style={{ filter: `drop-shadow(0 4px 12px ${MAP_COLORS.markers.shadow})` }}
+      style={{
+        filter: `drop-shadow(0 4px 12px ${MAP_COLORS.markers.shadow})`,
+        border: '2px solid red', // DEBUG: outer container
+      }}
     >
       {/* Main stamp container */}
       <motion.div
@@ -113,6 +116,7 @@ const TravelStampMarker = memo(({
         animate={isExpanded ? 'expanded' : 'collapsed'}
         variants={containerVariants}
         className="relative"
+        style={{ border: '2px solid blue' }} // DEBUG: motion container
       >
         {/* Glow effect for selected state */}
         <AnimatePresence>
@@ -134,9 +138,9 @@ const TravelStampMarker = memo(({
         <motion.div
           className="relative overflow-hidden"
           style={{
-            backgroundColor: MAP_COLORS.markers.highlight,
+            backgroundColor: 'yellow', // DEBUG: stamp body
             borderRadius: MARKER_STYLE.city.borderRadius,
-            border: `${MARKER_STYLE.city.borderWidth}px solid ${MAP_COLORS.markers.border}`,
+            border: `${MARKER_STYLE.city.borderWidth}px solid green`, // DEBUG: green border
             boxShadow: `
               inset 0 0 0 1px rgba(196, 88, 48, 0.1),
               0 2px 8px ${MAP_COLORS.markers.shadow}
@@ -149,6 +153,7 @@ const TravelStampMarker = memo(({
             style={{
               width: '100%',
               height: isExpanded ? 80 : MARKER_STYLE.city.collapsedSize - MARKER_STYLE.city.borderWidth * 2,
+              backgroundColor: 'purple', // DEBUG: photo section
             }}
           >
             {/* Photo or placeholder */}
