@@ -346,6 +346,47 @@ const TriggerContent = ({
   </motion.div>
 );
 
+// Helper to get activities for a specific day
+const getDayActivities = (activities: any, dayNumber: number) => {
+  if (!activities) return [];
+
+  // Activities are stored as: [{day: 1, activities: [...]}, {day: 2, activities: [...]}]
+  if (Array.isArray(activities)) {
+    const dayObj = activities.find((a: any) => a.day === dayNumber);
+    if (dayObj?.activities && Array.isArray(dayObj.activities)) {
+      return dayObj.activities;
+    }
+  }
+
+  return [];
+};
+
+// Helper to get restaurants for a specific day
+const getDayRestaurants = (restaurants: any, dayNumber: number) => {
+  if (!restaurants) return [];
+
+  // Restaurants are stored as: [{day: 1, meals: {breakfast: {}, lunch: {}, dinner: {}}}]
+  if (Array.isArray(restaurants)) {
+    const dayObj = restaurants.find((r: any) => r.day === dayNumber);
+    if (dayObj?.meals) {
+      // Convert meals object to array with mealType
+      const result: any[] = [];
+      if (dayObj.meals.breakfast) {
+        result.push({ ...dayObj.meals.breakfast, mealType: 'breakfast' });
+      }
+      if (dayObj.meals.lunch) {
+        result.push({ ...dayObj.meals.lunch, mealType: 'lunch' });
+      }
+      if (dayObj.meals.dinner) {
+        result.push({ ...dayObj.meals.dinner, mealType: 'dinner' });
+      }
+      return result;
+    }
+  }
+
+  return [];
+};
+
 // Itinerary Content - The final view with day cards
 const ItineraryContent = ({ itinerary }: { itinerary: any }) => {
   // dayStructure can be EITHER an array OR an object with .days property
@@ -353,6 +394,11 @@ const ItineraryContent = ({ itinerary }: { itinerary: any }) => {
   const daysArray = Array.isArray(dayStructure)
     ? dayStructure
     : (Array.isArray(dayStructure?.days) ? dayStructure.days : []);
+
+  // Count total activities across all days
+  const totalActivities = daysArray.reduce((sum: number, _: any, idx: number) => {
+    return sum + getDayActivities(itinerary.activities, idx + 1).length;
+  }, 0);
 
   return (
     <motion.div
@@ -372,7 +418,7 @@ const ItineraryContent = ({ itinerary }: { itinerary: any }) => {
             Your Itinerary is Ready!
           </h3>
           <p className="text-sm text-[#8B7355]">
-            {daysArray.length} days of adventure await
+            {daysArray.length} days • {totalActivities} activities planned
           </p>
         </div>
       </div>
@@ -380,18 +426,24 @@ const ItineraryContent = ({ itinerary }: { itinerary: any }) => {
       {/* Day Cards */}
       <div className="space-y-4">
         {daysArray.length > 0 ? (
-          daysArray.map((day: any, index: number) => (
-            <EditorialDayCard
-              key={day.date || index}
-              day={{
-                ...day,
-                city: day.location || day.city || 'Day ' + (index + 1)
-              }}
-              dayNumber={index + 1}
-              activities={itinerary.activities?.[day.location || day.city] || []}
-              restaurants={itinerary.restaurants?.[day.location || day.city] || []}
-            />
-          ))
+          daysArray.map((day: any, index: number) => {
+            const dayNumber = index + 1;
+            const dayActivities = getDayActivities(itinerary.activities, dayNumber);
+            const dayRestaurants = getDayRestaurants(itinerary.restaurants, dayNumber);
+
+            return (
+              <EditorialDayCard
+                key={day.date || index}
+                day={{
+                  ...day,
+                  city: day.location || day.city || 'Day ' + dayNumber
+                }}
+                dayNumber={dayNumber}
+                activities={dayActivities}
+                restaurants={dayRestaurants}
+              />
+            );
+          })
         ) : (
           <div className="text-center py-8 text-[#8B7355]">
             <p>No day structure available yet.</p>
