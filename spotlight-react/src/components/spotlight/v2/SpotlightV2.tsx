@@ -10,7 +10,8 @@ import SpotlightHeader from './SpotlightHeader';
 import { EditorialItineraryPanel } from '../../itinerary/editorial';
 import { CommandBar } from './CommandBar';
 import { CityReplacementSheet } from './CityReplacementSheet';
-import { Loader2, Users, CalendarDays, Command } from 'lucide-react';
+import { ConstraintChangeSheet } from './ConstraintChangeSheet';
+import { Loader2, Users, CalendarDays, Command, Clock } from 'lucide-react';
 import { CollaborationPanel } from '../../collaboration/CollaborationPanel';
 import { CompanionPanel, CompanionTab, ProactiveBubble, MobileCompanionDrawer } from '../../companion/CompanionPanel';
 import { useCompanion } from '../../../contexts/CompanionProvider';
@@ -40,6 +41,10 @@ const SpotlightV2 = () => {
     cityIndex: number;
     cityName: string;
   }>({ isOpen: false, cityIndex: -1, cityName: '' });
+  const [constraintSheet, setConstraintSheet] = useState<{
+    isOpen: boolean;
+    type: 'duration' | 'budget' | 'travelers' | 'dates';
+  }>({ isOpen: false, type: 'duration' });
 
   // Companion state
   const {
@@ -869,27 +874,57 @@ const SpotlightV2 = () => {
         onReplace={handleReplaceCity}
       />
 
-      {/* Floating Cmd+K Button - Bottom right corner */}
-      <motion.button
-        onClick={() => setIsCommandBarOpen(true)}
-        initial={{ opacity: 0, scale: 0.8 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 1 }}
-        className="fixed bottom-6 right-6 z-40 hidden md:flex items-center gap-2 px-4 py-2.5 rounded-xl shadow-lg transition-all"
-        style={{
-          background: 'linear-gradient(135deg, #1A1814 0%, #252220 100%)',
-          border: '1px solid rgba(212, 168, 83, 0.3)',
-          boxShadow: '0 4px 20px rgba(0,0,0,0.3), 0 0 0 1px rgba(212, 168, 83, 0.1)'
-        }}
-        whileHover={{ scale: 1.05, boxShadow: '0 6px 24px rgba(0,0,0,0.4), 0 0 20px rgba(212, 168, 83, 0.2)' }}
-        whileTap={{ scale: 0.98 }}
-      >
-        <Command className="w-4 h-4 text-[#D4A853]" />
-        <span className="text-sm font-medium text-[#F5F0EB]">Command</span>
-        <kbd className="ml-1 px-1.5 py-0.5 text-xs font-medium rounded bg-[#2D2A27] text-[#9B8E82] border border-[#3D3835]">
-          ⌘K
-        </kbd>
-      </motion.button>
+      {/* Constraint Change Sheet - Adapt trip when constraints change */}
+      <ConstraintChangeSheet
+        isOpen={constraintSheet.isOpen}
+        onClose={() => setConstraintSheet({ isOpen: false, type: 'duration' })}
+        initialType={constraintSheet.type}
+      />
+
+      {/* Floating Action Buttons - Bottom right corner */}
+      <div className="fixed bottom-6 right-6 z-40 hidden md:flex flex-col gap-2">
+        {/* Adapt Trip Button */}
+        <motion.button
+          onClick={() => setConstraintSheet({ isOpen: true, type: 'duration' })}
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 1.1 }}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl shadow-lg transition-all"
+          style={{
+            background: 'linear-gradient(135deg, #C45830 0%, #D96A42 100%)',
+            border: '1px solid rgba(196, 88, 48, 0.3)',
+            boxShadow: '0 4px 20px rgba(196, 88, 48, 0.3)'
+          }}
+          whileHover={{ scale: 1.05, boxShadow: '0 6px 24px rgba(196, 88, 48, 0.4)' }}
+          whileTap={{ scale: 0.98 }}
+          title="Adapt your trip (change duration, budget, etc.)"
+        >
+          <Clock className="w-4 h-4 text-white" />
+          <span className="text-sm font-medium text-white">Adapt Trip</span>
+        </motion.button>
+
+        {/* Command Button */}
+        <motion.button
+          onClick={() => setIsCommandBarOpen(true)}
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 1 }}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl shadow-lg transition-all"
+          style={{
+            background: 'linear-gradient(135deg, #1A1814 0%, #252220 100%)',
+            border: '1px solid rgba(212, 168, 83, 0.3)',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.3), 0 0 0 1px rgba(212, 168, 83, 0.1)'
+          }}
+          whileHover={{ scale: 1.05, boxShadow: '0 6px 24px rgba(0,0,0,0.4), 0 0 20px rgba(212, 168, 83, 0.2)' }}
+          whileTap={{ scale: 0.98 }}
+        >
+          <Command className="w-4 h-4 text-[#D4A853]" />
+          <span className="text-sm font-medium text-[#F5F0EB]">Command</span>
+          <kbd className="ml-1 px-1.5 py-0.5 text-xs font-medium rounded bg-[#2D2A27] text-[#9B8E82] border border-[#3D3835]">
+            ⌘K
+          </kbd>
+        </motion.button>
+      </div>
 
     </div>
   );
