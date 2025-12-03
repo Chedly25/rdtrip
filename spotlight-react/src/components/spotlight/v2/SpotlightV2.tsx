@@ -588,17 +588,17 @@ const SpotlightV2 = () => {
           onSave={() => setShowSaveModal(true)}
         />
 
-        {/* Personalized Intro Banner - Shows when route has AI-generated personalization */}
+        {/* Personalized Intro Card - Compact floating notification */}
         <AnimatePresence>
           {hasPersonalizedIntro && route?.personalizedIntro && (
             <motion.div
-              initial={{ opacity: 0, y: -20 }}
+              initial={{ opacity: 0, y: -16 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="absolute top-16 left-0 right-0 z-30"
+              exit={{ opacity: 0, y: -16 }}
+              className="absolute top-[68px] left-0 z-30 max-w-md"
               style={{
-                // Leave space for companion panel on desktop
-                right: isPanelExpanded ? '340px' : '0',
+                // Account for companion panel on desktop
+                maxWidth: isPanelExpanded ? 'calc(100% - 360px)' : '420px',
               }}
             >
               <PersonalizedIntroBanner
