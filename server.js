@@ -3168,6 +3168,238 @@ For confidence, be conservative - only high confidence if command is very clear.
   }
 });
 
+/**
+ * POST /api/route/handle-constraint-change
+ * Handle trip-wide constraint changes (duration, budget, preferences, dates)
+ * Returns intelligent suggestions for adapting the route
+ */
+app.post('/api/route/handle-constraint-change', async (req, res) => {
+  try {
+    const { constraintType, change, routeContext, personalization } = req.body;
+
+    console.log('🔄 Handling constraint change:', constraintType, change);
+
+    if (!constraintType || !routeContext) {
+      return res.status(400).json({
+        error: 'Missing constraintType or routeContext'
+      });
+    }
+
+    // Build prompt for AI to suggest adaptations
+    const cityList = routeContext.cities
+      .map((c, i) => `${i + 1}. ${c.name} (${c.nights} nights)`)
+      .join('\n');
+
+    const totalNights = routeContext.cities.reduce((sum, c) => sum + c.nights, 0);
+    const totalCities = routeContext.cities.length;
+
+    let constraintPrompt = '';
+    let suggestionType = '';
+
+    switch (constraintType) {
+      case 'duration':
+        const dayChange = change.days || 0;
+        suggestionType = dayChange < 0 ? 'shorten' : 'extend';
+        constraintPrompt = `
+The traveler needs to ${dayChange < 0 ? 'shorten' : 'extend'} their trip by ${Math.abs(dayChange)} day${Math.abs(dayChange) !== 1 ? 's' : ''}.
+
+Current trip: ${totalNights} nights across ${totalCities} cities
+${cityList}
+
+${dayChange < 0 ? `
+Suggest the BEST ways to reduce ${Math.abs(dayChange)} night(s):
+1. Which city/cities to remove entirely (if significant reduction needed)
+2. Which cities to reduce nights in (and by how much)
+3. Consider: travel time between cities, must-see highlights, logical flow
+
+Prioritize keeping cities that are:
+- Essential for the route flow (don't create huge detours)
+- Have the most unique attractions
+- Match user preferences
+` : `
+Suggest the BEST ways to add ${Math.abs(dayChange)} night(s):
+1. Which existing cities deserve more time
+2. Any new cities that could be added (consider route geography)
+3. Consider: hidden gems near the route, day trip potential
+`}`;
+        break;
+
+      case 'budget':
+        const budgetChange = change.direction || 'tighter';
+        suggestionType = budgetChange === 'tighter' ? 'budget_down' : 'budget_up';
+        constraintPrompt = `
+The traveler's budget is now ${budgetChange === 'tighter' ? 'tighter' : 'more generous'}.
+
+Current trip: ${totalNights} nights across ${totalCities} cities
+${cityList}
+
+${budgetChange === 'tighter' ? `
+Suggest ways to make this trip more budget-friendly:
+1. Cheaper alternative cities (similar vibe, lower cost)
+2. Cities to reduce nights in (expensive destinations)
+3. General tips for the route
+` : `
+Suggest ways to enhance this trip with the increased budget:
+1. Upgrade opportunities (cities worth more time)
+2. Premium destinations to add
+3. Cities where luxury experiences shine
+`}`;
+        break;
+
+      case 'travelers':
+        const travelerChange = change.description || 'traveling with kids now';
+        suggestionType = 'traveler_change';
+        constraintPrompt = `
+The travel group has changed: ${travelerChange}
+
+Current trip: ${totalNights} nights across ${totalCities} cities
+${cityList}
+
+Analyze which parts of this route might need adjustment:
+1. Flag any cities that might not be suitable
+2. Suggest alternatives or adjustments
+3. Recommend changes to night distribution
+4. Note any activities that might need reconsideration`;
+        break;
+
+      case 'dates':
+        const newSeason = change.season || change.month || 'different time';
+        suggestionType = 'date_change';
+        constraintPrompt = `
+The trip is moving to: ${newSeason}
+
+Current trip: ${totalNights} nights across ${totalCities} cities
+${cityList}
+
+Consider seasonal implications:
+1. Weather impact on each destination
+2. Any cities to avoid during this time
+3. Cities that become better during this time
+4. Special events or considerations`;
+        break;
+
+      default:
+        return res.status(400).json({
+          error: `Unknown constraint type: ${constraintType}`
+        });
+    }
+
+    // Add personalization context if available
+    const personalizationContext = personalization ? `
+
+User preferences:
+- Trip style: ${personalization.travelStyle || 'Not specified'}
+- Interests: ${personalization.interests?.join(', ') || 'Not specified'}
+- Occasion: ${personalization.occasion || 'General travel'}
+- Pace: ${personalization.pace || 'Moderate'}
+` : '';
+
+    const fullPrompt = constraintPrompt + personalizationContext + `
+
+IMPORTANT: Respond with a JSON object containing:
+{
+  "summary": "One sentence explaining the recommended approach",
+  "impact": {
+    "nightsChange": number (positive or negative),
+    "citiesAffected": number,
+    "estimatedSavings": string (for budget) or null
+  },
+  "suggestions": [
+    {
+      "type": "remove_city" | "reduce_nights" | "add_nights" | "replace_city" | "add_city" | "reorder" | "tip",
+      "priority": "high" | "medium" | "low",
+      "cityName": string or null,
+      "cityIndex": number or null,
+      "value": any (nights change, replacement city name, etc),
+      "reason": "Why this change helps",
+      "tradeoff": "What you lose/gain"
+    }
+  ],
+  "alternativeApproach": {
+    "summary": "A different way to handle this",
+    "suggestions": [...same format...]
+  }
+}
+
+Be specific and actionable. Max 5 suggestions per approach.`;
+
+    // Call Perplexity API for intelligent suggestions
+    const perplexityResponse = await fetch('https://api.perplexity.ai/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.PERPLEXITY_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'llama-3.1-sonar-small-128k-online',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a travel planning expert. Provide practical, specific suggestions for adapting travel itineraries. Always respond with valid JSON only, no markdown.'
+          },
+          {
+            role: 'user',
+            content: fullPrompt
+          }
+        ],
+        temperature: 0.3,
+        max_tokens: 1500
+      })
+    });
+
+    if (!perplexityResponse.ok) {
+      throw new Error(`Perplexity API error: ${perplexityResponse.status}`);
+    }
+
+    const perplexityData = await perplexityResponse.json();
+    const aiResponse = perplexityData.choices[0]?.message?.content || '{}';
+
+    // Parse AI response
+    let parsed;
+    try {
+      // Clean response - remove markdown code blocks if present
+      const cleanedResponse = aiResponse
+        .replace(/```json\s*/gi, '')
+        .replace(/```\s*/gi, '')
+        .trim();
+      parsed = JSON.parse(cleanedResponse);
+    } catch (parseError) {
+      console.error('Failed to parse AI response:', aiResponse);
+      // Provide fallback response
+      parsed = {
+        summary: 'Unable to generate specific suggestions. Please try adjusting manually.',
+        impact: { nightsChange: 0, citiesAffected: 0 },
+        suggestions: [],
+        alternativeApproach: null
+      };
+    }
+
+    // Add metadata
+    const result = {
+      constraintType,
+      suggestionType,
+      originalRequest: change,
+      ...parsed,
+      metadata: {
+        originalNights: totalNights,
+        originalCities: totalCities,
+        processedAt: new Date().toISOString()
+      }
+    };
+
+    console.log(`✅ Generated ${parsed.suggestions?.length || 0} suggestions for ${constraintType} change`);
+
+    res.json(result);
+
+  } catch (error) {
+    console.error('❌ Constraint change handling failed:', error);
+    res.status(500).json({
+      error: error.message,
+      suggestions: []
+    });
+  }
+});
+
 // Helper: Calculate total route distance using Haversine
 function calculateTotalRouteDistance(route) {
   const { calculateDistance } = require('./utils/cityOptimization');

@@ -433,11 +433,11 @@ Features:
 - [ ] 🆕 City Replacement bottom sheet
 - [ ] 🆕 Route modification history tracking
 - [ ] 🆕 Natural Language Command Parser
-- [ ] 🆕 Constraint Change Handler
-- [ ] 🆕 Command Bar (Cmd+K)
+- [x] ✅ Constraint Change Handler (ConstraintChangeSheet.tsx + API endpoint)
+- [x] ✅ Command Bar (Cmd+K) (CommandBar.tsx with AI parsing)
 - [ ] 🆕 Modification Preview with before/after
 - [ ] 🆕 Smart Suggestions panel
-- [ ] 🆕 Night redistribution UI
+- [x] ✅ Night redistribution UI (NightEditor.tsx)
 - [ ] 🆕 Itinerary Modification API
 - [ ] 🆕 Activity Replacement Agent
 - [ ] 🆕 Itinerary Item Actions
@@ -1729,7 +1729,17 @@ Based on existing features, here's the recommended order:
    - Clickable nights display on city cards
    - Apply changes with smooth animations
 
-7. **Constraint Change Handler**
+7. **Constraint Change Handler** ✅ COMPLETE
+   - "Adapt Trip" button in SpotlightV2 header
+   - Beautiful bottom sheet with tabbed interface (Duration/Budget/Travelers/Dates)
+   - Duration: Visual +/- days selector with trip shortening/extension indicators
+   - Budget: Tighter/Generous toggle with spending direction
+   - Travelers: Text input for traveler changes
+   - Dates: Text input for date adjustments
+   - Backend API `/api/route/handle-constraint-change` with Perplexity AI
+   - AI-generated suggestions with priority badges
+   - Apply individual suggestions with visual feedback
+   - Wanderlust Editorial design aesthetic
 
 ---
 
