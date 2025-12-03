@@ -1,7 +1,8 @@
 import { motion } from 'framer-motion';
 import { Moon, MapPin, Utensils, ChevronRight, Minus, Plus, Star, X, Sparkles } from 'lucide-react';
-import { useSpotlightStoreV2, type CityData } from '../../../stores/spotlightStoreV2';
+import { useSpotlightStoreV2, type CityData, type Activity } from '../../../stores/spotlightStoreV2';
 import { getCityHighlight } from '../../../utils/cityHighlights';
+import { WhyThisCard } from '../v2/WhyThisCard';
 
 interface SelectedCityPanelProps {
   city: CityData;
@@ -108,33 +109,46 @@ const SelectedCityPanel = ({
             Highlights
           </h4>
           <div className="space-y-2">
-            {topActivities.map((activity: any, index: number) => (
+            {topActivities.map((activity: Activity, index: number) => (
               <motion.div
                 key={index}
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.05 }}
-                className="flex items-center gap-3 bg-white rounded-xl px-3 py-2.5 shadow-sm border border-[#E8DFD3]"
+                className="bg-white rounded-xl px-3 py-2.5 shadow-sm border border-[#E8DFD3]"
               >
-                <div className="w-8 h-8 rounded-lg bg-[#FFF0EB] flex items-center justify-center flex-shrink-0">
-                  <MapPin className="w-4 h-4 text-[#C45830]" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-[#2C2417] truncate">
-                    {activity.name || activity}
-                  </p>
-                  {activity.description && (
-                    <p className="text-xs text-[#8B7355] truncate">
-                      {activity.description}
-                    </p>
-                  )}
-                </div>
-                {activity.rating && (
-                  <div className="flex items-center gap-0.5 text-xs text-[#D4A853]">
-                    <Star className="w-3 h-3 fill-[#D4A853] text-[#D4A853]" />
-                    <span>{activity.rating}</span>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-[#FFF0EB] flex items-center justify-center flex-shrink-0">
+                    <MapPin className="w-4 h-4 text-[#C45830]" />
                   </div>
-                )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-[#2C2417] truncate">
+                      {activity.name || String(activity)}
+                    </p>
+                    {activity.description && (
+                      <p className="text-xs text-[#8B7355] truncate">
+                        {activity.description}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {/* WhyThisCard badge - shows when activity has match reasons */}
+                    {activity.matchReasons && activity.matchReasons.length > 0 && (
+                      <WhyThisCard
+                        matchReasons={activity.matchReasons}
+                        matchScore={activity.matchScore}
+                        placeName={activity.name || 'this place'}
+                        variant="badge"
+                      />
+                    )}
+                    {activity.rating && (
+                      <div className="flex items-center gap-0.5 text-xs text-[#D4A853]">
+                        <Star className="w-3 h-3 fill-[#D4A853] text-[#D4A853]" />
+                        <span>{activity.rating}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </motion.div>
             ))}
           </div>

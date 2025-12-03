@@ -14,6 +14,7 @@ import { CompanionPanel, CompanionTab, ProactiveBubble, MobileCompanionDrawer } 
 import { useCompanion } from '../../../contexts/CompanionProvider';
 import { useAgent } from '../../../contexts/AgentProvider';
 import { getStoredItineraryId } from '../../../hooks/useItineraryGeneration';
+import { PersonalizedIntroBanner } from './PersonalizedIntroBanner';
 
 const SpotlightV2 = () => {
   // Get routeId from query params (?routeId=123) not path params
@@ -369,7 +370,11 @@ const SpotlightV2 = () => {
       nightAllocations: data.nightAllocations || {},
       agentResults: data.agentResults || [],
       // Include personalization data if present
-      personalization: data.personalization || undefined
+      personalization: data.personalization || data.preferences?.personalization || undefined,
+      // Include AI-generated personalization content (from UnifiedRouteAgent)
+      personalizedIntro: data.personalizedIntro || undefined,
+      tripStyleProfile: data.tripStyleProfile || undefined,
+      tripNarrative: data.tripNarrative || undefined,
     };
   };
 
@@ -557,6 +562,13 @@ const SpotlightV2 = () => {
     }
   };
 
+  // Calculate totals for the intro banner
+  const totalDays = (route?.cities?.reduce((sum, city) => sum + (city.nights || 0), 0) || 0) + 1;
+  const totalCities = route?.cities?.length || 0;
+
+  // Check if we should show the personalized intro banner
+  const hasPersonalizedIntro = route?.personalizedIntro?.headline;
+
   return (
     <div className="h-screen w-screen overflow-hidden bg-[#FFFBF5] relative flex">
       {/* Main Content Area - Takes remaining space when companion is open */}
@@ -566,6 +578,30 @@ const SpotlightV2 = () => {
           onGenerateItinerary={handleGenerateItinerary}
           onSave={() => setShowSaveModal(true)}
         />
+
+        {/* Personalized Intro Banner - Shows when route has AI-generated personalization */}
+        <AnimatePresence>
+          {hasPersonalizedIntro && route?.personalizedIntro && (
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="absolute top-16 left-0 right-0 z-30"
+              style={{
+                // Leave space for companion panel on desktop
+                right: isPanelExpanded ? '340px' : '0',
+              }}
+            >
+              <PersonalizedIntroBanner
+                intro={route.personalizedIntro}
+                tripStyleProfile={route.tripStyleProfile}
+                tripNarrative={route.tripNarrative}
+                totalDays={totalDays}
+                totalCities={totalCities}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Map - Fullscreen hero element */}
         <MapViewV2 />

@@ -15,9 +15,10 @@ import {
   Cloud,
   Thermometer,
 } from 'lucide-react';
-import { useSpotlightStoreV2 } from '../../../stores/spotlightStoreV2';
+import { useSpotlightStoreV2, type Activity, type Restaurant } from '../../../stores/spotlightStoreV2';
 import { Button, NightStepper, Badge } from '../../ui';
 import { fetchCityImage } from '../../../services/cityImages';
+import { WhyThisCard } from '../v2/WhyThisCard';
 
 interface CityDetailModalProps {
   cityIndex: number | null;
@@ -237,23 +238,38 @@ const CityDetailModal = ({ cityIndex, onClose }: CityDetailModalProps) => {
                     Top Activities
                   </h3>
                   <div className="space-y-3">
-                    {city.activities.slice(0, 5).map((activity: any, index: number) => (
+                    {city.activities.slice(0, 5).map((activity: Activity, index: number) => (
                       <div
                         key={index}
-                        className="bg-rui-grey-2 rounded-rui-12 p-4 flex items-center justify-between"
+                        className="bg-rui-grey-2 rounded-rui-12 p-4"
                       >
-                        <div>
-                          <p className="text-emphasis-2 text-rui-black">{activity.name || activity}</p>
-                          {activity.description && (
-                            <p className="text-body-3 text-rui-grey-50 mt-1 line-clamp-1">
-                              {activity.description}
-                            </p>
-                          )}
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-emphasis-2 text-rui-black">{activity.name || String(activity)}</p>
+                            {activity.description && (
+                              <p className="text-body-3 text-rui-grey-50 mt-1 line-clamp-2">
+                                {activity.description}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            {activity.rating && (
+                              <div className="flex items-center gap-1">
+                                <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                                <span className="text-emphasis-3 text-rui-black">{activity.rating}</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                        {activity.rating && (
-                          <div className="flex items-center gap-1">
-                            <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                            <span className="text-emphasis-3 text-rui-black">{activity.rating}</span>
+                        {/* WhyThisCard inline - shows when activity has match reasons */}
+                        {activity.matchReasons && activity.matchReasons.length > 0 && (
+                          <div className="mt-3">
+                            <WhyThisCard
+                              matchReasons={activity.matchReasons}
+                              matchScore={activity.matchScore}
+                              placeName={activity.name || 'this place'}
+                              variant="inline"
+                            />
                           </div>
                         )}
                       </div>
@@ -270,21 +286,36 @@ const CityDetailModal = ({ cityIndex, onClose }: CityDetailModalProps) => {
                     Recommended Restaurants
                   </h3>
                   <div className="space-y-3">
-                    {city.restaurants.slice(0, 5).map((restaurant: any, index: number) => (
+                    {city.restaurants.slice(0, 5).map((restaurant: Restaurant, index: number) => (
                       <div
                         key={index}
-                        className="bg-rui-grey-2 rounded-rui-12 p-4 flex items-center justify-between"
+                        className="bg-rui-grey-2 rounded-rui-12 p-4"
                       >
-                        <div>
-                          <p className="text-emphasis-2 text-rui-black">{restaurant.name || restaurant}</p>
-                          {restaurant.cuisine && (
-                            <p className="text-body-3 text-rui-grey-50 mt-1">{restaurant.cuisine}</p>
-                          )}
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-emphasis-2 text-rui-black">{restaurant.name || String(restaurant)}</p>
+                            {restaurant.cuisine && (
+                              <p className="text-body-3 text-rui-grey-50 mt-1">{restaurant.cuisine}</p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            {restaurant.rating && (
+                              <div className="flex items-center gap-1">
+                                <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                                <span className="text-emphasis-3 text-rui-black">{restaurant.rating}</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                        {restaurant.rating && (
-                          <div className="flex items-center gap-1">
-                            <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                            <span className="text-emphasis-3 text-rui-black">{restaurant.rating}</span>
+                        {/* WhyThisCard inline - shows when restaurant has match reasons */}
+                        {restaurant.matchReasons && restaurant.matchReasons.length > 0 && (
+                          <div className="mt-3">
+                            <WhyThisCard
+                              matchReasons={restaurant.matchReasons}
+                              matchScore={restaurant.matchScore}
+                              placeName={restaurant.name || 'this restaurant'}
+                              variant="inline"
+                            />
                           </div>
                         )}
                       </div>
