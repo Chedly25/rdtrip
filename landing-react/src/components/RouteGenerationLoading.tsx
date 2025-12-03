@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Loader2, Check, Clock, Search, MapPin, Calendar, Sparkles, CheckCircle, Route, Compass } from 'lucide-react'
+import { Loader2, Check, Clock, Search, MapPin, Calendar, Sparkles, CheckCircle, Route, Compass, Heart, Coffee } from 'lucide-react'
 import type { TripPreferences } from '../types'
 import { AVAILABLE_INTERESTS } from '../types'
 
@@ -11,6 +11,8 @@ interface RouteGenerationLoadingProps {
     currentAgent: string | null
     percentComplete: number
     estimatedTimeRemaining: number
+    phase?: string // Current phase from backend
+    message?: string // Current message from backend
   }
   destination: string
   preferences: TripPreferences
@@ -19,45 +21,70 @@ interface RouteGenerationLoadingProps {
 // Warm editorial easing
 const warmEasing = [0.23, 1, 0.32, 1] as const
 
-// Workflow phases for unified generation
+// Workflow phases for unified generation (matches backend phases)
 const workflowPhases = [
   {
     id: 'research',
     name: 'Research',
     icon: Search,
-    description: 'Analyzing the route corridor and options'
+    description: 'Analyzing the route corridor and options',
+    color: '#C45830' // Terracotta
   },
   {
     id: 'discovery',
     name: 'Discovery',
     icon: MapPin,
-    description: 'Finding perfect stops based on your interests'
+    description: 'Finding perfect stops based on your interests',
+    color: '#D4A853' // Golden
   },
   {
     id: 'planning',
     name: 'Planning',
     icon: Calendar,
-    description: 'Optimizing route order and timing'
+    description: 'Optimizing route order and timing',
+    color: '#6B8E7B' // Sage green
   },
   {
     id: 'enrichment',
     name: 'Enrichment',
-    icon: Sparkles,
-    description: 'Adding activities, restaurants, and hotels'
+    icon: Coffee,
+    description: 'Adding activities, restaurants, and hotels',
+    color: '#8B7355' // Warm brown
   },
   {
     id: 'validation',
     name: 'Validation',
     icon: CheckCircle,
-    description: 'Verifying feasibility and quality'
+    description: 'Verifying feasibility and quality',
+    color: '#5B6E8C' // Dusty blue
   },
   {
     id: 'optimization',
     name: 'Optimization',
     icon: Route,
-    description: 'Final refinements for your perfect trip'
+    description: 'Final refinements for your journey',
+    color: '#C45830' // Terracotta
+  },
+  {
+    id: 'personalizing',
+    name: 'Personalizing',
+    icon: Heart,
+    description: 'Creating your personalized story',
+    color: '#D4A853' // Golden
   }
 ]
+
+// Map phase string to index
+const phaseToIndex: Record<string, number> = {
+  'research': 0,
+  'discovery': 1,
+  'planning': 2,
+  'enrichment': 3,
+  'validation': 4,
+  'optimization': 5,
+  'personalizing': 6,
+  'completed': 7
+}
 
 // Fun facts about destinations and travel
 const travelFacts = [
@@ -99,11 +126,18 @@ export function RouteGenerationLoading({ progress, destination, preferences }: R
     .map((i) => AVAILABLE_INTERESTS.find((ai) => ai.id === i.id)?.label || i.id)
     .join(', ')
 
-  // Determine current phase based on progress
-  const currentPhaseIndex = Math.min(
-    Math.floor((progress.percentComplete / 100) * workflowPhases.length),
-    workflowPhases.length - 1
-  )
+  // Determine current phase based on backend phase or fall back to percentage
+  const currentPhaseIndex = progress.phase
+    ? (phaseToIndex[progress.phase] ?? Math.min(
+        Math.floor((progress.percentComplete / 100) * workflowPhases.length),
+        workflowPhases.length - 1
+      ))
+    : Math.min(
+        Math.floor((progress.percentComplete / 100) * workflowPhases.length),
+        workflowPhases.length - 1
+      )
+
+  // Note: Each phase has its own color applied dynamically in the render loop
 
   return (
     <motion.div
@@ -180,12 +214,13 @@ export function RouteGenerationLoading({ progress, destination, preferences }: R
           </div>
         </div>
 
-        {/* Workflow Phases - Editorial card style */}
+        {/* Workflow Phases - Editorial card style with dynamic colors */}
         <div className="mb-8 space-y-3">
           {workflowPhases.map((phase, index) => {
             const isCompleted = index < currentPhaseIndex
             const isCurrent = index === currentPhaseIndex
             const Icon = phase.icon
+            const phaseColor = phase.color || '#C45830'
 
             return (
               <motion.div
@@ -197,22 +232,25 @@ export function RouteGenerationLoading({ progress, destination, preferences }: R
                   duration: 0.3,
                   ease: warmEasing
                 }}
+                style={{
+                  borderColor: isCurrent ? phaseColor : isCompleted ? `${phaseColor}50` : undefined,
+                  backgroundColor: isCompleted ? `${phaseColor}10` : undefined
+                }}
                 className={`flex items-center p-4 rounded-rui-16 border transition-all duration-300 ${
                   isCompleted
-                    ? 'border-rui-accent/30 bg-rui-accent-light'
+                    ? ''
                     : isCurrent
-                    ? 'border-rui-accent bg-rui-white shadow-rui-2'
+                    ? 'bg-rui-white shadow-rui-2'
                     : 'border-rui-grey-8 bg-rui-grey-2'
                 }`}
               >
-                {/* Icon/Status */}
-                <div className={`flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-rui-12 mr-4 transition-all ${
-                  isCompleted
-                    ? 'bg-rui-accent'
-                    : isCurrent
-                    ? 'bg-gradient-to-br from-rui-accent to-[#D66842]'
-                    : 'bg-rui-grey-10'
-                }`}>
+                {/* Icon/Status - Dynamic color per phase */}
+                <div
+                  className="flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-rui-12 mr-4 transition-all"
+                  style={{
+                    backgroundColor: isCompleted || isCurrent ? phaseColor : 'var(--rui-color-grey-10)'
+                  }}
+                >
                   {isCompleted ? (
                     <motion.div
                       initial={{ scale: 0, rotate: -180 }}
@@ -236,16 +274,18 @@ export function RouteGenerationLoading({ progress, destination, preferences }: R
                 {/* Phase Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2.5">
-                    <span className={`text-emphasis-1 transition-colors ${
-                      isCompleted ? 'text-rui-accent' : isCurrent ? 'text-rui-black' : 'text-rui-grey-50'
-                    }`}>
+                    <span
+                      className="text-emphasis-1 transition-colors"
+                      style={{ color: isCompleted ? phaseColor : isCurrent ? 'var(--rui-color-black)' : 'var(--rui-color-grey-50)' }}
+                    >
                       {phase.name}
                     </span>
                     {isCompleted && (
                       <motion.span
                         initial={{ opacity: 0, scale: 0.8 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className="text-body-3 font-medium text-rui-accent bg-rui-accent/10 px-2.5 py-0.5 rounded-full"
+                        className="text-body-3 font-medium px-2.5 py-0.5 rounded-full"
+                        style={{ color: phaseColor, backgroundColor: `${phaseColor}15` }}
                       >
                         Complete
                       </motion.span>
@@ -259,7 +299,8 @@ export function RouteGenerationLoading({ progress, destination, preferences }: R
                       transition={{ duration: 0.2 }}
                       className="text-body-2 text-rui-grey-50 mt-1"
                     >
-                      {phase.description}
+                      {/* Use backend message if available, otherwise show static description */}
+                      {progress.message || phase.description}
                     </motion.p>
                   )}
                 </div>

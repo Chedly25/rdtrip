@@ -16,6 +16,7 @@ import { useAgent } from '../../../contexts/AgentProvider';
 import { getStoredItineraryId } from '../../../hooks/useItineraryGeneration';
 import { PersonalizedIntroBanner } from './PersonalizedIntroBanner';
 import { PersonalizationBadge } from './PersonalizationBadge';
+import { FeatureTour, MarketplacePrompt } from '../../onboarding';
 
 const SpotlightV2 = () => {
   // Get routeId from query params (?routeId=123) not path params
@@ -733,6 +734,15 @@ const SpotlightV2 = () => {
         isOpen={mobileCompanionOpen}
         onOpen={() => setMobileCompanionOpen(true)}
         onClose={() => setMobileCompanionOpen(false)}
+      />
+
+      {/* Feature Tour - Shows for first-time users */}
+      <FeatureTour />
+
+      {/* Marketplace Prompt - Shows after delay for discovery */}
+      <MarketplacePrompt
+        delay={10000}
+        className="fixed bottom-[300px] left-4 z-30"
       />
 
     </div>

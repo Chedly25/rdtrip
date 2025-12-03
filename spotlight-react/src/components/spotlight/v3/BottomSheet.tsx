@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { motion, useMotionValue, useTransform, animate, type PanInfo } from 'framer-motion';
-import { Plus, ChevronRight, Compass } from 'lucide-react';
+import { motion, useMotionValue, useTransform, animate, type PanInfo, AnimatePresence } from 'framer-motion';
+import { Plus, ChevronRight, Compass, MapPin, Users, Receipt } from 'lucide-react';
 import {
   DndContext,
   closestCenter,
@@ -24,6 +24,10 @@ import { getCityHighlight } from '../../../utils/cityHighlights';
 import AddCityLandmarkModal from '../v2/AddCityLandmarkModal';
 import { useCompanion } from '../../../contexts/CompanionProvider';
 import { PersonalizationBadge } from '../v2/PersonalizationBadge';
+import { CollaborationEmptyState, ExpensesEmptyState } from '../../onboarding';
+
+// Tab types for the bottom sheet
+type BottomSheetTab = 'route' | 'collaborate' | 'expenses';
 
 // Companion panel width for desktop layout
 const COMPANION_PANEL_WIDTH = 340;
@@ -56,6 +60,13 @@ const BottomSheet = ({ onCityDetailsClick }: BottomSheetProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [isDesktop, setIsDesktop] = useState(false);
+  const [activeTab, setActiveTab] = useState<BottomSheetTab>('route');
+  const [hasSeenCollabTab, setHasSeenCollabTab] = useState(() =>
+    localStorage.getItem('rdtrip_seen_collab_tab') === 'true'
+  );
+  const [hasSeenExpensesTab, setHasSeenExpensesTab] = useState(() =>
+    localStorage.getItem('rdtrip_seen_expenses_tab') === 'true'
+  );
   const sheetRef = useRef<HTMLDivElement>(null);
 
   // Track if we're on desktop for companion panel offset
@@ -168,6 +179,32 @@ const BottomSheet = ({ onCityDetailsClick }: BottomSheetProps) => {
   const activeCity = activeCityIndex !== null ? route.cities[activeCityIndex] : null;
   const selectedCity = selectedCityIndex !== null ? route.cities[selectedCityIndex] : null;
 
+  // Handle tab switching
+  const handleTabChange = (tab: BottomSheetTab) => {
+    setActiveTab(tab);
+    // Mark tab as seen to hide "NEW" badge
+    if (tab === 'collaborate' && !hasSeenCollabTab) {
+      localStorage.setItem('rdtrip_seen_collab_tab', 'true');
+      setHasSeenCollabTab(true);
+    }
+    if (tab === 'expenses' && !hasSeenExpensesTab) {
+      localStorage.setItem('rdtrip_seen_expenses_tab', 'true');
+      setHasSeenExpensesTab(true);
+    }
+    // Auto-expand when switching tabs
+    if (!isExpanded) {
+      setIsExpanded(true);
+      animate(y, -280, { type: 'spring', stiffness: 300, damping: 30 });
+    }
+  };
+
+  // Tab configuration
+  const tabs: Array<{ id: BottomSheetTab; label: string; icon: React.ReactNode; badge?: string }> = [
+    { id: 'route', label: 'Route', icon: <MapPin className="w-4 h-4" /> },
+    { id: 'collaborate', label: 'Collaborate', icon: <Users className="w-4 h-4" />, badge: !hasSeenCollabTab ? 'NEW' : undefined },
+    { id: 'expenses', label: 'Expenses', icon: <Receipt className="w-4 h-4" />, badge: !hasSeenExpensesTab ? 'NEW' : undefined },
+  ];
+
   return (
     <>
       {/* Add City Modal */}
@@ -205,150 +242,243 @@ const BottomSheet = ({ onCityDetailsClick }: BottomSheetProps) => {
 
         {/* Content Container */}
         <div className="h-full flex flex-col pt-7">
-          {/* Header: Trip Summary - Editorial style */}
-          <div className="px-5 pb-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              {/* Route text */}
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-[15px] text-[#2C2417]">
-                  {originName}
-                </span>
-                <ChevronRight className="w-4 h-4 text-[#C45830]" />
-                <span className="font-semibold text-[15px] text-[#2C2417]">
-                  {destinationName}
-                </span>
+          {/* Header: Trip Summary + Tabs - Editorial style */}
+          <div className="px-5 pb-3">
+            {/* Top row: Route info and expand button */}
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                {/* Route text */}
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-[15px] text-[#2C2417]">
+                    {originName}
+                  </span>
+                  <ChevronRight className="w-4 h-4 text-[#C45830]" />
+                  <span className="font-semibold text-[15px] text-[#2C2417]">
+                    {destinationName}
+                  </span>
+                </div>
+
+                {/* Stats pills */}
+                <div className="flex items-center gap-2 ml-2">
+                  <span className="px-2.5 py-1 bg-[#F5F0E8] rounded-full text-xs font-medium text-[#8B7355]">
+                    {route.cities.length} stops
+                  </span>
+                  <span className="px-2.5 py-1 bg-[#F5F0E8] rounded-full text-xs font-medium text-[#8B7355]">
+                    {totalNights} nights
+                  </span>
+                  {/* Personalization badge - shows when route has personalization context */}
+                  {route.personalization && (
+                    <PersonalizationBadge personalization={route.personalization} />
+                  )}
+                </div>
               </div>
 
-              {/* Stats pills */}
-              <div className="flex items-center gap-2 ml-2">
-                <span className="px-2.5 py-1 bg-[#F5F0E8] rounded-full text-xs font-medium text-[#8B7355]">
-                  {route.cities.length} stops
-                </span>
-                <span className="px-2.5 py-1 bg-[#F5F0E8] rounded-full text-xs font-medium text-[#8B7355]">
-                  {totalNights} nights
-                </span>
-                {/* Personalization badge - shows when route has personalization context */}
-                {route.personalization && (
-                  <PersonalizationBadge personalization={route.personalization} />
-                )}
-              </div>
+              {/* Expand indicator */}
+              <motion.button
+                onClick={toggleExpanded}
+                animate={{ rotate: isExpanded ? 180 : 0 }}
+                transition={{ duration: 0.2 }}
+                className="w-8 h-8 rounded-full bg-[#F5F0E8] flex items-center justify-center text-[#8B7355] hover:bg-[#E8DFD3] transition-colors"
+              >
+                <ChevronRight className="w-4 h-4 rotate-90" />
+              </motion.button>
             </div>
 
-            {/* Expand indicator */}
-            <motion.button
-              onClick={toggleExpanded}
-              animate={{ rotate: isExpanded ? 180 : 0 }}
-              transition={{ duration: 0.2 }}
-              className="w-8 h-8 rounded-full bg-[#F5F0E8] flex items-center justify-center text-[#8B7355] hover:bg-[#E8DFD3] transition-colors"
-            >
-              <ChevronRight className="w-4 h-4 rotate-90" />
-            </motion.button>
+            {/* Tab bar - Editorial style */}
+            <div className="flex items-center gap-1 p-1 bg-[#F5F0E8] rounded-xl" data-tour="bottom-sheet-tabs">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => handleTabChange(tab.id)}
+                  className={`
+                    relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200
+                    ${activeTab === tab.id
+                      ? 'bg-white text-[#2C2417] shadow-sm'
+                      : 'text-[#8B7355] hover:text-[#2C2417] hover:bg-white/50'
+                    }
+                  `}
+                  data-tour={tab.id === 'collaborate' ? 'collaborate-button' : undefined}
+                >
+                  <span className={activeTab === tab.id ? 'text-[#C45830]' : ''}>
+                    {tab.icon}
+                  </span>
+                  <span>{tab.label}</span>
+                  {/* NEW badge */}
+                  {tab.badge && (
+                    <motion.span
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className="absolute -top-1 -right-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold text-white"
+                      style={{
+                        background: 'linear-gradient(135deg, #C45830 0%, #D4A853 100%)',
+                        boxShadow: '0 2px 6px rgba(196, 88, 48, 0.35)',
+                      }}
+                    >
+                      {tab.badge}
+                    </motion.span>
+                  )}
+                </button>
+              ))}
+            </div>
           </div>
 
-          {/* City Cards Carousel */}
-          <div className="px-5 pb-3">
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragStart={handleCardDragStart}
-              onDragEnd={handleCardDragEnd}
-            >
-              <SortableContext
-                items={route.cities.map((_, index) => `city-${index}`)}
-                strategy={horizontalListSortingStrategy}
+          {/* Tab Content */}
+          <AnimatePresence mode="wait">
+            {/* Route Tab Content */}
+            {activeTab === 'route' && (
+              <motion.div
+                key="route-tab"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 10 }}
+                transition={{ duration: 0.2 }}
+                className="flex-1 flex flex-col overflow-hidden"
               >
-                <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide scroll-smooth snap-x">
-                  {route.cities.map((city, index) => {
-                    const cityName = getCityName(city.city);
-                    const country = typeof city.city === 'object' ? city.city.country : undefined;
-                    const highlight = getCityHighlight(cityName, city, country);
-
-                    return (
-                      <div key={`city-${index}`} className="snap-start">
-                        <CompactCityCard
-                          id={`city-${index}`}
-                          cityName={cityName}
-                          country={country}
-                          index={index}
-                          nights={city.nights || 0}
-                          highlight={highlight}
-                          hasActivities={(city.activities?.length || 0) > 0}
-                          isSelected={selectedCityIndex === index}
-                          onSelect={() => {
-                            const newSelectedIndex = index === selectedCityIndex ? null : index;
-                            setSelectedCity(newSelectedIndex);
-                            // Notify companion of city selection
-                            onCitySelect(newSelectedIndex !== null ? cityName : null);
-                          }}
-                        />
-                      </div>
-                    );
-                  })}
-
-                  {/* Add City Button */}
-                  <button
-                    onClick={() => setIsAddingLandmark(true)}
-                    className="flex-shrink-0 w-[180px] h-[176px] rounded-2xl border-2 border-dashed border-[#D4C4B0] bg-[#FAF7F2] flex flex-col items-center justify-center gap-2 text-[#8B7355] hover:border-[#C45830] hover:text-[#C45830] hover:bg-[#FFF8F5] transition-all snap-start"
+                {/* City Cards Carousel */}
+                <div className="px-5 pb-3">
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragStart={handleCardDragStart}
+                    onDragEnd={handleCardDragEnd}
                   >
-                    <div className="w-10 h-10 rounded-full bg-[#F5F0E8] flex items-center justify-center">
-                      <Plus className="w-5 h-5" />
-                    </div>
-                    <span className="text-xs font-medium">Add City</span>
-                  </button>
+                    <SortableContext
+                      items={route.cities.map((_, index) => `city-${index}`)}
+                      strategy={horizontalListSortingStrategy}
+                    >
+                      <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide scroll-smooth snap-x">
+                        {route.cities.map((city, index) => {
+                          const cityName = getCityName(city.city);
+                          const country = typeof city.city === 'object' ? city.city.country : undefined;
+                          const highlight = getCityHighlight(cityName, city, country);
+
+                          return (
+                            <div key={`city-${index}`} className="snap-start">
+                              <CompactCityCard
+                                id={`city-${index}`}
+                                cityName={cityName}
+                                country={country}
+                                index={index}
+                                nights={city.nights || 0}
+                                highlight={highlight}
+                                hasActivities={(city.activities?.length || 0) > 0}
+                                isSelected={selectedCityIndex === index}
+                                onSelect={() => {
+                                  const newSelectedIndex = index === selectedCityIndex ? null : index;
+                                  setSelectedCity(newSelectedIndex);
+                                  // Notify companion of city selection
+                                  onCitySelect(newSelectedIndex !== null ? cityName : null);
+                                }}
+                              />
+                            </div>
+                          );
+                        })}
+
+                        {/* Add City Button */}
+                        <button
+                          onClick={() => setIsAddingLandmark(true)}
+                          className="flex-shrink-0 w-[180px] h-[176px] rounded-2xl border-2 border-dashed border-[#D4C4B0] bg-[#FAF7F2] flex flex-col items-center justify-center gap-2 text-[#8B7355] hover:border-[#C45830] hover:text-[#C45830] hover:bg-[#FFF8F5] transition-all snap-start"
+                        >
+                          <div className="w-10 h-10 rounded-full bg-[#F5F0E8] flex items-center justify-center">
+                            <Plus className="w-5 h-5" />
+                          </div>
+                          <span className="text-xs font-medium">Add City</span>
+                        </button>
+                      </div>
+                    </SortableContext>
+
+                    {/* Drag Overlay */}
+                    <DragOverlay>
+                      {activeId && activeCity && activeCityIndex !== null ? (
+                        <div className="w-[180px] bg-[#FFFBF5] rounded-2xl shadow-xl overflow-hidden opacity-90">
+                          <div className="h-[120px] bg-[#F5F0E8] flex items-center justify-center">
+                            <span className="text-2xl font-bold text-[#D4C4B0]">{activeCityIndex + 1}</span>
+                          </div>
+                          <div className="p-3">
+                            <h3 className="text-[15px] font-semibold text-[#2C2417] truncate">
+                              {getCityName(activeCity.city)}
+                            </h3>
+                          </div>
+                        </div>
+                      ) : null}
+                    </DragOverlay>
+                  </DndContext>
                 </div>
-              </SortableContext>
 
-              {/* Drag Overlay */}
-              <DragOverlay>
-                {activeId && activeCity && activeCityIndex !== null ? (
-                  <div className="w-[180px] bg-[#FFFBF5] rounded-2xl shadow-xl overflow-hidden opacity-90">
-                    <div className="h-[120px] bg-[#F5F0E8] flex items-center justify-center">
-                      <span className="text-2xl font-bold text-[#D4C4B0]">{activeCityIndex + 1}</span>
-                    </div>
-                    <div className="p-3">
-                      <h3 className="text-[15px] font-semibold text-[#2C2417] truncate">
-                        {getCityName(activeCity.city)}
-                      </h3>
-                    </div>
-                  </div>
-                ) : null}
-              </DragOverlay>
-            </DndContext>
-          </div>
+                {/* Selected City Panel (visible when expanded) */}
+                {isExpanded && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 20 }}
+                    transition={{ delay: 0.1 }}
+                    className="flex-1 px-5 pb-5 overflow-hidden"
+                  >
+                    {selectedCity && selectedCityIndex !== null ? (
+                      <SelectedCityPanel
+                        city={selectedCity}
+                        cityIndex={selectedCityIndex}
+                        onNightsChange={(nights) => handleNightsChange(selectedCityIndex, nights)}
+                        onViewDetails={() => onCityDetailsClick?.(selectedCityIndex)}
+                        onClose={() => setSelectedCity(null)}
+                      />
+                    ) : (
+                      /* Editorial Empty State */
+                      <div className="h-full flex flex-col items-center justify-center text-center">
+                        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#F5F0E8] to-[#E8DFD3] flex items-center justify-center mb-4">
+                          <Compass className="w-7 h-7 text-[#C45830]" />
+                        </div>
+                        <h3 className="text-[15px] font-semibold text-[#2C2417] mb-1">
+                          Explore Your Journey
+                        </h3>
+                        <p className="text-sm text-[#8B7355] max-w-[200px]">
+                          Tap a destination card to view details and customize your stay
+                        </p>
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </motion.div>
+            )}
 
-          {/* Selected City Panel (visible when expanded) */}
-          {isExpanded && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-              transition={{ delay: 0.1 }}
-              className="flex-1 px-5 pb-5 overflow-hidden"
-            >
-              {selectedCity && selectedCityIndex !== null ? (
-                <SelectedCityPanel
-                  city={selectedCity}
-                  cityIndex={selectedCityIndex}
-                  onNightsChange={(nights) => handleNightsChange(selectedCityIndex, nights)}
-                  onViewDetails={() => onCityDetailsClick?.(selectedCityIndex)}
-                  onClose={() => setSelectedCity(null)}
+            {/* Collaborate Tab Content */}
+            {activeTab === 'collaborate' && (
+              <motion.div
+                key="collaborate-tab"
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                transition={{ duration: 0.2 }}
+                className="flex-1 overflow-hidden"
+              >
+                <CollaborationEmptyState
+                  onAction={() => {
+                    // TODO: Open invite collaborator modal
+                    console.log('Open invite modal');
+                  }}
                 />
-              ) : (
-                /* Editorial Empty State */
-                <div className="h-full flex flex-col items-center justify-center text-center">
-                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#F5F0E8] to-[#E8DFD3] flex items-center justify-center mb-4">
-                    <Compass className="w-7 h-7 text-[#C45830]" />
-                  </div>
-                  <h3 className="text-[15px] font-semibold text-[#2C2417] mb-1">
-                    Explore Your Journey
-                  </h3>
-                  <p className="text-sm text-[#8B7355] max-w-[200px]">
-                    Tap a destination card to view details and customize your stay
-                  </p>
-                </div>
-              )}
-            </motion.div>
-          )}
+              </motion.div>
+            )}
+
+            {/* Expenses Tab Content */}
+            {activeTab === 'expenses' && (
+              <motion.div
+                key="expenses-tab"
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                transition={{ duration: 0.2 }}
+                className="flex-1 overflow-hidden"
+              >
+                <ExpensesEmptyState
+                  onAction={() => {
+                    // TODO: Open add expense modal
+                    console.log('Open add expense modal');
+                  }}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </motion.div>
     </>
