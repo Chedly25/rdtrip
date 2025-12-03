@@ -423,7 +423,7 @@ Features:
 - [x] ✅ Delete waypoint API
 
 **Enhance:**
-- [ ] 🔨 Add "Remove City" button to FloatingCityCards
+- [x] 🔨 Add "Remove City" button to FloatingCityCards ✅ DONE
 - [ ] 🔨 Add reorder warnings and geographic feedback
 
 **New to Build:**
@@ -1680,10 +1680,11 @@ Features:
 Based on existing features, here's the recommended order:
 
 ### Week 1: Complete Route Editing
-1. **Add "Remove City" button** to FloatingCityCards (2-4 hours)
-   - Just add an X button that calls store method
-   - Add confirmation dialog
-   - Done!
+1. ✅ **Add "Remove City" button** to FloatingCityCards - **DONE!**
+   - Added Trash2 button on hover/select
+   - Beautiful RemoveCityDialog with Wanderlust Editorial design
+   - removeCity store action with landmark adjustment
+   - Prevents removal if < 2 cities
 
 2. **Add reorder feedback** (4-8 hours)
    - Show distance change after reorder
