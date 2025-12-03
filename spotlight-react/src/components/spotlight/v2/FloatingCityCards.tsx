@@ -1,8 +1,9 @@
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useSpotlightStoreV2 } from '../../../stores/spotlightStoreV2';
-import { MapPin, Moon, Plus, GripVertical, Star, X } from 'lucide-react';
+import { MapPin, Moon, Plus, GripVertical, Star, X, Trash2 } from 'lucide-react';
 import { useState, useEffect, Fragment } from 'react';
 import AddCityLandmarkModal from './AddCityLandmarkModal';
+import RemoveCityDialog from './RemoveCityDialog';
 import { fetchCityImage } from '../../../services/cityImages';
 import { getLandmarkImagePath } from '../../../services/landmarks';
 import {
@@ -35,7 +36,10 @@ interface SortableCityCardProps {
     accent: string;
   };
   cityName: string;
+  totalCities: number;
+  canRemove: boolean;
   onCityClick: () => void;
+  onRemoveClick: () => void;
 }
 
 const SortableCityCard = ({
@@ -44,8 +48,13 @@ const SortableCityCard = ({
   isSelected,
   agentColors,
   cityName,
-  onCityClick
+  totalCities: _totalCities, // Used for future enhancements
+  canRemove,
+  onCityClick,
+  onRemoveClick
 }: SortableCityCardProps) => {
+  void _totalCities; // Suppress unused warning
+  const [isHovered, setIsHovered] = useState(false);
   const [cityImage, setCityImage] = useState<string | null>(null);
 
   const {
@@ -78,7 +87,9 @@ const SortableCityCard = ({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: isDragging ? 0.5 : 1, y: 0 }}
       transition={{ delay: index * 0.05 }}
-      className={`flex-shrink-0 w-56 p-3 rounded-xl cursor-pointer transition-all duration-300 backdrop-blur-md ${
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      className={`relative flex-shrink-0 w-56 p-3 rounded-xl cursor-pointer transition-all duration-300 backdrop-blur-md ${
         isSelected
           ? 'ring-2 shadow-xl scale-105 bg-white/95'
           : 'bg-white/75 hover:bg-white/85 hover:shadow-lg'
@@ -97,6 +108,30 @@ const SortableCityCard = ({
       >
         <GripVertical className="w-4 h-4 text-gray-600" />
       </div>
+
+      {/* Remove Button - appears on hover */}
+      <AnimatePresence>
+        {(isHovered || isSelected) && canRemove && (
+          <motion.button
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            transition={{ duration: 0.15 }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onRemoveClick();
+            }}
+            className="absolute -top-2 -right-2 z-20 w-7 h-7 rounded-full flex items-center justify-center shadow-lg transition-all hover:scale-110"
+            style={{
+              background: 'linear-gradient(135deg, #C45830 0%, #A84828 100%)',
+              boxShadow: '0 2px 8px rgba(196, 88, 48, 0.4)'
+            }}
+            title="Remove city"
+          >
+            <Trash2 className="w-3.5 h-3.5 text-white" />
+          </motion.button>
+        )}
+      </AnimatePresence>
 
       <div onClick={onCityClick}>
         {/* City Image - Smaller */}
@@ -253,11 +288,40 @@ const FloatingCityCards = () => {
     getCityName,
     getAgentColors,
     reorderCities,
+    removeCity,
     removeLandmark
   } = useSpotlightStoreV2();
 
   const agentColors = getAgentColors();
   const [activeId, setActiveId] = useState<string | null>(null);
+
+  // State for remove city dialog
+  const [removeCityDialog, setRemoveCityDialog] = useState<{
+    isOpen: boolean;
+    cityIndex: number;
+    cityName: string;
+  }>({
+    isOpen: false,
+    cityIndex: -1,
+    cityName: ''
+  });
+
+  const handleRemoveCityClick = (index: number, name: string) => {
+    setRemoveCityDialog({
+      isOpen: true,
+      cityIndex: index,
+      cityName: name
+    });
+  };
+
+  const handleConfirmRemoveCity = () => {
+    removeCity(removeCityDialog.cityIndex);
+    setRemoveCityDialog({ isOpen: false, cityIndex: -1, cityName: '' });
+  };
+
+  const handleCancelRemoveCity = () => {
+    setRemoveCityDialog({ isOpen: false, cityIndex: -1, cityName: '' });
+  };
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -375,6 +439,9 @@ const FloatingCityCards = () => {
                       landmark => landmark.insertAfterCityIndex === cityIndex
                     );
 
+                    // Can only remove if more than 2 cities
+                    const canRemove = route.cities.length > 2;
+
                     return (
                       <Fragment key={`city-group-${cityIndex}`}>
                         {/* City Card */}
@@ -385,7 +452,10 @@ const FloatingCityCards = () => {
                           isSelected={isSelected}
                           agentColors={agentColors}
                           cityName={cityName}
+                          totalCities={route.cities.length}
+                          canRemove={canRemove}
                           onCityClick={() => handleCityClick(cityIndex)}
+                          onRemoveClick={() => handleRemoveCityClick(cityIndex, cityName)}
                         />
 
                         {/* Landmark Cards after this city */}
@@ -429,6 +499,16 @@ const FloatingCityCards = () => {
           </div>
         </motion.div>
       </div>
+
+      {/* Remove City Confirmation Dialog */}
+      <RemoveCityDialog
+        isOpen={removeCityDialog.isOpen}
+        cityName={removeCityDialog.cityName}
+        cityIndex={removeCityDialog.cityIndex}
+        totalCities={route.cities.length}
+        onConfirm={handleConfirmRemoveCity}
+        onCancel={handleCancelRemoveCity}
+      />
     </div>
   );
 };

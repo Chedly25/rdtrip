@@ -247,6 +247,7 @@ interface SpotlightStoreV2 {
   addLandmarkToRoute: (landmark: Landmark) => Promise<void>;
   removeLandmark: (landmarkId: string) => void;
   updateLandmark: (landmarkId: string, updates: Partial<LandmarkStop>) => void;
+  removeCity: (cityIndex: number) => void;
   reorderCities: (oldIndex: number, newIndex: number) => void;
   updateCityNights: (cityName: string, nights: number) => void;
 
@@ -605,6 +606,48 @@ export const useSpotlightStoreV2 = create<SpotlightStoreV2>((set, get) => ({
         }
       : null
   })),
+
+  removeCity: (cityIndex) => set((state) => {
+    if (!state.route) return state;
+
+    // Prevent removing if only 2 cities left (need at least origin + destination)
+    if (state.route.cities.length <= 2) {
+      console.warn('Cannot remove city: need at least 2 cities in route');
+      return state;
+    }
+
+    const cities = [...state.route.cities];
+    const removedCity = cities[cityIndex];
+    cities.splice(cityIndex, 1);
+
+    // Also remove any landmarks that were inserted after this city
+    const landmarks = state.route.landmarks.filter(
+      l => l.insertAfterCityIndex !== cityIndex
+    ).map(l => ({
+      // Adjust landmark positions if they were after the removed city
+      ...l,
+      insertAfterCityIndex: (l.insertAfterCityIndex ?? 0) > cityIndex
+        ? (l.insertAfterCityIndex ?? 0) - 1
+        : l.insertAfterCityIndex
+    }));
+
+    console.log(`🗑️ Removed city: ${typeof removedCity.city === 'string' ? removedCity.city : removedCity.city.name}`);
+
+    // Adjust selected city index if needed
+    let newSelectedIndex = state.selectedCityIndex;
+    if (state.selectedCityIndex !== null) {
+      if (state.selectedCityIndex === cityIndex) {
+        newSelectedIndex = null; // Deselect if removed city was selected
+      } else if (state.selectedCityIndex > cityIndex) {
+        newSelectedIndex = state.selectedCityIndex - 1;
+      }
+    }
+
+    return {
+      route: { ...state.route, cities, landmarks },
+      selectedCityIndex: newSelectedIndex
+    };
+  }),
 
   reorderCities: (oldIndex, newIndex) => set((state) => {
     if (!state.route) return state;
