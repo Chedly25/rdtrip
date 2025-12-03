@@ -2906,6 +2906,143 @@ app.post('/api/calculate-budget', async (req, res) => {
   }
 });
 
+// ==================== CITY REPLACEMENT API ====================
+
+/**
+ * POST /api/route/suggest-replacement
+ * Get AI-powered city replacement suggestions based on route context and personalization
+ */
+app.post('/api/route/suggest-replacement', async (req, res) => {
+  try {
+    const {
+      currentCity,       // City to replace
+      cityIndex,         // Position in route
+      routeContext,      // Full route info: { cities, origin, destination, personalization }
+      reason             // Optional: why user wants to replace ("too expensive", "not enough activities", etc.)
+    } = req.body;
+
+    console.log('🔄 City replacement request:', {
+      currentCity: currentCity?.name || currentCity,
+      cityIndex,
+      reason,
+      hasPersonalization: !!routeContext?.personalization
+    });
+
+    if (!currentCity || !routeContext?.cities) {
+      return res.status(400).json({ error: 'Current city and route context required' });
+    }
+
+    // Build context for AI
+    const cityNames = routeContext.cities.map(c =>
+      typeof c.city === 'string' ? c.city : c.city?.name || 'Unknown'
+    );
+    const prevCity = cityIndex > 0 ? cityNames[cityIndex - 1] : null;
+    const nextCity = cityIndex < cityNames.length - 1 ? cityNames[cityIndex + 1] : null;
+
+    // Get personalization context
+    const personalization = routeContext.personalization || {};
+    const personalizationContext = [];
+
+    if (personalization.travelStyle) personalizationContext.push(`Travel style: ${personalization.travelStyle}`);
+    if (personalization.pace) personalizationContext.push(`Pace: ${personalization.pace}/5`);
+    if (personalization.interests?.length) personalizationContext.push(`Interests: ${personalization.interests.join(', ')}`);
+    if (personalization.diningStyle) personalizationContext.push(`Dining: ${personalization.diningStyle}`);
+    if (personalization.budget) personalizationContext.push(`Budget: ${personalization.budget}`);
+    if (personalization.occasion) personalizationContext.push(`Occasion: ${personalization.occasion}`);
+    if (personalization.tripStory) personalizationContext.push(`Trip context: "${personalization.tripStory.substring(0, 150)}..."`);
+
+    const prompt = `You are a travel expert helping find replacement cities for a road trip route.
+
+CURRENT ROUTE:
+${cityNames.map((name, i) => `${i + 1}. ${name}${i === cityIndex ? ' ← REPLACING THIS' : ''}`).join('\n')}
+
+CITY TO REPLACE: ${typeof currentCity === 'string' ? currentCity : currentCity.name}
+${prevCity ? `Previous stop: ${prevCity}` : 'This is the starting city'}
+${nextCity ? `Next stop: ${nextCity}` : 'This is the final destination'}
+
+${reason ? `USER'S REASON: "${reason}"` : ''}
+
+${personalizationContext.length > 0 ? `
+TRAVELER PREFERENCES:
+${personalizationContext.join('\n')}
+` : ''}
+
+Suggest 3 alternative cities that:
+1. Are geographically logical (between ${prevCity || 'origin'} and ${nextCity || 'destination'})
+2. Match the traveler's preferences and interests
+3. Offer something the current city might be missing
+4. Are diverse options (e.g., one cultural hub, one scenic/relaxed, one off-the-beaten-path)
+
+Return ONLY valid JSON with no markdown:
+{
+  "suggestions": [
+    {
+      "name": "City Name",
+      "country": "Country",
+      "coordinates": { "lat": 0.0, "lng": 0.0 },
+      "whyReplace": "One sentence explaining why this is better than current city",
+      "highlights": ["3-4 key attractions or experiences"],
+      "matchScore": 85,
+      "matchReasons": ["Matches your interest in X", "Perfect for Y travelers"],
+      "estimatedDetourKm": 50,
+      "bestFor": "culture|nature|food|adventure|relaxation"
+    }
+  ]
+}`;
+
+    const response = await fetch('https://api.perplexity.ai/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${PERPLEXITY_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'sonar',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a travel expert. Return ONLY valid JSON with no markdown formatting, no code blocks.'
+          },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.7,
+        max_tokens: 1500
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Perplexity API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const content = data.choices[0].message.content;
+
+    // Clean markdown if present
+    const jsonContent = content
+      .replace(/```json\n?/g, '')
+      .replace(/```\n?/g, '')
+      .trim();
+
+    const suggestions = JSON.parse(jsonContent);
+
+    console.log(`✅ Generated ${suggestions.suggestions?.length || 0} replacement suggestions`);
+
+    res.json({
+      currentCity: typeof currentCity === 'string' ? currentCity : currentCity.name,
+      cityIndex,
+      suggestions: suggestions.suggestions || [],
+      reason
+    });
+
+  } catch (error) {
+    console.error('❌ City replacement suggestion failed:', error);
+    res.status(500).json({
+      error: 'Failed to generate replacement suggestions',
+      message: error.message
+    });
+  }
+});
+
 // Helper: Calculate total route distance using Haversine
 function calculateTotalRouteDistance(route) {
   const { calculateDistance } = require('./utils/cityOptimization');
