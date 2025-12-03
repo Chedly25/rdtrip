@@ -82,15 +82,36 @@ const SpotlightHeader = ({ onGenerateItinerary, onSave }: SpotlightHeaderProps) 
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate('/')}
-            className="h-9 px-2 rounded-rui-12 bg-rui-grey-5 hover:bg-rui-grey-10 flex items-center gap-1.5 transition-colors duration-rui-sm"
+            className="h-9 px-2.5 rounded-rui-12 bg-rui-grey-5 hover:bg-rui-grey-10 flex items-center gap-1.5 transition-colors duration-rui-sm"
             aria-label="Back to home"
           >
             <ArrowLeft className="w-4 h-4 text-rui-black" />
-            <img
-              src="/logos/icon.png"
-              alt="Waycraft"
+            {/* Waycraft Icon */}
+            <svg
+              viewBox="0 0 48 40"
               className="h-5 w-auto"
-            />
+              aria-hidden="true"
+            >
+              <defs>
+                <linearGradient id="waycraft-header-gradient" x1="0%" y1="100%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#C45830" />
+                  <stop offset="50%" stopColor="#D4A853" />
+                  <stop offset="100%" stopColor="#E8C547" />
+                </linearGradient>
+              </defs>
+              <path
+                d="M4 8 L4 32 Q4 36 8 36 L12 36 Q16 36 18 32 L24 16 L30 32 Q32 36 36 36 L40 36 Q44 36 44 32 L44 8"
+                fill="none"
+                stroke="url(#waycraft-header-gradient)"
+                strokeWidth="4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M42 4 L43 7 L46 8 L43 9 L42 12 L41 9 L38 8 L41 7 Z"
+                fill="#D4A853"
+              />
+            </svg>
           </button>
 
           <div className="flex items-center gap-3">

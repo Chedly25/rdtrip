@@ -51,12 +51,36 @@ export function Footer() {
               viewport={{ once: true }}
               transition={{ duration: 0.5, ease: ruiEasing }}
             >
-              <div className="mb-4">
-                <img
-                  src="/logos/primary_horizontal_logo.png"
-                  alt="Waycraft"
-                  className="h-8 w-auto brightness-0 invert"
-                />
+              <div className="mb-4 flex items-center gap-2.5">
+                {/* Waycraft Icon */}
+                <svg
+                  viewBox="0 0 48 40"
+                  className="h-9 w-auto"
+                  aria-hidden="true"
+                >
+                  <defs>
+                    <linearGradient id="waycraft-footer-gradient" x1="0%" y1="100%" x2="100%" y2="0%">
+                      <stop offset="0%" stopColor="#C45830" />
+                      <stop offset="50%" stopColor="#D4A853" />
+                      <stop offset="100%" stopColor="#E8C547" />
+                    </linearGradient>
+                  </defs>
+                  <path
+                    d="M4 8 L4 32 Q4 36 8 36 L12 36 Q16 36 18 32 L24 16 L30 32 Q32 36 36 36 L40 36 Q44 36 44 32 L44 8"
+                    fill="none"
+                    stroke="url(#waycraft-footer-gradient)"
+                    strokeWidth="4"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M42 4 L43 7 L46 8 L43 9 L42 12 L41 9 L38 8 L41 7 Z"
+                    fill="#D4A853"
+                  />
+                </svg>
+                <span className="font-marketing text-2xl tracking-tight text-rui-white">
+                  Waycraft
+                </span>
               </div>
               <p className="mb-6 max-w-sm text-body-2 text-rui-grey-50">
                 Your journey, personally crafted. AI-powered route planning for
