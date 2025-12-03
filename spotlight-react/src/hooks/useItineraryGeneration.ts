@@ -14,6 +14,26 @@ interface Itinerary {
   weather: any[];
   events: any[];
   budget: any;
+  // Personalization visibility fields
+  tripNarrative?: string;
+  tripStyleProfile?: {
+    explorerVsRelaxer: number;
+    budgetVsLuxury: number;
+    mainstreamVsHidden: number;
+    packedVsLeisurely: number;
+  };
+  dayThemes?: Array<{
+    day: number;
+    theme: string;
+    themeEmoji?: string;
+  }>;
+  personalizedIntro?: {
+    headline: string;
+    summary: string;
+    highlightedFactors: string[];
+  };
+  preferences?: any;
+  personalizationContent?: any;
 }
 
 interface GenerationProgress {
@@ -357,7 +377,14 @@ export function useItineraryGeneration(): UseItineraryGenerationReturn {
                 practicalInfo: fullItinerary.practicalInfo,
                 weather: fullItinerary.weather,
                 events: fullItinerary.events,
-                budget: fullItinerary.budget
+                budget: fullItinerary.budget,
+                // Personalization visibility fields
+                tripNarrative: fullItinerary.tripNarrative,
+                tripStyleProfile: fullItinerary.tripStyleProfile,
+                dayThemes: fullItinerary.dayThemes,
+                personalizedIntro: fullItinerary.personalizedIntro,
+                preferences: fullItinerary.preferences,
+                personalizationContent: fullItinerary.personalizationContent
               });
 
               // Update partial results for preview
@@ -430,7 +457,14 @@ export function useItineraryGeneration(): UseItineraryGenerationReturn {
         practicalInfo: fullItinerary.practicalInfo,
         weather: fullItinerary.weather,
         events: fullItinerary.events,
-        budget: fullItinerary.budget
+        budget: fullItinerary.budget,
+        // Personalization visibility fields
+        tripNarrative: fullItinerary.tripNarrative,
+        tripStyleProfile: fullItinerary.tripStyleProfile,
+        dayThemes: fullItinerary.dayThemes,
+        personalizedIntro: fullItinerary.personalizedIntro,
+        preferences: fullItinerary.preferences,
+        personalizationContent: fullItinerary.personalizationContent
       });
 
       // Mark all agents as completed since itinerary is already generated
