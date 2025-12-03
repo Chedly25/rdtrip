@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useSpotlightStoreV2 } from '../../../stores/spotlightStoreV2';
+import { useAuth } from '../../../contexts/AuthContext';
 import {
   ArrowLeft,
   Share2,
@@ -12,6 +13,7 @@ import {
   Copy,
 } from 'lucide-react';
 import { Button, Badge } from '../../ui';
+import { AuthButton } from '../../auth';
 
 interface SpotlightHeaderProps {
   onGenerateItinerary?: () => void;
@@ -21,8 +23,10 @@ interface SpotlightHeaderProps {
 const SpotlightHeader = ({ onGenerateItinerary, onSave }: SpotlightHeaderProps) => {
   const navigate = useNavigate();
   const { route, getCityName } = useSpotlightStoreV2();
+  const { isAuthenticated } = useAuth();
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
   if (!route) return null;
 
@@ -129,17 +133,80 @@ const SpotlightHeader = ({ onGenerateItinerary, onSave }: SpotlightHeaderProps) 
 
         {/* Right: Actions */}
         <div className="flex items-center gap-2">
-          {/* Save Button */}
+          {/* Save Button - Smart auth-aware */}
           {onSave && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onSave}
-              className="gap-1.5"
-            >
-              <Bookmark className="w-4 h-4" />
-              Save
-            </Button>
+            <div className="relative">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  if (isAuthenticated) {
+                    onSave();
+                  } else {
+                    setShowLoginPrompt(true);
+                  }
+                }}
+                className="gap-1.5"
+              >
+                <Bookmark className="w-4 h-4" />
+                Save
+              </Button>
+
+              {/* Login prompt tooltip */}
+              <AnimatePresence>
+                {showLoginPrompt && !isAuthenticated && (
+                  <>
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="fixed inset-0 z-40"
+                      onClick={() => setShowLoginPrompt(false)}
+                    />
+                    <motion.div
+                      initial={{ opacity: 0, y: -8, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -8, scale: 0.95 }}
+                      className="absolute right-0 top-full mt-2 w-64 p-4 rounded-2xl shadow-lg z-50"
+                      style={{
+                        background: 'linear-gradient(165deg, #FFFBF5 0%, #FAF7F2 100%)',
+                        boxShadow: '0 10px 40px rgba(44, 36, 23, 0.15), 0 0 0 1px rgba(44, 36, 23, 0.05)'
+                      }}
+                    >
+                      <p
+                        className="text-sm font-medium mb-2"
+                        style={{ color: '#2C2417' }}
+                      >
+                        Sign in to save your trip
+                      </p>
+                      <p
+                        className="text-xs mb-3"
+                        style={{ color: '#8B7355' }}
+                      >
+                        Create an account to save routes and access them from any device.
+                      </p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setShowLoginPrompt(false)}
+                          className="flex-1 py-2 px-3 text-xs font-medium rounded-xl transition-colors"
+                          style={{
+                            color: '#8B7355',
+                            background: '#F5F0E8'
+                          }}
+                        >
+                          Maybe later
+                        </button>
+                      </div>
+                      {/* Arrow pointing up */}
+                      <div
+                        className="absolute -top-2 right-6 w-4 h-4 rotate-45"
+                        style={{ background: '#FFFBF5' }}
+                      />
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
           )}
 
           {/* Share Button */}
@@ -233,6 +300,11 @@ const SpotlightHeader = ({ onGenerateItinerary, onSave }: SpotlightHeaderProps) 
               Generate Itinerary
             </Button>
           )}
+
+          {/* Auth Button - Sign in/Profile */}
+          <div className="ml-2 border-l border-rui-grey-10 pl-3">
+            <AuthButton variant="compact" />
+          </div>
         </div>
       </div>
     </motion.header>

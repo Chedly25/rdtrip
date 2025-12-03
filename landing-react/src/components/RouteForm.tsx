@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Calendar, Zap } from 'lucide-react'
+import { Calendar, Zap, RefreshCw, AlertTriangle } from 'lucide-react'
 import { useFormStore } from '../stores/formStore'
 import { BudgetSelector } from './BudgetSelector'
 import { CompanionSelector } from './CompanionSelector'
@@ -9,6 +9,7 @@ import { TripStyleSlider } from './TripStyleSlider'
 import { RouteGenerationLoading } from './RouteGenerationLoading'
 import { CitySelector } from './CitySelector'
 import { TripStoryInput, PersonalizationAccordion } from './personalization'
+import { getFriendlyError, getRetryMessage, isRecoverableError } from '../utils/errorMessages'
 import type { TripPersonalization } from '../types'
 
 // Revolut easing
@@ -92,12 +93,15 @@ export function RouteForm({ onRouteGenerated }: RouteFormProps) {
   const totalDays = totalNights + 1
 
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [retryCount, setRetryCount] = useState(0)
   const [progress, setProgress] = useState({
     total: 0,
     completed: 0,
     currentAgent: null as string | null,
     percentComplete: 0,
-    estimatedTimeRemaining: 0
+    estimatedTimeRemaining: 0,
+    phase: '' as string,
+    message: '' as string
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -193,14 +197,16 @@ export function RouteForm({ onRouteGenerated }: RouteFormProps) {
         const statusData = await statusResponse.json()
         console.log('Job status:', statusData)
 
-        // Update progress state
+        // Update progress state with phase information
         if (statusData.progress) {
           setProgress({
             total: statusData.progress.total || 0,
             completed: statusData.progress.completed || 0,
             currentAgent: statusData.progress.currentAgent || null,
             percentComplete: statusData.progress.percentComplete || 0,
-            estimatedTimeRemaining: statusData.progress.estimatedTimeRemaining || 0
+            estimatedTimeRemaining: statusData.progress.estimatedTimeRemaining || 0,
+            phase: statusData.progress.phase || '',
+            message: statusData.progress.message || ''
           })
         }
 
@@ -430,15 +436,64 @@ export function RouteForm({ onRouteGenerated }: RouteFormProps) {
             {/* Budget Selector */}
             <BudgetSelector selected={budget} onChange={setBudget} />
 
-            {/* Error Message */}
+            {/* Error Message with Wanderlust Styling */}
             {error && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3, ease: ruiEasing }}
-                className="rounded-rui-12 bg-danger/10 p-4 text-sm text-danger"
+                className="rounded-2xl p-6"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(196, 88, 48, 0.08) 0%, rgba(196, 88, 48, 0.04) 100%)',
+                  border: '1px solid rgba(196, 88, 48, 0.15)',
+                }}
               >
-                {error}
+                <div className="flex items-start gap-4">
+                  <div
+                    className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(196, 88, 48, 0.15) 0%, rgba(196, 88, 48, 0.25) 100%)',
+                    }}
+                  >
+                    <AlertTriangle className="w-5 h-5" style={{ color: '#C45830' }} />
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <h4
+                      className="font-semibold mb-1"
+                      style={{
+                        fontFamily: "'Fraunces', Georgia, serif",
+                        color: '#2C2417',
+                        letterSpacing: '-0.01em',
+                      }}
+                    >
+                      {getFriendlyError(error).title}
+                    </h4>
+                    <p className="text-sm mb-3" style={{ color: '#8B7355' }}>
+                      {getFriendlyError(error).message}
+                    </p>
+
+                    {isRecoverableError(error) && (
+                      <motion.button
+                        type="button"
+                        onClick={() => {
+                          setError(null)
+                          setRetryCount(prev => prev + 1)
+                        }}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all"
+                        style={{
+                          background: 'linear-gradient(135deg, #C45830 0%, #B54A2A 100%)',
+                          color: 'white',
+                        }}
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        {retryCount > 0 ? getRetryMessage(retryCount) : 'Try Again'}
+                      </motion.button>
+                    )}
+                  </div>
+                </div>
               </motion.div>
             )}
 

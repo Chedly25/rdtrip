@@ -5,6 +5,7 @@ import { ItineraryGenerationPage } from './components/itinerary/ItineraryGenerat
 import { TodayView } from './components/today/TodayView'
 import { AgentProvider } from './contexts/AgentProvider'
 import { CompanionProvider } from './contexts/CompanionProvider'
+import { AuthProvider } from './contexts/AuthContext'
 import { AgentChatBubble } from './components/agent/AgentChatBubble'
 import { AgentModal } from './components/agent/AgentModal'
 
@@ -21,23 +22,25 @@ const queryClient = new QueryClient({
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <Router basename="/spotlight-new">
-        <AgentProvider>
-          <CompanionProvider>
-            <Routes>
-              <Route path="/generate" element={<ItineraryGenerationPage />} />
-              <Route path="/today" element={<TodayView />} />
-              <Route path="*" element={<SpotlightV2 />} />
-            </Routes>
+      <AuthProvider>
+        <Router basename="/spotlight-new">
+          <AgentProvider>
+            <CompanionProvider>
+              <Routes>
+                <Route path="/generate" element={<ItineraryGenerationPage />} />
+                <Route path="/today" element={<TodayView />} />
+                <Route path="*" element={<SpotlightV2 />} />
+              </Routes>
 
-            {/* AI Agent Modal - Available for full-screen agent interactions */}
-            <AgentModal />
+              {/* AI Agent Modal - Available for full-screen agent interactions */}
+              <AgentModal />
 
-            {/* Legacy Agent Chat Bubble - Kept for pages without companion panel */}
-            <AgentChatBubble />
-          </CompanionProvider>
-        </AgentProvider>
-      </Router>
+              {/* Legacy Agent Chat Bubble - Kept for pages without companion panel */}
+              <AgentChatBubble />
+            </CompanionProvider>
+          </AgentProvider>
+        </Router>
+      </AuthProvider>
     </QueryClientProvider>
   )
 }
