@@ -1,9 +1,10 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { useSpotlightStoreV2 } from '../../../stores/spotlightStoreV2';
+import { useSpotlightStoreV2, type CityData } from '../../../stores/spotlightStoreV2';
 import { MapPin, Moon, Plus, GripVertical, Star, X, Trash2 } from 'lucide-react';
-import { useState, useEffect, Fragment } from 'react';
+import { useState, useEffect, Fragment, useRef, useCallback } from 'react';
 import AddCityLandmarkModal from './AddCityLandmarkModal';
 import RemoveCityDialog from './RemoveCityDialog';
+import ReorderFeedback, { calculateRouteDistance, type ReorderFeedbackData } from './ReorderFeedback';
 import { fetchCityImage } from '../../../services/cityImages';
 import { getLandmarkImagePath } from '../../../services/landmarks';
 import {
@@ -306,6 +307,25 @@ const FloatingCityCards = () => {
     cityName: ''
   });
 
+  // State for reorder feedback
+  const [reorderFeedback, setReorderFeedback] = useState<ReorderFeedbackData>({
+    isVisible: false,
+    oldDistance: 0,
+    newDistance: 0,
+    oldOrder: [],
+    newOrder: [],
+    movedCity: '',
+    fromIndex: 0,
+    toIndex: 0
+  });
+
+  // Store pre-drag state for undo functionality
+  const preDragStateRef = useRef<{
+    cities: CityData[];
+    distance: number;
+    cityNames: string[];
+  } | null>(null);
+
   const handleRemoveCityClick = (index: number, name: string) => {
     setRemoveCityDialog({
       isOpen: true,
@@ -322,6 +342,28 @@ const FloatingCityCards = () => {
   const handleCancelRemoveCity = () => {
     setRemoveCityDialog({ isOpen: false, cityIndex: -1, cityName: '' });
   };
+
+  // Reorder feedback handlers
+  const handleUndoReorder = useCallback(() => {
+    if (!preDragStateRef.current || !route) return;
+
+    // Find the reorder we need to undo
+    const { fromIndex, toIndex } = reorderFeedback;
+
+    // Reverse the reorder
+    reorderCities(toIndex, fromIndex);
+
+    // Hide feedback
+    setReorderFeedback(prev => ({ ...prev, isVisible: false }));
+
+    // Clear the saved state
+    preDragStateRef.current = null;
+  }, [route, reorderFeedback, reorderCities]);
+
+  const handleDismissFeedback = useCallback(() => {
+    setReorderFeedback(prev => ({ ...prev, isVisible: false }));
+    preDragStateRef.current = null;
+  }, []);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -342,17 +384,50 @@ const FloatingCityCards = () => {
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string);
+
+    // Save pre-drag state for undo and distance comparison
+    if (route) {
+      preDragStateRef.current = {
+        cities: [...route.cities],
+        distance: calculateRouteDistance(route.cities),
+        cityNames: route.cities.map(c => getCityName(c.city))
+      };
+    }
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
 
-    if (over && active.id !== over.id) {
+    if (over && active.id !== over.id && route && preDragStateRef.current) {
       const oldIndex = parseInt((active.id as string).replace('city-', ''));
       const newIndex = parseInt((over.id as string).replace('city-', ''));
 
+      // Get the moved city name before reordering
+      const movedCityName = getCityName(route.cities[oldIndex].city);
+      const oldDistance = preDragStateRef.current.distance;
+      const oldOrder = preDragStateRef.current.cityNames;
+
       // Reorder cities in store
       reorderCities(oldIndex, newIndex);
+
+      // Calculate new distance after reorder (we need to simulate the new order)
+      const newCities = [...route.cities];
+      const [removed] = newCities.splice(oldIndex, 1);
+      newCities.splice(newIndex, 0, removed);
+      const newDistance = calculateRouteDistance(newCities);
+      const newOrder = newCities.map(c => getCityName(c.city));
+
+      // Show feedback
+      setReorderFeedback({
+        isVisible: true,
+        oldDistance,
+        newDistance,
+        oldOrder,
+        newOrder,
+        movedCity: movedCityName,
+        fromIndex: oldIndex,
+        toIndex: newIndex
+      });
 
       // Update selected city index if needed
       if (selectedCityIndex === oldIndex) {
@@ -508,6 +583,13 @@ const FloatingCityCards = () => {
         totalCities={route.cities.length}
         onConfirm={handleConfirmRemoveCity}
         onCancel={handleCancelRemoveCity}
+      />
+
+      {/* Reorder Feedback Toast */}
+      <ReorderFeedback
+        data={reorderFeedback}
+        onUndo={handleUndoReorder}
+        onDismiss={handleDismissFeedback}
       />
     </div>
   );
