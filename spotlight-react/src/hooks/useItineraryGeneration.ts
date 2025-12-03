@@ -249,7 +249,14 @@ export function useItineraryGeneration(): UseItineraryGenerationReturn {
                 practicalInfo: fullItinerary.practicalInfo,
                 weather: fullItinerary.weather,
                 events: fullItinerary.events,
-                budget: fullItinerary.budget
+                budget: fullItinerary.budget,
+                // Personalization visibility fields
+                tripNarrative: fullItinerary.tripNarrative,
+                tripStyleProfile: fullItinerary.tripStyleProfile,
+                dayThemes: fullItinerary.dayThemes,
+                personalizedIntro: fullItinerary.personalizedIntro,
+                preferences: fullItinerary.preferences,
+                personalizationContent: fullItinerary.personalizationContent
               });
 
               const newUrl = `${window.location.pathname}?itinerary=${itineraryId}`;
