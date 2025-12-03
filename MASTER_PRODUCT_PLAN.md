@@ -1709,7 +1709,15 @@ Based on existing features, here's the recommended order:
    - Golden Replace button on city cards
 
 ### Week 4+: Natural Language
-5. **Command Bar** with AI parsing
+5. ✅ **Command Bar with AI parsing** - **DONE!**
+   - CommandBar.tsx with Cmd+K keyboard shortcut
+   - Dark editorial design with amber/golden accents
+   - Quick command suggestions based on route
+   - Natural language parsing via /api/route/parse-command
+   - Floating ⌘K button for discoverability
+   - High-confidence auto-execution for clear intents
+   - Integrated into SpotlightV2 with full action handlers
+
 6. **Constraint Change Handler**
 
 ---

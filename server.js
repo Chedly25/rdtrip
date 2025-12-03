@@ -3043,6 +3043,131 @@ Return ONLY valid JSON with no markdown:
   }
 });
 
+/**
+ * POST /api/route/parse-command
+ * Parse natural language commands for route modification
+ */
+app.post('/api/route/parse-command', async (req, res) => {
+  try {
+    const { command, routeContext } = req.body;
+
+    console.log('🗣️ Parsing command:', command);
+
+    if (!command || !routeContext?.cities) {
+      return res.status(400).json({ error: 'Command and route context required' });
+    }
+
+    const cityNames = routeContext.cities.map(c => c.name);
+
+    const prompt = `You are a travel route modification assistant. Parse the user's command and identify their intent.
+
+CURRENT ROUTE:
+${cityNames.map((name, i) => `${i + 1}. ${name} (${routeContext.cities[i]?.nights || 1} nights)`).join('\n')}
+
+USER COMMAND: "${command}"
+
+Identify the intent and extract entities. Possible intents:
+- remove: Remove a city from the route
+- replace: Replace a city with another
+- add: Add a new city to the route
+- reorder: Change the order of cities
+- adjust_nights: Change how many nights in a city
+- unknown: Cannot understand the request
+
+Return ONLY valid JSON with no markdown:
+{
+  "intent": "remove|replace|add|reorder|adjust_nights|unknown",
+  "confidence": 0.0-1.0,
+  "entities": {
+    "city": "city name if mentioned",
+    "nights": null or number,
+    "position": "before|after" if mentioned,
+    "referenceCity": "city name for position reference"
+  },
+  "suggestedActions": [
+    {
+      "id": "action-1",
+      "type": "remove|replace|add|reorder|nights|custom",
+      "label": "Human readable action label",
+      "description": "What this action will do",
+      "cityIndex": 0,
+      "cityName": "City Name",
+      "value": null
+    }
+  ]
+}
+
+For cityIndex, use the index from the CURRENT ROUTE (0-based).
+For confidence, be conservative - only high confidence if command is very clear.`;
+
+    const response = await fetch('https://api.perplexity.ai/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${PERPLEXITY_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'sonar',
+        messages: [
+          {
+            role: 'system',
+            content: 'You parse travel commands. Return ONLY valid JSON, no markdown.'
+          },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.3,
+        max_tokens: 800
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Perplexity API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const content = data.choices[0].message.content;
+
+    // Clean markdown if present
+    const jsonContent = content
+      .replace(/```json\n?/g, '')
+      .replace(/```\n?/g, '')
+      .trim();
+
+    const parsed = JSON.parse(jsonContent);
+
+    // Add icon mappings for frontend
+    const iconMap = {
+      remove: 'Trash2',
+      replace: 'RefreshCw',
+      add: 'Plus',
+      reorder: 'ArrowUpDown',
+      nights: 'Moon',
+      custom: 'Wand2'
+    };
+
+    if (parsed.suggestedActions) {
+      parsed.suggestedActions = parsed.suggestedActions.map(action => ({
+        ...action,
+        icon: iconMap[action.type] || 'Wand2'
+      }));
+    }
+
+    console.log(`✅ Parsed command: ${parsed.intent} (${Math.round(parsed.confidence * 100)}% confidence)`);
+
+    res.json(parsed);
+
+  } catch (error) {
+    console.error('❌ Command parsing failed:', error);
+    res.status(500).json({
+      intent: 'unknown',
+      confidence: 0,
+      entities: {},
+      suggestedActions: [],
+      error: error.message
+    });
+  }
+});
+
 // Helper: Calculate total route distance using Haversine
 function calculateTotalRouteDistance(route) {
   const { calculateDistance } = require('./utils/cityOptimization');

@@ -8,7 +8,9 @@ import { CityDetailModal } from '../v3/CityDetailModal';
 import { SaveRouteModal } from '../v3/SaveRouteModal';
 import SpotlightHeader from './SpotlightHeader';
 import { EditorialItineraryPanel } from '../../itinerary/editorial';
-import { Loader2, Users, CalendarDays } from 'lucide-react';
+import { CommandBar } from './CommandBar';
+import { CityReplacementSheet } from './CityReplacementSheet';
+import { Loader2, Users, CalendarDays, Command } from 'lucide-react';
 import { CollaborationPanel } from '../../collaboration/CollaborationPanel';
 import { CompanionPanel, CompanionTab, ProactiveBubble, MobileCompanionDrawer } from '../../companion/CompanionPanel';
 import { useCompanion } from '../../../contexts/CompanionProvider';
@@ -32,6 +34,12 @@ const SpotlightV2 = () => {
   const [mobileCompanionOpen, setMobileCompanionOpen] = useState(false);
   const [showItineraryPanel, setShowItineraryPanel] = useState(false);
   const [hasStoredItinerary, setHasStoredItinerary] = useState(false);
+  const [isCommandBarOpen, setIsCommandBarOpen] = useState(false);
+  const [replacementSheet, setReplacementSheet] = useState<{
+    isOpen: boolean;
+    cityIndex: number;
+    cityName: string;
+  }>({ isOpen: false, cityIndex: -1, cityName: '' });
 
   // Companion state
   const {
@@ -91,6 +99,106 @@ const SpotlightV2 = () => {
     setHasStoredItinerary(!!storedId);
     console.log('📋 Stored itinerary check:', storedId ? `Found: ${storedId}` : 'None found');
   }, [itineraryId, routeId]);
+
+  // Cmd+K keyboard shortcut for command bar
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Check for Cmd+K (Mac) or Ctrl+K (Windows/Linux)
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setIsCommandBarOpen(prev => !prev);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // Handle command bar actions
+  const handleCommandAction = (action: {
+    type: 'remove' | 'replace' | 'add' | 'reorder' | 'nights' | 'custom';
+    cityIndex?: number;
+    cityName?: string;
+    value?: any;
+  }) => {
+    if (!route) return;
+
+    console.log('🎯 Command action:', action);
+
+    switch (action.type) {
+      case 'remove':
+        if (action.cityIndex !== undefined && action.cityIndex > 0 && action.cityIndex < route.cities.length - 1) {
+          // Remove city from route
+          const newCities = [...route.cities];
+          newCities.splice(action.cityIndex, 1);
+          setRoute({ ...route, cities: newCities });
+        }
+        break;
+
+      case 'replace':
+        if (action.cityIndex !== undefined && action.cityName) {
+          // Open replacement sheet
+          setReplacementSheet({
+            isOpen: true,
+            cityIndex: action.cityIndex,
+            cityName: action.cityName
+          });
+        }
+        break;
+
+      case 'nights':
+        if (action.cityIndex !== undefined && action.value !== undefined) {
+          // Update nights for city
+          const newCities = [...route.cities];
+          newCities[action.cityIndex] = {
+            ...newCities[action.cityIndex],
+            nights: action.value
+          };
+          setRoute({ ...route, cities: newCities });
+        }
+        break;
+
+      case 'add':
+        // Open companion panel to discuss adding a city
+        if (!isPanelExpanded) {
+          togglePanel();
+        }
+        sendMessage('I want to add a new city to my route. Can you suggest some options?');
+        break;
+
+      default:
+        console.log('Unknown command action:', action.type);
+    }
+  };
+
+  // Handle city replacement from command bar or FloatingCityCards
+  const handleReplaceCity = (newCity: {
+    name: string;
+    country: string;
+    coordinates: { lat: number; lng: number };
+    whyReplace?: string;
+    highlights?: string[];
+    matchScore?: number;
+    matchReasons?: string[];
+    estimatedDetourKm?: number;
+    bestFor?: 'culture' | 'nature' | 'food' | 'adventure' | 'relaxation';
+  }) => {
+    if (!route || replacementSheet.cityIndex < 0) return;
+
+    const newCities = [...route.cities];
+    newCities[replacementSheet.cityIndex] = {
+      ...newCities[replacementSheet.cityIndex],
+      city: {
+        name: newCity.name,
+        country: newCity.country,
+        coordinates: newCity.coordinates
+      },
+      coordinates: newCity.coordinates
+    };
+
+    setRoute({ ...route, cities: newCities });
+    setReplacementSheet({ isOpen: false, cityIndex: -1, cityName: '' });
+  };
 
   const loadRouteData = async () => {
     try {
@@ -744,6 +852,44 @@ const SpotlightV2 = () => {
         delay={10000}
         className="fixed bottom-[300px] left-4 z-30"
       />
+
+      {/* Command Bar - Cmd+K interface */}
+      <CommandBar
+        isOpen={isCommandBarOpen}
+        onClose={() => setIsCommandBarOpen(false)}
+        onExecuteAction={handleCommandAction}
+      />
+
+      {/* City Replacement Sheet - Triggered from command bar or city cards */}
+      <CityReplacementSheet
+        isOpen={replacementSheet.isOpen}
+        onClose={() => setReplacementSheet({ isOpen: false, cityIndex: -1, cityName: '' })}
+        cityName={replacementSheet.cityName}
+        cityIndex={replacementSheet.cityIndex}
+        onReplace={handleReplaceCity}
+      />
+
+      {/* Floating Cmd+K Button - Bottom right corner */}
+      <motion.button
+        onClick={() => setIsCommandBarOpen(true)}
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 1 }}
+        className="fixed bottom-6 right-6 z-40 hidden md:flex items-center gap-2 px-4 py-2.5 rounded-xl shadow-lg transition-all"
+        style={{
+          background: 'linear-gradient(135deg, #1A1814 0%, #252220 100%)',
+          border: '1px solid rgba(212, 168, 83, 0.3)',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.3), 0 0 0 1px rgba(212, 168, 83, 0.1)'
+        }}
+        whileHover={{ scale: 1.05, boxShadow: '0 6px 24px rgba(0,0,0,0.4), 0 0 20px rgba(212, 168, 83, 0.2)' }}
+        whileTap={{ scale: 0.98 }}
+      >
+        <Command className="w-4 h-4 text-[#D4A853]" />
+        <span className="text-sm font-medium text-[#F5F0EB]">Command</span>
+        <kbd className="ml-1 px-1.5 py-0.5 text-xs font-medium rounded bg-[#2D2A27] text-[#9B8E82] border border-[#3D3835]">
+          ⌘K
+        </kbd>
+      </motion.button>
 
     </div>
   );
