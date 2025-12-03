@@ -1718,7 +1718,18 @@ Based on existing features, here's the recommended order:
    - High-confidence auto-execution for clear intents
    - Integrated into SpotlightV2 with full action handlers
 
-6. **Constraint Change Handler**
+6. ✅ **Night Redistribution UI** - **DONE!**
+   - NightEditor.tsx component with "Moonlit Allocation" design
+   - Moon phase visualization for each night
+   - Warm Wanderlust Editorial aesthetic
+   - Per-city +/- stepper controls
+   - Total nights budget with progress bar
+   - "Redistribute Evenly" magic wand button
+   - Visual warnings for over/under budget
+   - Clickable nights display on city cards
+   - Apply changes with smooth animations
+
+7. **Constraint Change Handler**
 
 ---
 

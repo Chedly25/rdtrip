@@ -5,6 +5,7 @@ import { useState, useEffect, Fragment, useRef, useCallback } from 'react';
 import AddCityLandmarkModal from './AddCityLandmarkModal';
 import RemoveCityDialog from './RemoveCityDialog';
 import CityReplacementSheet from './CityReplacementSheet';
+import NightEditor from './NightEditor';
 import ReorderFeedback, { calculateRouteDistance, type ReorderFeedbackData } from './ReorderFeedback';
 import { fetchCityImage } from '../../../services/cityImages';
 import { getLandmarkImagePath } from '../../../services/landmarks';
@@ -43,6 +44,7 @@ interface SortableCityCardProps {
   onCityClick: () => void;
   onRemoveClick: () => void;
   onReplaceClick: () => void;
+  onNightsClick: () => void;
 }
 
 const SortableCityCard = ({
@@ -55,7 +57,8 @@ const SortableCityCard = ({
   canRemove,
   onCityClick,
   onRemoveClick,
-  onReplaceClick
+  onReplaceClick,
+  onNightsClick
 }: SortableCityCardProps) => {
   void _totalCities; // Suppress unused warning
   const [isHovered, setIsHovered] = useState(false);
@@ -197,10 +200,17 @@ const SortableCityCard = ({
 
         {/* City info - More compact */}
         <div className="flex items-center gap-3 text-xs text-gray-600">
-          <div className="flex items-center gap-1">
-            <Moon className="w-3 h-3" />
-            <span>{city.nights} {city.nights === 1 ? 'night' : 'nights'}</span>
-          </div>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onNightsClick();
+            }}
+            className="flex items-center gap-1 px-2 py-1 -mx-2 -my-1 rounded-md hover:bg-amber-50 transition-colors group cursor-pointer"
+            title="Edit nights"
+          >
+            <Moon className="w-3 h-3 text-amber-600 group-hover:text-amber-700 transition-colors" />
+            <span className="group-hover:text-amber-700 transition-colors">{city.nights} {city.nights === 1 ? 'night' : 'nights'}</span>
+          </button>
 
           {city.activities && city.activities.length > 0 && (
             <div className="flex items-center gap-1">
@@ -360,6 +370,9 @@ const FloatingCityCards = () => {
     fromIndex: 0,
     toIndex: 0
   });
+
+  // State for night editor
+  const [isNightEditorOpen, setIsNightEditorOpen] = useState(false);
 
   // Store pre-drag state for undo functionality
   const preDragStateRef = useRef<{
@@ -617,6 +630,7 @@ const FloatingCityCards = () => {
                           onCityClick={() => handleCityClick(cityIndex)}
                           onRemoveClick={() => handleRemoveCityClick(cityIndex, cityName)}
                           onReplaceClick={() => handleReplaceCityClick(cityIndex, cityName)}
+                          onNightsClick={() => setIsNightEditorOpen(true)}
                         />
 
                         {/* Landmark Cards after this city */}
@@ -685,6 +699,12 @@ const FloatingCityCards = () => {
         cityName={replacementSheet.cityName}
         onClose={handleCloseReplacementSheet}
         onReplace={handleReplaceCity}
+      />
+
+      {/* Night Editor */}
+      <NightEditor
+        isOpen={isNightEditorOpen}
+        onClose={() => setIsNightEditorOpen(false)}
       />
     </div>
   );
