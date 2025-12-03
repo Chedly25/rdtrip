@@ -283,11 +283,16 @@ class GooglePlacesDiscoveryAgent {
       return true;
     });
 
-    // 3. Rank by quality score
-    filtered = filtered.map(candidate => ({
-      ...candidate,
-      qualityScore: this.calculateQualityScore(candidate, preferences)
-    }));
+    // 3. Rank by quality score AND attach match reasons
+    filtered = filtered.map(candidate => {
+      const { score, matchReasons } = this.calculateQualityScore(candidate, preferences);
+      return {
+        ...candidate,
+        qualityScore: score,
+        matchReasons: matchReasons,
+        matchScore: this.calculateMatchPercentage(score, matchReasons)
+      };
+    });
 
     // 4. Sort by quality score
     filtered.sort((a, b) => b.qualityScore - a.qualityScore);
@@ -296,15 +301,33 @@ class GooglePlacesDiscoveryAgent {
   }
 
   /**
+   * Calculate a normalized match percentage (0-100) for display
+   */
+  calculateMatchPercentage(score, matchReasons) {
+    // If there are personalization match reasons, calculate based on those
+    if (matchReasons && matchReasons.length > 0) {
+      const personalizationScore = matchReasons.reduce((sum, r) => sum + r.contribution, 0);
+      // Max possible personalization score is ~50 points
+      // Normalize to 0-100, with a base of 50% for having any matches
+      const percentage = Math.min(100, 50 + (personalizationScore / 50) * 50);
+      return Math.round(percentage);
+    }
+    // No personalization data - return null (don't show match score)
+    return null;
+  }
+
+  /**
    * Calculate quality score for ranking
-   * NOW WITH AGENT PERSONALITY SCORING AND PERSONALIZATION
+   * NOW WITH AGENT PERSONALITY SCORING, PERSONALIZATION, AND MATCH REASONS
+   * Returns: { score: number, matchReasons: MatchReason[] }
    */
   calculateQualityScore(candidate, preferences) {
     const agentType = preferences?.agentType || preferences?.travelStyle || 'best-overall';
     const personalization = preferences?.personalization || {};
     let score = 0;
+    const matchReasons = [];
 
-    // Rating (40 points max)
+    // Rating (40 points max) - base quality, not a "match reason"
     if (candidate.rating) {
       score += (candidate.rating / 5.0) * 40;
     }
@@ -313,124 +336,161 @@ class GooglePlacesDiscoveryAgent {
     if (candidate.ratingCount) {
       if (agentType === 'hidden-gems' || personalization.avoidCrowds) {
         // HIDDEN GEMS or AVOID CROWDS: Prefer LOWER rating counts (undiscovered places)
-        // Inverse scoring: fewer ratings = higher score
         const hiddenGemScore = Math.max(0, 20 - Math.min(candidate.ratingCount / 50, 1) * 20);
         score += hiddenGemScore;
         if (candidate.ratingCount < 100) {
-          score += 10; // Bonus for truly hidden spots
+          score += 10;
+          if (personalization.avoidCrowds) {
+            matchReasons.push({
+              factor: 'avoid_crowds',
+              contribution: 10,
+              explanation: 'Hidden spot away from tourist crowds'
+            });
+          }
         }
       } else {
-        // OTHER AGENTS: Prefer popular, well-reviewed places
         const ratingPoints = Math.min(candidate.ratingCount / 100, 1) * 20;
         score += ratingPoints;
       }
     }
 
-    // Has photos (15 points)
+    // Has photos (15 points) - base quality
     if (candidate.hasPhotos) {
       score += 15;
     }
 
-    // Has opening hours data (10 points)
+    // Has opening hours data (10 points) - base quality
     if (candidate.openingHours) {
       score += 10;
     }
 
-    // Open now (10 points bonus)
+    // Open now (10 points bonus) - base quality
     if (candidate.isOpenNow) {
       score += 10;
     }
 
     // Price level match (5 points)
-    if (this.matchesBudget(candidate.priceLevel, preferences.budget || personalization.budget)) {
+    const effectiveBudget = preferences.budget || personalization.budget;
+    if (this.matchesBudget(candidate.priceLevel, effectiveBudget)) {
       score += 5;
+      if (personalization.budget) {
+        matchReasons.push({
+          factor: `budget_${personalization.budget}`,
+          contribution: 5,
+          explanation: `Fits your ${personalization.budget} budget`
+        });
+      }
     }
 
     // AGENT-SPECIFIC BONUSES
     const place_types = candidate.place_types || [];
 
     if (agentType === 'adventure') {
-      // Bonus for nature/outdoor types
       if (place_types.includes('park') || place_types.includes('natural_feature') || place_types.includes('hiking_area')) {
         score += 20;
       }
     } else if (agentType === 'culture') {
-      // Bonus for museums and historical sites
       if (place_types.includes('museum') || place_types.includes('art_gallery') || place_types.includes('library')) {
         score += 20;
       }
     } else if (agentType === 'food') {
-      // Bonus for high-rated restaurants
       if (place_types.includes('restaurant') && candidate.rating >= 4.0) {
         score += 20;
       }
     } else if (agentType === 'hidden-gems') {
-      // Bonus for unique types (not generic tourist_attraction)
       if (!place_types.includes('tourist_attraction') && place_types.length > 0) {
         score += 15;
       }
     }
 
-    // PERSONALIZATION BONUSES (up to 30 points)
-    score += this.calculatePersonalizationBonus(candidate, personalization);
+    // PERSONALIZATION BONUSES (up to 30 points) - with reasons!
+    const personalizationResult = this.calculatePersonalizationBonus(candidate, personalization);
+    score += personalizationResult.score;
+    matchReasons.push(...personalizationResult.reasons);
 
-    return score;
+    return { score, matchReasons };
   }
 
   /**
    * Calculate bonus score based on user personalization preferences
+   * NOW RETURNS MATCH REASONS for visibility
+   * Returns: { score: number, reasons: MatchReason[] }
    */
   calculatePersonalizationBonus(candidate, personalization) {
     if (!personalization || Object.keys(personalization).length === 0) {
-      return 0;
+      return { score: 0, reasons: [] };
     }
 
     let bonus = 0;
+    const reasons = [];
     const place_types = candidate.place_types || [];
-    const name = (candidate.name || '').toLowerCase();
 
     // Interest matching (up to 15 points)
     if (personalization.interests && personalization.interests.length > 0) {
       const interestTypeMap = {
-        'history': ['museum', 'historic_site', 'monument', 'landmark'],
-        'art': ['art_gallery', 'museum'],
-        'architecture': ['church', 'cathedral', 'historic_site', 'landmark'],
-        'nature': ['park', 'natural_feature', 'hiking_area', 'garden'],
-        'food': ['restaurant', 'cafe', 'bakery', 'food'],
-        'wine': ['bar', 'winery', 'liquor_store'],
-        'nightlife': ['bar', 'night_club', 'casino'],
-        'shopping': ['shopping_mall', 'store', 'market'],
-        'photography': ['scenic_lookout', 'park', 'landmark', 'tourist_attraction'],
-        'adventure': ['park', 'hiking_area', 'amusement_park', 'stadium'],
-        'wellness': ['spa', 'gym', 'health'],
-        'local-culture': ['local_government_office', 'market', 'cafe'],
-        'beaches': ['beach'],
-        'mountains': ['natural_feature', 'hiking_area', 'park'],
-        'museums': ['museum', 'art_gallery']
+        'history': { types: ['museum', 'historic_site', 'monument', 'landmark'], label: 'history' },
+        'art': { types: ['art_gallery', 'museum'], label: 'art' },
+        'architecture': { types: ['church', 'cathedral', 'historic_site', 'landmark'], label: 'architecture' },
+        'nature': { types: ['park', 'natural_feature', 'hiking_area', 'garden'], label: 'nature' },
+        'food': { types: ['restaurant', 'cafe', 'bakery', 'food'], label: 'culinary experiences' },
+        'wine': { types: ['bar', 'winery', 'liquor_store'], label: 'wine' },
+        'nightlife': { types: ['bar', 'night_club', 'casino'], label: 'nightlife' },
+        'shopping': { types: ['shopping_mall', 'store', 'market'], label: 'shopping' },
+        'photography': { types: ['scenic_lookout', 'park', 'landmark', 'tourist_attraction'], label: 'photography' },
+        'adventure': { types: ['park', 'hiking_area', 'amusement_park', 'stadium'], label: 'adventure' },
+        'wellness': { types: ['spa', 'gym', 'health'], label: 'wellness' },
+        'local-culture': { types: ['local_government_office', 'market', 'cafe'], label: 'local culture' },
+        'beaches': { types: ['beach'], label: 'beaches' },
+        'mountains': { types: ['natural_feature', 'hiking_area', 'park'], label: 'mountains' },
+        'museums': { types: ['museum', 'art_gallery'], label: 'museums' }
       };
 
+      let interestBonus = 0;
       for (const interest of personalization.interests) {
-        const matchingTypes = interestTypeMap[interest] || [];
-        if (matchingTypes.some(t => place_types.includes(t))) {
-          bonus += 5; // 5 points per matched interest
+        const mapping = interestTypeMap[interest];
+        if (mapping && mapping.types.some(t => place_types.includes(t))) {
+          interestBonus += 5;
+          reasons.push({
+            factor: `interest_${interest}`,
+            contribution: 5,
+            explanation: `Matches your interest in ${mapping.label}`
+          });
         }
       }
-      bonus = Math.min(bonus, 15); // Cap at 15 points
+      bonus += Math.min(interestBonus, 15); // Cap at 15 points
     }
 
     // Travel style bonus (up to 10 points)
     if (personalization.travelStyle) {
       const styleMatch = {
-        'explorer': ['tourist_attraction', 'landmark', 'museum', 'park'],
-        'relaxer': ['spa', 'cafe', 'park', 'garden'],
-        'culture': ['museum', 'art_gallery', 'historic_site', 'church'],
-        'adventurer': ['park', 'hiking_area', 'amusement_park', 'stadium'],
-        'foodie': ['restaurant', 'cafe', 'bakery', 'bar']
+        'explorer': { types: ['tourist_attraction', 'landmark', 'museum', 'park'], label: 'explorer' },
+        'relaxer': { types: ['spa', 'cafe', 'park', 'garden'], label: 'relaxed traveler' },
+        'culture': { types: ['museum', 'art_gallery', 'historic_site', 'church'], label: 'culture seeker' },
+        'adventurer': { types: ['park', 'hiking_area', 'amusement_park', 'stadium'], label: 'adventurer' },
+        'foodie': { types: ['restaurant', 'cafe', 'bakery', 'bar'], label: 'foodie' }
       };
 
-      const matchingTypes = styleMatch[personalization.travelStyle] || [];
-      if (matchingTypes.some(t => place_types.includes(t))) {
+      const mapping = styleMatch[personalization.travelStyle];
+      if (mapping && mapping.types.some(t => place_types.includes(t))) {
         bonus += 10;
+        reasons.push({
+          factor: `style_${personalization.travelStyle}`,
+          contribution: 10,
+          explanation: `Perfect for a ${mapping.label} like you`
+        });
+      }
+    }
+
+    // Occasion bonus
+    if (personalization.occasion) {
+      const occasionMatch = this.matchesOccasion(candidate, personalization.occasion);
+      if (occasionMatch.matches) {
+        bonus += occasionMatch.points;
+        reasons.push({
+          factor: `occasion_${personalization.occasion}`,
+          contribution: occasionMatch.points,
+          explanation: occasionMatch.explanation
+        });
       }
     }
 
@@ -440,19 +500,70 @@ class GooglePlacesDiscoveryAgent {
           place_types.includes('hiking_area') || place_types.includes('beach') ||
           place_types.includes('natural_feature')) {
         bonus += 5;
+        reasons.push({
+          factor: 'prefer_outdoor',
+          contribution: 5,
+          explanation: 'Great outdoor venue as you prefer'
+        });
       }
     }
 
-    // Accessibility consideration - prefer accessible venues
+    // Accessibility consideration
     if (personalization.accessibility && personalization.accessibility.length > 0) {
-      // Google Places doesn't have great accessibility data, but we can prefer
-      // larger, established venues which tend to be more accessible
       if (candidate.ratingCount > 500 && candidate.rating >= 4.0) {
-        bonus += 3; // Established venues often have better accessibility
+        bonus += 3;
+        reasons.push({
+          factor: 'accessibility',
+          contribution: 3,
+          explanation: 'Well-established venue, typically more accessible'
+        });
       }
     }
 
-    return bonus;
+    return { score: bonus, reasons };
+  }
+
+  /**
+   * Check if a place matches the trip occasion
+   */
+  matchesOccasion(candidate, occasion) {
+    const place_types = candidate.place_types || [];
+    const rating = candidate.rating || 0;
+
+    const occasionMatchers = {
+      'honeymoon': {
+        check: () => rating >= 4.3 && (place_types.includes('spa') || place_types.includes('park') || place_types.includes('restaurant')),
+        points: 8,
+        explanation: 'Romantic setting perfect for your honeymoon'
+      },
+      'anniversary': {
+        check: () => rating >= 4.2 && (place_types.includes('restaurant') || place_types.includes('spa') || place_types.includes('park')),
+        points: 8,
+        explanation: 'Special venue for celebrating your anniversary'
+      },
+      'birthday': {
+        check: () => rating >= 4.0,
+        points: 5,
+        explanation: 'Highly-rated venue for your birthday celebration'
+      },
+      'family-vacation': {
+        check: () => place_types.includes('park') || place_types.includes('zoo') || place_types.includes('aquarium') || place_types.includes('museum'),
+        points: 8,
+        explanation: 'Family-friendly activity'
+      },
+      'solo-adventure': {
+        check: () => place_types.includes('cafe') || place_types.includes('museum') || place_types.includes('park'),
+        points: 5,
+        explanation: 'Great for solo exploration'
+      }
+    };
+
+    const matcher = occasionMatchers[occasion];
+    if (matcher && matcher.check()) {
+      return { matches: true, points: matcher.points, explanation: matcher.explanation };
+    }
+
+    return { matches: false, points: 0, explanation: '' };
   }
 
   /**

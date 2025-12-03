@@ -249,12 +249,18 @@ class GooglePlacesRestaurantAgent {
 
   /**
    * Rank restaurants by quality and fit
+   * NOW WITH MATCH REASONS
    */
   rankRestaurants(restaurants, preferences, mealType) {
-    const ranked = restaurants.map(restaurant => ({
-      ...restaurant,
-      qualityScore: this.calculateRestaurantScore(restaurant, preferences, mealType)
-    }));
+    const ranked = restaurants.map(restaurant => {
+      const { score, matchReasons } = this.calculateRestaurantScore(restaurant, preferences, mealType);
+      return {
+        ...restaurant,
+        qualityScore: score,
+        matchReasons: matchReasons,
+        matchScore: this.calculateMatchPercentage(score, matchReasons)
+      };
+    });
 
     // Sort by quality score
     ranked.sort((a, b) => b.qualityScore - a.qualityScore);
@@ -263,15 +269,29 @@ class GooglePlacesRestaurantAgent {
   }
 
   /**
+   * Calculate a normalized match percentage (0-100) for display
+   */
+  calculateMatchPercentage(score, matchReasons) {
+    if (matchReasons && matchReasons.length > 0) {
+      const personalizationScore = matchReasons.reduce((sum, r) => sum + r.contribution, 0);
+      const percentage = Math.min(100, 50 + (personalizationScore / 40) * 50);
+      return Math.round(percentage);
+    }
+    return null;
+  }
+
+  /**
    * Calculate restaurant quality score
-   * NOW WITH AGENT PERSONALITY SCORING AND PERSONALIZATION
+   * NOW WITH AGENT PERSONALITY SCORING, PERSONALIZATION, AND MATCH REASONS
+   * Returns: { score: number, matchReasons: MatchReason[] }
    */
   calculateRestaurantScore(restaurant, preferences, mealType) {
     const agentType = preferences?.agentType || preferences?.travelStyle || 'best-overall';
     const personalization = preferences?.personalization || {};
     let score = 0;
+    const matchReasons = [];
 
-    // Rating (40 points)
+    // Rating (40 points) - base quality
     if (restaurant.rating) {
       score += (restaurant.rating / 5.0) * 40;
     }
@@ -279,90 +299,112 @@ class GooglePlacesRestaurantAgent {
     // Number of ratings - AGENT-SPECIFIC LOGIC
     if (restaurant.ratingCount) {
       if (agentType === 'hidden-gems' || personalization.avoidCrowds) {
-        // HIDDEN GEMS or AVOID CROWDS: Prefer fewer ratings (local secrets)
         const hiddenScore = Math.max(0, 20 - Math.min(restaurant.ratingCount / 50, 1) * 20);
         score += hiddenScore;
         if (restaurant.ratingCount < 50) {
-          score += 10; // Bonus for truly hidden restaurants
+          score += 10;
+          if (personalization.avoidCrowds) {
+            matchReasons.push({
+              factor: 'avoid_crowds',
+              contribution: 10,
+              explanation: 'Local secret, away from tourist crowds'
+            });
+          }
         }
       } else {
-        // OTHER AGENTS: Prefer well-reviewed places
         score += Math.min(restaurant.ratingCount / 100, 1) * 20;
       }
     }
 
-    // Has photos (15 points)
+    // Has photos (15 points) - base quality
     if (restaurant.hasPhotos) {
       score += 15;
     }
 
-    // Open now (15 points bonus)
+    // Open now (15 points bonus) - base quality
     if (restaurant.isOpenNow) {
       score += 15;
     }
 
-    // Price match - check both preferences.budget and personalization.budget (10 points)
+    // Price match
     const effectiveBudget = preferences.budget || personalization.budget;
     if (this.matchesBudget(restaurant.priceLevel, effectiveBudget)) {
       score += 10;
+      if (personalization.budget) {
+        matchReasons.push({
+          factor: `budget_${personalization.budget}`,
+          contribution: 10,
+          explanation: `Fits your ${personalization.budget} budget`
+        });
+      }
     }
 
     // AGENT-SPECIFIC BONUSES
     if (agentType === 'food') {
-      // FOOD AGENT: Big bonus for high-end dining
       if (restaurant.priceLevel >= 3 && restaurant.rating >= 4.0) {
-        score += 25; // Fine dining bonus
+        score += 25;
       }
       if (restaurant.rating >= 4.5) {
-        score += 15; // Exceptional quality bonus
+        score += 15;
       }
     } else if (agentType === 'adventure') {
-      // ADVENTURE: Prefer casual, hearty meals
       if (restaurant.priceLevel <= 2) {
-        score += 15; // Casual dining bonus
+        score += 15;
       }
     } else if (agentType === 'culture') {
-      // CULTURE: Prefer traditional/authentic venues
       if (restaurant.priceLevel === 2 || restaurant.priceLevel === 3) {
-        score += 15; // Mid-range traditional bonus
+        score += 15;
       }
     }
 
-    // PERSONALIZATION BONUSES (up to 25 points)
-    score += this.calculatePersonalizationBonus(restaurant, personalization);
+    // PERSONALIZATION BONUSES - with reasons!
+    const personalizationResult = this.calculatePersonalizationBonus(restaurant, personalization);
+    score += personalizationResult.score;
+    matchReasons.push(...personalizationResult.reasons);
 
-    return score;
+    return { score, matchReasons };
   }
 
   /**
    * Calculate personalization bonus for restaurant scoring
+   * NOW RETURNS MATCH REASONS for visibility
+   * Returns: { score: number, reasons: MatchReason[] }
    */
   calculatePersonalizationBonus(restaurant, personalization) {
     if (!personalization || Object.keys(personalization).length === 0) {
-      return 0;
+      return { score: 0, reasons: [] };
     }
 
     let bonus = 0;
+    const reasons = [];
 
     // Dining style preference (up to 15 points)
     if (personalization.diningStyle) {
       const styleScores = {
-        'street': { idealPriceLevel: 1, description: 'casual and cheap' },
-        'casual': { idealPriceLevel: 2, description: 'relaxed atmosphere' },
-        'mix': { idealPriceLevel: null, description: 'variety' }, // No preference
-        'fine': { idealPriceLevel: [3, 4], description: 'upscale' }
+        'street': { idealPriceLevel: 1, label: 'street food', description: 'Authentic street-style eats' },
+        'casual': { idealPriceLevel: 2, label: 'casual dining', description: 'Relaxed, no-fuss atmosphere' },
+        'mix': { idealPriceLevel: null, label: 'variety', description: '' },
+        'fine': { idealPriceLevel: [3, 4], label: 'fine dining', description: 'Upscale dining experience' }
       };
 
       const style = styleScores[personalization.diningStyle];
       if (style && style.idealPriceLevel) {
+        let matches = false;
         if (Array.isArray(style.idealPriceLevel)) {
-          if (style.idealPriceLevel.includes(restaurant.priceLevel)) {
-            bonus += 15;
-          }
-        } else if (restaurant.priceLevel === style.idealPriceLevel) {
+          matches = style.idealPriceLevel.includes(restaurant.priceLevel);
+        } else {
+          matches = restaurant.priceLevel === style.idealPriceLevel;
+        }
+
+        if (matches) {
           bonus += 15;
-        } else if (Math.abs((restaurant.priceLevel || 2) - style.idealPriceLevel) === 1) {
-          bonus += 8; // Close match
+          reasons.push({
+            factor: `dining_${personalization.diningStyle}`,
+            contribution: 15,
+            explanation: `${style.description} — your ${style.label} preference`
+          });
+        } else if (!Array.isArray(style.idealPriceLevel) && Math.abs((restaurant.priceLevel || 2) - style.idealPriceLevel) === 1) {
+          bonus += 8;
         }
       }
     }
@@ -370,41 +412,111 @@ class GooglePlacesRestaurantAgent {
     // Budget alignment (5 points)
     if (personalization.budget) {
       const budgetPriceLevels = {
-        'budget': [1, 2],
-        'mid': [2, 3],
-        'luxury': [3, 4]
+        'budget': { levels: [1, 2], label: 'budget-friendly' },
+        'mid': { levels: [2, 3], label: 'mid-range' },
+        'luxury': { levels: [3, 4], label: 'luxury' }
       };
-      const acceptableLevels = budgetPriceLevels[personalization.budget] || [2, 3];
-      if (acceptableLevels.includes(restaurant.priceLevel)) {
+      const budgetMapping = budgetPriceLevels[personalization.budget];
+      if (budgetMapping && budgetMapping.levels.includes(restaurant.priceLevel)) {
         bonus += 5;
+        // Only add reason if not already added from dining style
+        if (!reasons.some(r => r.factor.startsWith('dining_'))) {
+          reasons.push({
+            factor: `budget_${personalization.budget}`,
+            contribution: 5,
+            explanation: `Matches your ${budgetMapping.label} budget`
+          });
+        }
       }
     }
 
-    // Occasion-based preferences (5 points)
+    // Occasion-based preferences (up to 10 points)
     if (personalization.occasion) {
-      const romanticOccasions = ['honeymoon', 'anniversary'];
-      const celebratoryOccasions = ['birthday', 'graduation', 'retirement'];
-      const familyOccasions = ['family-vacation', 'reunion'];
-
-      if (romanticOccasions.includes(personalization.occasion)) {
-        // Prefer higher-end, atmospheric restaurants for romantic occasions
-        if (restaurant.priceLevel >= 3 && restaurant.rating >= 4.0) {
-          bonus += 5;
-        }
-      } else if (celebratoryOccasions.includes(personalization.occasion)) {
-        // Prefer well-rated restaurants good for celebrations
-        if (restaurant.rating >= 4.2) {
-          bonus += 5;
-        }
-      } else if (familyOccasions.includes(personalization.occasion)) {
-        // Prefer mid-range family-friendly options
-        if (restaurant.priceLevel <= 3) {
-          bonus += 5;
-        }
+      const occasionResult = this.matchesOccasion(restaurant, personalization.occasion);
+      if (occasionResult.matches) {
+        bonus += occasionResult.points;
+        reasons.push({
+          factor: `occasion_${personalization.occasion}`,
+          contribution: occasionResult.points,
+          explanation: occasionResult.explanation
+        });
       }
     }
 
-    return bonus;
+    // Interest in food/wine (5 points)
+    if (personalization.interests?.includes('food')) {
+      if (restaurant.rating >= 4.2) {
+        bonus += 5;
+        reasons.push({
+          factor: 'interest_food',
+          contribution: 5,
+          explanation: 'Top-rated for your foodie interests'
+        });
+      }
+    }
+
+    if (personalization.interests?.includes('wine')) {
+      // Check if restaurant name suggests wine focus
+      const name = (restaurant.name || '').toLowerCase();
+      if (name.includes('wine') || name.includes('enoteca') || name.includes('vino')) {
+        bonus += 5;
+        reasons.push({
+          factor: 'interest_wine',
+          contribution: 5,
+          explanation: 'Wine-focused venue for wine lovers'
+        });
+      }
+    }
+
+    return { score: bonus, reasons };
+  }
+
+  /**
+   * Check if a restaurant matches the trip occasion
+   */
+  matchesOccasion(restaurant, occasion) {
+    const rating = restaurant.rating || 0;
+    const priceLevel = restaurant.priceLevel || 2;
+
+    const occasionMatchers = {
+      'honeymoon': {
+        check: () => priceLevel >= 3 && rating >= 4.0,
+        points: 10,
+        explanation: 'Romantic atmosphere for your honeymoon'
+      },
+      'anniversary': {
+        check: () => priceLevel >= 3 && rating >= 4.0,
+        points: 10,
+        explanation: 'Special setting to celebrate your anniversary'
+      },
+      'birthday': {
+        check: () => rating >= 4.2,
+        points: 8,
+        explanation: 'Celebration-worthy venue for your birthday'
+      },
+      'graduation': {
+        check: () => rating >= 4.0,
+        points: 5,
+        explanation: 'Great spot to celebrate your achievement'
+      },
+      'family-vacation': {
+        check: () => priceLevel <= 3,
+        points: 5,
+        explanation: 'Family-friendly dining option'
+      },
+      'reunion': {
+        check: () => priceLevel <= 3,
+        points: 5,
+        explanation: 'Good for group dining'
+      }
+    };
+
+    const matcher = occasionMatchers[occasion];
+    if (matcher && matcher.check()) {
+      return { matches: true, points: matcher.points, explanation: matcher.explanation };
+    }
+
+    return { matches: false, points: 0, explanation: '' };
   }
 
   /**
