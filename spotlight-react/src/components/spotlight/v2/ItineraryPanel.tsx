@@ -6,10 +6,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Loader2, Calendar, Sparkles, CheckCircle2, AlertCircle, MapPin, Landmark, Star, Car } from 'lucide-react';
+import { X, Loader2, Calendar, Sparkles, CheckCircle2, AlertCircle, MapPin, Landmark, Star, Car, Gem } from 'lucide-react';
 import { useItineraryGeneration } from '../../../hooks/useItineraryGeneration';
 import { AgentOrchestrationVisualizerV5 } from '../../itinerary/AgentOrchestrationVisualizerV5';
 import { useSpotlightStoreV2 } from '../../../stores/spotlightStoreV2';
+import { PersonalizationSummary } from './PersonalizationSummary';
 
 interface ItineraryPanelProps {
   isOpen: boolean;
@@ -88,7 +89,9 @@ export const ItineraryPanel = ({ isOpen, onClose }: ItineraryPanelProps) => {
     const preferences = {
       travelStyle: route.agent,
       budget: route.budget,
-      agentType: route.agent
+      agentType: route.agent,
+      // Pass personalization data to backend for AI-powered customization
+      personalization: route.personalization || null
     };
 
     console.log('🚀 Starting itinerary generation with:', { routeData, preferences });
@@ -136,26 +139,71 @@ export const ItineraryPanel = ({ isOpen, onClose }: ItineraryPanelProps) => {
             className="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header */}
-            <div className="bg-white border-b border-gray-200 p-6 flex justify-between items-center flex-shrink-0">
+            {/* Header - Editorial style when personalized */}
+            <div
+              className="border-b p-6 flex justify-between items-center flex-shrink-0"
+              style={{
+                background: route?.personalization
+                  ? 'linear-gradient(145deg, #FFFDF9 0%, #FFF8ED 100%)'
+                  : 'white',
+                borderColor: route?.personalization
+                  ? 'rgba(196, 88, 48, 0.1)'
+                  : '#e5e7eb',
+              }}
+            >
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-50 rounded-lg">
-                  <Calendar className="w-6 h-6 text-blue-600" />
+                <div
+                  className="p-2 rounded-lg"
+                  style={{
+                    background: route?.personalization
+                      ? 'linear-gradient(135deg, rgba(196, 88, 48, 0.12) 0%, rgba(212, 168, 83, 0.12) 100%)'
+                      : 'rgb(239 246 255)',
+                  }}
+                >
+                  {route?.personalization ? (
+                    <Gem className="w-6 h-6" style={{ color: '#C45830' }} />
+                  ) : (
+                    <Calendar className="w-6 h-6 text-blue-600" />
+                  )}
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900">Detailed Itinerary Generator</h2>
-                  <p className="text-gray-600 text-sm mt-1">
-                    AI-powered day-by-day planning with 9 specialized agents
+                  <h2
+                    className="text-2xl font-bold"
+                    style={{
+                      color: route?.personalization ? '#2C2417' : '#111827',
+                      fontFamily: route?.personalization ? "'Fraunces', Georgia, serif" : 'inherit',
+                    }}
+                  >
+                    {route?.personalization ? 'Create Your Perfect Itinerary' : 'Detailed Itinerary Generator'}
+                  </h2>
+                  <p
+                    className="text-sm mt-1"
+                    style={{ color: route?.personalization ? '#8B7355' : '#6b7280' }}
+                  >
+                    {route?.personalization
+                      ? 'AI-powered planning tailored to your preferences'
+                      : 'AI-powered day-by-day planning with 9 specialized agents'}
                   </p>
                 </div>
               </div>
               <button
                 onClick={handleClose}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  background: 'transparent',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = route?.personalization
+                    ? 'rgba(196, 88, 48, 0.08)'
+                    : 'rgba(0, 0, 0, 0.05)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                }}
                 disabled={isGenerating}
                 title={isGenerating ? "Please wait for generation to complete" : "Close"}
               >
-                <X className="w-6 h-6 text-gray-700" />
+                <X className="w-6 h-6" style={{ color: route?.personalization ? '#8B7355' : '#374151' }} />
               </button>
             </div>
 
@@ -166,104 +214,310 @@ export const ItineraryPanel = ({ isOpen, onClose }: ItineraryPanelProps) => {
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="text-center py-12 px-6"
+                  className="py-8 px-6"
                 >
-                  <div className="inline-flex p-4 bg-blue-50 border-2 border-blue-100 rounded-xl mb-6">
-                    <Calendar className="w-16 h-16 text-blue-600" />
+                  {/* Personalized Header - if personalization exists */}
+                  {route?.personalization?.tripStory || route?.personalization?.occasion || route?.personalization?.interests?.length ? (
+                    <div className="text-center mb-6">
+                      <motion.div
+                        initial={{ scale: 0.9 }}
+                        animate={{ scale: 1 }}
+                        className="inline-flex p-3 rounded-2xl mb-4"
+                        style={{
+                          background: 'linear-gradient(135deg, rgba(196, 88, 48, 0.1) 0%, rgba(212, 168, 83, 0.1) 100%)',
+                        }}
+                      >
+                        <Gem className="w-10 h-10" style={{ color: '#C45830' }} />
+                      </motion.div>
+                      <h3
+                        className="text-2xl font-bold mb-2"
+                        style={{
+                          color: '#2C2417',
+                          fontFamily: "'Fraunces', Georgia, serif",
+                          letterSpacing: '-0.02em',
+                        }}
+                      >
+                        {route.personalization?.occasion === 'honeymoon'
+                          ? 'Ready to Plan Your Honeymoon?'
+                          : route.personalization?.occasion === 'anniversary'
+                          ? 'Ready to Plan Your Anniversary Escape?'
+                          : route.personalization?.occasion === 'birthday'
+                          ? 'Ready to Plan Your Birthday Adventure?'
+                          : 'Ready to Create Your Personalized Itinerary?'}
+                      </h3>
+                      <p className="text-gray-600 max-w-lg mx-auto">
+                        Our AI will craft a day-by-day journey tailored to your preferences
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="text-center mb-6">
+                      <div className="inline-flex p-4 bg-blue-50 border-2 border-blue-100 rounded-xl mb-4">
+                        <Calendar className="w-12 h-12 text-blue-600" />
+                      </div>
+                      <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                        Ready to Generate Your Itinerary?
+                      </h3>
+                      <p className="text-gray-600 max-w-lg mx-auto">
+                        Our AI will create a comprehensive day-by-day plan with activities, restaurants, and accommodations
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Personalization Summary Card - if personalization exists */}
+                  {route?.personalization && (
+                    <div className="mb-6 max-w-xl mx-auto">
+                      <PersonalizationSummary
+                        personalization={route.personalization}
+                        variant="full"
+                      />
+                    </div>
+                  )}
+
+                  {/* Feature highlights - refined styling */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-8 max-w-3xl mx-auto">
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.1 }}
+                      className="rounded-xl p-4 transition-all hover:shadow-md"
+                      style={{
+                        background: 'linear-gradient(145deg, #FFFDF9 0%, #FFF8ED 100%)',
+                        border: '1px solid rgba(196, 88, 48, 0.1)',
+                      }}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <span
+                          className="w-6 h-6 rounded-lg flex items-center justify-center text-xs"
+                          style={{ background: 'rgba(196, 88, 48, 0.1)', color: '#C45830' }}
+                        >
+                          <Sparkles className="w-3.5 h-3.5" />
+                        </span>
+                        <span className="font-semibold text-sm" style={{ color: '#2C2417' }}>Smart Planning</span>
+                      </div>
+                      <div className="text-xs" style={{ color: '#8B7355' }}>
+                        Optimized day structure based on your preferences
+                      </div>
+                    </motion.div>
+
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.2 }}
+                      className="rounded-xl p-4 transition-all hover:shadow-md"
+                      style={{
+                        background: 'linear-gradient(145deg, #FFFDF9 0%, #FFF8ED 100%)',
+                        border: '1px solid rgba(196, 88, 48, 0.1)',
+                      }}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <span
+                          className="w-6 h-6 rounded-lg flex items-center justify-center text-xs"
+                          style={{ background: 'rgba(212, 168, 83, 0.15)', color: '#8B6914' }}
+                        >
+                          9
+                        </span>
+                        <span className="font-semibold text-sm" style={{ color: '#2C2417' }}>AI Agents</span>
+                      </div>
+                      <div className="text-xs" style={{ color: '#8B7355' }}>
+                        Parallel processing for comprehensive results
+                      </div>
+                    </motion.div>
+
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.3 }}
+                      className="rounded-xl p-4 transition-all hover:shadow-md"
+                      style={{
+                        background: 'linear-gradient(145deg, #FFFDF9 0%, #FFF8ED 100%)',
+                        border: '1px solid rgba(196, 88, 48, 0.1)',
+                      }}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <span
+                          className="w-6 h-6 rounded-lg flex items-center justify-center text-xs"
+                          style={{ background: 'rgba(74, 124, 89, 0.1)', color: '#4A7C59' }}
+                        >
+                          <Car className="w-3.5 h-3.5" />
+                        </span>
+                        <span className="font-semibold text-sm" style={{ color: '#2C2417' }}>Fast Generation</span>
+                      </div>
+                      <div className="text-xs" style={{ color: '#8B7355' }}>
+                        Typically completes in 30-90 seconds
+                      </div>
+                    </motion.div>
                   </div>
 
-                  <h3 className="text-2xl font-bold text-gray-900 mb-3">
-                    Ready to Generate Your Itinerary?
-                  </h3>
-
-                  <p className="text-gray-600 mb-8 max-w-2xl mx-auto leading-relaxed">
-                    Our AI will analyze your route and create a comprehensive day-by-day plan.
-                    The system uses 9 specialized agents working in parallel to discover the best
-                    activities, restaurants, accommodations, scenic stops, weather forecasts, local events,
-                    and budget optimization for your trip.
-                  </p>
-
-                  {/* Feature highlights */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 max-w-3xl mx-auto">
-                    <div className="bg-white border-2 border-gray-200 rounded-lg p-4 hover:border-blue-200 transition-colors">
-                      <div className="text-gray-900 font-semibold mb-1 flex items-center gap-2">
-                        <span className="text-blue-600">🎯</span> Smart Planning
-                      </div>
-                      <div className="text-sm text-gray-600">Optimized day structure based on your preferences</div>
-                    </div>
-                    <div className="bg-white border-2 border-gray-200 rounded-lg p-4 hover:border-blue-200 transition-colors">
-                      <div className="text-gray-900 font-semibold mb-1 flex items-center gap-2">
-                        <span className="text-blue-600">🤖</span> 9 AI Agents
-                      </div>
-                      <div className="text-sm text-gray-600">Parallel processing for comprehensive results</div>
-                    </div>
-                    <div className="bg-white border-2 border-gray-200 rounded-lg p-4 hover:border-blue-200 transition-colors">
-                      <div className="text-gray-900 font-semibold mb-1 flex items-center gap-2">
-                        <span className="text-blue-600">⚡</span> Fast Generation
-                      </div>
-                      <div className="text-sm text-gray-600">Typically completes in 30-90 seconds</div>
-                    </div>
+                  {/* CTA Button - styled to match editorial theme when personalized */}
+                  <div className="text-center">
+                    {route?.personalization ? (
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={handleGenerate}
+                        className="px-8 py-4 rounded-xl font-semibold text-lg inline-flex items-center gap-3 transition-all"
+                        style={{
+                          background: 'linear-gradient(135deg, #C45830 0%, #D4A853 100%)',
+                          color: '#FFFDF9',
+                          boxShadow: '0 4px 14px rgba(196, 88, 48, 0.3)',
+                        }}
+                      >
+                        <Sparkles className="w-5 h-5" />
+                        Create My Personalized Itinerary
+                      </motion.button>
+                    ) : (
+                      <button
+                        onClick={handleGenerate}
+                        className="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold text-lg hover:shadow-lg transition-all inline-flex items-center gap-3"
+                      >
+                        <Sparkles className="w-5 h-5" />
+                        Start Generation
+                        <span className="text-sm font-normal opacity-90">(30-90 seconds)</span>
+                      </button>
+                    )}
                   </div>
-
-                  <button
-                    onClick={handleGenerate}
-                    className="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold text-lg hover:shadow-lg transition-all inline-flex items-center gap-3"
-                  >
-                    <Sparkles className="w-5 h-5" />
-                    Start Generation
-                    <span className="text-sm font-normal opacity-90">(30-90 seconds)</span>
-                  </button>
                 </motion.div>
               )}
 
               {/* Generating State */}
               {isGenerating && (
                 <div className="space-y-6">
-                  {/* Status Banner */}
+                  {/* Status Banner - Editorial style when personalized */}
                   <motion.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-blue-50 border-2 border-blue-200 rounded-xl p-6"
+                    className="rounded-xl p-6"
+                    style={{
+                      background: route?.personalization
+                        ? 'linear-gradient(145deg, #FFFDF9 0%, #FFF8ED 100%)'
+                        : 'rgb(239 246 255)',
+                      border: route?.personalization
+                        ? '1px solid rgba(196, 88, 48, 0.15)'
+                        : '2px solid rgb(191 219 254)',
+                    }}
                   >
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-3">
-                        <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+                        <motion.div
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                        >
+                          {route?.personalization ? (
+                            <Sparkles className="w-6 h-6" style={{ color: '#C45830' }} />
+                          ) : (
+                            <Loader2 className="w-6 h-6 text-blue-600" />
+                          )}
+                        </motion.div>
                         <div>
-                          <p className="text-gray-900 font-semibold text-lg">
-                            Generating your itinerary...
+                          <p
+                            className="font-semibold text-lg"
+                            style={{
+                              color: route?.personalization ? '#2C2417' : '#111827',
+                              fontFamily: route?.personalization ? "'Fraunces', Georgia, serif" : 'inherit',
+                            }}
+                          >
+                            {route?.personalization
+                              ? 'Crafting your personalized journey...'
+                              : 'Generating your itinerary...'}
                           </p>
-                          <p className="text-gray-600 text-sm">
+                          <p
+                            className="text-sm"
+                            style={{ color: route?.personalization ? '#8B7355' : '#6b7280' }}
+                          >
                             {completedAgents} of {totalAgents} agents completed • {formatTime(elapsedTime)} elapsed
                           </p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-3xl font-bold text-blue-600">{progressPercentage}%</div>
-                        <div className="text-xs text-gray-600">Complete</div>
+                        <div
+                          className="text-3xl font-bold"
+                          style={{ color: route?.personalization ? '#C45830' : '#2563eb' }}
+                        >
+                          {progressPercentage}%
+                        </div>
+                        <div
+                          className="text-xs"
+                          style={{ color: route?.personalization ? '#8B7355' : '#6b7280' }}
+                        >
+                          Complete
+                        </div>
                       </div>
                     </div>
 
                     {/* Progress Bar */}
-                    <div className="w-full h-2 bg-white rounded-full overflow-hidden border border-blue-100">
+                    <div
+                      className="w-full h-2 rounded-full overflow-hidden"
+                      style={{
+                        background: route?.personalization ? 'rgba(44, 36, 23, 0.08)' : 'white',
+                        border: route?.personalization ? 'none' : '1px solid rgb(219 234 254)',
+                      }}
+                    >
                       <motion.div
                         initial={{ width: 0 }}
                         animate={{ width: `${progressPercentage}%` }}
                         transition={{ duration: 0.5, ease: "easeOut" }}
-                        className="h-full bg-blue-600"
+                        className="h-full rounded-full"
+                        style={{
+                          background: route?.personalization
+                            ? 'linear-gradient(90deg, #C45830 0%, #D4A853 100%)'
+                            : '#2563eb',
+                        }}
                       />
                     </div>
+
+                    {/* Personalization reminder during generation */}
+                    {route?.personalization?.tripStory && (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.5 }}
+                        className="mt-4 pt-4 border-t"
+                        style={{ borderColor: 'rgba(139, 115, 85, 0.15)' }}
+                      >
+                        <p
+                          className="text-xs uppercase tracking-wider mb-1"
+                          style={{ color: '#8B7355' }}
+                        >
+                          Tailoring to your preferences
+                        </p>
+                        <p
+                          className="text-sm italic"
+                          style={{ color: '#5C4D3D' }}
+                        >
+                          "{route.personalization.tripStory.slice(0, 80)}..."
+                        </p>
+                      </motion.div>
+                    )}
                   </motion.div>
 
                   {/* Agent Visualizer */}
-                  <div className="bg-white rounded-xl border-2 border-gray-200 overflow-hidden">
+                  <div
+                    className="rounded-xl overflow-hidden"
+                    style={{
+                      border: route?.personalization
+                        ? '1px solid rgba(196, 88, 48, 0.1)'
+                        : '2px solid #e5e7eb',
+                    }}
+                  >
                     <AgentOrchestrationVisualizerV5
                       agents={agentNodes}
                       partialResults={partialResults}
                     />
                   </div>
 
-                  {/* Helpful tip */}
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-800">
+                  {/* Helpful tip - Editorial style when personalized */}
+                  <div
+                    className="rounded-lg p-4 text-sm"
+                    style={{
+                      background: route?.personalization
+                        ? 'linear-gradient(145deg, rgba(212, 168, 83, 0.08) 0%, rgba(212, 168, 83, 0.04) 100%)'
+                        : 'rgb(254 252 232)',
+                      border: route?.personalization
+                        ? '1px solid rgba(212, 168, 83, 0.2)'
+                        : '1px solid rgb(253 230 138)',
+                      color: route?.personalization ? '#8B6914' : '#92400e',
+                    }}
+                  >
                     <div className="flex items-start gap-2">
                       <Sparkles className="w-4 h-4 mt-0.5 flex-shrink-0" />
                       <div>
@@ -302,20 +556,87 @@ export const ItineraryPanel = ({ isOpen, onClose }: ItineraryPanelProps) => {
                   animate={{ opacity: 1, y: 0 }}
                   className="space-y-6"
                 >
-                  {/* Success Banner */}
-                  <div className="bg-green-50 border-2 border-green-200 rounded-xl p-6">
-                    <div className="flex items-center gap-3 mb-3">
-                      <CheckCircle2 className="w-8 h-8 text-green-600" />
-                      <div>
-                        <p className="text-gray-900 font-bold text-xl">
-                          Itinerary Generated Successfully!
-                        </p>
-                        <p className="text-gray-600 text-sm">
-                          Completed in {formatTime(elapsedTime)} • All 9 agents finished
-                        </p>
+                  {/* Success Banner - Personalized or default */}
+                  {itinerary.personalizedIntro ? (
+                    <div
+                      className="rounded-xl p-6 relative overflow-hidden"
+                      style={{
+                        background: 'linear-gradient(145deg, #FFFDF9 0%, #FFF8ED 100%)',
+                        border: '1px solid rgba(196, 88, 48, 0.15)',
+                      }}
+                    >
+                      {/* Decorative accent */}
+                      <div
+                        className="absolute top-0 left-0 right-0 h-1"
+                        style={{
+                          background: 'linear-gradient(90deg, #C45830 0%, #D4A853 50%, #4A7C59 100%)',
+                        }}
+                      />
+                      <div className="flex items-start gap-4">
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ type: "spring", delay: 0.2 }}
+                          className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+                          style={{
+                            background: 'linear-gradient(135deg, rgba(74, 124, 89, 0.15) 0%, rgba(212, 168, 83, 0.15) 100%)',
+                          }}
+                        >
+                          <CheckCircle2 className="w-6 h-6" style={{ color: '#4A7C59' }} />
+                        </motion.div>
+                        <div className="flex-1">
+                          <h3
+                            className="text-xl font-bold mb-1"
+                            style={{
+                              color: '#2C2417',
+                              fontFamily: "'Fraunces', Georgia, serif",
+                            }}
+                          >
+                            {itinerary.personalizedIntro.headline || 'Your Personalized Itinerary is Ready!'}
+                          </h3>
+                          <p className="text-sm mb-3" style={{ color: '#8B7355' }}>
+                            Completed in {formatTime(elapsedTime)} • Tailored to your preferences
+                          </p>
+                          {itinerary.personalizedIntro.summary && (
+                            <p className="text-sm italic" style={{ color: '#5C4D3D' }}>
+                              "{itinerary.personalizedIntro.summary}"
+                            </p>
+                          )}
+                          {itinerary.personalizedIntro.highlightedFactors && itinerary.personalizedIntro.highlightedFactors.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-3">
+                              {itinerary.personalizedIntro.highlightedFactors.slice(0, 4).map((factor: string, idx: number) => (
+                                <span
+                                  key={idx}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium"
+                                  style={{
+                                    background: 'rgba(212, 168, 83, 0.12)',
+                                    color: '#8B6914',
+                                  }}
+                                >
+                                  <Sparkles className="w-3 h-3" style={{ color: '#D4A853' }} />
+                                  {factor}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="bg-green-50 border-2 border-green-200 rounded-xl p-6">
+                      <div className="flex items-center gap-3 mb-3">
+                        <CheckCircle2 className="w-8 h-8 text-green-600" />
+                        <div>
+                          <p className="text-gray-900 font-bold text-xl">
+                            Itinerary Generated Successfully!
+                          </p>
+                          <p className="text-gray-600 text-sm">
+                            Completed in {formatTime(elapsedTime)} • All 9 agents finished
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Itinerary Preview */}
                   <div className="bg-gray-50 border border-gray-200 rounded-xl p-6">
