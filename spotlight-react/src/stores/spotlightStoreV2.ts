@@ -221,9 +221,28 @@ export interface SpotlightRoute {
   dayThemes?: DayTheme[];    // Themed titles for each day
 }
 
+// Trip Mode state for live trip tracking
+export interface TripModeState {
+  isActive: boolean;
+  startedAt: string | null;
+  currentDay: number;
+  currentCityIndex: number;
+  completedActivities: string[];
+  checkins: Array<{
+    activityId: string;
+    timestamp: string;
+    photo?: string;
+    note?: string;
+    location?: { lat: number; lng: number };
+  }>;
+}
+
 interface SpotlightStoreV2 {
   // Core route data
   route: SpotlightRoute | null;
+
+  // Trip Mode state
+  tripMode: TripModeState;
 
   // UI state
   selectedCityIndex: number | null;
@@ -274,11 +293,27 @@ interface SpotlightStoreV2 {
   getCityName: (city: string | CityObject) => string;
   getCityCoordinates: (city: string | CityObject) => CityCoordinates | null;
   getAgentColors: () => { primary: string; secondary: string; accent: string };
+
+  // Trip Mode actions
+  startTrip: () => void;
+  endTrip: () => void;
+  advanceDay: () => void;
+  markActivityComplete: (activityId: string) => void;
+  addCheckin: (checkin: TripModeState['checkins'][0]) => void;
+  setCurrentCity: (cityIndex: number) => void;
 }
 
 export const useSpotlightStoreV2 = create<SpotlightStoreV2>((set, get) => ({
   // Initial state
   route: null,
+  tripMode: {
+    isActive: false,
+    startedAt: null,
+    currentDay: 1,
+    currentCityIndex: 0,
+    completedActivities: [],
+    checkins: [],
+  },
   selectedCityIndex: null,
   isAddingLandmark: false,
   isEditingCity: false,
@@ -754,5 +789,53 @@ export const useSpotlightStoreV2 = create<SpotlightStoreV2>((set, get) => ({
     const state = get();
     const agent = state.route?.agent || 'best-overall';
     return AGENT_COLORS[agent as keyof typeof AGENT_COLORS] || AGENT_COLORS['best-overall'];
-  }
+  },
+
+  // Trip Mode actions
+  startTrip: () => set((state) => ({
+    tripMode: {
+      ...state.tripMode,
+      isActive: true,
+      startedAt: new Date().toISOString(),
+      currentDay: 1,
+      currentCityIndex: 0,
+      completedActivities: [],
+      checkins: [],
+    }
+  })),
+
+  endTrip: () => set((state) => ({
+    tripMode: {
+      ...state.tripMode,
+      isActive: false,
+    }
+  })),
+
+  advanceDay: () => set((state) => ({
+    tripMode: {
+      ...state.tripMode,
+      currentDay: state.tripMode.currentDay + 1,
+    }
+  })),
+
+  markActivityComplete: (activityId: string) => set((state) => ({
+    tripMode: {
+      ...state.tripMode,
+      completedActivities: [...state.tripMode.completedActivities, activityId],
+    }
+  })),
+
+  addCheckin: (checkin) => set((state) => ({
+    tripMode: {
+      ...state.tripMode,
+      checkins: [...state.tripMode.checkins, checkin],
+    }
+  })),
+
+  setCurrentCity: (cityIndex: number) => set((state) => ({
+    tripMode: {
+      ...state.tripMode,
+      currentCityIndex: cityIndex,
+    }
+  })),
 }));
