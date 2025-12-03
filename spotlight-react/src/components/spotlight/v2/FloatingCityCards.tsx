@@ -1,9 +1,10 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { useSpotlightStoreV2, type CityData } from '../../../stores/spotlightStoreV2';
-import { MapPin, Moon, Plus, GripVertical, Star, X, Trash2 } from 'lucide-react';
+import { useSpotlightStoreV2, type CityData, type CityCoordinates } from '../../../stores/spotlightStoreV2';
+import { MapPin, Moon, Plus, GripVertical, Star, X, Trash2, RefreshCw } from 'lucide-react';
 import { useState, useEffect, Fragment, useRef, useCallback } from 'react';
 import AddCityLandmarkModal from './AddCityLandmarkModal';
 import RemoveCityDialog from './RemoveCityDialog';
+import CityReplacementSheet from './CityReplacementSheet';
 import ReorderFeedback, { calculateRouteDistance, type ReorderFeedbackData } from './ReorderFeedback';
 import { fetchCityImage } from '../../../services/cityImages';
 import { getLandmarkImagePath } from '../../../services/landmarks';
@@ -41,6 +42,7 @@ interface SortableCityCardProps {
   canRemove: boolean;
   onCityClick: () => void;
   onRemoveClick: () => void;
+  onReplaceClick: () => void;
 }
 
 const SortableCityCard = ({
@@ -52,7 +54,8 @@ const SortableCityCard = ({
   totalCities: _totalCities, // Used for future enhancements
   canRemove,
   onCityClick,
-  onRemoveClick
+  onRemoveClick,
+  onReplaceClick
 }: SortableCityCardProps) => {
   void _totalCities; // Suppress unused warning
   const [isHovered, setIsHovered] = useState(false);
@@ -110,27 +113,54 @@ const SortableCityCard = ({
         <GripVertical className="w-4 h-4 text-gray-600" />
       </div>
 
-      {/* Remove Button - appears on hover */}
+      {/* Action Buttons - appear on hover */}
       <AnimatePresence>
-        {(isHovered || isSelected) && canRemove && (
-          <motion.button
+        {(isHovered || isSelected) && (
+          <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.8 }}
             transition={{ duration: 0.15 }}
-            onClick={(e) => {
-              e.stopPropagation();
-              onRemoveClick();
-            }}
-            className="absolute -top-2 -right-2 z-20 w-7 h-7 rounded-full flex items-center justify-center shadow-lg transition-all hover:scale-110"
-            style={{
-              background: 'linear-gradient(135deg, #C45830 0%, #A84828 100%)',
-              boxShadow: '0 2px 8px rgba(196, 88, 48, 0.4)'
-            }}
-            title="Remove city"
+            className="absolute -top-2 -right-2 z-20 flex gap-1.5"
           >
-            <Trash2 className="w-3.5 h-3.5 text-white" />
-          </motion.button>
+            {/* Replace Button */}
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onReplaceClick();
+              }}
+              className="w-7 h-7 rounded-full flex items-center justify-center shadow-lg transition-all"
+              style={{
+                background: 'linear-gradient(135deg, #D4A853 0%, #B8923D 100%)',
+                boxShadow: '0 2px 8px rgba(212, 168, 83, 0.4)'
+              }}
+              title="Replace city"
+            >
+              <RefreshCw className="w-3.5 h-3.5 text-white" />
+            </motion.button>
+
+            {/* Remove Button */}
+            {canRemove && (
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRemoveClick();
+                }}
+                className="w-7 h-7 rounded-full flex items-center justify-center shadow-lg transition-all"
+                style={{
+                  background: 'linear-gradient(135deg, #C45830 0%, #A84828 100%)',
+                  boxShadow: '0 2px 8px rgba(196, 88, 48, 0.4)'
+                }}
+                title="Remove city"
+              >
+                <Trash2 className="w-3.5 h-3.5 text-white" />
+              </motion.button>
+            )}
+          </motion.div>
         )}
       </AnimatePresence>
 
@@ -290,7 +320,8 @@ const FloatingCityCards = () => {
     getAgentColors,
     reorderCities,
     removeCity,
-    removeLandmark
+    removeLandmark,
+    updateCities
   } = useSpotlightStoreV2();
 
   const agentColors = getAgentColors();
@@ -298,6 +329,17 @@ const FloatingCityCards = () => {
 
   // State for remove city dialog
   const [removeCityDialog, setRemoveCityDialog] = useState<{
+    isOpen: boolean;
+    cityIndex: number;
+    cityName: string;
+  }>({
+    isOpen: false,
+    cityIndex: -1,
+    cityName: ''
+  });
+
+  // State for replacement sheet
+  const [replacementSheet, setReplacementSheet] = useState<{
     isOpen: boolean;
     cityIndex: number;
     cityName: string;
@@ -341,6 +383,49 @@ const FloatingCityCards = () => {
 
   const handleCancelRemoveCity = () => {
     setRemoveCityDialog({ isOpen: false, cityIndex: -1, cityName: '' });
+  };
+
+  // Replacement sheet handlers
+  const handleReplaceCityClick = (index: number, name: string) => {
+    setReplacementSheet({
+      isOpen: true,
+      cityIndex: index,
+      cityName: name
+    });
+  };
+
+  const handleCloseReplacementSheet = () => {
+    setReplacementSheet({ isOpen: false, cityIndex: -1, cityName: '' });
+  };
+
+  const handleReplaceCity = (newCity: {
+    name: string;
+    country: string;
+    coordinates: CityCoordinates;
+  }) => {
+    if (!route) return;
+
+    const cities = [...route.cities];
+    const oldCity = cities[replacementSheet.cityIndex];
+
+    // Create new city data with the replacement
+    const newCityData: CityData = {
+      ...oldCity,
+      city: {
+        name: newCity.name,
+        country: newCity.country,
+        coordinates: newCity.coordinates
+      },
+      coordinates: newCity.coordinates,
+      // Keep nights, activities, restaurants etc from old city for now
+      // They will be regenerated when itinerary is updated
+    };
+
+    cities[replacementSheet.cityIndex] = newCityData;
+    updateCities(cities);
+
+    console.log(`🔄 Replaced ${replacementSheet.cityName} with ${newCity.name}`);
+    setReplacementSheet({ isOpen: false, cityIndex: -1, cityName: '' });
   };
 
   // Reorder feedback handlers
@@ -531,6 +616,7 @@ const FloatingCityCards = () => {
                           canRemove={canRemove}
                           onCityClick={() => handleCityClick(cityIndex)}
                           onRemoveClick={() => handleRemoveCityClick(cityIndex, cityName)}
+                          onReplaceClick={() => handleReplaceCityClick(cityIndex, cityName)}
                         />
 
                         {/* Landmark Cards after this city */}
@@ -590,6 +676,15 @@ const FloatingCityCards = () => {
         data={reorderFeedback}
         onUndo={handleUndoReorder}
         onDismiss={handleDismissFeedback}
+      />
+
+      {/* City Replacement Sheet */}
+      <CityReplacementSheet
+        isOpen={replacementSheet.isOpen}
+        cityIndex={replacementSheet.cityIndex}
+        cityName={replacementSheet.cityName}
+        onClose={handleCloseReplacementSheet}
+        onReplace={handleReplaceCity}
       />
     </div>
   );
