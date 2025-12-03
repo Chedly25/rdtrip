@@ -447,6 +447,9 @@ router.get('/generate/:jobId/stream', (req, res) => {
  * Helper function to format itinerary row for API response
  */
 function formatItineraryResponse(row) {
+  // Extract personalization content fields for top-level access
+  const personalizationContent = row.personalization_content || {};
+
   return {
     id: row.id,
     routeId: row.route_id,
@@ -464,6 +467,12 @@ function formatItineraryResponse(row) {
     weather: row.weather_data,
     events: row.local_events,
     budget: row.budget_breakdown,
+    // Personalization content - exposed at top level for frontend consumption
+    personalizedIntro: personalizationContent.personalizedIntro || null,
+    dayThemes: personalizationContent.dayThemes || null,
+    tripStyleProfile: personalizationContent.tripStyleProfile || null,
+    tripNarrative: personalizationContent.tripNarrative || null,
+    personalizationContent: personalizationContent, // Also include full object
     processingStatus: row.processing_status,
     progress: row.progress,
     errorLog: row.error_log,

@@ -832,8 +832,9 @@ class AgentOrchestratorV3 extends EventEmitter {
              weather = $7,
              events = $8,
              budget = $9,
+             personalization_content = $10,
              updated_at = NOW()
-         WHERE id = $10`,
+         WHERE id = $11`,
         [
           JSON.stringify(this.results.dayPlanner || null),
           JSON.stringify(this.results.activities || null),
@@ -844,6 +845,7 @@ class AgentOrchestratorV3 extends EventEmitter {
           JSON.stringify(this.results.weather || null),
           JSON.stringify(this.results.events || null),
           JSON.stringify(this.results.budget || null),
+          JSON.stringify(this.results.personalizationContent || null),
           this.itineraryId
         ]
       );

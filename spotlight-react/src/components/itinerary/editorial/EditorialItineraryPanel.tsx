@@ -496,10 +496,11 @@ const ItineraryContent = ({ itinerary }: { itinerary: any }) => {
   const [addedScenicStopIds, setAddedScenicStopIds] = useState<string[]>([]);
   const { addLandmarkToRoute, route } = useSpotlightStoreV2();
 
-  // Get personalization data from route
-  const tripNarrative = route?.tripNarrative;
-  const tripStyleProfile = route?.tripStyleProfile;
-  const tripStory = route?.personalization?.tripStory;
+  // Get personalization data - check itinerary first (from API), then fall back to route store
+  const tripNarrative = itinerary?.tripNarrative || route?.tripNarrative;
+  const tripStyleProfile = itinerary?.tripStyleProfile || route?.tripStyleProfile;
+  const tripStory = itinerary?.preferences?.personalization?.tripStory || route?.personalization?.tripStory;
+  const dayThemes = itinerary?.dayThemes || route?.dayThemes;
 
   // dayStructure can be EITHER an array OR an object with .days property
   const dayStructure = itinerary.dayStructure;
@@ -620,12 +621,19 @@ const ItineraryContent = ({ itinerary }: { itinerary: any }) => {
             const dayAccommodation = getDayAccommodation(itinerary.accommodations, dayNumber);
             const dayScenicStops = getDayScenicStops(itinerary.scenicStops, dayNumber);
 
+            // Get the theme for this day from dayThemes array
+            const dayThemeData = dayThemes?.find((t: any) => t.day === dayNumber);
+
             return (
               <EditorialDayCard
                 key={day.date || index}
                 day={{
                   ...day,
-                  city: day.location || day.city || 'Day ' + dayNumber
+                  city: day.location || day.city || 'Day ' + dayNumber,
+                  // Add theme data from AI-generated dayThemes
+                  theme: dayThemeData?.theme || day.theme,
+                  themeSubtitle: dayThemeData?.subtitle || day.themeSubtitle,
+                  themeIcon: dayThemeData?.icon || day.themeIcon,
                 }}
                 dayNumber={dayNumber}
                 activities={dayActivities}
