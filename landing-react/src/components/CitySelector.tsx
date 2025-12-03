@@ -160,6 +160,7 @@ export function CitySelector({ value, placeholder, onCitySelect, error, label }:
             <div className="max-h-64 overflow-y-auto p-1.5">
               {suggestions.map((city, index) => (
                 <button
+                  type="button"
                   key={`${city.name}-${city.country}-${index}`}
                   onClick={() => handleCitySelect(city)}
                   className="w-full rounded-rui-12 px-4 py-3 text-left transition-colors duration-rui-sm hover:bg-rui-grey-2 focus:bg-rui-grey-2 focus:outline-none"
