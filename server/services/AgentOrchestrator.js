@@ -639,8 +639,30 @@ BEFORE responding to ANY message, ALWAYS check the conversation history:
 User: "Let's change chaine d'eguilles from the aix en provence activities"
 ✅ GOOD: Extract "Aix-en-Provence" → searchActivities(city: "Aix-en-Provence, France")
 ❌ BAD: Ask "Which city are you interested in?"`;
+    } else if (pageContext?.route) {
+      // No itinerary but we have route context from pageContext
+      const route = pageContext.route;
+      prompt += `\n\n**Current Route Context** (no generated itinerary yet):
+- Origin: ${route.origin || 'Unknown'}
+- Destination: ${route.destination || 'Unknown'}
+- Cities on route: ${route.cities?.length > 0 ? route.cities.join(' → ') : 'Not specified'}
+- Duration: ${route.duration ? `${route.duration} days` : 'Not specified'}
+
+The user is exploring this route. They can ask about:
+- Things to do in any of these cities
+- Weather conditions along the route
+- Restaurant recommendations
+- Hidden gems and local experiences
+- Help planning their journey
+
+**IMPORTANT**: You have the route context above - use it! If user asks about "the trip" or "our journey", you know the cities involved.`;
+
+      // Add personalization context if available
+      if (pageContext.personalization) {
+        prompt += this.buildPersonalizationPrompt(pageContext.personalization);
+      }
     } else {
-      // No itinerary context
+      // No itinerary or route context
       prompt += `\n\nThe user is ${pageContext?.name === 'itinerary' ? 'building an itinerary' : pageContext?.name === 'spotlight' ? 'exploring routes' : 'browsing the site'}.`;
     }
 
