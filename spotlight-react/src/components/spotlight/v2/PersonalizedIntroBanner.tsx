@@ -1,25 +1,17 @@
 /**
- * Personalized Intro Banner
+ * Personalized Intro Card
  *
- * A cinematic hero banner that appears at the top of the spotlight view
- * when the route has personalization. Shows the AI-generated headline,
- * narrative, and tags indicating what preferences shaped the journey.
+ * A compact, elegant notification card that appears when the route
+ * has personalization. Designed as a floating "boarding pass" aesthetic -
+ * minimal by default, expandable for details.
  *
- * Design: Warm editorial with gradient overlays, refined typography,
- * and subtle motion. Inspired by luxury travel magazine covers.
+ * Design: Refined editorial with warm cream tones, subtle gold accents,
+ * and elegant Fraunces typography. Compact footprint, maximum impact.
  */
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Sparkles,
-  ChevronDown,
-  Heart,
-  MapPin,
-  Calendar,
-  Compass,
-  X,
-} from 'lucide-react';
+import { Sparkles, ChevronRight, X } from 'lucide-react';
 import type { PersonalizedIntro, TripStyleProfile } from '../../../stores/spotlightStoreV2';
 
 interface PersonalizedIntroBannerProps {
@@ -32,16 +24,16 @@ interface PersonalizedIntroBannerProps {
   onDismiss?: () => void;
 }
 
-// Soft color palette for style profile bars
-const STYLE_COLORS = {
-  cultural: '#8B6914',    // Gold
-  adventure: '#3A6247',   // Forest green
-  relaxation: '#4A90A4',  // Mediterranean blue
-  culinary: '#8B3A3A',    // Brick red
-  nature: '#4A7C59',      // Earthy green
+// Soft warm palette for style bars
+const STYLE_COLORS: Record<string, string> = {
+  cultural: '#B8860B',
+  adventure: '#2E7D4A',
+  relaxation: '#4A90A4',
+  culinary: '#A0522D',
+  nature: '#228B22',
 };
 
-const STYLE_LABELS = {
+const STYLE_LABELS: Record<string, string> = {
   cultural: 'Cultural',
   adventure: 'Adventure',
   relaxation: 'Relaxation',
@@ -58,277 +50,214 @@ export function PersonalizedIntroBanner({
   className = '',
   onDismiss,
 }: PersonalizedIntroBannerProps) {
-  const [showDetails, setShowDetails] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
 
   if (isDismissed) return null;
 
-  const handleDismiss = () => {
+  const handleDismiss = (e: React.MouseEvent) => {
+    e.stopPropagation();
     setIsDismissed(true);
     onDismiss?.();
   };
 
+  const toggleExpand = () => setIsExpanded(!isExpanded);
+
+  // Get first highlight or personalized tag for the subtitle
+  const subtitle = intro.highlights?.[0] || intro.personalizedFor?.[0] || `${totalCities} cities · ${totalDays} days`;
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: -20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      transition={{ duration: 0.5, ease: [0.15, 0.5, 0.5, 1] }}
-      className={`relative overflow-hidden ${className}`}
-      style={{
-        background: 'linear-gradient(135deg, #FFFBF5 0%, #FEF7ED 50%, #FAF3E8 100%)',
-        borderBottom: '1px solid rgba(139, 115, 85, 0.15)',
-      }}
+      initial={{ opacity: 0, y: -12, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -12, scale: 0.98 }}
+      transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
+      className={`mx-4 md:mx-6 ${className}`}
     >
-      {/* Subtle decorative pattern */}
-      <div
-        className="pointer-events-none absolute inset-0 opacity-[0.03]"
+      {/* Main Card */}
+      <motion.div
+        layout
+        onClick={toggleExpand}
+        className="relative cursor-pointer overflow-hidden rounded-2xl"
         style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%238B7355' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+          background: 'linear-gradient(145deg, #FFFDF9 0%, #FFF9F0 100%)',
+          boxShadow: '0 4px 24px rgba(44, 36, 23, 0.08), 0 1px 4px rgba(44, 36, 23, 0.04)',
+          border: '1px solid rgba(196, 88, 48, 0.08)',
         }}
-      />
-
-      {/* Main content */}
-      <div className="relative px-4 py-5 md:px-6 md:py-6">
-        {/* Header row with sparkle and dismiss */}
-        <div className="mb-3 flex items-start justify-between">
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
-            className="flex items-center gap-2"
-          >
-            <div
-              className="flex h-7 w-7 items-center justify-center rounded-full"
-              style={{
-                background: 'linear-gradient(135deg, rgba(196, 88, 48, 0.15) 0%, rgba(212, 168, 83, 0.15) 100%)',
-              }}
-            >
-              <Sparkles className="h-3.5 w-3.5" style={{ color: '#C45830' }} />
-            </div>
-            <span
-              className="text-xs font-semibold uppercase tracking-widest"
-              style={{ color: '#C45830' }}
-            >
-              Personalized for you
-            </span>
-          </motion.div>
-
-          <button
-            onClick={handleDismiss}
-            className="rounded-full p-1.5 transition-all hover:bg-black/5 active:scale-95"
-            aria-label="Dismiss banner"
-          >
-            <X className="h-4 w-4" style={{ color: '#8B7355' }} />
-          </button>
-        </div>
-
-        {/* Headline */}
-        <motion.h1
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1, duration: 0.4 }}
-          className="mb-2 text-2xl font-bold leading-tight md:text-3xl"
+        whileHover={{ scale: 1.005 }}
+        whileTap={{ scale: 0.995 }}
+      >
+        {/* Subtle accent line at top */}
+        <div
+          className="absolute top-0 left-0 right-0 h-[2px]"
           style={{
-            color: '#2C2417',
-            fontFamily: "'Fraunces', Georgia, serif",
-            letterSpacing: '-0.01em',
+            background: 'linear-gradient(90deg, #C45830 0%, #D4A853 50%, #C45830 100%)',
           }}
-        >
-          {intro.headline}
-        </motion.h1>
+        />
 
-        {/* Subheadline */}
-        <motion.p
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15, duration: 0.4 }}
-          className="mb-4 text-base"
-          style={{
-            color: '#5C4D3D',
-            fontFamily: "'Satoshi', sans-serif",
-          }}
-        >
-          {intro.subheadline}
-        </motion.p>
-
-        {/* Quick stats */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.2, duration: 0.4 }}
-          className="mb-4 flex flex-wrap items-center gap-4 text-sm"
-          style={{ color: '#8B7355' }}
-        >
-          <span className="flex items-center gap-1.5">
-            <Calendar className="h-3.5 w-3.5" />
-            {totalDays} days
-          </span>
-          <span className="flex items-center gap-1.5">
-            <MapPin className="h-3.5 w-3.5" />
-            {totalCities} cities
-          </span>
-          {intro.personalizedFor && intro.personalizedFor.length > 0 && (
-            <span className="flex items-center gap-1.5">
-              <Heart className="h-3.5 w-3.5" style={{ color: '#C45830' }} />
-              Tailored for {intro.personalizedFor[0]}
-            </span>
-          )}
-        </motion.div>
-
-        {/* Personalized For tags */}
-        {intro.personalizedFor && intro.personalizedFor.length > 0 && (
+        {/* Compact Header Row */}
+        <div className="flex items-center gap-3 px-4 py-3">
+          {/* Icon */}
           <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.25, duration: 0.4 }}
-            className="mb-4 flex flex-wrap gap-2"
-          >
-            {intro.personalizedFor.map((tag, idx) => (
-              <motion.span
-                key={tag}
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.3 + idx * 0.05 }}
-                className="rounded-full px-3 py-1 text-xs font-medium"
-                style={{
-                  background: 'rgba(196, 88, 48, 0.1)',
-                  color: '#C45830',
-                  border: '1px solid rgba(196, 88, 48, 0.2)',
-                }}
-              >
-                {tag}
-              </motion.span>
-            ))}
-          </motion.div>
-        )}
-
-        {/* Narrative */}
-        {(intro.narrative || tripNarrative) && (
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3, duration: 0.5 }}
-            className="mb-4 text-sm leading-relaxed"
+            initial={{ rotate: -10 }}
+            animate={{ rotate: 0 }}
+            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl"
             style={{
-              color: '#5C4D3D',
-              fontFamily: "'Satoshi', sans-serif",
-              fontStyle: 'italic',
+              background: 'linear-gradient(135deg, rgba(196, 88, 48, 0.1) 0%, rgba(212, 168, 83, 0.1) 100%)',
             }}
           >
-            "{intro.narrative || tripNarrative}"
-          </motion.p>
-        )}
-
-        {/* Highlights preview */}
-        {intro.highlights && intro.highlights.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.35, duration: 0.4 }}
-            className="mb-4"
-          >
-            <div className="flex flex-wrap gap-2">
-              {intro.highlights.slice(0, 3).map((highlight, idx) => (
-                <span
-                  key={idx}
-                  className="flex items-center gap-1.5 text-xs"
-                  style={{ color: '#8B7355' }}
-                >
-                  <span style={{ color: '#D4A853' }}>+</span>
-                  {highlight}
-                </span>
-              ))}
-            </div>
+            <Sparkles className="h-4 w-4" style={{ color: '#C45830' }} />
           </motion.div>
-        )}
 
-        {/* Expand for trip style profile */}
-        {tripStyleProfile && (
-          <>
-            <motion.button
-              onClick={() => setShowDetails(!showDetails)}
-              className="flex items-center gap-2 text-sm font-medium transition-colors hover:opacity-80"
-              style={{ color: '#C45830' }}
-              whileHover={{ x: 2 }}
-              whileTap={{ scale: 0.98 }}
+          {/* Content */}
+          <div className="min-w-0 flex-1">
+            <h2
+              className="truncate text-base font-semibold leading-snug"
+              style={{
+                color: '#2C2417',
+                fontFamily: "'Fraunces', Georgia, serif",
+                letterSpacing: '-0.01em',
+              }}
             >
-              <Compass className="h-4 w-4" />
-              {showDetails ? 'Hide trip profile' : 'View your trip profile'}
-              <motion.div
-                animate={{ rotate: showDetails ? 180 : 0 }}
-                transition={{ duration: 0.2 }}
-              >
-                <ChevronDown className="h-4 w-4" />
-              </motion.div>
-            </motion.button>
+              {intro.headline}
+            </h2>
+            <p
+              className="truncate text-sm"
+              style={{ color: '#8B7355' }}
+            >
+              {subtitle}
+            </p>
+          </div>
 
-            <AnimatePresence>
-              {showDetails && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.3, ease: [0.15, 0.5, 0.5, 1] }}
-                  className="overflow-hidden"
-                >
-                  <div
-                    className="mt-4 rounded-xl p-4"
+          {/* Actions */}
+          <div className="flex items-center gap-1">
+            <motion.div
+              animate={{ rotate: isExpanded ? 90 : 0 }}
+              transition={{ duration: 0.2 }}
+              className="flex h-7 w-7 items-center justify-center rounded-lg hover:bg-black/5"
+            >
+              <ChevronRight className="h-4 w-4" style={{ color: '#8B7355' }} />
+            </motion.div>
+            <button
+              onClick={handleDismiss}
+              className="flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-black/5"
+              aria-label="Dismiss"
+            >
+              <X className="h-4 w-4" style={{ color: '#8B7355' }} />
+            </button>
+          </div>
+        </div>
+
+        {/* Expanded Content */}
+        <AnimatePresence>
+          {isExpanded && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
+              className="overflow-hidden"
+            >
+              <div
+                className="border-t px-4 pb-4 pt-3"
+                style={{ borderColor: 'rgba(139, 115, 85, 0.1)' }}
+              >
+                {/* Narrative */}
+                {(intro.narrative || tripNarrative) && (
+                  <p
+                    className="mb-3 text-sm leading-relaxed"
                     style={{
-                      background: 'rgba(255, 255, 255, 0.6)',
-                      border: '1px solid rgba(139, 115, 85, 0.1)',
+                      color: '#5C4D3D',
+                      fontStyle: 'italic',
                     }}
                   >
-                    <h3
-                      className="mb-3 text-xs font-semibold uppercase tracking-wider"
+                    "{intro.narrative || tripNarrative}"
+                  </p>
+                )}
+
+                {/* Highlights */}
+                {intro.highlights && intro.highlights.length > 0 && (
+                  <div className="mb-3 flex flex-wrap gap-2">
+                    {intro.highlights.map((highlight, idx) => (
+                      <span
+                        key={idx}
+                        className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium"
+                        style={{
+                          background: 'rgba(212, 168, 83, 0.12)',
+                          color: '#8B6914',
+                        }}
+                      >
+                        <span style={{ color: '#D4A853' }}>✦</span>
+                        {highlight}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Trip Style Profile */}
+                {tripStyleProfile && Object.keys(tripStyleProfile).length > 0 && (
+                  <div className="mt-3 rounded-xl bg-black/[0.02] p-3">
+                    <p
+                      className="mb-2 text-[10px] font-semibold uppercase tracking-wider"
                       style={{ color: '#8B7355' }}
                     >
-                      Your Trip Style Mix
-                    </h3>
-                    <div className="space-y-2.5">
-                      {Object.entries(tripStyleProfile).map(([style, value]) => (
-                        <div key={style} className="flex items-center gap-3">
-                          <span
-                            className="w-20 text-xs font-medium"
-                            style={{ color: '#5C4D3D' }}
-                          >
-                            {STYLE_LABELS[style as keyof typeof STYLE_LABELS]}
-                          </span>
-                          <div className="relative h-2 flex-1 overflow-hidden rounded-full bg-black/5">
-                            <motion.div
-                              initial={{ width: 0 }}
-                              animate={{ width: `${value}%` }}
-                              transition={{ duration: 0.6, delay: 0.1, ease: [0.15, 0.5, 0.5, 1] }}
-                              className="absolute inset-y-0 left-0 rounded-full"
-                              style={{
-                                background: STYLE_COLORS[style as keyof typeof STYLE_COLORS],
-                              }}
-                            />
+                      Your Trip Profile
+                    </p>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+                      {Object.entries(tripStyleProfile)
+                        .filter(([, value]) => value > 0)
+                        .sort(([, a], [, b]) => b - a)
+                        .slice(0, 4)
+                        .map(([style, value]) => (
+                          <div key={style} className="flex items-center gap-2">
+                            <div
+                              className="h-1.5 flex-1 overflow-hidden rounded-full"
+                              style={{ background: 'rgba(0,0,0,0.05)' }}
+                            >
+                              <motion.div
+                                initial={{ width: 0 }}
+                                animate={{ width: `${value}%` }}
+                                transition={{ duration: 0.5, delay: 0.1 }}
+                                className="h-full rounded-full"
+                                style={{
+                                  background: STYLE_COLORS[style] || '#8B7355',
+                                }}
+                              />
+                            </div>
+                            <span
+                              className="w-16 text-[11px]"
+                              style={{ color: '#5C4D3D' }}
+                            >
+                              {STYLE_LABELS[style] || style}
+                            </span>
                           </div>
-                          <span
-                            className="w-8 text-right text-xs font-medium"
-                            style={{ color: '#8B7355' }}
-                          >
-                            {value}%
-                          </span>
-                        </div>
-                      ))}
+                        ))}
                     </div>
                   </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </>
-        )}
-      </div>
+                )}
 
-      {/* Gradient fade at bottom */}
-      <div
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-4"
-        style={{
-          background: 'linear-gradient(to top, rgba(250, 243, 232, 0.8) 0%, transparent 100%)',
-        }}
-      />
+                {/* Personalized For Tags */}
+                {intro.personalizedFor && intro.personalizedFor.length > 1 && (
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {intro.personalizedFor.slice(1).map((tag, idx) => (
+                      <span
+                        key={idx}
+                        className="rounded-full px-2 py-0.5 text-[11px]"
+                        style={{
+                          background: 'rgba(196, 88, 48, 0.08)',
+                          color: '#C45830',
+                        }}
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
     </motion.div>
   );
 }
