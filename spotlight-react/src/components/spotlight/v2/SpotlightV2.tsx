@@ -15,6 +15,7 @@ import { useCompanion } from '../../../contexts/CompanionProvider';
 import { useAgent } from '../../../contexts/AgentProvider';
 import { getStoredItineraryId } from '../../../hooks/useItineraryGeneration';
 import { PersonalizedIntroBanner } from './PersonalizedIntroBanner';
+import { PersonalizationBadge } from './PersonalizationBadge';
 
 const SpotlightV2 = () => {
   // Get routeId from query params (?routeId=123) not path params
@@ -569,6 +570,14 @@ const SpotlightV2 = () => {
   // Check if we should show the personalized intro banner
   const hasPersonalizedIntro = route?.personalizedIntro?.headline;
 
+  // Check if route has personalization context
+  const hasPersonalization = route?.personalization && (
+    route.personalization.tripStory ||
+    route.personalization.occasion ||
+    route.personalization.travelStyle ||
+    route.personalization.interests?.length
+  );
+
   return (
     <div className="h-screen w-screen overflow-hidden bg-[#FFFBF5] relative flex">
       {/* Main Content Area - Takes remaining space when companion is open */}
@@ -662,6 +671,14 @@ const SpotlightV2 = () => {
 
       {/* Floating Action Buttons - Fixed position */}
       <div className="fixed top-20 left-4 z-50 flex flex-col gap-2">
+        {/* Personalization Badge - Shows when route has personalization context */}
+        {hasPersonalization && route?.personalization && (
+          <PersonalizationBadge
+            personalization={route.personalization}
+            className="mb-1"
+          />
+        )}
+
         {/* View Itinerary Button - Shows when stored itinerary exists */}
         {hasStoredItinerary && (
           <motion.button
