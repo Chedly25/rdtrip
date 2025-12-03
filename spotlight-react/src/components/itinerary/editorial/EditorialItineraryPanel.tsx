@@ -25,11 +25,13 @@ import {
   Loader2
 } from 'lucide-react';
 import { useSpotlightStoreV2 } from '../../../stores/spotlightStoreV2';
+import type { TripPersonalization } from '../../../stores/spotlightStoreV2';
 import { useItineraryGeneration, getStoredItineraryId } from '../../../hooks/useItineraryGeneration';
 import { EditorialDayCard } from './EditorialDayCard';
 import { EditorialLoadingScreen } from './EditorialLoadingScreen';
 import { TripNarrative } from '../../spotlight/v2/TripNarrative';
 import { TripStyleVisualization } from '../../spotlight/v2/TripStyleVisualization';
+import { PersonalizationSummary } from '../../spotlight/v2/PersonalizationSummary';
 
 interface EditorialItineraryPanelProps {
   isOpen: boolean;
@@ -126,7 +128,9 @@ export const EditorialItineraryPanel = ({ isOpen, onClose }: EditorialItineraryP
     const preferences = {
       travelStyle: route.agent || 'best-overall',
       budget: route.budget || 'mid',
-      agentType: route.agent || 'best-overall'
+      agentType: route.agent || 'best-overall',
+      // Pass personalization data to backend for AI-powered customization
+      personalization: route.personalization || null
     };
 
     try {
@@ -206,6 +210,7 @@ export const EditorialItineraryPanel = ({ isOpen, onClose }: EditorialItineraryP
                     originName={originName}
                     destName={destName}
                     onStart={handleStartGeneration}
+                    personalization={route?.personalization}
                   />
                 )}
 
@@ -274,14 +279,39 @@ const TriggerContent = ({
   totalCities,
   originName,
   destName,
-  onStart
+  onStart,
+  personalization
 }: {
   totalNights: number;
   totalCities: number;
   originName: string;
   destName: string;
   onStart: () => void;
-}) => (
+  personalization?: TripPersonalization | null;
+}) => {
+  // Determine personalized headline based on occasion
+  const getPersonalizedHeadline = () => {
+    if (!personalization?.occasion) return 'Create Your Perfect Itinerary';
+    switch (personalization.occasion) {
+      case 'honeymoon': return 'Plan Your Dream Honeymoon';
+      case 'anniversary': return 'Create Your Anniversary Escape';
+      case 'birthday': return 'Design Your Birthday Adventure';
+      case 'graduation': return 'Plan Your Graduation Journey';
+      case 'babymoon': return 'Craft Your Perfect Babymoon';
+      case 'reunion': return 'Plan Your Reunion Getaway';
+      case 'solo-adventure': return 'Design Your Solo Adventure';
+      case 'girls-trip': return "Create Your Girls' Trip";
+      case 'guys-trip': return "Plan Your Guys' Trip";
+      case 'family-vacation': return 'Design Your Family Vacation';
+      default: return 'Create Your Personalized Itinerary';
+    }
+  };
+
+  const hasPersonalization = personalization?.tripStory ||
+    personalization?.interests?.length ||
+    personalization?.occasion;
+
+  return (
   <motion.div
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
@@ -302,12 +332,13 @@ const TriggerContent = ({
         </div>
 
         <h3 className="font-serif text-3xl font-semibold mb-3">
-          Create Your Perfect Itinerary
+          {getPersonalizedHeadline()}
         </h3>
 
         <p className="text-white/70 text-base leading-relaxed mb-6">
-          Our AI will craft a detailed day-by-day plan with activities, restaurants,
-          and accommodations tailored to your journey.
+          {hasPersonalization
+            ? 'Our AI will craft a day-by-day plan tailored to your preferences and interests.'
+            : 'Our AI will craft a detailed day-by-day plan with activities, restaurants, and accommodations tailored to your journey.'}
         </p>
 
         {/* Trip Stats */}
@@ -332,6 +363,14 @@ const TriggerContent = ({
         </button>
       </div>
     </div>
+
+    {/* Personalization Summary - Show user's preferences if available */}
+    {hasPersonalization && personalization && (
+      <PersonalizationSummary
+        personalization={personalization}
+        variant="compact"
+      />
+    )}
 
     {/* What You'll Get */}
     <div className="space-y-4">
@@ -396,7 +435,8 @@ const TriggerContent = ({
       </div>
     </div>
   </motion.div>
-);
+  );
+};
 
 // Helper to get activities for a specific day
 const getDayActivities = (activities: any, dayNumber: number) => {
