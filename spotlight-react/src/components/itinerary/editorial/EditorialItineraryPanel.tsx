@@ -28,6 +28,8 @@ import { useSpotlightStoreV2 } from '../../../stores/spotlightStoreV2';
 import { useItineraryGeneration, getStoredItineraryId } from '../../../hooks/useItineraryGeneration';
 import { EditorialDayCard } from './EditorialDayCard';
 import { EditorialLoadingScreen } from './EditorialLoadingScreen';
+import { TripNarrative } from '../../spotlight/v2/TripNarrative';
+import { TripStyleVisualization } from '../../spotlight/v2/TripStyleVisualization';
 
 interface EditorialItineraryPanelProps {
   isOpen: boolean;
@@ -494,6 +496,11 @@ const ItineraryContent = ({ itinerary }: { itinerary: any }) => {
   const [addedScenicStopIds, setAddedScenicStopIds] = useState<string[]>([]);
   const { addLandmarkToRoute, route } = useSpotlightStoreV2();
 
+  // Get personalization data from route
+  const tripNarrative = route?.tripNarrative;
+  const tripStyleProfile = route?.tripStyleProfile;
+  const tripStory = route?.personalization?.tripStory;
+
   // dayStructure can be EITHER an array OR an object with .days property
   const dayStructure = itinerary.dayStructure;
   const daysArray = Array.isArray(dayStructure)
@@ -582,6 +589,26 @@ const ItineraryContent = ({ itinerary }: { itinerary: any }) => {
           </p>
         </div>
       </div>
+
+      {/* Trip Narrative - AI-generated story of the trip */}
+      {tripNarrative && (
+        <TripNarrative
+          narrative={tripNarrative}
+          tripStory={tripStory}
+          isExpandedByDefault={false}
+          maxCollapsedLines={4}
+        />
+      )}
+
+      {/* Trip Style Visualization - radar chart of trip character */}
+      {tripStyleProfile && (
+        <TripStyleVisualization
+          profile={tripStyleProfile}
+          variant="radar"
+          showLabels={true}
+          showLegend={true}
+        />
+      )}
 
       {/* Day Cards */}
       <div className="space-y-4">
