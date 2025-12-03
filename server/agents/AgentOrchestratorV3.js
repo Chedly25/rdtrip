@@ -22,6 +22,7 @@ const PracticalInfoAgent = require('./PracticalInfoAgent');
 const WeatherAgent = require('./WeatherAgent');
 const EventsAgent = require('./EventsAgent');
 const BudgetOptimizer = require('./BudgetOptimizer');
+const PersonalizationContentAgent = require('./PersonalizationContentAgent');
 
 class AgentOrchestratorV3 extends EventEmitter {
   constructor(routeData, preferences, db, existingItineraryId = null) {
@@ -66,7 +67,10 @@ class AgentOrchestratorV3 extends EventEmitter {
       practicalInfo: new PracticalInfoAgent(routeData, null, this.progressCallback.bind(this)),
       weather: new WeatherAgent(routeData, null, this.progressCallback.bind(this)),
       events: new EventsAgent(routeData, null, this.progressCallback.bind(this)),
-      budget: new BudgetOptimizer(routeData, null, this.progressCallback.bind(this))
+      budget: new BudgetOptimizer(routeData, null, this.progressCallback.bind(this)),
+
+      // Personalization content agent (generates intro, themes, narrative)
+      personalizationContent: new PersonalizationContentAgent()
     };
 
     // Execution graph defines agent dependencies and parallelization
@@ -107,8 +111,13 @@ class AgentOrchestratorV3 extends EventEmitter {
         { name: 'practicalInfo', agent: 'practicalInfo', deps: ['dayPlanner'] }
       ],
 
-      // Phase 4: Budget calculation (needs everything)
-      phase4_sequential: [
+      // Phase 4: Personalization content (needs activities/restaurants for context)
+      phase4_parallel: [
+        { name: 'personalizationContent', agent: 'personalizationContent', deps: ['activities', 'restaurants'] }
+      ],
+
+      // Phase 5: Budget calculation (needs everything)
+      phase5_sequential: [
         { name: 'budget', agent: 'budget', deps: ['*'] }
       ]
     };
@@ -288,6 +297,15 @@ class AgentOrchestratorV3 extends EventEmitter {
       case 'practicalInfo':
         agent.dayStructure = this.results.dayPlanner;
         return await agent.generate();
+
+      case 'personalizationContent':
+        return await agent.generate({
+          routeData: this.routeData,
+          personalization: this.preferences?.personalization,
+          dayStructure: this.results.dayPlanner,
+          activities: this.results.activities,
+          restaurants: this.results.restaurants
+        });
 
       case 'budget':
         agent.activities = this.results.activities;

@@ -16,11 +16,13 @@
 
 const axios = require('axios');
 const GooglePlacesService = require('../services/googlePlacesService');
+const PersonalizationContentAgent = require('./PersonalizationContentAgent');
 
 class UnifiedRouteAgent {
   constructor(db, googleApiKey) {
     this.db = db;
     this.googlePlacesService = new GooglePlacesService(googleApiKey, db);
+    this.personalizationContentAgent = new PersonalizationContentAgent();
     this.perplexityApiKey = process.env.PERPLEXITY_API_KEY;
   }
 
@@ -90,8 +92,27 @@ class UnifiedRouteAgent {
       const validated = await this.phaseValidation(enriched, preferences);
 
       // PHASE 6: Optimization
-      this.updateProgress(onProgress, 'optimization', 95, 'Final refinements...');
+      this.updateProgress(onProgress, 'optimization', 90, 'Final refinements...');
       const optimized = await this.phaseOptimization(validated, preferences);
+
+      // PHASE 7: Personalization Content (if user has personalization)
+      let personalizedContent = null;
+      if (preferences.personalization) {
+        this.updateProgress(onProgress, 'personalizing', 95, 'Creating your personalized story...');
+        try {
+          personalizedContent = await this.personalizationContentAgent.generate({
+            routeData: { origin, destination, waypoints: optimized.cities },
+            personalization: preferences.personalization,
+            dayStructure: { totalDays: totalNights + 1, days: this.buildDayStructureFromRoute(optimized, totalNights) },
+            activities: this.extractActivitiesFromRoute(optimized),
+            restaurants: this.extractRestaurantsFromRoute(optimized)
+          });
+          console.log(`   ✓ Personalization content generated`);
+        } catch (error) {
+          console.warn(`   ⚠️ Personalization content failed:`, error.message);
+          // Continue without personalized content
+        }
+      }
 
       // Complete
       this.updateProgress(onProgress, 'completed', 100, 'Route generation complete!');
@@ -108,10 +129,16 @@ class UnifiedRouteAgent {
         budget,
         preferences,
         route: optimized,
+        // Include personalization content in response
+        personalizedIntro: personalizedContent?.personalizedIntro || null,
+        dayThemes: personalizedContent?.dayThemes || null,
+        tripStyleProfile: personalizedContent?.tripStyleProfile || null,
+        tripNarrative: personalizedContent?.tripNarrative || null,
         metadata: {
           generatedAt: new Date().toISOString(),
           durationMs: Date.now() - startTime,
-          phases: ['research', 'discovery', 'planning', 'enrichment', 'validation', 'optimization']
+          phases: ['research', 'discovery', 'planning', 'enrichment', 'validation', 'optimization', 'personalizing'],
+          hasPersonalization: !!personalizedContent
         }
       };
 
@@ -832,6 +859,59 @@ Return ONLY valid JSON:
     score += coverage * 10;
 
     return Math.min(100, Math.round(score));
+  }
+
+  /**
+   * Build day structure from optimized route for PersonalizationContentAgent
+   */
+  buildDayStructureFromRoute(optimized, totalNights) {
+    if (!optimized || !optimized.cities) return [];
+
+    const days = [];
+    let dayNum = 1;
+
+    for (const city of optimized.cities) {
+      const nights = city.nights || 1;
+
+      // Create a day entry for each night + 1 for first day activities
+      for (let n = 0; n < nights; n++) {
+        days.push({
+          day: dayNum++,
+          date: new Date(Date.now() + (dayNum - 1) * 86400000).toISOString().split('T')[0],
+          location: city.name || city.city,
+          theme: city.theme || `Exploring ${city.name || city.city}`,
+          overnight: city.name || city.city
+        });
+      }
+    }
+
+    return days;
+  }
+
+  /**
+   * Extract activities from optimized route for PersonalizationContentAgent
+   */
+  extractActivitiesFromRoute(optimized) {
+    if (!optimized || !optimized.cities) return [];
+
+    return optimized.cities.map((city, idx) => ({
+      day: idx + 1,
+      city: city.name || city.city,
+      activities: city.activities || []
+    }));
+  }
+
+  /**
+   * Extract restaurants from optimized route for PersonalizationContentAgent
+   */
+  extractRestaurantsFromRoute(optimized) {
+    if (!optimized || !optimized.cities) return [];
+
+    return optimized.cities.map((city, idx) => ({
+      day: idx + 1,
+      city: city.name || city.city,
+      meals: city.restaurants || {}
+    }));
   }
 }
 
