@@ -26,7 +26,7 @@ interface CityDetailModalProps {
 }
 
 const CityDetailModal = ({ cityIndex, onClose }: CityDetailModalProps) => {
-  const { route, getCityName, updateCityNights } = useSpotlightStoreV2();
+  const { route, getCityName, updateCityNights, removeCity } = useSpotlightStoreV2();
   const [cityImage, setCityImage] = useState<string | null>(null);
   const [imageLoading, setImageLoading] = useState(true);
 
@@ -54,9 +54,10 @@ const CityDetailModal = ({ cityIndex, onClose }: CityDetailModalProps) => {
   };
 
   const handleRemoveCity = () => {
-    // TODO: Implement removeCity action in store
-    // For now, just close the modal
-    onClose();
+    if (cityIndex !== null && route && route.cities.length > 2) {
+      removeCity(cityIndex);
+      onClose();
+    }
   };
 
   const navigateToCity = (direction: 'prev' | 'next') => {
