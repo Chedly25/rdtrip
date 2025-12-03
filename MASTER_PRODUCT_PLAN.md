@@ -1686,9 +1686,13 @@ Based on existing features, here's the recommended order:
    - removeCity store action with landmark adjustment
    - Prevents removal if < 2 cities
 
-2. **Add reorder feedback** (4-8 hours)
-   - Show distance change after reorder
-   - "This adds X km" warning
+2. ✅ **Add reorder feedback** - **DONE!**
+   - ReorderFeedback.tsx component with Wanderlust Editorial design
+   - Calculates route distance using Haversine formula
+   - Shows distance change after drag & drop (+/- km)
+   - Green styling for saved distance, red for added distance
+   - Undo button to reverse the reorder
+   - Auto-dismiss after 5 seconds with progress bar
 
 ### Week 2-3: AI-Powered Modifications
 3. **City Replacement Agent** (backend, 2-3 days)
