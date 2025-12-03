@@ -129,7 +129,9 @@ class UnifiedRouteAgent {
         budget,
         preferences,
         route: optimized,
-        // Include personalization content in response
+        // Include original personalization input for frontend display
+        personalization: preferences.personalization || null,
+        // Include AI-generated personalization content in response
         personalizedIntro: personalizedContent?.personalizedIntro || null,
         dayThemes: personalizedContent?.dayThemes || null,
         tripStyleProfile: personalizedContent?.tripStyleProfile || null,
