@@ -36,8 +36,13 @@ class UnifiedRouteAgent {
     tripPace,
     budget,
     preferences,
+    personalization,  // User's trip story, occasion, interests, etc.
     onProgress
   }) {
+    // Merge personalization into preferences if provided separately
+    if (personalization && !preferences.personalization) {
+      preferences.personalization = personalization;
+    }
     console.log(`\n🎯 ========================================`);
     console.log(`   UNIFIED ROUTE AGENT - Starting Generation`);
     console.log(`   ========================================`);
@@ -48,6 +53,9 @@ class UnifiedRouteAgent {
     console.log(`   Companions: ${preferences.companions}`);
     console.log(`   Interests: ${preferences.interests.map(i => `${i.id}(${i.weight})`).join(', ')}`);
     console.log(`   Trip Style: ${preferences.tripStyle}/100`);
+    if (preferences.personalization) {
+      console.log(`   ✨ Personalization: tripStory=${!!preferences.personalization.tripStory}, occasion=${preferences.personalization.occasion || 'none'}`);
+    }
 
     const startTime = Date.now();
 
