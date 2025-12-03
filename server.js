@@ -1649,7 +1649,8 @@ app.post('/api/generate-unified-route', async (req, res) => {
       totalNights,
       tripPace = 'balanced',
       budget = 'mid',
-      preferences
+      preferences,
+      personalization  // User's trip story, occasion, interests, etc.
     } = req.body;
 
     // ============= VALIDATION =============
@@ -1738,6 +1739,9 @@ app.post('/api/generate-unified-route', async (req, res) => {
     console.log(`   Budget: ${budget}`);
     console.log(`   Companions: ${preferences.companions}`);
     console.log(`   Interests: ${preferences.interests.map(i => i.id).join(', ')}`);
+    if (personalization) {
+      console.log(`   Personalization: tripStory=${!!personalization.tripStory}, occasion=${personalization.occasion || 'none'}`);
+    }
 
     // Create unique job ID
     const jobId = `unified_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -1752,6 +1756,7 @@ app.post('/api/generate-unified-route', async (req, res) => {
       tripPace,
       budget,
       preferences,
+      personalization,  // Include user's trip story, occasion, etc.
       progress: {
         phase: 'research',
         message: 'Analyzing route corridor...',
@@ -1778,7 +1783,7 @@ app.post('/api/generate-unified-route', async (req, res) => {
     });
 
     // Start processing in background (don't await)
-    processUnifiedRouteJob(jobId, origin, destination, totalNights, tripPace, budget, preferences).catch(error => {
+    processUnifiedRouteJob(jobId, origin, destination, totalNights, tripPace, budget, preferences, personalization).catch(error => {
       console.error(`Job ${jobId} failed:`, error);
       const failedJob = routeJobs.get(jobId);
       if (failedJob) {
@@ -2043,7 +2048,7 @@ app.get('/api/route-status/:jobId', (req, res) => {
 });
 
 // UNIFIED Background Job Processor - Uses UnifiedRouteAgent (6-phase workflow)
-async function processUnifiedRouteJob(jobId, origin, destination, totalNights, tripPace, budget, preferences) {
+async function processUnifiedRouteJob(jobId, origin, destination, totalNights, tripPace, budget, preferences, personalization) {
   const job = routeJobs.get(jobId);
   if (!job) return;
 
@@ -2071,6 +2076,7 @@ async function processUnifiedRouteJob(jobId, origin, destination, totalNights, t
       tripPace,
       budget,
       preferences,
+      personalization,  // User's trip story, occasion, interests, etc.
       onProgress
     });
 
