@@ -1695,11 +1695,18 @@ Based on existing features, here's the recommended order:
    - Auto-dismiss after 5 seconds with progress bar
 
 ### Week 2-3: AI-Powered Modifications
-3. **City Replacement Agent** (backend, 2-3 days)
-   - Suggest alternatives based on context
+3. ✅ **City Replacement Agent** - **DONE!**
+   - POST /api/route/suggest-replacement endpoint
+   - Uses Perplexity AI for context-aware suggestions
+   - Returns 3 alternatives with match scores and highlights
+   - Considers personalization (interests, occasion, style)
 
-4. **City Replacement Sheet** (frontend, 1-2 days)
-   - Reuse AddCityLandmarkModal patterns
+4. ✅ **City Replacement Sheet** - **DONE!**
+   - CityReplacementSheet.tsx with bottom sheet UI
+   - Wanderlust Editorial design (warm colors, organic feel)
+   - Quick reason presets for better suggestions
+   - Category badges (culture, nature, food, adventure, relaxation)
+   - Golden Replace button on city cards
 
 ### Week 4+: Natural Language
 5. **Command Bar** with AI parsing
