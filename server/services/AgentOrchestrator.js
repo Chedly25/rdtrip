@@ -513,6 +513,9 @@ class AgentOrchestrator {
   buildSystemPrompt(context, memories = [], preferences = {}) {
     const { pageContext, itineraryData } = context;
 
+    // Extract personalization from page context
+    const personalization = pageContext?.personalization || {};
+
     let prompt = `You are an expert travel assistant for RDTrip, a road trip planning platform.
 
 **Your Capabilities**:
@@ -528,7 +531,7 @@ class AgentOrchestrator {
 - Concise and to the point (2-3 paragraphs max)
 - Actionable - always suggest next steps
 - Honest - if you don't know something, use your tools to find out
-
+${this.buildPersonalizationPrompt(personalization)}
 ⚠️ **CRITICAL: CONVERSATION MEMORY** ⚠️
 BEFORE responding to ANY message, ALWAYS check the conversation history:
 
@@ -841,6 +844,122 @@ When handling multi-step tasks, you MUST remember conversation context:
 - Don't make user repeat themselves or re-specify details you already have
 
 **If the user asks about activities, attractions, or things to do - you MUST call searchActivities. No exceptions.**`;
+
+    return prompt;
+  }
+
+  /**
+   * Build personalization-aware prompt section
+   * Makes the agent reference user preferences naturally in responses
+   */
+  buildPersonalizationPrompt(personalization) {
+    if (!personalization || Object.keys(personalization).length === 0) {
+      return '';
+    }
+
+    let prompt = `\n
+**🎯 PERSONALIZATION CONTEXT - Use These Naturally in Responses**:
+You have insight into this user's preferences. Reference them naturally when making recommendations.`;
+
+    // Trip Story - the user's own words about their trip
+    if (personalization.tripStory) {
+      prompt += `\n
+**Their Trip Story**: "${personalization.tripStory.substring(0, 300)}${personalization.tripStory.length > 300 ? '...' : ''}"
+→ Reference their story naturally: "Since you mentioned this is your anniversary..." or "Given your interest in authentic local experiences..."`;
+    }
+
+    // Occasion - special event context
+    if (personalization.occasion) {
+      const occasionPhrases = {
+        'honeymoon': 'romantic recommendations, couples activities, intimate dining',
+        'anniversary': 'special celebrations, romantic spots, memorable experiences',
+        'birthday': 'celebration-worthy venues, special treatment, festive atmosphere',
+        'family-vacation': 'family-friendly activities, kid-appropriate options',
+        'girls-trip': 'fun group activities, social venues, spa/wellness',
+        'guys-trip': 'adventure activities, sports, breweries/pubs',
+        'solo-adventure': 'safe solo-friendly spots, social hostels, guided tours',
+        'business-leisure': 'efficient options, professional venues, quick recommendations'
+      };
+      const occasion = personalization.occasion;
+      prompt += `\n
+**Occasion**: ${occasion}${occasionPhrases[occasion] ? ` → Prioritize: ${occasionPhrases[occasion]}` : ''}`;
+    }
+
+    // Dining Style
+    if (personalization.diningStyle) {
+      prompt += `\n
+**Dining Preference**: ${personalization.diningStyle}
+→ Match restaurant recommendations to this style`;
+    }
+
+    // Dietary restrictions
+    if (personalization.dietary && personalization.dietary.length > 0) {
+      prompt += `\n
+**Dietary Needs**: ${personalization.dietary.join(', ')}
+→ ALWAYS mention dietary compatibility when recommending restaurants`;
+    }
+
+    // Accessibility needs
+    if (personalization.accessibility && personalization.accessibility.length > 0) {
+      prompt += `\n
+**Accessibility**: ${personalization.accessibility.join(', ')}
+→ Prioritize accessible venues and mention accessibility features`;
+    }
+
+    // Crowd preference
+    if (personalization.avoidCrowds) {
+      prompt += `\n
+**Crowd Preference**: Prefers avoiding crowds
+→ Suggest off-peak times, hidden gems, less touristy alternatives`;
+    }
+
+    // Outdoor preference
+    if (personalization.preferOutdoor) {
+      prompt += `\n
+**Activity Style**: Prefers outdoor activities
+→ Prioritize outdoor options, nature experiences, al fresco dining`;
+    }
+
+    // Travel style
+    if (personalization.travelStyle) {
+      prompt += `\n
+**Travel Style**: ${personalization.travelStyle}
+→ Match pacing and activity intensity to this style`;
+    }
+
+    // Pace preference
+    if (personalization.pace) {
+      const paceGuidance = {
+        'relaxed': 'fewer activities per day, more downtime, leisurely meals',
+        'moderate': 'balanced mix of activities and rest',
+        'packed': 'maximize experiences, efficient scheduling, early starts'
+      };
+      prompt += `\n
+**Pace**: ${personalization.pace}${paceGuidance[personalization.pace] ? ` → ${paceGuidance[personalization.pace]}` : ''}`;
+    }
+
+    // Interests
+    if (personalization.interests && personalization.interests.length > 0) {
+      prompt += `\n
+**Key Interests**: ${personalization.interests.join(', ')}
+→ Prioritize activities matching these interests`;
+    }
+
+    // Budget
+    if (personalization.budget) {
+      prompt += `\n
+**Budget Level**: ${personalization.budget}
+→ Match price ranges to this budget`;
+    }
+
+    prompt += `\n
+**HOW TO USE PERSONALIZATION**:
+- Naturally weave preferences into recommendations: "For your honeymoon, I'd suggest..."
+- Acknowledge their specific interests: "Since you love wine..."
+- Respect their pace: "Given your preference for a relaxed pace..."
+- Don't recite the preferences back - USE them to personalize suggestions
+- Make them feel understood, not analyzed
+`;
 
     return prompt;
   }
