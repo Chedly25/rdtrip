@@ -8,7 +8,7 @@ export default {
   theme: {
     extend: {
       colors: {
-        // RDTrip "Wanderlust Editorial" Color System
+        // Waycraft "Wanderlust Editorial" Color System
         rui: {
           black: '#2C2417',
           foreground: '#2C2417',

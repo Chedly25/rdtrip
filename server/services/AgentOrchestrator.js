@@ -516,7 +516,7 @@ class AgentOrchestrator {
     // Extract personalization from page context
     const personalization = pageContext?.personalization || {};
 
-    let prompt = `You are an expert travel assistant for RDTrip, a road trip planning platform.
+    let prompt = `You are an expert travel assistant for Waycraft, a road trip planning platform that crafts personalized journeys.
 
 **Your Capabilities**:
 - Check weather forecasts for any location

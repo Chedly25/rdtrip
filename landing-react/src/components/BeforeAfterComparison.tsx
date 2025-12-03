@@ -141,7 +141,7 @@ export function BeforeAfterComparison() {
             </div>
           </motion.div>
 
-          {/* The RDTrip Way */}
+          {/* The Waycraft Way */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             whileInView={{ opacity: 1, x: 0 }}
@@ -153,7 +153,7 @@ export function BeforeAfterComparison() {
               {/* Header - Warm accent gradient */}
               <div className="bg-gradient-to-r from-rui-accent to-[#D66842] px-6 py-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-2xl font-bold text-white font-marketing">The RDTrip Way</h3>
+                  <h3 className="text-2xl font-bold text-white font-marketing">The Waycraft Way</h3>
                   <div className="flex items-center gap-2 rounded-full bg-white/20 px-3 py-1.5">
                     <Zap className="h-4 w-4 text-white" />
                     <span className="text-sm font-medium text-white">2 minutes</span>
@@ -173,7 +173,7 @@ export function BeforeAfterComparison() {
                         <div className="h-2.5 w-2.5 rounded-full bg-warning/60" />
                         <div className="h-2.5 w-2.5 rounded-full bg-success/60" />
                       </div>
-                      <div className="ml-2 flex-1 text-[10px] font-medium text-rui-accent">rdtrip.com</div>
+                      <div className="ml-2 flex-1 text-[10px] font-medium text-rui-accent">waycraft.com</div>
                     </div>
                   </div>
 

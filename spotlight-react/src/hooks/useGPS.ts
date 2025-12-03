@@ -67,7 +67,7 @@ export function useGPS(options: UseGPSOptions = {}): UseGPSReturn {
         `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`,
         {
           headers: {
-            'User-Agent': 'RDTrip/1.0' // Required by Nominatim
+            'User-Agent': 'Waycraft/1.0' // Required by Nominatim
           }
         }
       );

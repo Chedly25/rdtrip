@@ -217,7 +217,7 @@ export default function SharedRoute() {
           <div className="max-w-3xl mx-auto text-center">
             <h2 className="text-3xl font-bold mb-4">Ready to plan your perfect trip?</h2>
             <p className="text-slate-300 text-lg mb-8">
-              Join thousands of travelers using RDTrip to create personalized routes powered by AI
+              Join thousands of travelers using Waycraft to craft personalized journeys powered by AI
             </p>
             <button
               onClick={() => navigate('/')}

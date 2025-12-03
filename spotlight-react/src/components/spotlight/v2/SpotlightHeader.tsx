@@ -82,10 +82,15 @@ const SpotlightHeader = ({ onGenerateItinerary, onSave }: SpotlightHeaderProps) 
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate('/')}
-            className="w-9 h-9 rounded-rui-12 bg-rui-grey-5 hover:bg-rui-grey-10 flex items-center justify-center transition-colors duration-rui-sm"
+            className="h-9 px-2 rounded-rui-12 bg-rui-grey-5 hover:bg-rui-grey-10 flex items-center gap-1.5 transition-colors duration-rui-sm"
             aria-label="Back to home"
           >
             <ArrowLeft className="w-4 h-4 text-rui-black" />
+            <img
+              src="/logos/icon.png"
+              alt="Waycraft"
+              className="h-5 w-auto"
+            />
           </button>
 
           <div className="flex items-center gap-3">

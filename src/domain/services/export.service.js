@@ -19,12 +19,12 @@ class ExportService extends BaseService {
     const route = this.extractRoute(trip);
 
     const gpx = `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="RDTrip" xmlns="http://www.topografix.com/GPX/1/1">
+<gpx version="1.1" creator="Waycraft" xmlns="http://www.topografix.com/GPX/1/1">
   <metadata>
     <name>${this.escapeXml(trip.name || 'Road Trip')}</name>
     <desc>${this.escapeXml(trip.description || '')}</desc>
     <author>
-      <name>RDTrip</name>
+      <name>Waycraft</name>
     </author>
     <time>${new Date().toISOString()}</time>
   </metadata>
@@ -59,7 +59,7 @@ ${route.map(pt => `    <rtept lat="${pt.lat}" lon="${pt.lng}">
     
     const ics = `BEGIN:VCALENDAR
 VERSION:2.0
-PRODID:-//RDTrip//Road Trip Planner//EN
+PRODID:-//Waycraft//Road Trip Planner//EN
 CALSCALE:GREGORIAN
 METHOD:PUBLISH
 X-WR-CALNAME:${trip.name || 'Road Trip'}
@@ -81,7 +81,7 @@ END:VCALENDAR`;
     const end = this.formatICSDate(event.endTime);
 
     return `BEGIN:VEVENT
-UID:${event.id}@rdtrip.com
+UID:${event.id}@waycraft.com
 DTSTAMP:${now}
 DTSTART:${start}
 DTEND:${end}
@@ -161,7 +161,7 @@ ${route.map(pt => `          ${pt.lng},${pt.lat},0`).join('\n')}
       metadata: {
         exportedAt: new Date().toISOString(),
         version: '1.0',
-        generator: 'RDTrip'
+        generator: 'Waycraft'
       },
       trip: {
         id: trip.id,

@@ -41,9 +41,13 @@ export function Navigation() {
           {/* Logo */}
           <a
             href="/"
-            className="flex items-center gap-2 text-rui-black transition-opacity duration-rui-sm hover:opacity-70"
+            className="flex items-center gap-2 transition-opacity duration-rui-sm hover:opacity-80"
           >
-            <span className="font-marketing text-xl tracking-tight">RoadTrip</span>
+            <img
+              src="/logos/primary_horizontal_logo.png"
+              alt="Waycraft"
+              className="h-8 w-auto"
+            />
           </a>
 
           {/* Desktop Navigation */}

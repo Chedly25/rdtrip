@@ -52,19 +52,23 @@ export function Footer() {
               transition={{ duration: 0.5, ease: ruiEasing }}
             >
               <div className="mb-4">
-                <span className="font-marketing text-2xl text-rui-white">RoadTrip</span>
+                <img
+                  src="/logos/primary_horizontal_logo.png"
+                  alt="Waycraft"
+                  className="h-8 w-auto brightness-0 invert"
+                />
               </div>
               <p className="mb-6 max-w-sm text-body-2 text-rui-grey-50">
-                AI-powered route planning for unforgettable adventures. Plan
-                smarter, travel better, and discover the world your way.
+                Your journey, personally crafted. AI-powered route planning for
+                unforgettable adventures tailored to your unique travel style.
               </p>
               <div className="flex items-center gap-2 text-sm text-rui-grey-50">
                 <Mail className="h-4 w-4" />
                 <a
-                  href="mailto:hello@roadtrip.com"
+                  href="mailto:hello@waycraft.com"
                   className="transition-colors duration-rui-sm hover:text-rui-white"
                 >
-                  hello@roadtrip.com
+                  hello@waycraft.com
                 </a>
               </div>
             </motion.div>
@@ -190,7 +194,7 @@ export function Footer() {
             transition={{ duration: 0.5, ease: ruiEasing }}
             className="flex items-center gap-1 text-sm text-rui-grey-50"
           >
-            <span>2024 RoadTrip. Made with</span>
+            <span>2024 Waycraft. Made with</span>
             <Heart className="h-4 w-4 fill-danger text-danger" />
             <span>for travelers</span>
           </motion.div>
