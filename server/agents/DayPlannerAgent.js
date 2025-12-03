@@ -4,6 +4,7 @@
  */
 
 const axios = require('axios');
+const { parseJsonResponse } = require('../utils/jsonParser');
 
 class DayPlannerAgent {
   constructor(routeData, preferences) {
@@ -19,21 +20,34 @@ class DayPlannerAgent {
 
     const prompt = this.buildPrompt();
 
-    // Retry logic for API timeouts
+    // Retry logic for API timeouts AND JSON parsing failures
+    const MAX_ATTEMPTS = 3;
     let lastError;
-    for (let attempt = 1; attempt <= 2; attempt++) {
+    let lastRawResponse = null;
+
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
       try {
-        console.log(`📅 Day Planner: Attempt ${attempt}/2`);
+        console.log(`📅 Day Planner: Attempt ${attempt}/${MAX_ATTEMPTS}`);
         const response = await this.callPerplexity(prompt);
+        lastRawResponse = response;
         const parsed = this.parseResponse(response);
         console.log(`✓ Day Planner: Created ${parsed.totalDays}-day structure`);
         return parsed;
       } catch (error) {
         lastError = error;
-        if (attempt < 2 && error.message.includes('timeout')) {
-          console.log(`⚠️  Day Planner: Timeout on attempt ${attempt}, retrying...`);
-          await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2s before retry
+        const isRetryable = error.message.includes('timeout') ||
+                           error.message.includes('JSON parsing failed') ||
+                           error.message.includes('Unexpected end of JSON') ||
+                           error.message.includes('No JSON object found');
+
+        if (attempt < MAX_ATTEMPTS && isRetryable) {
+          console.log(`⚠️  Day Planner: ${error.message} on attempt ${attempt}, retrying...`);
+          await new Promise(resolve => setTimeout(resolve, 2000 * attempt)); // Exponential backoff
         } else {
+          // Log the raw response for debugging before throwing
+          if (lastRawResponse) {
+            console.error('📅 Day Planner: Final raw response that failed parsing:', lastRawResponse.substring(0, 500));
+          }
           throw error;
         }
       }
@@ -205,7 +219,7 @@ IMPORTANT: Return ONLY the JSON object, no other text.`;
               content: prompt
             }
           ],
-          max_tokens: 3000,
+          max_tokens: 4096,  // Increased to prevent truncation on longer itineraries
           temperature: 0.3
         },
         {
@@ -226,43 +240,21 @@ IMPORTANT: Return ONLY the JSON object, no other text.`;
   }
 
   parseResponse(responseText) {
-    try {
-      // Try to extract JSON from response
-      let jsonText = responseText.trim();
+    // Use shared JSON parser with automatic repair
+    const parsed = parseJsonResponse(responseText, { agentName: 'Day Planner' });
 
-      // Remove markdown code blocks if present
-      if (jsonText.includes('```json')) {
-        const match = jsonText.match(/```json\s*([\s\S]*?)\s*```/);
-        if (match) jsonText = match[1];
-      } else if (jsonText.includes('```')) {
-        const match = jsonText.match(/```\s*([\s\S]*?)\s*```/);
-        if (match) jsonText = match[1];
-      }
-
-      // Find JSON object boundaries
-      const jsonStart = jsonText.indexOf('{');
-      const jsonEnd = jsonText.lastIndexOf('}');
-
-      if (jsonStart === -1 || jsonEnd === -1) {
-        throw new Error('No JSON object found in response');
-      }
-
-      jsonText = jsonText.substring(jsonStart, jsonEnd + 1);
-
-      // Parse JSON
-      const parsed = JSON.parse(jsonText);
-
-      // Validate structure
-      if (!parsed.totalDays || !Array.isArray(parsed.days)) {
-        throw new Error('Invalid day structure format');
-      }
-
-      return parsed;
-
-    } catch (error) {
-      console.error('Failed to parse Day Planner response:', responseText);
-      throw new Error(`JSON parsing failed: ${error.message}`);
+    // Validate structure
+    if (!parsed.totalDays || !Array.isArray(parsed.days)) {
+      throw new Error('Invalid day structure format');
     }
+
+    // Ensure we have at least some valid days
+    if (parsed.days.length === 0) {
+      throw new Error('No valid days found in response');
+    }
+
+    console.log(`📅 Day Planner: Successfully parsed ${parsed.days.length} days`);
+    return parsed;
   }
 
   calculateTotalDistance(waypoints) {
