@@ -26,6 +26,10 @@ import {
   Check,
   Loader2
 } from 'lucide-react';
+import { DayThemeHeader } from '../../spotlight/v2/DayThemeHeader';
+import { MatchScoreIndicator } from '../../spotlight/v2/MatchScoreIndicator';
+import { WhyThisCard } from '../../spotlight/v2/WhyThisCard';
+import type { MatchReason } from '../../../stores/spotlightStoreV2';
 
 // Photo can be either a string URL or an object with url/thumbnail
 interface Photo {
@@ -47,6 +51,10 @@ interface Activity {
   googleMapsUrl?: string;
   category?: string;
   timeOfDay?: string;
+  // Personalization visibility fields
+  matchReasons?: MatchReason[];
+  matchScore?: number;
+  personalizedNote?: string;
 }
 
 interface Restaurant {
@@ -121,6 +129,10 @@ interface DayData {
     lunch?: Restaurant[];
     dinner?: Restaurant[];
   };
+  // Day theme from AI personalization
+  theme?: string;
+  themeSubtitle?: string;
+  themeIcon?: string;
 }
 
 interface EditorialDayCardProps {
@@ -221,43 +233,64 @@ export const EditorialDayCard = ({
       {/* Card Header */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full px-6 py-5 flex items-center justify-between hover:bg-[#FAF7F2] transition-colors"
+        className="w-full px-6 py-5 flex flex-col hover:bg-[#FAF7F2] transition-colors"
       >
-        <div className="flex items-center gap-4">
-          {/* Day Number Badge */}
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#C45830] to-[#D4A853] flex items-center justify-center flex-shrink-0">
-            <span className="text-white font-serif text-lg font-semibold">
-              {dayNumber}
-            </span>
+        <div className="flex items-center justify-between w-full">
+          <div className="flex items-center gap-4">
+            {/* Day Number Badge */}
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#C45830] to-[#D4A853] flex items-center justify-center flex-shrink-0">
+              <span className="text-white font-serif text-lg font-semibold">
+                {dayNumber}
+              </span>
+            </div>
+
+            {/* Day Info */}
+            <div className="text-left">
+              <div className="flex items-center gap-2">
+                <h3 className="font-serif text-lg text-[#2C2417] font-semibold">
+                  {day.city}
+                </h3>
+                {day.weather && (
+                  <span className="text-sm text-[#8B7355]">
+                    {day.weather.temp}°
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2 text-sm text-[#8B7355]">
+                {dateStr && <span>{dayName}, {dateStr}</span>}
+                <span className="text-[#E8DFD3]">•</span>
+                <span>{totalActivityCount} activities</span>
+              </div>
+            </div>
           </div>
 
-          {/* Day Info */}
-          <div className="text-left">
-            <div className="flex items-center gap-2">
-              <h3 className="font-serif text-lg text-[#2C2417] font-semibold">
-                {day.city}
-              </h3>
-              {day.weather && (
-                <span className="text-sm text-[#8B7355]">
-                  {day.weather.temp}°
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-2 text-sm text-[#8B7355]">
-              {dateStr && <span>{dayName}, {dateStr}</span>}
-              <span className="text-[#E8DFD3]">•</span>
-              <span>{totalActivityCount} activities</span>
-            </div>
-          </div>
+          {/* Expand/Collapse Icon */}
+          <motion.div
+            animate={{ rotate: isExpanded ? 180 : 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <ChevronDown className="w-5 h-5 text-[#8B7355]" />
+          </motion.div>
         </div>
 
-        {/* Expand/Collapse Icon */}
-        <motion.div
-          animate={{ rotate: isExpanded ? 180 : 0 }}
-          transition={{ duration: 0.3 }}
-        >
-          <ChevronDown className="w-5 h-5 text-[#8B7355]" />
-        </motion.div>
+        {/* Day Theme - shows when AI generated a theme for this day */}
+        {day.theme && (
+          <div className="mt-3 pt-3 border-t border-[#E8DFD3]/50 w-full">
+            <DayThemeHeader
+              dayNumber={dayNumber}
+              city={day.city}
+              theme={{
+                day: dayNumber,
+                city: day.city,
+                theme: day.theme,
+                subtitle: day.themeSubtitle,
+                icon: day.themeIcon,
+                date: dateStr,
+              }}
+              variant="compact"
+            />
+          </div>
+        )}
       </button>
 
       {/* Expanded Content */}
@@ -449,69 +482,100 @@ const TimePeriodSection = ({
 const ActivityCard = ({ activity }: { activity: Activity }) => {
   const photoUrl = getPhotoUrl(activity.photos?.[0]);
   const mapsUrl = getGoogleMapsUrl(activity);
+  const hasMatchReasons = activity.matchReasons && activity.matchReasons.length > 0;
 
   const CardContent = () => (
-    <>
-      {/* Photo */}
-      {photoUrl && (
-        <div
-          className="rounded-xl overflow-hidden flex-shrink-0 bg-[#E8DFD3] relative"
-          style={{ width: '64px', height: '64px' }}
-        >
-          <img
-            src={photoUrl}
-            alt={activity.name}
-            className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-            loading="lazy"
-            onError={(e) => {
-              // Hide broken images
-              (e.target as HTMLImageElement).parentElement!.style.display = 'none';
-            }}
-          />
-        </div>
-      )}
+    <div className="flex-1">
+      <div className="flex items-start gap-3">
+        {/* Photo */}
+        {photoUrl && (
+          <div
+            className="rounded-xl overflow-hidden flex-shrink-0 bg-[#E8DFD3] relative"
+            style={{ width: '64px', height: '64px' }}
+          >
+            <img
+              src={photoUrl}
+              alt={activity.name}
+              className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              loading="lazy"
+              onError={(e) => {
+                // Hide broken images
+                (e.target as HTMLImageElement).parentElement!.style.display = 'none';
+              }}
+            />
+          </div>
+        )}
 
-      {/* Content */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-start justify-between gap-2">
-          <h5 className="font-medium text-[#2C2417] text-sm line-clamp-1">
-            {activity.name}
-          </h5>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            {activity.rating && (
-              <div className="flex items-center gap-1">
-                <Star className="w-3 h-3 text-[#D4A853] fill-[#D4A853]" />
-                <span className="text-xs text-[#8B7355]">{activity.rating}</span>
+        {/* Content */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <h5 className="font-medium text-[#2C2417] text-sm line-clamp-1">
+              {activity.name}
+            </h5>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {/* Match Score Badge */}
+              {activity.matchScore && activity.matchScore > 0 && (
+                <MatchScoreIndicator
+                  score={activity.matchScore}
+                  size="xs"
+                  variant="badge"
+                  showIcon={false}
+                />
+              )}
+              {activity.rating && (
+                <div className="flex items-center gap-1">
+                  <Star className="w-3 h-3 text-[#D4A853] fill-[#D4A853]" />
+                  <span className="text-xs text-[#8B7355]">{activity.rating}</span>
+                </div>
+              )}
+              {mapsUrl && (
+                <ExternalLink className="w-3 h-3 text-[#8B7355] opacity-0 group-hover:opacity-100 transition-opacity" />
+              )}
+            </div>
+          </div>
+
+          {activity.description && (
+            <p className="text-xs text-[#8B7355] line-clamp-2 mt-1">
+              {activity.description}
+            </p>
+          )}
+
+          {/* Personalized Note */}
+          {activity.personalizedNote && (
+            <p className="text-xs text-[#C45830] italic mt-1.5">
+              "{activity.personalizedNote}"
+            </p>
+          )}
+
+          <div className="flex items-center gap-3 mt-2">
+            {activity.suggestedTime && (
+              <div className="flex items-center gap-1 text-xs text-[#8B7355]">
+                <Clock className="w-3 h-3" />
+                <span>{activity.suggestedTime}</span>
               </div>
             )}
-            {mapsUrl && (
-              <ExternalLink className="w-3 h-3 text-[#8B7355] opacity-0 group-hover:opacity-100 transition-opacity" />
+            {activity.address && (
+              <div className="flex items-center gap-1 text-xs text-[#8B7355]">
+                <MapPin className="w-3 h-3" />
+                <span className="truncate max-w-[120px]">{activity.address}</span>
+              </div>
             )}
           </div>
         </div>
-
-        {activity.description && (
-          <p className="text-xs text-[#8B7355] line-clamp-2 mt-1">
-            {activity.description}
-          </p>
-        )}
-
-        <div className="flex items-center gap-3 mt-2">
-          {activity.suggestedTime && (
-            <div className="flex items-center gap-1 text-xs text-[#8B7355]">
-              <Clock className="w-3 h-3" />
-              <span>{activity.suggestedTime}</span>
-            </div>
-          )}
-          {activity.address && (
-            <div className="flex items-center gap-1 text-xs text-[#8B7355]">
-              <MapPin className="w-3 h-3" />
-              <span className="truncate max-w-[120px]">{activity.address}</span>
-            </div>
-          )}
-        </div>
       </div>
-    </>
+
+      {/* Why This Card - shows match reasons when available */}
+      {hasMatchReasons && (
+        <div className="mt-3 pt-3 border-t border-[#E8DFD3]/50">
+          <WhyThisCard
+            matchReasons={activity.matchReasons!}
+            matchScore={activity.matchScore}
+            placeName={activity.name}
+            variant="inline"
+          />
+        </div>
+      )}
+    </div>
   );
 
   if (mapsUrl) {
@@ -520,7 +584,7 @@ const ActivityCard = ({ activity }: { activity: Activity }) => {
         href={mapsUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="group flex items-start gap-3 p-3 rounded-2xl bg-[#FAF7F2] hover:bg-[#F5F0E8] transition-colors"
+        className="group block p-3 rounded-2xl bg-[#FAF7F2] hover:bg-[#F5F0E8] transition-colors"
       >
         <CardContent />
       </a>
@@ -528,7 +592,7 @@ const ActivityCard = ({ activity }: { activity: Activity }) => {
   }
 
   return (
-    <div className="group flex items-start gap-3 p-3 rounded-2xl bg-[#FAF7F2]">
+    <div className="group p-3 rounded-2xl bg-[#FAF7F2]">
       <CardContent />
     </div>
   );
