@@ -229,12 +229,21 @@ export function AgentProvider({ children }: AgentProviderProps) {
           return location.displayName || location.name || null;
         };
 
+        // Extract cities from spotlightData.cities array
+        // Each city item has a `city` field that can be string or CityObject
+        const extractedCities = spotlightData.cities?.map((c: any) => {
+          const cityField = c.city;
+          if (!cityField) return null;
+          if (typeof cityField === 'string') return cityField;
+          return cityField.name || cityField.displayName || null;
+        }).filter(Boolean) || [];
+
         routeContext = {
           routeId: routeId,
           origin: getLocationString(spotlightData.origin),
           destination: getLocationString(spotlightData.destination),
-          cities: spotlightData.waypoints?.map((w: any) => w.name || w.location || w) || [],
-          duration: spotlightData.duration || null,
+          cities: extractedCities,
+          duration: spotlightData.duration || spotlightData.cities?.length || null,
           startDate: spotlightData.startDate || null
         };
 
