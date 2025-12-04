@@ -233,9 +233,10 @@ const SpotlightV2 = () => {
         });
 
         if (!response.ok) {
-          // If route not found or unauthorized, fall back to localStorage
-          // This handles cases where routeId is a timestamp (not a real DB ID)
-          if (response.status === 404 || response.status === 401 || response.status === 403) {
+          // If route not found, unauthorized, or invalid ID format (500), fall back to localStorage
+          // This handles cases where routeId is a timestamp format (not a real DB UUID)
+          // 500 occurs when the route ID format doesn't match UUID (e.g., "route_timestamp_random")
+          if (response.status === 404 || response.status === 401 || response.status === 403 || response.status === 500) {
             console.warn(`⚠️ Backend fetch failed (${response.status}), falling back to localStorage`);
             // Don't throw - let it fall through to localStorage fallback
           } else {
