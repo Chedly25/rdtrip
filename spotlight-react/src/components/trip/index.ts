@@ -26,6 +26,10 @@ export { PlanChangeSheet } from './PlanChangeSheet';
 export { TripProgress } from './TripProgress';
 export { TripCompleteFlow } from './TripCompleteFlow';
 
+// Memories & Gallery
+export { TripMemories } from './TripMemories';
+export { CheckinSummaryCard, CheckinSummaryCompact } from './CheckinSummaryCard';
+
 // Offline Support
 export { useOfflineManager } from './OfflineManager';
 export { OfflineIndicator, OfflineBanner } from './OfflineIndicator';
@@ -37,3 +41,4 @@ export type { NearbyPlace } from './QuickActions';
 export type { CheckinData } from './CheckinModal';
 export type { TripAlert } from './AlertBanner';
 export type { OfflineState, PendingAction, OfflineTripData } from './OfflineManager';
+export type { TripMemory } from './TripMemories';

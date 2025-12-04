@@ -23,6 +23,7 @@ const WeatherAgent = require('./WeatherAgent');
 const EventsAgent = require('./EventsAgent');
 const BudgetOptimizer = require('./BudgetOptimizer');
 const PersonalizationContentAgent = require('./PersonalizationContentAgent');
+const PersonalizationReasoner = require('../services/PersonalizationReasoner');
 
 class AgentOrchestratorV3 extends EventEmitter {
   constructor(routeData, preferences, db, existingItineraryId = null) {
@@ -72,6 +73,9 @@ class AgentOrchestratorV3 extends EventEmitter {
       // Personalization content agent (generates intro, themes, narrative)
       personalizationContent: new PersonalizationContentAgent()
     };
+
+    // Item-level personalization reasoner (generates match scores + reasons for activities/restaurants)
+    this.personalizationReasoner = new PersonalizationReasoner();
 
     // Execution graph defines agent dependencies and parallelization
     this.executionGraph = this.buildExecutionGraph();
@@ -386,12 +390,19 @@ class AgentOrchestratorV3 extends EventEmitter {
                   dayUsedPlaceIds.add(candidate.place_id);
                   globalUsedPlaceIds.add(candidate.place_id);
 
+                  // Generate personalization match data
+                  const personalizationMatch = this.personalizationReasoner.generateReasoning(
+                    candidate,
+                    this.preferences?.personalization
+                  );
+
                   dayActivities.activities.push({
                     ...candidate,
                     block: window.period, // Tag with period: morning/afternoon/evening
-                    zoneFocus: window.zoneFocus
+                    zoneFocus: window.zoneFocus,
+                    personalizationMatch // Score, reasons, breakdown
                   });
-                  console.log(`      ✓ Selected: ${candidate.name} (${window.period} block, avoiding ${globalUsedPlaceIds.size - 1} global duplicates)`);
+                  console.log(`      ✓ Selected: ${candidate.name} (${window.period} block, ${personalizationMatch.score}% match)`);
                 }
               }
             }
@@ -465,8 +476,18 @@ class AgentOrchestratorV3 extends EventEmitter {
 
             if (restaurant) {
               usedPlaceIds.add(restaurant.place_id);
-              dayRestaurants.meals[meal] = restaurant;
-              console.log(`      ✓ Selected: ${restaurant.name} for ${meal} (avoiding ${usedPlaceIds.size - 1} duplicates)`);
+
+              // Generate personalization match data for restaurant
+              const personalizationMatch = this.personalizationReasoner.generateReasoning(
+                restaurant,
+                this.preferences?.personalization
+              );
+
+              dayRestaurants.meals[meal] = {
+                ...restaurant,
+                personalizationMatch // Score, reasons, breakdown
+              };
+              console.log(`      ✓ Selected: ${restaurant.name} for ${meal} (${personalizationMatch.score}% match)`);
             }
           }
 
@@ -515,11 +536,20 @@ class AgentOrchestratorV3 extends EventEmitter {
         const result = await this.agents.googleAccommodations.discoverAccommodations(request);
 
         if (result.success && result.hotels && result.hotels.length > 0) {
+          const hotel = result.hotels[0]; // Best hotel
+
+          // Generate personalization match data for accommodation
+          const personalizationMatch = this.personalizationReasoner.generateReasoning(
+            hotel,
+            this.preferences?.personalization
+          );
+
           return {
             night: day.day,
             date: day.date,
             city: city,
-            ...result.hotels[0] // Best hotel
+            ...hotel,
+            personalizationMatch // Score, reasons, breakdown
           };
         }
 

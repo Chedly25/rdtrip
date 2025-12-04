@@ -1,15 +1,113 @@
-import { useState } from 'react'
-import { X, Mail, UserPlus, Loader2, CheckCircle, AlertCircle } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
+/**
+ * Invite Collaborator Modal - "The Invitation Telegram"
+ *
+ * A vintage telegram / invitation card aesthetic for inviting travel companions.
+ * Features telegram header styling, wax seal decorations, and typewriter text.
+ *
+ * Design: Wanderlust Editorial with vintage telegram aesthetics
+ */
+
+import { useState } from 'react';
+import { X, Mail, UserPlus, Loader2, CheckCircle, AlertCircle, Edit3, Eye } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+
+// =============================================================================
+// WANDERLUST EDITORIAL COLOR PALETTE
+// =============================================================================
+const colors = {
+  cream: '#FFFBF5',
+  warmWhite: '#FAF7F2',
+  terracotta: '#C45830',
+  terracottaLight: '#D96A42',
+  golden: '#D4A853',
+  goldenLight: '#E4BE73',
+  goldenDark: '#B8923D',
+  sage: '#6B8E7B',
+  sageLight: '#8BA99A',
+  espresso: '#2C1810',
+  darkBrown: '#3D2A1E',
+  mediumBrown: '#5C4033',
+  lightBrown: '#8B7355',
+  parchment: '#F5E6C8',
+  stampRed: '#8B2323',
+  waxRed: '#A52A2A',
+  inkBlue: '#1C3A5F',
+};
 
 interface InviteCollaboratorModalProps {
-  isOpen: boolean
-  onClose: () => void
-  routeId: string
-  onSuccess: () => void
+  isOpen: boolean;
+  onClose: () => void;
+  routeId: string;
+  onSuccess: () => void;
 }
 
-type RoleType = 'editor' | 'viewer'
+type RoleType = 'editor' | 'viewer';
+
+// =============================================================================
+// DECORATIVE ELEMENTS
+// =============================================================================
+
+function TelegramHeader() {
+  return (
+    <div
+      style={{
+        textAlign: 'center',
+        marginBottom: '8px',
+        paddingBottom: '16px',
+        borderBottom: `2px solid ${colors.golden}`,
+        position: 'relative',
+      }}
+    >
+      {/* Decorative telegram lines */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '8px',
+          left: 0,
+          right: 0,
+          height: '3px',
+          background: `repeating-linear-gradient(90deg, ${colors.golden} 0px, ${colors.golden} 8px, transparent 8px, transparent 12px)`,
+        }}
+      />
+
+      <div style={{ marginTop: '20px' }}>
+        <p
+          style={{
+            fontFamily: '"Courier New", monospace',
+            fontSize: '10px',
+            letterSpacing: '4px',
+            color: colors.lightBrown,
+            marginBottom: '4px',
+          }}
+        >
+          CORRESPONDENCE BUREAU
+        </p>
+        <h2
+          style={{
+            fontFamily: 'Georgia, serif',
+            fontSize: '22px',
+            fontWeight: 700,
+            color: colors.espresso,
+            margin: 0,
+          }}
+        >
+          Invitation Telegram
+        </h2>
+        <p
+          style={{
+            fontFamily: '"Courier New", monospace',
+            fontSize: '10px',
+            letterSpacing: '2px',
+            color: colors.mediumBrown,
+            marginTop: '4px',
+          }}
+        >
+          ADD A FELLOW TRAVELER
+        </p>
+      </div>
+    </div>
+  );
+}
 
 export function InviteCollaboratorModal({
   isOpen,
@@ -17,39 +115,36 @@ export function InviteCollaboratorModal({
   routeId,
   onSuccess,
 }: InviteCollaboratorModalProps) {
-  const [email, setEmail] = useState('')
-  const [role, setRole] = useState<RoleType>('editor')
-  const [message, setMessage] = useState('')
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
+  const [email, setEmail] = useState('');
+  const [role, setRole] = useState<RoleType>('editor');
+  const [message, setMessage] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
-  // Validate email format
   function isValidEmail(email: string): boolean {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    return emailRegex.test(email)
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
   }
 
-  // Handle form submission
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setError(null)
+    e.preventDefault();
+    setError(null);
 
-    // Validate email
     if (!email.trim()) {
-      setError('Email address is required')
-      return
+      setError('Email address is required');
+      return;
     }
 
     if (!isValidEmail(email.trim())) {
-      setError('Please enter a valid email address')
-      return
+      setError('Please enter a valid email address');
+      return;
     }
 
-    setIsSubmitting(true)
+    setIsSubmitting(true);
 
     try {
-      const token = localStorage.getItem('auth_token')
+      const token = localStorage.getItem('auth_token');
       const response = await fetch(`/api/routes/${routeId}/collaborators`, {
         method: 'POST',
         headers: {
@@ -61,88 +156,157 @@ export function InviteCollaboratorModal({
           role,
           message: message.trim() || undefined,
         }),
-      })
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (response.ok) {
-        // Show success message
-        setSuccess(true)
-
-        // Call success callback after a brief delay
+        setSuccess(true);
         setTimeout(() => {
-          onSuccess()
-          handleClose()
-        }, 1500)
+          onSuccess();
+          handleClose();
+        }, 1500);
       } else {
-        // Handle error responses
-        setError(data.error || 'Failed to send invitation')
+        setError(data.error || 'Failed to send invitation');
       }
     } catch (error) {
-      console.error('Error inviting collaborator:', error)
-      setError('An unexpected error occurred. Please try again.')
+      console.error('Error inviting collaborator:', error);
+      setError('An unexpected error occurred. Please try again.');
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
   }
 
-  // Reset form and close modal
   function handleClose() {
-    setEmail('')
-    setRole('editor')
-    setMessage('')
-    setError(null)
-    setSuccess(false)
-    onClose()
+    setEmail('');
+    setRole('editor');
+    setMessage('');
+    setError(null);
+    setSuccess(false);
+    onClose();
   }
 
-  if (!isOpen) return null
+  if (!isOpen) return null;
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    padding: '12px 14px',
+    fontFamily: 'Georgia, serif',
+    fontSize: '14px',
+    color: colors.espresso,
+    background: colors.warmWhite,
+    border: `1px solid ${colors.golden}`,
+    borderRadius: '6px',
+    outline: 'none',
+    transition: 'all 0.2s ease',
+  };
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <div
+        style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 50,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '16px',
+          background: 'rgba(44, 24, 16, 0.6)',
+          backdropFilter: 'blur(4px)',
+        }}
+        onClick={handleClose}
+      >
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.95 }}
+          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 20 }}
           transition={{ duration: 0.2 }}
-          className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden"
+          style={{
+            width: '100%',
+            maxWidth: '480px',
+            background: `linear-gradient(180deg, ${colors.cream} 0%, ${colors.warmWhite} 100%)`,
+            borderRadius: '16px',
+            border: `2px solid ${colors.golden}`,
+            boxShadow: `0 25px 50px -12px rgba(44, 24, 16, 0.4), inset 0 1px 0 ${colors.parchment}`,
+            overflow: 'hidden',
+          }}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-500 rounded-lg">
-                <UserPlus className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900">Invite Collaborator</h2>
-                <p className="text-xs text-gray-600">Add someone to help plan this trip</p>
-              </div>
-            </div>
-            <button
-              onClick={handleClose}
-              className="p-1 hover:bg-white/50 rounded-lg transition-colors"
-              disabled={isSubmitting}
+          <div style={{ padding: '24px 24px 0' }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'flex-end',
+                marginBottom: '8px',
+              }}
             >
-              <X className="h-5 w-5 text-gray-500" />
-            </button>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={handleClose}
+                disabled={isSubmitting}
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  background: `${colors.terracotta}15`,
+                  border: `1px solid ${colors.terracotta}`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                  color: colors.terracotta,
+                  opacity: isSubmitting ? 0.5 : 1,
+                }}
+              >
+                <X style={{ width: 16, height: 16 }} />
+              </motion.button>
+            </div>
+            <TelegramHeader />
           </div>
 
           {/* Content */}
-          <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          <form onSubmit={handleSubmit} style={{ padding: '20px 24px 24px' }}>
             {/* Success message */}
             {success && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-lg"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '14px',
+                  background: `${colors.sage}15`,
+                  border: `1px solid ${colors.sage}`,
+                  borderRadius: '8px',
+                  marginBottom: '20px',
+                }}
               >
-                <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-green-900">Invitation sent!</p>
-                  <p className="text-xs text-green-700 mt-0.5">
-                    They'll receive an email invitation to collaborate.
+                <CheckCircle style={{ width: 20, height: 20, color: colors.sage, flexShrink: 0 }} />
+                <div style={{ flex: 1 }}>
+                  <p
+                    style={{
+                      fontFamily: 'Georgia, serif',
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      color: colors.sage,
+                      margin: 0,
+                    }}
+                  >
+                    Telegram dispatched!
+                  </p>
+                  <p
+                    style={{
+                      fontFamily: '"Courier New", monospace',
+                      fontSize: '11px',
+                      color: colors.sageLight,
+                      marginTop: '2px',
+                    }}
+                  >
+                    They will receive an invitation to collaborate.
                   </p>
                 </div>
               </motion.div>
@@ -153,196 +317,370 @@ export function InviteCollaboratorModal({
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-lg"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '14px',
+                  background: `${colors.stampRed}10`,
+                  border: `1px solid ${colors.stampRed}`,
+                  borderRadius: '8px',
+                  marginBottom: '20px',
+                }}
               >
-                <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0" />
-                <p className="text-sm text-red-900">{error}</p>
+                <AlertCircle style={{ width: 20, height: 20, color: colors.stampRed, flexShrink: 0 }} />
+                <p
+                  style={{
+                    fontFamily: 'Georgia, serif',
+                    fontSize: '13px',
+                    color: colors.stampRed,
+                    margin: 0,
+                  }}
+                >
+                  {error}
+                </p>
               </motion.div>
             )}
 
             {/* Email input */}
-            <div className="space-y-2">
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email Address <span className="text-red-500">*</span>
+            <div style={{ marginBottom: '20px' }}>
+              <label
+                style={{
+                  display: 'block',
+                  fontFamily: '"Courier New", monospace',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  letterSpacing: '1px',
+                  color: colors.mediumBrown,
+                  marginBottom: '6px',
+                  textTransform: 'uppercase',
+                }}
+              >
+                RECIPIENT ADDRESS <span style={{ color: colors.stampRed }}>*</span>
               </label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <div style={{ position: 'relative' }}>
+                <Mail
+                  style={{
+                    position: 'absolute',
+                    left: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    width: 16,
+                    height: 16,
+                    color: colors.lightBrown,
+                  }}
+                />
                 <input
                   type="email"
                   id="email"
                   value={email}
                   onChange={(e) => {
-                    setEmail(e.target.value)
-                    setError(null)
+                    setEmail(e.target.value);
+                    setError(null);
                   }}
-                  placeholder="friend@example.com"
+                  placeholder="fellow.traveler@example.com"
                   disabled={isSubmitting || success}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-400 transition-shadow"
+                  style={{
+                    ...inputStyle,
+                    paddingLeft: '40px',
+                    opacity: isSubmitting || success ? 0.6 : 1,
+                  }}
                   required
                 />
               </div>
-              <p className="text-xs text-gray-500">
-                They'll need to have an account to accept the invitation
+              <p
+                style={{
+                  fontFamily: '"Courier New", monospace',
+                  fontSize: '10px',
+                  color: colors.lightBrown,
+                  marginTop: '4px',
+                  fontStyle: 'italic',
+                }}
+              >
+                An account is required to accept the invitation
               </p>
             </div>
 
             {/* Role selector */}
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">
-                Role <span className="text-red-500">*</span>
+            <div style={{ marginBottom: '20px' }}>
+              <label
+                style={{
+                  display: 'block',
+                  fontFamily: '"Courier New", monospace',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  letterSpacing: '1px',
+                  color: colors.mediumBrown,
+                  marginBottom: '6px',
+                  textTransform: 'uppercase',
+                }}
+              >
+                TRAVEL ROLE <span style={{ color: colors.stampRed }}>*</span>
               </label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                {/* Editor */}
+                <motion.button
                   type="button"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={() => setRole('editor')}
                   disabled={isSubmitting || success}
-                  className={`p-4 border-2 rounded-lg transition-all ${
-                    role === 'editor'
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  } disabled:opacity-50 disabled:cursor-not-allowed`}
+                  style={{
+                    padding: '14px',
+                    borderRadius: '10px',
+                    border: `2px solid ${role === 'editor' ? colors.terracotta : colors.golden}`,
+                    background: role === 'editor' ? `${colors.terracotta}10` : colors.warmWhite,
+                    cursor: isSubmitting || success ? 'not-allowed' : 'pointer',
+                    opacity: isSubmitting || success ? 0.6 : 1,
+                    transition: 'all 0.2s ease',
+                  }}
                 >
-                  <div className="flex flex-col items-center gap-2">
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
                     <div
-                      className={`p-2 rounded-lg ${
-                        role === 'editor' ? 'bg-blue-100' : 'bg-gray-100'
-                      }`}
+                      style={{
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '8px',
+                        background: role === 'editor' ? `${colors.terracotta}20` : `${colors.golden}20`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
                     >
-                      <svg
-                        className={`h-5 w-5 ${role === 'editor' ? 'text-blue-600' : 'text-gray-600'}`}
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                        />
-                      </svg>
+                      <Edit3
+                        style={{
+                          width: 20,
+                          height: 20,
+                          color: role === 'editor' ? colors.terracotta : colors.mediumBrown,
+                        }}
+                      />
                     </div>
-                    <div className="text-center">
+                    <div style={{ textAlign: 'center' }}>
                       <p
-                        className={`text-sm font-medium ${
-                          role === 'editor' ? 'text-blue-900' : 'text-gray-900'
-                        }`}
+                        style={{
+                          fontFamily: 'Georgia, serif',
+                          fontSize: '14px',
+                          fontWeight: 600,
+                          color: role === 'editor' ? colors.terracotta : colors.espresso,
+                          margin: 0,
+                        }}
                       >
                         Editor
                       </p>
-                      <p className="text-xs text-gray-500 mt-0.5">Can make changes</p>
+                      <p
+                        style={{
+                          fontFamily: '"Courier New", monospace',
+                          fontSize: '10px',
+                          color: colors.lightBrown,
+                          marginTop: '2px',
+                        }}
+                      >
+                        Can make changes
+                      </p>
                     </div>
                   </div>
-                </button>
+                </motion.button>
 
-                <button
+                {/* Viewer */}
+                <motion.button
                   type="button"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={() => setRole('viewer')}
                   disabled={isSubmitting || success}
-                  className={`p-4 border-2 rounded-lg transition-all ${
-                    role === 'viewer'
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  } disabled:opacity-50 disabled:cursor-not-allowed`}
+                  style={{
+                    padding: '14px',
+                    borderRadius: '10px',
+                    border: `2px solid ${role === 'viewer' ? colors.sage : colors.golden}`,
+                    background: role === 'viewer' ? `${colors.sage}10` : colors.warmWhite,
+                    cursor: isSubmitting || success ? 'not-allowed' : 'pointer',
+                    opacity: isSubmitting || success ? 0.6 : 1,
+                    transition: 'all 0.2s ease',
+                  }}
                 >
-                  <div className="flex flex-col items-center gap-2">
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
                     <div
-                      className={`p-2 rounded-lg ${
-                        role === 'viewer' ? 'bg-blue-100' : 'bg-gray-100'
-                      }`}
+                      style={{
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '8px',
+                        background: role === 'viewer' ? `${colors.sage}20` : `${colors.golden}20`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
                     >
-                      <svg
-                        className={`h-5 w-5 ${role === 'viewer' ? 'text-blue-600' : 'text-gray-600'}`}
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                        />
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                        />
-                      </svg>
+                      <Eye
+                        style={{
+                          width: 20,
+                          height: 20,
+                          color: role === 'viewer' ? colors.sage : colors.mediumBrown,
+                        }}
+                      />
                     </div>
-                    <div className="text-center">
+                    <div style={{ textAlign: 'center' }}>
                       <p
-                        className={`text-sm font-medium ${
-                          role === 'viewer' ? 'text-blue-900' : 'text-gray-900'
-                        }`}
+                        style={{
+                          fontFamily: 'Georgia, serif',
+                          fontSize: '14px',
+                          fontWeight: 600,
+                          color: role === 'viewer' ? colors.sage : colors.espresso,
+                          margin: 0,
+                        }}
                       >
                         Viewer
                       </p>
-                      <p className="text-xs text-gray-500 mt-0.5">Can only view</p>
+                      <p
+                        style={{
+                          fontFamily: '"Courier New", monospace',
+                          fontSize: '10px',
+                          color: colors.lightBrown,
+                          marginTop: '2px',
+                        }}
+                      >
+                        View only access
+                      </p>
                     </div>
                   </div>
-                </button>
+                </motion.button>
               </div>
             </div>
 
             {/* Optional message */}
-            <div className="space-y-2">
-              <label htmlFor="message" className="block text-sm font-medium text-gray-700">
-                Personal Message <span className="text-gray-400 text-xs">(Optional)</span>
+            <div style={{ marginBottom: '24px' }}>
+              <label
+                style={{
+                  display: 'block',
+                  fontFamily: '"Courier New", monospace',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  letterSpacing: '1px',
+                  color: colors.mediumBrown,
+                  marginBottom: '6px',
+                  textTransform: 'uppercase',
+                }}
+              >
+                PERSONAL MESSAGE{' '}
+                <span style={{ color: colors.lightBrown, fontWeight: 400, fontStyle: 'italic' }}>(Optional)</span>
               </label>
               <textarea
                 id="message"
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder="Hey! Want to help plan this trip together?"
+                placeholder="Greetings! Care to join me on this adventure?"
                 disabled={isSubmitting || success}
                 rows={3}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-400 resize-none transition-shadow"
+                style={{
+                  ...inputStyle,
+                  resize: 'none',
+                  opacity: isSubmitting || success ? 0.6 : 1,
+                }}
                 maxLength={500}
               />
-              <div className="flex justify-between items-center">
-                <p className="text-xs text-gray-500">Add a personal note to the invitation</p>
-                <p className="text-xs text-gray-400">{message.length}/500</p>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginTop: '4px',
+                }}
+              >
+                <p
+                  style={{
+                    fontFamily: '"Courier New", monospace',
+                    fontSize: '10px',
+                    color: colors.lightBrown,
+                    fontStyle: 'italic',
+                  }}
+                >
+                  Add a personal note to the invitation
+                </p>
+                <p
+                  style={{
+                    fontFamily: '"Courier New", monospace',
+                    fontSize: '10px',
+                    color: colors.lightBrown,
+                  }}
+                >
+                  {message.length}/500
+                </p>
               </div>
             </div>
 
             {/* Action buttons */}
-            <div className="flex gap-3 pt-2">
-              <button
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <motion.button
                 type="button"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={handleClose}
                 disabled={isSubmitting}
-                className="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                style={{
+                  flex: 1,
+                  padding: '14px 20px',
+                  background: 'transparent',
+                  border: `1px solid ${colors.golden}`,
+                  borderRadius: '8px',
+                  fontFamily: '"Courier New", monospace',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  letterSpacing: '1px',
+                  color: colors.mediumBrown,
+                  cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                  opacity: isSubmitting ? 0.5 : 1,
+                }}
               >
-                Cancel
-              </button>
-              <button
+                CANCEL
+              </motion.button>
+              <motion.button
                 type="submit"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 disabled={isSubmitting || success || !email.trim()}
-                className="flex-1 px-4 py-3 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                style={{
+                  flex: 1,
+                  padding: '14px 20px',
+                  background:
+                    isSubmitting || success || !email.trim()
+                      ? colors.lightBrown
+                      : `linear-gradient(135deg, ${colors.terracotta} 0%, ${colors.terracottaLight} 100%)`,
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontFamily: '"Courier New", monospace',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  letterSpacing: '1px',
+                  color: colors.cream,
+                  cursor: isSubmitting || success || !email.trim() ? 'not-allowed' : 'pointer',
+                  boxShadow:
+                    isSubmitting || success || !email.trim() ? 'none' : `0 4px 12px ${colors.terracotta}40`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                }}
               >
                 {isSubmitting ? (
                   <>
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                    <span>Sending...</span>
+                    <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />
+                    DISPATCHING...
                   </>
                 ) : success ? (
                   <>
-                    <CheckCircle className="h-5 w-5" />
-                    <span>Sent!</span>
+                    <CheckCircle style={{ width: 16, height: 16 }} />
+                    SENT!
                   </>
                 ) : (
                   <>
-                    <UserPlus className="h-5 w-5" />
-                    <span>Send Invitation</span>
+                    <UserPlus style={{ width: 16, height: 16 }} />
+                    DISPATCH TELEGRAM
                   </>
                 )}
-              </button>
+              </motion.button>
             </div>
           </form>
         </motion.div>
       </div>
     </AnimatePresence>
-  )
+  );
 }

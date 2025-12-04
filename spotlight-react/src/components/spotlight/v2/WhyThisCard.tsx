@@ -252,6 +252,7 @@ export function WhyThisCard({
                   personalizationMatch!.reasons.slice(0, 4).map((reason, idx) => {
                     const catConfig = CATEGORY_CONFIG[reason.category] || CATEGORY_CONFIG['style'];
                     const Icon = catConfig.icon;
+                    const confidencePercent = reason.confidence ? Math.round(reason.confidence * 100) : null;
 
                     return (
                       <motion.div
@@ -263,10 +264,43 @@ export function WhyThisCard({
                       >
                         <div className="flex flex-col items-center gap-1">
                           <div
-                            className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full"
+                            className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full relative"
                             style={{ background: catConfig.bg }}
                           >
                             <Icon className="h-2.5 w-2.5" style={{ color: catConfig.color }} />
+                            {/* Confidence ring indicator */}
+                            {confidencePercent !== null && (
+                              <svg
+                                className="absolute inset-0"
+                                viewBox="0 0 20 20"
+                                style={{ transform: 'rotate(-90deg)' }}
+                              >
+                                <circle
+                                  cx="10"
+                                  cy="10"
+                                  r="9"
+                                  fill="none"
+                                  stroke={catConfig.bg}
+                                  strokeWidth="2"
+                                />
+                                <motion.circle
+                                  cx="10"
+                                  cy="10"
+                                  r="9"
+                                  fill="none"
+                                  stroke={catConfig.color}
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeDasharray={2 * Math.PI * 9}
+                                  initial={{ strokeDashoffset: 2 * Math.PI * 9 }}
+                                  animate={{
+                                    strokeDashoffset: 2 * Math.PI * 9 * (1 - (reason.confidence || 0)),
+                                  }}
+                                  transition={{ duration: 0.6, delay: 0.2 + idx * 0.1 }}
+                                  style={{ opacity: 0.6 }}
+                                />
+                              </svg>
+                            )}
                           </div>
                           <span
                             className="text-[8px] font-medium uppercase tracking-wider"
@@ -275,15 +309,29 @@ export function WhyThisCard({
                             {catConfig.label}
                           </span>
                         </div>
-                        <p
-                          className="flex-1 text-xs leading-relaxed"
-                          style={{
-                            color: '#5C4D3D',
-                            fontFamily: "'Satoshi', sans-serif",
-                          }}
-                        >
-                          {reason.text}
-                        </p>
+                        <div className="flex-1 min-w-0">
+                          <p
+                            className="text-xs leading-relaxed"
+                            style={{
+                              color: '#5C4D3D',
+                              fontFamily: "'Satoshi', sans-serif",
+                            }}
+                          >
+                            {reason.text}
+                          </p>
+                          {/* Confidence badge */}
+                          {confidencePercent !== null && (
+                            <span
+                              className="inline-block mt-1 text-[9px] font-medium px-1.5 py-0.5 rounded-full"
+                              style={{
+                                background: confidencePercent >= 80 ? '#E8F4E8' : confidencePercent >= 50 ? '#FEF8E8' : '#F5F0E8',
+                                color: confidencePercent >= 80 ? '#4A7C59' : confidencePercent >= 50 ? '#8B6914' : '#8B7355',
+                              }}
+                            >
+                              {confidencePercent >= 80 ? 'High confidence' : confidencePercent >= 50 ? 'Moderate' : 'Suggested'}
+                            </span>
+                          )}
+                        </div>
                       </motion.div>
                     );
                   })

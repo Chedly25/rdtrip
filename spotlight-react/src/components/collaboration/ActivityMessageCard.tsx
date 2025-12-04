@@ -1,5 +1,32 @@
+/**
+ * Activity Message Card - "The Destination Card"
+ *
+ * A vintage destination postcard aesthetic for shared activity messages.
+ * Features postcard borders, location stamps, and editorial typography.
+ *
+ * Design: Wanderlust Editorial with vintage postcard aesthetics
+ */
+
 import { MapPin, Clock, ExternalLink } from 'lucide-react';
 import { motion } from 'framer-motion';
+
+// =============================================================================
+// WANDERLUST EDITORIAL COLOR PALETTE
+// =============================================================================
+const colors = {
+  cream: '#FFFBF5',
+  warmWhite: '#FAF7F2',
+  terracotta: '#C45830',
+  terracottaLight: '#D96A42',
+  golden: '#D4A853',
+  goldenLight: '#E4BE73',
+  goldenDark: '#B8923D',
+  sage: '#6B8E7B',
+  espresso: '#2C1810',
+  mediumBrown: '#5C4033',
+  lightBrown: '#8B7355',
+  parchment: '#F5E6C8',
+};
 
 interface Activity {
   name: string;
@@ -20,54 +47,136 @@ export function ActivityMessageCard({ activity, isCurrentUser }: ActivityMessage
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.2 }}
-      className={`rounded-lg border overflow-hidden ${
-        isCurrentUser
-          ? 'bg-blue-600 border-blue-500'
-          : 'bg-white border-gray-200'
-      }`}
+      style={{
+        borderRadius: '10px',
+        overflow: 'hidden',
+        background: isCurrentUser
+          ? `linear-gradient(135deg, ${colors.terracotta} 0%, ${colors.terracottaLight} 100%)`
+          : colors.warmWhite,
+        border: `2px solid ${isCurrentUser ? colors.terracottaLight : colors.golden}`,
+        boxShadow: `0 2px 8px rgba(44, 24, 16, 0.12)`,
+      }}
     >
-      {/* Header */}
+      {/* Postcard Header with stamp effect */}
       <div
-        className={`px-3 py-2 border-b ${
-          isCurrentUser ? 'border-blue-500' : 'border-gray-200'
-        }`}
+        style={{
+          padding: '10px 12px',
+          borderBottom: `1px ${isCurrentUser ? 'solid' : 'dashed'} ${isCurrentUser ? colors.terracottaLight : colors.golden}`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}
       >
-        <div className="flex items-center gap-2">
-          <MapPin className={`w-4 h-4 ${isCurrentUser ? 'text-blue-100' : 'text-blue-600'}`} />
-          <span
-            className={`text-sm font-semibold ${
-              isCurrentUser ? 'text-white' : 'text-gray-900'
-            }`}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div
+            style={{
+              width: '24px',
+              height: '24px',
+              borderRadius: '4px',
+              background: isCurrentUser ? 'rgba(255,255,255,0.2)' : `${colors.terracotta}15`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
           >
-            Shared Activity
+            <MapPin
+              style={{
+                width: 14,
+                height: 14,
+                color: isCurrentUser ? colors.cream : colors.terracotta,
+              }}
+            />
+          </div>
+          <span
+            style={{
+              fontFamily: '"Courier New", monospace',
+              fontSize: '10px',
+              fontWeight: 700,
+              letterSpacing: '1px',
+              color: isCurrentUser ? 'rgba(255,255,255,0.9)' : colors.mediumBrown,
+              textTransform: 'uppercase',
+            }}
+          >
+            Shared Destination
           </span>
+        </div>
+
+        {/* Decorative stamp */}
+        <div
+          style={{
+            width: '20px',
+            height: '20px',
+            borderRadius: '50%',
+            border: `2px dashed ${isCurrentUser ? 'rgba(255,255,255,0.3)' : colors.golden}`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '10px',
+          }}
+        >
+          ✈
         </div>
       </div>
 
       {/* Content */}
-      <div className="p-3">
+      <div style={{ padding: '12px' }}>
         <h4
-          className={`font-medium mb-1 ${
-            isCurrentUser ? 'text-white' : 'text-gray-900'
-          }`}
+          style={{
+            fontFamily: 'Georgia, serif',
+            fontSize: '15px',
+            fontWeight: 700,
+            color: isCurrentUser ? colors.cream : colors.espresso,
+            margin: '0 0 8px 0',
+          }}
         >
           {activity.name}
         </h4>
 
         {/* Metadata */}
-        <div className="flex flex-wrap gap-3 text-xs mb-2">
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '12px',
+            marginBottom: activity.description ? '10px' : 0,
+          }}
+        >
           {activity.city && (
-            <div className="flex items-center gap-1">
-              <MapPin className={`w-3 h-3 ${isCurrentUser ? 'text-blue-200' : 'text-gray-500'}`} />
-              <span className={isCurrentUser ? 'text-blue-100' : 'text-gray-600'}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <MapPin
+                style={{
+                  width: 12,
+                  height: 12,
+                  color: isCurrentUser ? 'rgba(255,255,255,0.7)' : colors.lightBrown,
+                }}
+              />
+              <span
+                style={{
+                  fontFamily: '"Courier New", monospace',
+                  fontSize: '11px',
+                  color: isCurrentUser ? 'rgba(255,255,255,0.8)' : colors.mediumBrown,
+                }}
+              >
                 {activity.city}
               </span>
             </div>
           )}
           {activity.duration && (
-            <div className="flex items-center gap-1">
-              <Clock className={`w-3 h-3 ${isCurrentUser ? 'text-blue-200' : 'text-gray-500'}`} />
-              <span className={isCurrentUser ? 'text-blue-100' : 'text-gray-600'}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <Clock
+                style={{
+                  width: 12,
+                  height: 12,
+                  color: isCurrentUser ? 'rgba(255,255,255,0.7)' : colors.lightBrown,
+                }}
+              />
+              <span
+                style={{
+                  fontFamily: '"Courier New", monospace',
+                  fontSize: '11px',
+                  color: isCurrentUser ? 'rgba(255,255,255,0.8)' : colors.mediumBrown,
+                }}
+              >
                 {activity.duration}
               </span>
             </div>
@@ -77,9 +186,17 @@ export function ActivityMessageCard({ activity, isCurrentUser }: ActivityMessage
         {/* Description */}
         {activity.description && (
           <p
-            className={`text-sm mb-2 line-clamp-3 ${
-              isCurrentUser ? 'text-blue-50' : 'text-gray-700'
-            }`}
+            style={{
+              fontFamily: 'Georgia, serif',
+              fontSize: '13px',
+              lineHeight: 1.5,
+              color: isCurrentUser ? 'rgba(255,255,255,0.9)' : colors.espresso,
+              margin: '0 0 10px 0',
+              display: '-webkit-box',
+              WebkitLineClamp: 3,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+            }}
           >
             {activity.description}
           </p>
@@ -91,14 +208,25 @@ export function ActivityMessageCard({ activity, isCurrentUser }: ActivityMessage
             href={activity.url}
             target="_blank"
             rel="noopener noreferrer"
-            className={`inline-flex items-center gap-1 text-xs font-medium transition-colors ${
-              isCurrentUser
-                ? 'text-blue-100 hover:text-white'
-                : 'text-blue-600 hover:text-blue-700'
-            }`}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              fontFamily: '"Courier New", monospace',
+              fontSize: '11px',
+              fontWeight: 700,
+              letterSpacing: '0.5px',
+              color: isCurrentUser ? colors.cream : colors.terracotta,
+              textDecoration: 'none',
+              padding: '6px 10px',
+              borderRadius: '4px',
+              background: isCurrentUser ? 'rgba(255,255,255,0.15)' : `${colors.terracotta}10`,
+              border: `1px solid ${isCurrentUser ? 'rgba(255,255,255,0.2)' : `${colors.terracotta}30`}`,
+              transition: 'all 0.2s ease',
+            }}
           >
-            <span>View details</span>
-            <ExternalLink className="w-3 h-3" />
+            VIEW DETAILS
+            <ExternalLink style={{ width: 11, height: 11 }} />
           </a>
         )}
       </div>

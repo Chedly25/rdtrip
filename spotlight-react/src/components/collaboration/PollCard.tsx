@@ -1,7 +1,52 @@
+/**
+ * Poll Card - "The Traveler's Ballot"
+ *
+ * A vintage ballot box / voting card aesthetic for group decisions.
+ * Features pencil-mark checkboxes, paper ballot styling, and seal stamps.
+ *
+ * Design: Wanderlust Editorial with vintage polling/ballot aesthetics
+ */
+
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { BarChart3, Check, Clock, X, Users } from 'lucide-react';
+import {
+  Vote,
+  Check,
+  Clock,
+  X,
+  Users,
+  Lock,
+  Unlock,
+  Award,
+} from 'lucide-react';
 import type { TripPoll } from '../../types';
+
+// =============================================================================
+// WANDERLUST EDITORIAL COLOR PALETTE
+// =============================================================================
+const colors = {
+  cream: '#FFFBF5',
+  warmWhite: '#FAF7F2',
+  terracotta: '#C45830',
+  terracottaLight: '#D96A42',
+  golden: '#D4A853',
+  goldenLight: '#E4BE73',
+  goldenDark: '#B8923D',
+  sage: '#6B8E7B',
+  sageLight: '#8BA99A',
+  sageDark: '#4A6B5A',
+  espresso: '#2C1810',
+  darkBrown: '#3D2A1E',
+  mediumBrown: '#5C4033',
+  lightBrown: '#8B7355',
+
+  // Ballot accents
+  parchment: '#F5E6C8',
+  inkBlue: '#1A365D',
+  stampRed: '#8B2323',
+  pencilGray: '#4A4A4A',
+  ballotBg: '#FDFBF7',
+};
 
 interface PollCardProps {
   poll: TripPoll;
@@ -12,55 +57,244 @@ interface PollCardProps {
   onClose?: (pollId: string) => void;
 }
 
+// Poll type icons
+const POLL_TYPE_ICONS: Record<string, string> = {
+  general: '📋',
+  activity: '🎯',
+  restaurant: '🍽️',
+  accommodation: '🏨',
+  schedule: '📅',
+};
+
+// =============================================================================
+// BALLOT HEADER SEAL
+// =============================================================================
+const BallotSeal: React.FC<{ status: string }> = ({ status }) => {
+  const sealConfig = {
+    active: { color: colors.sage, text: 'OPEN', icon: <Unlock style={{ width: 12, height: 12 }} /> },
+    closed: { color: colors.lightBrown, text: 'CLOSED', icon: <Lock style={{ width: 12, height: 12 }} /> },
+    executed: { color: colors.golden, text: 'DECIDED', icon: <Award style={{ width: 12, height: 12 }} /> },
+  };
+
+  const config = sealConfig[status as keyof typeof sealConfig] || sealConfig.active;
+
+  return (
+    <motion.div
+      initial={{ scale: 0, rotate: -20 }}
+      animate={{ scale: 1, rotate: 0 }}
+      style={{
+        position: 'absolute',
+        top: '-8px',
+        right: '16px',
+        padding: '6px 12px',
+        background: `${config.color}20`,
+        border: `2px solid ${config.color}`,
+        borderRadius: '4px',
+        transform: 'rotate(3deg)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '4px',
+        color: config.color,
+      }}
+    >
+      {config.icon}
+      <span
+        style={{
+          fontFamily: '"Courier New", monospace',
+          fontSize: '10px',
+          fontWeight: 700,
+          letterSpacing: '1px',
+        }}
+      >
+        {config.text}
+      </span>
+    </motion.div>
+  );
+};
+
+// =============================================================================
+// PENCIL CHECKBOX
+// =============================================================================
+const PencilCheckbox: React.FC<{
+  checked: boolean;
+  onClick?: () => void;
+  disabled?: boolean;
+  isMultiple?: boolean;
+}> = ({ checked, onClick, disabled, isMultiple }) => (
+  <motion.button
+    whileHover={disabled ? {} : { scale: 1.05 }}
+    whileTap={disabled ? {} : { scale: 0.95 }}
+    onClick={onClick}
+    disabled={disabled}
+    style={{
+      width: 24,
+      height: 24,
+      borderRadius: isMultiple ? '4px' : '50%',
+      background: colors.ballotBg,
+      border: `2px solid ${checked ? colors.terracotta : colors.lightBrown}`,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      cursor: disabled ? 'default' : 'pointer',
+      position: 'relative',
+      flexShrink: 0,
+    }}
+  >
+    {checked && (
+      <motion.svg
+        initial={{ pathLength: 0, opacity: 0 }}
+        animate={{ pathLength: 1, opacity: 1 }}
+        transition={{ duration: 0.3 }}
+        width="14"
+        height="14"
+        viewBox="0 0 14 14"
+        style={{ position: 'absolute' }}
+      >
+        <motion.path
+          d="M 2 7 L 5 10 L 12 3"
+          fill="none"
+          stroke={colors.pencilGray}
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          initial={{ pathLength: 0 }}
+          animate={{ pathLength: 1 }}
+          transition={{ duration: 0.3 }}
+        />
+      </motion.svg>
+    )}
+  </motion.button>
+);
+
+// =============================================================================
+// PROGRESS BAR (BALLOT FILL)
+// =============================================================================
+const BallotProgressBar: React.FC<{
+  percentage: number;
+  isWinning: boolean;
+  showResults: boolean;
+}> = ({ percentage, isWinning, showResults }) => (
+  <div
+    style={{
+      position: 'absolute',
+      inset: 0,
+      borderRadius: '8px',
+      overflow: 'hidden',
+      zIndex: 0,
+    }}
+  >
+    <motion.div
+      initial={{ width: 0 }}
+      animate={{ width: showResults ? `${percentage}%` : 0 }}
+      transition={{ duration: 0.6, ease: 'easeOut', delay: 0.1 }}
+      style={{
+        height: '100%',
+        background: isWinning
+          ? `linear-gradient(90deg, ${colors.golden}30 0%, ${colors.goldenLight}20 100%)`
+          : `linear-gradient(90deg, ${colors.sage}20 0%, ${colors.sageLight}15 100%)`,
+      }}
+    />
+  </div>
+);
+
+// =============================================================================
+// VOTER AVATARS
+// =============================================================================
+const VoterAvatars: React.FC<{ voters: string[]; maxDisplay?: number }> = ({
+  voters,
+  maxDisplay = 3,
+}) => {
+  const displayVoters = voters.slice(0, maxDisplay);
+  const remaining = voters.length - maxDisplay;
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+      {displayVoters.map((voter, i) => (
+        <div
+          key={i}
+          style={{
+            width: 20,
+            height: 20,
+            borderRadius: '4px',
+            background: colors.parchment,
+            border: `1px solid ${colors.golden}`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontFamily: '"Courier New", monospace',
+            fontSize: '9px',
+            fontWeight: 700,
+            color: colors.espresso,
+            marginLeft: i > 0 ? '-6px' : 0,
+          }}
+          title={voter}
+        >
+          {voter.charAt(0).toUpperCase()}
+        </div>
+      ))}
+      {remaining > 0 && (
+        <span
+          style={{
+            marginLeft: '4px',
+            fontFamily: '"Courier New", monospace',
+            fontSize: '10px',
+            color: colors.lightBrown,
+          }}
+        >
+          +{remaining}
+        </span>
+      )}
+    </div>
+  );
+};
+
+// =============================================================================
+// MAIN COMPONENT
+// =============================================================================
 export function PollCard({
   poll,
   routeId,
   currentUserId,
   userRole = 'viewer',
   onVote,
-  onClose
+  onClose,
 }: PollCardProps) {
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
   const [hasVoted, setHasVoted] = useState(false);
   const [showResults, setShowResults] = useState(poll.status !== 'active');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Check if current user has already voted
+  // Check if user has voted
   useEffect(() => {
-    const userVote = poll.votes.find(v => v.userId === currentUserId);
+    const userVote = poll.votes.find((v) => v.userId === currentUserId);
     if (userVote) {
       setSelectedOptions(userVote.selectedOptions);
       setHasVoted(true);
     }
   }, [poll.votes, currentUserId]);
 
-  // Calculate vote counts for each option
-  const getVoteCount = (optionId: string): number => {
-    return poll.votes.filter(vote =>
-      vote.selectedOptions.includes(optionId)
-    ).length;
-  };
+  // Vote calculations
+  const getVoteCount = (optionId: string): number =>
+    poll.votes.filter((vote) => vote.selectedOptions.includes(optionId)).length;
 
-  // Calculate percentage for each option
   const getVotePercentage = (optionId: string): number => {
     if (poll.votes.length === 0) return 0;
     return (getVoteCount(optionId) / poll.votes.length) * 100;
   };
 
-  // Get voters for an option
-  const getVoters = (optionId: string): string[] => {
-    return poll.votes
-      .filter(vote => vote.selectedOptions.includes(optionId))
-      .map(vote => vote.userName);
-  };
+  const getVoters = (optionId: string): string[] =>
+    poll.votes.filter((vote) => vote.selectedOptions.includes(optionId)).map((vote) => vote.userName);
 
-  // Handle option selection
+  const maxVotes = Math.max(...poll.options.map((o) => getVoteCount(o.id)), 0);
+
+  // Handle option click
   const handleOptionClick = (optionId: string) => {
-    if (poll.status !== 'active') return;
+    if (poll.status !== 'active' || hasVoted) return;
 
     if (poll.multipleChoice) {
-      setSelectedOptions(prev => {
+      setSelectedOptions((prev) => {
         if (prev.includes(optionId)) {
-          return prev.filter(id => id !== optionId);
+          return prev.filter((id) => id !== optionId);
         } else if (prev.length < poll.maxChoices) {
           return [...prev, optionId];
         }
@@ -73,31 +307,32 @@ export function PollCard({
 
   // Submit vote
   const handleSubmitVote = async () => {
-    if (selectedOptions.length === 0) return;
+    if (selectedOptions.length === 0 || isSubmitting) return;
 
+    setIsSubmitting(true);
     try {
       const response = await fetch(`/api/routes/${routeId}/polls/${poll.id}/vote`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('rdtrip_token')}`
+          Authorization: `Bearer ${localStorage.getItem('rdtrip_token')}`,
         },
-        body: JSON.stringify({ selectedOptions })
+        body: JSON.stringify({ selectedOptions }),
       });
 
       if (response.ok) {
         setHasVoted(true);
         setShowResults(true);
-        if (onVote) {
-          onVote(poll.id, selectedOptions);
-        }
+        onVote?.(poll.id, selectedOptions);
       }
     } catch (error) {
       console.error('Error submitting vote:', error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  // Close poll (owner/editor only)
+  // Close poll
   const handleClosePoll = async () => {
     if (userRole === 'viewer') return;
 
@@ -105,12 +340,12 @@ export function PollCard({
       const response = await fetch(`/api/routes/${routeId}/polls/${poll.id}/close`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('rdtrip_token')}`
-        }
+          Authorization: `Bearer ${localStorage.getItem('rdtrip_token')}`,
+        },
       });
 
-      if (response.ok && onClose) {
-        onClose(poll.id);
+      if (response.ok) {
+        onClose?.(poll.id);
       }
     } catch (error) {
       console.error('Error closing poll:', error);
@@ -124,65 +359,187 @@ export function PollCard({
     const diff = date.getTime() - now.getTime();
     const hours = Math.floor(diff / (1000 * 60 * 60));
 
-    if (hours < 0) return 'Expired';
-    if (hours < 24) return `${hours}h remaining`;
+    if (hours < 0) return { text: 'Expired', urgent: true };
+    if (hours < 24) return { text: `${hours}h remaining`, urgent: true };
     const days = Math.floor(hours / 24);
-    return `${days}d remaining`;
+    return { text: `${days}d remaining`, urgent: false };
   };
 
   const isPollActive = poll.status === 'active';
   const canVote = isPollActive && !hasVoted;
   const canClosePoll = isPollActive && (userRole === 'owner' || userRole === 'editor' || poll.createdBy === currentUserId);
+  const pollTypeIcon = POLL_TYPE_ICONS[poll.pollType] || POLL_TYPE_ICONS.general;
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white rounded-xl shadow-lg border-2 border-blue-200 p-6 mb-4"
+      style={{
+        position: 'relative',
+        background: `linear-gradient(135deg, ${colors.cream} 0%, ${colors.parchment} 100%)`,
+        borderRadius: '12px',
+        border: `1px solid ${colors.golden}`,
+        boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
+        overflow: 'hidden',
+        marginBottom: '16px',
+      }}
     >
-      {/* Poll Header */}
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-2">
-            <BarChart3 className="w-5 h-5 text-blue-600" />
-            <h3 className="text-lg font-bold text-gray-900">{poll.question}</h3>
+      {/* Decorative ballot edge */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: '4px',
+          background: `repeating-linear-gradient(
+            90deg,
+            ${colors.golden} 0,
+            ${colors.golden} 8px,
+            transparent 8px,
+            transparent 16px
+          )`,
+        }}
+      />
+
+      <BallotSeal status={poll.status} />
+
+      {/* Header */}
+      <div style={{ padding: '24px 20px 16px' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+          <div
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: '8px',
+              background: `${colors.terracotta}15`,
+              border: `1px solid ${colors.terracotta}`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '20px',
+              flexShrink: 0,
+            }}
+          >
+            {pollTypeIcon}
           </div>
 
-          <div className="flex items-center gap-3 text-sm text-gray-600">
-            <span>by {poll.createdByName}</span>
-            {poll.votes.length > 0 && (
-              <span className="flex items-center gap-1">
-                <Users className="w-4 h-4" />
-                {poll.votes.length} vote{poll.votes.length !== 1 ? 's' : ''}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h3
+              style={{
+                margin: 0,
+                fontFamily: 'Georgia, serif',
+                fontSize: '17px',
+                fontWeight: 700,
+                color: colors.espresso,
+                lineHeight: 1.3,
+              }}
+            >
+              {poll.question}
+            </h3>
+
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                alignItems: 'center',
+                gap: '12px',
+                marginTop: '8px',
+              }}
+            >
+              <span
+                style={{
+                  fontFamily: '"Courier New", monospace',
+                  fontSize: '11px',
+                  color: colors.lightBrown,
+                }}
+              >
+                by {poll.createdByName}
               </span>
-            )}
-            {poll.deadline && (
-              <span className="flex items-center gap-1">
-                <Clock className="w-4 h-4" />
-                {formatDeadline(poll.deadline)}
-              </span>
+
+              {poll.votes.length > 0 && (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    color: colors.mediumBrown,
+                  }}
+                >
+                  <Users style={{ width: 12, height: 12 }} />
+                  <span
+                    style={{
+                      fontFamily: '"Courier New", monospace',
+                      fontSize: '11px',
+                    }}
+                  >
+                    {poll.votes.length} vote{poll.votes.length !== 1 ? 's' : ''}
+                  </span>
+                </div>
+              )}
+
+              {poll.deadline && (() => {
+                const deadline = formatDeadline(poll.deadline);
+                return (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      color: deadline.urgent ? colors.terracotta : colors.sage,
+                    }}
+                  >
+                    <Clock style={{ width: 12, height: 12 }} />
+                    <span
+                      style={{
+                        fontFamily: '"Courier New", monospace',
+                        fontSize: '11px',
+                        fontWeight: deadline.urgent ? 700 : 400,
+                      }}
+                    >
+                      {deadline.text}
+                    </span>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {poll.description && (
+              <p
+                style={{
+                  margin: '8px 0 0 0',
+                  fontFamily: 'Georgia, serif',
+                  fontSize: '13px',
+                  color: colors.mediumBrown,
+                  fontStyle: 'italic',
+                }}
+              >
+                {poll.description}
+              </p>
             )}
           </div>
-
-          {poll.description && (
-            <p className="text-sm text-gray-600 mt-2">{poll.description}</p>
-          )}
-        </div>
-
-        {/* Status Badge */}
-        <div className={`px-3 py-1 rounded-full text-xs font-medium ${
-          poll.status === 'active' ? 'bg-green-100 text-green-700' :
-          poll.status === 'closed' ? 'bg-gray-100 text-gray-700' :
-          'bg-blue-100 text-blue-700'
-        }`}>
-          {poll.status.toUpperCase()}
         </div>
       </div>
 
-      {/* Poll Instructions */}
+      {/* Instructions */}
       {canVote && (
-        <div className="bg-blue-50 rounded-lg p-3 mb-4">
-          <p className="text-sm text-blue-800">
+        <div
+          style={{
+            margin: '0 20px 12px',
+            padding: '8px 12px',
+            background: `${colors.sage}15`,
+            borderRadius: '6px',
+            borderLeft: `3px solid ${colors.sage}`,
+          }}
+        >
+          <p
+            style={{
+              margin: 0,
+              fontFamily: '"Courier New", monospace',
+              fontSize: '11px',
+              color: colors.sage,
+            }}
+          >
             {poll.multipleChoice
               ? `Select up to ${poll.maxChoices} option${poll.maxChoices > 1 ? 's' : ''}`
               : 'Select one option'}
@@ -191,109 +548,272 @@ export function PollCard({
       )}
 
       {/* Options */}
-      <div className="space-y-3">
-        {poll.options.map((option) => {
-          const voteCount = getVoteCount(option.id);
-          const percentage = getVotePercentage(option.id);
-          const isSelected = selectedOptions.includes(option.id);
-          const voters = getVoters(option.id);
+      <div style={{ padding: '0 20px 16px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {poll.options.map((option) => {
+            const voteCount = getVoteCount(option.id);
+            const percentage = getVotePercentage(option.id);
+            const isSelected = selectedOptions.includes(option.id);
+            const voters = getVoters(option.id);
+            const isWinning = voteCount === maxVotes && maxVotes > 0;
 
-          return (
-            <motion.div
-              key={option.id}
-              whileHover={canVote ? { scale: 1.02 } : {}}
-              className={`relative rounded-lg border-2 transition-all ${
-                canVote ? 'cursor-pointer' : ''
-              } ${
-                isSelected && canVote
-                  ? 'border-blue-500 bg-blue-50'
-                  : 'border-gray-200 bg-white'
-              }`}
-              onClick={() => canVote && handleOptionClick(option.id)}
-            >
-              {/* Progress bar (shown if voted or results visible) */}
-              {(hasVoted || showResults) && (
-                <div
-                  className="absolute inset-0 bg-blue-100 rounded-lg opacity-30 transition-all"
-                  style={{ width: `${percentage}%` }}
+            return (
+              <motion.div
+                key={option.id}
+                whileHover={canVote ? { scale: 1.01 } : {}}
+                onClick={() => canVote && handleOptionClick(option.id)}
+                style={{
+                  position: 'relative',
+                  padding: '14px 16px',
+                  background: isSelected
+                    ? `${colors.terracotta}10`
+                    : colors.ballotBg,
+                  border: `1px solid ${isSelected ? colors.terracotta : colors.golden}`,
+                  borderRadius: '8px',
+                  cursor: canVote ? 'pointer' : 'default',
+                  overflow: 'hidden',
+                }}
+              >
+                <BallotProgressBar
+                  percentage={percentage}
+                  isWinning={isWinning}
+                  showResults={hasVoted || showResults}
                 />
-              )}
 
-              <div className="relative p-4 flex items-center justify-between">
-                <div className="flex items-center gap-3 flex-1">
-                  {/* Checkbox/Radio */}
+                <div
+                  style={{
+                    position: 'relative',
+                    zIndex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                  }}
+                >
+                  {/* Checkbox */}
                   {canVote && (
-                    <div className={`w-5 h-5 rounded-${poll.multipleChoice ? 'md' : 'full'} border-2 flex items-center justify-center ${
-                      isSelected ? 'border-blue-500 bg-blue-500' : 'border-gray-300'
-                    }`}>
-                      {isSelected && <Check className="w-3 h-3 text-white" />}
+                    <PencilCheckbox
+                      checked={isSelected}
+                      isMultiple={poll.multipleChoice}
+                      disabled={!canVote}
+                    />
+                  )}
+
+                  {/* Winning indicator */}
+                  {(hasVoted || showResults) && isWinning && voteCount > 0 && (
+                    <div
+                      style={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: '50%',
+                        background: colors.golden,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                      }}
+                    >
+                      <Award style={{ width: 14, height: 14, color: colors.cream }} />
                     </div>
                   )}
 
-                  {/* Option Label */}
-                  <div>
-                    <p className="font-medium text-gray-900">{option.label}</p>
+                  {/* Option content */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p
+                      style={{
+                        margin: 0,
+                        fontFamily: 'Georgia, serif',
+                        fontSize: '14px',
+                        fontWeight: isWinning && (hasVoted || showResults) ? 600 : 400,
+                        color: colors.espresso,
+                      }}
+                    >
+                      {option.label}
+                    </p>
                     {option.description && (
-                      <p className="text-sm text-gray-600 mt-1">{option.description}</p>
-                    )}
-                    {(hasVoted || showResults) && voters.length > 0 && (
-                      <p className="text-xs text-gray-500 mt-1">
-                        {voters.join(', ')}
+                      <p
+                        style={{
+                          margin: '4px 0 0 0',
+                          fontFamily: 'Georgia, serif',
+                          fontSize: '12px',
+                          color: colors.lightBrown,
+                        }}
+                      >
+                        {option.description}
                       </p>
                     )}
+                    {(hasVoted || showResults) && voters.length > 0 && (
+                      <div style={{ marginTop: '8px' }}>
+                        <VoterAvatars voters={voters} />
+                      </div>
+                    )}
                   </div>
-                </div>
 
-                {/* Vote Count */}
-                {(hasVoted || showResults) && (
-                  <div className="text-right ml-4">
-                    <p className="font-bold text-gray-900">{voteCount}</p>
-                    <p className="text-xs text-gray-500">{percentage.toFixed(0)}%</p>
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          );
-        })}
+                  {/* Vote count */}
+                  {(hasVoted || showResults) && (
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      <p
+                        style={{
+                          margin: 0,
+                          fontFamily: '"Courier New", monospace',
+                          fontSize: '18px',
+                          fontWeight: 700,
+                          color: isWinning ? colors.golden : colors.espresso,
+                        }}
+                      >
+                        {voteCount}
+                      </p>
+                      <p
+                        style={{
+                          margin: 0,
+                          fontFamily: '"Courier New", monospace',
+                          fontSize: '10px',
+                          color: colors.lightBrown,
+                        }}
+                      >
+                        {percentage.toFixed(0)}%
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-3 mt-4">
+      <div
+        style={{
+          padding: '16px 20px',
+          borderTop: `1px solid ${colors.golden}`,
+          background: colors.cream,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+        }}
+      >
         {canVote && (
           <>
-            <button
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               onClick={handleSubmitVote}
-              disabled={selectedOptions.length === 0}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors"
+              disabled={selectedOptions.length === 0 || isSubmitting}
+              style={{
+                padding: '10px 20px',
+                background:
+                  selectedOptions.length === 0
+                    ? colors.lightBrown
+                    : `linear-gradient(135deg, ${colors.terracotta} 0%, ${colors.terracottaLight} 100%)`,
+                border: 'none',
+                borderRadius: '8px',
+                fontFamily: '"Courier New", monospace',
+                fontSize: '12px',
+                fontWeight: 700,
+                letterSpacing: '1px',
+                color: colors.cream,
+                cursor: selectedOptions.length === 0 ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                boxShadow: selectedOptions.length === 0 ? 'none' : '0 2px 8px rgba(196, 88, 48, 0.3)',
+              }}
             >
-              Submit Vote
-            </button>
-            <button
+              <Vote style={{ width: 16, height: 16 }} />
+              {isSubmitting ? 'SUBMITTING...' : 'CAST VOTE'}
+            </motion.button>
+
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => setShowResults(!showResults)}
-              className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors"
+              style={{
+                padding: '10px 16px',
+                background: colors.cream,
+                border: `1px solid ${colors.golden}`,
+                borderRadius: '8px',
+                fontFamily: '"Courier New", monospace',
+                fontSize: '11px',
+                fontWeight: 700,
+                color: colors.mediumBrown,
+                cursor: 'pointer',
+              }}
             >
-              {showResults ? 'Hide Results' : 'Show Results'}
-            </button>
+              {showResults ? 'Hide Results' : 'Peek Results'}
+            </motion.button>
           </>
         )}
 
         {hasVoted && isPollActive && (
-          <button
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => setShowResults(!showResults)}
-            className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors"
+            style={{
+              padding: '10px 16px',
+              background: colors.cream,
+              border: `1px solid ${colors.golden}`,
+              borderRadius: '8px',
+              fontFamily: '"Courier New", monospace',
+              fontSize: '11px',
+              fontWeight: 700,
+              color: colors.mediumBrown,
+              cursor: 'pointer',
+            }}
           >
             {showResults ? 'Hide Results' : 'Show Results'}
-          </button>
+          </motion.button>
+        )}
+
+        {hasVoted && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 12px',
+              background: `${colors.sage}15`,
+              borderRadius: '6px',
+              color: colors.sage,
+            }}
+          >
+            <Check style={{ width: 14, height: 14 }} />
+            <span
+              style={{
+                fontFamily: '"Courier New", monospace',
+                fontSize: '11px',
+                fontWeight: 700,
+              }}
+            >
+              VOTED
+            </span>
+          </div>
         )}
 
         {canClosePoll && (
-          <button
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={handleClosePoll}
-            className="ml-auto px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg font-medium transition-colors flex items-center gap-2"
+            style={{
+              marginLeft: 'auto',
+              padding: '10px 16px',
+              background: `${colors.stampRed}10`,
+              border: `1px solid ${colors.stampRed}`,
+              borderRadius: '8px',
+              fontFamily: '"Courier New", monospace',
+              fontSize: '11px',
+              fontWeight: 700,
+              color: colors.stampRed,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
           >
-            <X className="w-4 h-4" />
+            <X style={{ width: 14, height: 14 }} />
             Close Poll
-          </button>
+          </motion.button>
         )}
       </div>
     </motion.div>
