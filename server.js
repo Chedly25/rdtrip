@@ -8187,6 +8187,13 @@ app.use('/api/itinerary', itineraryRoutes.initializeRoutes(itineraryJobs, pool))
 const notificationsRoutes = require('./server/routes/notifications');
 app.use('/api/notifications', notificationsRoutes);
 
+// ==================== TRIP IN PROGRESS ROUTES ====================
+const tripRoutes = require('./server/routes/trip');
+app.use('/api/trip', tripRoutes);
+
+const nearbyRoutes = require('./server/routes/nearby');
+app.use('/api/nearby', nearbyRoutes);
+
 // =====================================================
 // CATCH-ALL ROUTE - Serve React app for client-side routing
 // =====================================================
