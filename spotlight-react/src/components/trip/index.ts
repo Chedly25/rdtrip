@@ -22,6 +22,10 @@ export { NearbySheet } from './NearbySheet';
 export { AlertBannerStack, useAlerts, createWeatherAlert, createReservationReminder, createDrivingWarning, createCheckoutReminder } from './AlertBanner';
 export { PlanChangeSheet } from './PlanChangeSheet';
 
+// Progress & Completion
+export { TripProgress } from './TripProgress';
+export { TripCompleteFlow } from './TripCompleteFlow';
+
 // Re-export types
 export type { TimeSlot } from './TodayView';
 export type { NearbyPlace } from './QuickActions';
