@@ -26,8 +26,14 @@ export { PlanChangeSheet } from './PlanChangeSheet';
 export { TripProgress } from './TripProgress';
 export { TripCompleteFlow } from './TripCompleteFlow';
 
+// Offline Support
+export { useOfflineManager } from './OfflineManager';
+export { OfflineIndicator, OfflineBanner } from './OfflineIndicator';
+export { PreTripDownload } from './PreTripDownload';
+
 // Re-export types
 export type { TimeSlot } from './TodayView';
 export type { NearbyPlace } from './QuickActions';
 export type { CheckinData } from './CheckinModal';
 export type { TripAlert } from './AlertBanner';
+export type { OfflineState, PendingAction, OfflineTripData } from './OfflineManager';
