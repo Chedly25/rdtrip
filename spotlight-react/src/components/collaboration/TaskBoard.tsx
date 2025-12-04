@@ -1,9 +1,41 @@
+/**
+ * Task Board - "The Planning Desk"
+ *
+ * A Kanban-style task board with vintage travel office aesthetic.
+ * Features status columns styled as cork boards with pinned cards.
+ *
+ * Design: Wanderlust Editorial with travel planning desk styling
+ */
+
 import { useState, useEffect } from 'react';
-import { AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, ListTodo, User, Loader2 } from 'lucide-react';
 import { TaskCard } from './TaskCard';
 import { CreateTaskModal } from './CreateTaskModal';
 import type { TripTask, TaskStatus } from '../../types';
+
+// =============================================================================
+// WANDERLUST EDITORIAL COLOR PALETTE
+// =============================================================================
+const colors = {
+  cream: '#FFFBF5',
+  warmWhite: '#FAF7F2',
+  terracotta: '#C45830',
+  terracottaLight: '#D96A42',
+  golden: '#D4A853',
+  goldenLight: '#E4BE73',
+  goldenDark: '#B8923D',
+  sage: '#6B8E7B',
+  sageLight: '#8BA99A',
+  sageDark: '#4A6B5A',
+  espresso: '#2C1810',
+  darkBrown: '#3D2A1E',
+  mediumBrown: '#5C4033',
+  lightBrown: '#8B7355',
+  parchment: '#F5E6C8',
+  corkBoard: '#D4B896',
+  corkBoardDark: '#C4A87A',
+};
 
 interface TaskBoardProps {
   routeId: string;
@@ -20,11 +52,12 @@ interface TaskGroups {
   cancelled: TripTask[];
 }
 
-const STATUS_COLUMNS: { status: TaskStatus; label: string; color: string }[] = [
-  { status: 'pending', label: 'To Do', color: 'bg-gray-100 border-gray-300' },
-  { status: 'in_progress', label: 'In Progress', color: 'bg-blue-100 border-blue-300' },
-  { status: 'completed', label: 'Completed', color: 'bg-green-100 border-green-300' },
-  { status: 'cancelled', label: 'Cancelled', color: 'bg-red-100 border-red-300' }
+// Status column configurations with Wanderlust colors
+const STATUS_COLUMNS: { status: TaskStatus; label: string; color: string; accent: string; icon: string }[] = [
+  { status: 'pending', label: 'To Do', color: colors.golden, accent: colors.goldenLight, icon: '📋' },
+  { status: 'in_progress', label: 'In Progress', color: colors.terracotta, accent: colors.terracottaLight, icon: '✏️' },
+  { status: 'completed', label: 'Completed', color: colors.sage, accent: colors.sageLight, icon: '✓' },
+  { status: 'cancelled', label: 'Cancelled', color: colors.lightBrown, accent: colors.mediumBrown, icon: '✗' },
 ];
 
 export function TaskBoard({
@@ -32,14 +65,14 @@ export function TaskBoard({
   itineraryId,
   currentUserId,
   userRole = 'viewer',
-  wsMessage
+  wsMessage,
 }: TaskBoardProps) {
   const [tasks, setTasks] = useState<TripTask[]>([]);
   const [grouped, setGrouped] = useState<TaskGroups>({
     pending: [],
     in_progress: [],
     completed: [],
-    cancelled: []
+    cancelled: [],
   });
   const [counts, setCounts] = useState({ pending: 0, in_progress: 0, completed: 0, cancelled: 0 });
   const [loading, setLoading] = useState(true);
@@ -56,8 +89,8 @@ export function TaskBoard({
 
       const response = await fetch(`/api/routes/${routeId}/tasks?${params}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('rdtrip_token')}`
-        }
+          Authorization: `Bearer ${localStorage.getItem('rdtrip_token')}`,
+        },
       });
 
       if (response.ok) {
@@ -85,25 +118,22 @@ export function TaskBoard({
     switch (wsMessage.type) {
       case 'task_created':
         if (wsMessage.task) {
-          fetchTasks(); // Refresh to get proper grouping
+          fetchTasks();
         }
         break;
-
       case 'task_updated':
         if (wsMessage.task) {
-          fetchTasks(); // Refresh to update grouping
+          fetchTasks();
         }
         break;
-
       case 'task_deleted':
         if (wsMessage.taskId) {
-          setTasks(prev => prev.filter(t => t.id !== wsMessage.taskId));
-          // Update grouped as well
-          setGrouped(prev => {
+          setTasks((prev) => prev.filter((t) => t.id !== wsMessage.taskId));
+          setGrouped((prev) => {
             const newGrouped = { ...prev };
-            Object.keys(newGrouped).forEach(status => {
+            Object.keys(newGrouped).forEach((status) => {
               newGrouped[status as TaskStatus] = newGrouped[status as TaskStatus].filter(
-                t => t.id !== wsMessage.taskId
+                (t) => t.id !== wsMessage.taskId
               );
             });
             return newGrouped;
@@ -113,83 +143,182 @@ export function TaskBoard({
     }
   }, [wsMessage]);
 
-  // Handle task update from card
   const handleTaskUpdate = (taskId: string, updates: Partial<TripTask>) => {
-    // Optimistic update
-    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, ...updates } : t));
-    // Refresh to ensure proper grouping
+    setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, ...updates } : t)));
     fetchTasks();
   };
 
-  // Handle task delete from card
   const handleTaskDelete = (taskId: string) => {
-    setTasks(prev => prev.filter(t => t.id !== taskId));
-    setGrouped(prev => {
+    setTasks((prev) => prev.filter((t) => t.id !== taskId));
+    setGrouped((prev) => {
       const newGrouped = { ...prev };
-      Object.keys(newGrouped).forEach(status => {
+      Object.keys(newGrouped).forEach((status) => {
         newGrouped[status as TaskStatus] = newGrouped[status as TaskStatus].filter(
-          t => t.id !== taskId
+          (t) => t.id !== taskId
         );
       });
       return newGrouped;
     });
   };
 
-  // Handle task created
   const handleTaskCreated = () => {
-    fetchTasks(); // Refresh to get updated list
+    fetchTasks();
   };
 
   const canCreateTask = userRole === 'owner' || userRole === 'editor';
 
   return (
-    <div className="h-full flex flex-col bg-gray-50">
+    <div
+      style={{
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        background: `linear-gradient(180deg, ${colors.warmWhite} 0%, ${colors.cream} 100%)`,
+      }}
+    >
       {/* Header */}
-      <div className="bg-white border-b p-4">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <ListTodo className="w-6 h-6 text-blue-600" />
-            <h2 className="text-xl font-bold text-gray-900">Task Board</h2>
+      <div
+        style={{
+          background: colors.cream,
+          borderBottom: `1px solid ${colors.golden}`,
+          padding: '16px 20px',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: '12px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: '8px',
+                background: `${colors.terracotta}15`,
+                border: `1px solid ${colors.terracotta}`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <ListTodo style={{ width: 20, height: 20, color: colors.terracotta }} />
+            </div>
+            <h2
+              style={{
+                margin: 0,
+                fontFamily: 'Georgia, serif',
+                fontSize: '18px',
+                fontWeight: 700,
+                color: colors.espresso,
+              }}
+            >
+              Planning Board
+            </h2>
           </div>
 
           {canCreateTask && (
-            <button
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => setShowCreateModal(true)}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+              style={{
+                padding: '10px 18px',
+                background: `linear-gradient(135deg, ${colors.terracotta} 0%, ${colors.terracottaLight} 100%)`,
+                border: 'none',
+                borderRadius: '8px',
+                fontFamily: '"Courier New", monospace',
+                fontSize: '12px',
+                fontWeight: 700,
+                letterSpacing: '1px',
+                color: colors.cream,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                boxShadow: '0 2px 8px rgba(196, 88, 48, 0.3)',
+              }}
             >
-              <Plus className="w-5 h-5" />
-              New Task
-            </button>
+              <Plus style={{ width: 16, height: 16 }} />
+              NEW TASK
+            </motion.button>
           )}
         </div>
 
         {/* Filters */}
-        <div className="flex items-center gap-2">
-          <button
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <motion.button
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.99 }}
             onClick={() => setFilterAssignedToMe(!filterAssignedToMe)}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
-              filterAssignedToMe
-                ? 'bg-blue-100 text-blue-700 border-2 border-blue-300'
-                : 'bg-gray-100 text-gray-600 border-2 border-gray-200'
-            }`}
+            style={{
+              padding: '8px 14px',
+              background: filterAssignedToMe ? `${colors.terracotta}15` : colors.cream,
+              border: `1px solid ${filterAssignedToMe ? colors.terracotta : colors.golden}`,
+              borderRadius: '6px',
+              fontFamily: '"Courier New", monospace',
+              fontSize: '11px',
+              fontWeight: 700,
+              color: filterAssignedToMe ? colors.terracotta : colors.mediumBrown,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
           >
-            <User className="w-4 h-4" />
+            <User style={{ width: 14, height: 14 }} />
             My Tasks Only
-          </button>
+          </motion.button>
 
           {/* Task Count Summary */}
-          <div className="ml-auto flex items-center gap-3 text-sm text-gray-600">
+          <div
+            style={{
+              marginLeft: 'auto',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              fontFamily: '"Courier New", monospace',
+              fontSize: '11px',
+              color: colors.lightBrown,
+            }}
+          >
             <span>Total: {tasks.length}</span>
             {counts.pending > 0 && (
-              <span className="px-2 py-1 bg-gray-100 rounded">To Do: {counts.pending}</span>
+              <span
+                style={{
+                  padding: '4px 8px',
+                  background: `${colors.golden}20`,
+                  borderRadius: '4px',
+                  color: colors.goldenDark,
+                }}
+              >
+                To Do: {counts.pending}
+              </span>
             )}
             {counts.in_progress > 0 && (
-              <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded">
-                In Progress: {counts.in_progress}
+              <span
+                style={{
+                  padding: '4px 8px',
+                  background: `${colors.terracotta}20`,
+                  borderRadius: '4px',
+                  color: colors.terracotta,
+                }}
+              >
+                Active: {counts.in_progress}
               </span>
             )}
             {counts.completed > 0 && (
-              <span className="px-2 py-1 bg-green-100 text-green-700 rounded">
+              <span
+                style={{
+                  padding: '4px 8px',
+                  background: `${colors.sage}20`,
+                  borderRadius: '4px',
+                  color: colors.sage,
+                }}
+              >
                 Done: {counts.completed}
               </span>
             )}
@@ -199,47 +328,146 @@ export function TaskBoard({
 
       {/* Kanban Board */}
       {loading ? (
-        <div className="flex-1 flex items-center justify-center">
-          <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+        <div
+          style={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Loader2
+            style={{
+              width: 32,
+              height: 32,
+              color: colors.golden,
+              animation: 'spin 1s linear infinite',
+            }}
+          />
         </div>
       ) : (
-        <div className="flex-1 overflow-x-auto overflow-y-hidden">
-          <div className="h-full flex gap-4 p-4 min-w-max">
-            {STATUS_COLUMNS.map(column => (
+        <div
+          style={{
+            flex: 1,
+            overflowX: 'auto',
+            overflowY: 'hidden',
+          }}
+        >
+          <div
+            style={{
+              height: '100%',
+              display: 'flex',
+              gap: '16px',
+              padding: '16px 20px',
+              minWidth: 'max-content',
+            }}
+          >
+            {STATUS_COLUMNS.map((column) => (
               <div
                 key={column.status}
-                className="flex-shrink-0 w-80 flex flex-col bg-white rounded-lg border-2 shadow-sm"
-                style={{ maxHeight: 'calc(100vh - 250px)' }}
+                style={{
+                  flexShrink: 0,
+                  width: '300px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  background: `linear-gradient(180deg, ${colors.cream} 0%, ${colors.parchment}50 100%)`,
+                  borderRadius: '12px',
+                  border: `1px solid ${colors.golden}`,
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                  maxHeight: 'calc(100vh - 280px)',
+                }}
               >
                 {/* Column Header */}
-                <div className={`px-4 py-3 border-b-2 ${column.color} rounded-t-lg`}>
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-bold text-gray-900">{column.label}</h3>
-                    <span className="px-2 py-1 bg-white bg-opacity-50 rounded-full text-sm font-medium">
+                <div
+                  style={{
+                    padding: '14px 16px',
+                    borderBottom: `1px solid ${colors.golden}`,
+                    background: `linear-gradient(135deg, ${column.color}15 0%, ${column.accent}10 100%)`,
+                    borderRadius: '12px 12px 0 0',
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '14px' }}>{column.icon}</span>
+                      <h3
+                        style={{
+                          margin: 0,
+                          fontFamily: 'Georgia, serif',
+                          fontSize: '14px',
+                          fontWeight: 600,
+                          color: colors.espresso,
+                        }}
+                      >
+                        {column.label}
+                      </h3>
+                    </div>
+                    <span
+                      style={{
+                        padding: '2px 10px',
+                        background: `${column.color}20`,
+                        border: `1px solid ${column.color}`,
+                        borderRadius: '12px',
+                        fontFamily: '"Courier New", monospace',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        color: column.color,
+                      }}
+                    >
                       {grouped[column.status]?.length || 0}
                     </span>
                   </div>
                 </div>
 
                 {/* Column Content - Scrollable */}
-                <div className="flex-1 overflow-y-auto p-3 space-y-3">
+                <div
+                  style={{
+                    flex: 1,
+                    overflowY: 'auto',
+                    padding: '12px',
+                  }}
+                >
                   <AnimatePresence>
                     {grouped[column.status]?.length === 0 ? (
-                      <div className="text-center py-8 text-gray-400 text-sm">
-                        No tasks
-                      </div>
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        style={{
+                          textAlign: 'center',
+                          padding: '32px 16px',
+                          color: colors.lightBrown,
+                        }}
+                      >
+                        <p
+                          style={{
+                            margin: 0,
+                            fontFamily: 'Georgia, serif',
+                            fontSize: '13px',
+                            fontStyle: 'italic',
+                          }}
+                        >
+                          No tasks yet
+                        </p>
+                      </motion.div>
                     ) : (
-                      grouped[column.status]?.map(task => (
-                        <TaskCard
-                          key={task.id}
-                          task={task}
-                          routeId={routeId}
-                          currentUserId={currentUserId}
-                          userRole={userRole}
-                          onTaskUpdate={handleTaskUpdate}
-                          onTaskDelete={handleTaskDelete}
-                        />
-                      ))
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        {grouped[column.status]?.map((task) => (
+                          <TaskCard
+                            key={task.id}
+                            task={task}
+                            routeId={routeId}
+                            currentUserId={currentUserId}
+                            userRole={userRole}
+                            onTaskUpdate={handleTaskUpdate}
+                            onTaskDelete={handleTaskDelete}
+                          />
+                        ))}
+                      </div>
                     )}
                   </AnimatePresence>
                 </div>

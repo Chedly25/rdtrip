@@ -30,6 +30,7 @@ import {
   Check,
   RotateCcw,
   Send,
+  Star,
 } from 'lucide-react';
 
 // Wanderlust Editorial Colors
@@ -317,6 +318,81 @@ const WeatherSelector = ({
   </div>
 );
 
+// Star rating component
+const StarRating = ({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (rating: number) => void;
+}) => {
+  const [hoverValue, setHoverValue] = useState<number | null>(null);
+
+  const ratingLabels = [
+    '', // 0 - not used
+    'Not for me',
+    'It was okay',
+    'Pretty good',
+    'Really enjoyed it',
+    'Absolutely amazing!',
+  ];
+
+  const displayValue = hoverValue ?? value;
+
+  return (
+    <div className="mt-5">
+      <label
+        className="text-xs uppercase tracking-wider mb-3 block"
+        style={{ color: colors.lightBrown }}
+      >
+        Rate this experience
+      </label>
+      <div className="flex flex-col items-center gap-2">
+        <div className="flex gap-1">
+          {[1, 2, 3, 4, 5].map((star) => (
+            <motion.button
+              key={star}
+              onClick={() => onChange(star)}
+              onMouseEnter={() => setHoverValue(star)}
+              onMouseLeave={() => setHoverValue(null)}
+              className="p-1 transition-colors"
+              whileHover={{ scale: 1.15 }}
+              whileTap={{ scale: 0.9 }}
+            >
+              <Star
+                className="w-8 h-8 transition-all duration-150"
+                style={{
+                  color: star <= displayValue ? colors.golden : colors.border,
+                  fill: star <= displayValue ? colors.golden : 'transparent',
+                  filter: star <= displayValue ? `drop-shadow(0 2px 4px ${colors.golden}40)` : 'none',
+                }}
+              />
+            </motion.button>
+          ))}
+        </div>
+        <AnimatePresence mode="wait">
+          {displayValue > 0 && (
+            <motion.span
+              key={displayValue}
+              initial={{ opacity: 0, y: -5 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 5 }}
+              className="text-sm font-medium"
+              style={{
+                color: colors.golden,
+                fontFamily: "'Caveat', cursive",
+                fontSize: '18px',
+              }}
+            >
+              {ratingLabels[displayValue]}
+            </motion.span>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+};
+
 // Note input with handwritten style
 const NoteInput = ({
   value,
@@ -459,6 +535,7 @@ export interface CheckinData {
   note: string;
   mood?: string;
   weather?: string;
+  rating?: number;
   timestamp: string;
   location: {
     name: string;
@@ -480,6 +557,7 @@ export const CheckinModal: React.FC<CheckinModalProps> = ({
   const [note, setNote] = useState('');
   const [mood, setMood] = useState<string | null>(null);
   const [weather, setWeather] = useState<string | null>(null);
+  const [rating, setRating] = useState<number>(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -520,6 +598,7 @@ export const CheckinModal: React.FC<CheckinModalProps> = ({
       note,
       mood: mood || undefined,
       weather: weather || undefined,
+      rating: rating > 0 ? rating : undefined,
       timestamp: new Date().toISOString(),
       location: {
         name: activityName,
@@ -535,15 +614,17 @@ export const CheckinModal: React.FC<CheckinModalProps> = ({
       setNote('');
       setMood(null);
       setWeather(null);
+      setRating(0);
       setShowSuccess(false);
     }, 1500);
-  }, [photo, note, mood, weather, activityName, coordinates, onSubmit, onClose]);
+  }, [photo, note, mood, weather, rating, activityName, coordinates, onSubmit, onClose]);
 
   const handleReset = useCallback(() => {
     setPhoto(null);
     setNote('');
     setMood(null);
     setWeather(null);
+    setRating(0);
   }, []);
 
   if (!isOpen) return null;
@@ -661,6 +742,9 @@ export const CheckinModal: React.FC<CheckinModalProps> = ({
 
             {/* Weather selector */}
             <WeatherSelector selected={weather} onSelect={setWeather} />
+
+            {/* Star rating */}
+            <StarRating value={rating} onChange={setRating} />
 
             {/* Note input */}
             <NoteInput value={note} onChange={setNote} />

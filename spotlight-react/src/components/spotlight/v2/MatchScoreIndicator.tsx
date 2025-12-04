@@ -7,18 +7,46 @@
  *
  * Design: Gradient progress bar with warm colors reflecting
  * the match quality (terracotta to gold for high matches).
+ *
+ * Enhanced Features (Phase 3):
+ * - Score breakdown by category
+ * - Expandable tooltip showing contribution from each preference
+ * - Category-specific icons and colors
  */
 
-import { motion } from 'framer-motion';
-import { Sparkles } from 'lucide-react';
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Sparkles,
+  Heart,
+  Leaf,
+  Accessibility,
+  Gauge,
+  Wallet,
+  Star,
+  ChevronDown,
+  Info,
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+
+// Score breakdown by category (from backend)
+export interface ScoreBreakdown {
+  category: 'occasion' | 'dietary' | 'accessibility' | 'interests' | 'pace' | 'budget' | 'style';
+  label: string;
+  score: number; // 0-100
+  weight: number; // How much this contributes to overall score
+}
 
 interface MatchScoreIndicatorProps {
   score: number;              // 0-100
   size?: 'xs' | 'sm' | 'md' | 'lg';
   showLabel?: boolean;
   showIcon?: boolean;
-  variant?: 'bar' | 'badge' | 'circular';
+  variant?: 'bar' | 'badge' | 'circular' | 'detailed';
   className?: string;
+  // Enhanced props for Phase 3
+  breakdown?: ScoreBreakdown[];
+  showBreakdownOnHover?: boolean;
 }
 
 // Get color gradient based on score
@@ -54,6 +82,17 @@ function getScoreColors(score: number) {
     label: 'Matches your style',
   };
 }
+
+// Category configuration for breakdown display
+const CATEGORY_CONFIG: Record<string, { icon: LucideIcon; color: string; bg: string }> = {
+  occasion: { icon: Heart, color: '#C45830', bg: '#FEF3EE' },
+  dietary: { icon: Leaf, color: '#4A7C59', bg: '#E8F4E8' },
+  accessibility: { icon: Accessibility, color: '#4A90A4', bg: '#E8F4F7' },
+  interests: { icon: Star, color: '#D4A853', bg: '#FEF8E8' },
+  pace: { icon: Gauge, color: '#8B7355', bg: '#F5F0E8' },
+  budget: { icon: Wallet, color: '#4A7C59', bg: '#E8F4E8' },
+  style: { icon: Sparkles, color: '#8B6914', bg: '#FEF8E8' },
+};
 
 // Size configurations
 const SIZE_CONFIG = {
@@ -94,9 +133,188 @@ export function MatchScoreIndicator({
   showIcon = true,
   variant = 'bar',
   className = '',
+  breakdown,
+  showBreakdownOnHover = false,
 }: MatchScoreIndicatorProps) {
+  const [showTooltip, setShowTooltip] = useState(false);
   const colors = getScoreColors(score);
   const sizeConfig = SIZE_CONFIG[size];
+
+  // Detailed variant with breakdown
+  if (variant === 'detailed') {
+    return (
+      <div className={`${className}`}>
+        {/* Main score display with expand button */}
+        <div
+          className="relative"
+          onMouseEnter={() => showBreakdownOnHover && setShowTooltip(true)}
+          onMouseLeave={() => showBreakdownOnHover && setShowTooltip(false)}
+        >
+          <motion.button
+            onClick={() => !showBreakdownOnHover && setShowTooltip(!showTooltip)}
+            className="w-full flex items-center justify-between gap-2 rounded-xl px-3 py-2.5 transition-all"
+            style={{
+              background: 'linear-gradient(135deg, rgba(196, 88, 48, 0.08) 0%, rgba(212, 168, 83, 0.08) 100%)',
+              border: '1px solid rgba(196, 88, 48, 0.15)',
+            }}
+            whileHover={{ borderColor: 'rgba(196, 88, 48, 0.3)' }}
+          >
+            <div className="flex items-center gap-2">
+              <div
+                className="flex h-8 w-8 items-center justify-center rounded-lg"
+                style={{ background: colors.bg }}
+              >
+                <Sparkles className="h-4 w-4" style={{ color: colors.text }} />
+              </div>
+              <div className="text-left">
+                <p className="text-sm font-semibold" style={{ color: '#2C2417' }}>
+                  {score}% match
+                </p>
+                <p className="text-xs" style={{ color: '#8B7355' }}>
+                  {colors.label}
+                </p>
+              </div>
+            </div>
+
+            {breakdown && breakdown.length > 0 && (
+              <div className="flex items-center gap-1.5">
+                <Info className="h-3.5 w-3.5" style={{ color: '#8B7355' }} />
+                <motion.div
+                  animate={{ rotate: showTooltip ? 180 : 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <ChevronDown className="h-3.5 w-3.5" style={{ color: '#8B7355' }} />
+                </motion.div>
+              </div>
+            )}
+          </motion.button>
+
+          {/* Progress bar */}
+          <div
+            className="mt-2 h-2 w-full overflow-hidden rounded-full"
+            style={{ background: 'rgba(139, 115, 85, 0.1)' }}
+          >
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${score}%` }}
+              transition={{ duration: 0.6, ease: [0.15, 0.5, 0.5, 1] }}
+              className="h-full rounded-full"
+              style={{ background: colors.gradient }}
+            />
+          </div>
+
+          {/* Breakdown tooltip */}
+          <AnimatePresence>
+            {showTooltip && breakdown && breakdown.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: -8, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -8, scale: 0.95 }}
+                transition={{ duration: 0.2 }}
+                className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-xl shadow-lg"
+                style={{
+                  background: 'linear-gradient(180deg, #FFFBF5 0%, #FAF7F2 100%)',
+                  border: '1px solid rgba(139, 115, 85, 0.15)',
+                }}
+              >
+                <div
+                  className="px-3 py-2"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(196, 88, 48, 0.06) 0%, rgba(212, 168, 83, 0.06) 100%)',
+                    borderBottom: '1px solid rgba(139, 115, 85, 0.1)',
+                  }}
+                >
+                  <p
+                    className="text-xs font-semibold"
+                    style={{
+                      color: '#2C2417',
+                      fontFamily: "'Fraunces', Georgia, serif",
+                    }}
+                  >
+                    Score Breakdown
+                  </p>
+                </div>
+
+                <div className="p-3 space-y-3">
+                  {breakdown.map((item, idx) => {
+                    const catConfig = CATEGORY_CONFIG[item.category] || CATEGORY_CONFIG['style'];
+                    const Icon = catConfig.icon;
+                    const itemColors = getScoreColors(item.score);
+
+                    return (
+                      <motion.div
+                        key={item.category}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: idx * 0.05 }}
+                        className="flex items-center gap-2"
+                      >
+                        <div
+                          className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-lg"
+                          style={{ background: catConfig.bg }}
+                        >
+                          <Icon className="h-3 w-3" style={{ color: catConfig.color }} />
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-medium" style={{ color: '#5C4D3D' }}>
+                              {item.label}
+                            </span>
+                            <span
+                              className="text-xs font-semibold"
+                              style={{ color: itemColors.text }}
+                            >
+                              {item.score}%
+                            </span>
+                          </div>
+                          <div
+                            className="h-1 w-full overflow-hidden rounded-full"
+                            style={{ background: 'rgba(139, 115, 85, 0.1)' }}
+                          >
+                            <motion.div
+                              initial={{ width: 0 }}
+                              animate={{ width: `${item.score}%` }}
+                              transition={{ duration: 0.4, delay: 0.1 + idx * 0.05 }}
+                              className="h-full rounded-full"
+                              style={{ background: itemColors.gradient }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Weight indicator */}
+                        <span
+                          className="text-[10px] flex-shrink-0 px-1.5 py-0.5 rounded-full"
+                          style={{
+                            background: 'rgba(139, 115, 85, 0.08)',
+                            color: '#8B7355',
+                          }}
+                        >
+                          {Math.round(item.weight * 100)}%
+                        </span>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+
+                <div
+                  className="px-3 py-2 text-center"
+                  style={{
+                    background: '#FAF7F2',
+                    borderTop: '1px solid rgba(139, 115, 85, 0.1)',
+                  }}
+                >
+                  <p className="text-[10px]" style={{ color: '#8B7355' }}>
+                    Percentages show category contribution
+                  </p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+    );
+  }
 
   // Badge variant - compact pill with percentage
   if (variant === 'badge') {

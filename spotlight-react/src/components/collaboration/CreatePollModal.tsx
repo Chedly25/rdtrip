@@ -1,7 +1,39 @@
+/**
+ * Create Poll Modal - "The Traveler's Ballot Box"
+ *
+ * A vintage ballot box / voting form aesthetic for creating group decisions.
+ * Features wax seal decorations, ballot paper styling, and typewriter text.
+ *
+ * Design: Wanderlust Editorial with vintage polling aesthetics
+ */
+
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Plus, Trash2, AlertCircle } from 'lucide-react';
+import { X, Plus, Trash2, AlertCircle, Loader2, ChevronDown } from 'lucide-react';
 import type { PollOption } from '../../types';
+
+// =============================================================================
+// WANDERLUST EDITORIAL COLOR PALETTE
+// =============================================================================
+const colors = {
+  cream: '#FFFBF5',
+  warmWhite: '#FAF7F2',
+  terracotta: '#C45830',
+  terracottaLight: '#D96A42',
+  golden: '#D4A853',
+  goldenLight: '#E4BE73',
+  goldenDark: '#B8923D',
+  sage: '#6B8E7B',
+  sageLight: '#8BA99A',
+  espresso: '#2C1810',
+  darkBrown: '#3D2A1E',
+  mediumBrown: '#5C4033',
+  lightBrown: '#8B7355',
+  parchment: '#F5E6C8',
+  stampRed: '#8B2323',
+  waxRed: '#A52A2A',
+  inkBlue: '#1C3A5F',
+};
 
 interface CreatePollModalProps {
   routeId: string;
@@ -12,13 +44,141 @@ interface CreatePollModalProps {
   onPollCreated?: (poll: any) => void;
 }
 
+const POLL_TYPES = [
+  { value: 'general', label: 'General Decision', icon: '📋' },
+  { value: 'activity', label: 'Activity Selection', icon: '🎯' },
+  { value: 'restaurant', label: 'Restaurant Choice', icon: '🍽️' },
+  { value: 'accommodation', label: 'Accommodation', icon: '🏨' },
+  { value: 'time', label: 'Time/Schedule', icon: '📅' },
+];
+
+// =============================================================================
+// DECORATIVE ELEMENTS
+// =============================================================================
+
+function BallotHeader() {
+  return (
+    <div
+      style={{
+        textAlign: 'center',
+        marginBottom: '8px',
+        paddingBottom: '16px',
+        borderBottom: `2px solid ${colors.golden}`,
+        position: 'relative',
+      }}
+    >
+      {/* Wax seal decoration */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '-8px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: '40px',
+          height: '40px',
+          borderRadius: '50%',
+          background: `radial-gradient(circle at 30% 30%, ${colors.waxRed} 0%, #8B2323 100%)`,
+          boxShadow: `0 2px 8px ${colors.waxRed}60`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <span style={{ fontSize: '18px' }}>📋</span>
+      </div>
+
+      <div style={{ marginTop: '32px' }}>
+        <p
+          style={{
+            fontFamily: '"Courier New", monospace',
+            fontSize: '10px',
+            letterSpacing: '3px',
+            color: colors.lightBrown,
+            marginBottom: '4px',
+          }}
+        >
+          OFFICIAL BALLOT
+        </p>
+        <h2
+          style={{
+            fontFamily: 'Georgia, serif',
+            fontSize: '22px',
+            fontWeight: 700,
+            color: colors.espresso,
+            margin: 0,
+          }}
+        >
+          Create New Poll
+        </h2>
+        <p
+          style={{
+            fontFamily: '"Courier New", monospace',
+            fontSize: '10px',
+            letterSpacing: '2px',
+            color: colors.mediumBrown,
+            marginTop: '4px',
+          }}
+        >
+          GROUP DECISION FORM
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function FormField({
+  label,
+  required,
+  hint,
+  children,
+}: {
+  label: string;
+  required?: boolean;
+  hint?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div style={{ marginBottom: '20px' }}>
+      <label
+        style={{
+          display: 'block',
+          fontFamily: '"Courier New", monospace',
+          fontSize: '11px',
+          fontWeight: 700,
+          letterSpacing: '1px',
+          color: colors.mediumBrown,
+          marginBottom: '6px',
+          textTransform: 'uppercase',
+        }}
+      >
+        {label}
+        {required && <span style={{ color: colors.stampRed, marginLeft: '4px' }}>*</span>}
+      </label>
+      {children}
+      {hint && (
+        <p
+          style={{
+            fontFamily: '"Courier New", monospace',
+            fontSize: '10px',
+            color: colors.lightBrown,
+            marginTop: '4px',
+            fontStyle: 'italic',
+          }}
+        >
+          {hint}
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function CreatePollModal({
   routeId,
   dayNumber,
   targetType,
   targetId,
   onClose,
-  onPollCreated
+  onPollCreated,
 }: CreatePollModalProps) {
   const [question, setQuestion] = useState('');
   const [description, setDescription] = useState('');
@@ -27,37 +187,32 @@ export function CreatePollModal({
   const [maxChoices, setMaxChoices] = useState(1);
   const [options, setOptions] = useState<PollOption[]>([
     { id: '1', label: '' },
-    { id: '2', label: '' }
+    { id: '2', label: '' },
   ]);
   const [deadline, setDeadline] = useState('');
   const [autoExecute, setAutoExecute] = useState(false);
   const [consensusThreshold, setConsensusThreshold] = useState(50);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Add new option
   const handleAddOption = () => {
-    const newId = (Math.max(...options.map(o => parseInt(o.id)), 0) + 1).toString();
+    const newId = (Math.max(...options.map((o) => parseInt(o.id)), 0) + 1).toString();
     setOptions([...options, { id: newId, label: '' }]);
   };
 
-  // Remove option
   const handleRemoveOption = (id: string) => {
     if (options.length <= 2) {
       setError('Poll must have at least 2 options');
       return;
     }
-    setOptions(options.filter(o => o.id !== id));
+    setOptions(options.filter((o) => o.id !== id));
   };
 
-  // Update option label
   const handleOptionChange = (id: string, label: string) => {
-    setOptions(options.map(o =>
-      o.id === id ? { ...o, label } : o
-    ));
+    setOptions(options.map((o) => (o.id === id ? { ...o, label } : o)));
   };
 
-  // Validate form
   const validateForm = (): boolean => {
     setError('');
 
@@ -66,7 +221,7 @@ export function CreatePollModal({
       return false;
     }
 
-    const filledOptions = options.filter(o => o.label.trim());
+    const filledOptions = options.filter((o) => o.label.trim());
     if (filledOptions.length < 2) {
       setError('At least 2 options are required');
       return false;
@@ -80,7 +235,6 @@ export function CreatePollModal({
     return true;
   };
 
-  // Submit poll
   const handleSubmit = async () => {
     if (!validateForm()) return;
 
@@ -88,13 +242,13 @@ export function CreatePollModal({
     setError('');
 
     try {
-      const filledOptions = options.filter(o => o.label.trim());
+      const filledOptions = options.filter((o) => o.label.trim());
 
       const response = await fetch(`/api/routes/${routeId}/polls`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('rdtrip_token')}`
+          Authorization: `Bearer ${localStorage.getItem('rdtrip_token')}`,
         },
         body: JSON.stringify({
           question: question.trim(),
@@ -108,8 +262,8 @@ export function CreatePollModal({
           maxChoices: multipleChoice ? maxChoices : 1,
           deadline: deadline || undefined,
           autoExecute,
-          consensusThreshold
-        })
+          consensusThreshold,
+        }),
       });
 
       if (!response.ok) {
@@ -124,7 +278,6 @@ export function CreatePollModal({
       }
 
       onClose();
-
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -132,149 +285,350 @@ export function CreatePollModal({
     }
   };
 
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    padding: '12px 14px',
+    fontFamily: 'Georgia, serif',
+    fontSize: '14px',
+    color: colors.espresso,
+    background: colors.warmWhite,
+    border: `1px solid ${colors.golden}`,
+    borderRadius: '6px',
+    outline: 'none',
+    transition: 'all 0.2s ease',
+  };
+
+  const selectStyle: React.CSSProperties = {
+    ...inputStyle,
+    appearance: 'none',
+    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%235C4033' d='M6 8L2 4h8z'/%3E%3C/svg%3E")`,
+    backgroundRepeat: 'no-repeat',
+    backgroundPosition: 'right 12px center',
+    paddingRight: '36px',
+    cursor: 'pointer',
+  };
+
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div
+        style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(44, 24, 16, 0.6)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 50,
+          padding: '16px',
+        }}
+        onClick={onClose}
+      >
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.95 }}
-          className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 20 }}
+          transition={{ duration: 0.2 }}
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            background: `linear-gradient(180deg, ${colors.cream} 0%, ${colors.warmWhite} 100%)`,
+            borderRadius: '16px',
+            border: `2px solid ${colors.golden}`,
+            boxShadow: `0 25px 50px -12px rgba(44, 24, 16, 0.4), inset 0 1px 0 ${colors.parchment}`,
+            maxWidth: '600px',
+            width: '100%',
+            maxHeight: '90vh',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+          }}
         >
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b">
-            <h2 className="text-2xl font-bold text-gray-900">Create New Poll</h2>
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+          <div style={{ padding: '24px 24px 0' }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'flex-end',
+                marginBottom: '8px',
+              }}
             >
-              <X className="w-6 h-6" />
-            </button>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={onClose}
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  background: `${colors.terracotta}15`,
+                  border: `1px solid ${colors.terracotta}`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: colors.terracotta,
+                }}
+              >
+                <X style={{ width: 16, height: 16 }} />
+              </motion.button>
+            </div>
+            <BallotHeader />
           </div>
 
           {/* Body - Scrollable */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          <div
+            style={{
+              flex: 1,
+              overflowY: 'auto',
+              padding: '20px 24px',
+            }}
+          >
             {/* Error Message */}
             {error && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3"
+                style={{
+                  background: `${colors.stampRed}10`,
+                  border: `1px solid ${colors.stampRed}`,
+                  borderRadius: '8px',
+                  padding: '12px 14px',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '10px',
+                  marginBottom: '20px',
+                }}
               >
-                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-red-800">{error}</p>
+                <AlertCircle
+                  style={{
+                    width: 18,
+                    height: 18,
+                    color: colors.stampRed,
+                    flexShrink: 0,
+                    marginTop: '1px',
+                  }}
+                />
+                <p
+                  style={{
+                    fontFamily: 'Georgia, serif',
+                    fontSize: '13px',
+                    color: colors.stampRed,
+                    margin: 0,
+                  }}
+                >
+                  {error}
+                </p>
               </motion.div>
             )}
 
             {/* Question */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Poll Question *
-              </label>
+            <FormField label="Poll Question" required hint={`${question.length}/200 characters`}>
               <input
                 type="text"
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
                 placeholder="e.g., Which restaurant should we visit for dinner?"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                style={inputStyle}
                 maxLength={200}
               />
-              <p className="text-xs text-gray-500 mt-1">{question.length}/200</p>
-            </div>
+            </FormField>
 
             {/* Description */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Description (optional)
-              </label>
+            <FormField label="Additional Context">
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Add more context about this poll..."
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
-                rows={3}
+                placeholder="Add context to help voters decide..."
+                style={{
+                  ...inputStyle,
+                  resize: 'none',
+                  minHeight: '70px',
+                }}
                 maxLength={500}
               />
-            </div>
+            </FormField>
 
             {/* Poll Type */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Poll Type
-              </label>
+            <FormField label="Category">
               <select
                 value={pollType}
                 onChange={(e) => setPollType(e.target.value as any)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                style={selectStyle}
               >
-                <option value="general">General Decision</option>
-                <option value="activity">Activity Selection</option>
-                <option value="restaurant">Restaurant Choice</option>
-                <option value="accommodation">Accommodation</option>
-                <option value="time">Time/Schedule</option>
+                {POLL_TYPES.map((type) => (
+                  <option key={type.value} value={type.value}>
+                    {type.icon} {type.label}
+                  </option>
+                ))}
               </select>
-            </div>
+            </FormField>
 
             {/* Options */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Options * (minimum 2)
-              </label>
-              <div className="space-y-3">
+            <FormField label="Ballot Options" required hint="Minimum 2 options required">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {options.map((option, index) => (
-                  <div key={option.id} className="flex items-center gap-2">
+                  <motion.div
+                    key={option.id}
+                    layout
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                    }}
+                  >
+                    {/* Option number badge */}
+                    <div
+                      style={{
+                        width: '28px',
+                        height: '28px',
+                        borderRadius: '50%',
+                        background: `linear-gradient(135deg, ${colors.golden} 0%, ${colors.goldenDark} 100%)`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontFamily: '"Courier New", monospace',
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        color: colors.cream,
+                        flexShrink: 0,
+                      }}
+                    >
+                      {index + 1}
+                    </div>
                     <input
                       type="text"
                       value={option.label}
                       onChange={(e) => handleOptionChange(option.id, e.target.value)}
                       placeholder={`Option ${index + 1}`}
-                      className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      style={{
+                        ...inputStyle,
+                        flex: 1,
+                      }}
                     />
                     {options.length > 2 && (
-                      <button
+                      <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
                         onClick={() => handleRemoveOption(option.id)}
-                        className="text-red-600 hover:text-red-700 p-2"
+                        style={{
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '6px',
+                          background: `${colors.stampRed}15`,
+                          border: `1px solid ${colors.stampRed}40`,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer',
+                          color: colors.stampRed,
+                        }}
                       >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
+                        <Trash2 style={{ width: 14, height: 14 }} />
+                      </motion.button>
                     )}
-                  </div>
+                  </motion.div>
                 ))}
               </div>
-              <button
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={handleAddOption}
-                className="mt-3 flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium"
+                style={{
+                  marginTop: '12px',
+                  padding: '10px 16px',
+                  background: `${colors.sage}15`,
+                  border: `1px dashed ${colors.sage}`,
+                  borderRadius: '6px',
+                  fontFamily: '"Courier New", monospace',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  letterSpacing: '0.5px',
+                  color: colors.sage,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
               >
-                <Plus className="w-4 h-4" />
-                Add Option
-              </button>
-            </div>
+                <Plus style={{ width: 14, height: 14 }} />
+                ADD OPTION
+              </motion.button>
+            </FormField>
 
-            {/* Multiple Choice */}
-            <div className="flex items-start gap-3">
+            {/* Multiple Choice Toggle */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '12px',
+                padding: '14px',
+                background: `${colors.parchment}40`,
+                borderRadius: '8px',
+                border: `1px solid ${colors.golden}40`,
+                marginBottom: '20px',
+              }}
+            >
               <input
                 type="checkbox"
                 id="multipleChoice"
                 checked={multipleChoice}
                 onChange={(e) => setMultipleChoice(e.target.checked)}
-                className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                style={{
+                  width: '18px',
+                  height: '18px',
+                  accentColor: colors.terracotta,
+                  cursor: 'pointer',
+                }}
               />
-              <div className="flex-1">
-                <label htmlFor="multipleChoice" className="block text-sm font-medium text-gray-700">
-                  Allow multiple choices
+              <div style={{ flex: 1 }}>
+                <label
+                  htmlFor="multipleChoice"
+                  style={{
+                    fontFamily: 'Georgia, serif',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    color: colors.espresso,
+                    cursor: 'pointer',
+                    display: 'block',
+                  }}
+                >
+                  Allow multiple selections
                 </label>
+                <p
+                  style={{
+                    fontFamily: '"Courier New", monospace',
+                    fontSize: '11px',
+                    color: colors.lightBrown,
+                    marginTop: '4px',
+                  }}
+                >
+                  Voters can choose more than one option
+                </p>
                 {multipleChoice && (
-                  <div className="mt-2">
-                    <label className="block text-sm text-gray-600 mb-1">
-                      Maximum choices
-                    </label>
+                  <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span
+                      style={{
+                        fontFamily: '"Courier New", monospace',
+                        fontSize: '11px',
+                        color: colors.mediumBrown,
+                      }}
+                    >
+                      MAX CHOICES:
+                    </span>
                     <input
                       type="number"
                       value={maxChoices}
                       onChange={(e) => setMaxChoices(parseInt(e.target.value) || 1)}
                       min={1}
                       max={options.length}
-                      className="w-24 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      style={{
+                        ...inputStyle,
+                        width: '70px',
+                        padding: '6px 10px',
+                      }}
                     />
                   </div>
                 )}
@@ -282,79 +636,215 @@ export function CreatePollModal({
             </div>
 
             {/* Deadline */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Deadline (optional)
-              </label>
+            <FormField label="Voting Deadline (Optional)">
               <input
                 type="datetime-local"
                 value={deadline}
                 onChange={(e) => setDeadline(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                style={inputStyle}
               />
-            </div>
+            </FormField>
+
+            {/* Advanced Options Toggle */}
+            <motion.button
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              style={{
+                width: '100%',
+                padding: '12px 14px',
+                background: `${colors.parchment}50`,
+                border: `1px dashed ${colors.golden}`,
+                borderRadius: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                cursor: 'pointer',
+                marginBottom: showAdvanced ? '16px' : 0,
+              }}
+            >
+              <span
+                style={{
+                  fontFamily: '"Courier New", monospace',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  letterSpacing: '1px',
+                  color: colors.mediumBrown,
+                  textTransform: 'uppercase',
+                }}
+              >
+                Advanced Settings
+              </span>
+              <motion.div animate={{ rotate: showAdvanced ? 180 : 0 }} transition={{ duration: 0.2 }}>
+                <ChevronDown style={{ width: 16, height: 16, color: colors.mediumBrown }} />
+              </motion.div>
+            </motion.button>
 
             {/* Advanced Options */}
-            <details className="border border-gray-200 rounded-lg p-4">
-              <summary className="font-medium text-gray-700 cursor-pointer">
-                Advanced Options
-              </summary>
-              <div className="mt-4 space-y-4">
-                {/* Auto Execute */}
-                <div className="flex items-start gap-3">
-                  <input
-                    type="checkbox"
-                    id="autoExecute"
-                    checked={autoExecute}
-                    onChange={(e) => setAutoExecute(e.target.checked)}
-                    className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                  />
-                  <div className="flex-1">
-                    <label htmlFor="autoExecute" className="block text-sm font-medium text-gray-700">
-                      Auto-execute winning option
-                    </label>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Automatically apply the winning choice when consensus is reached
-                    </p>
-                  </div>
-                </div>
-
-                {/* Consensus Threshold */}
-                {autoExecute && (
-                  <div>
-                    <label className="block text-sm text-gray-700 mb-1">
-                      Consensus threshold: {consensusThreshold}%
-                    </label>
+            <AnimatePresence>
+              {showAdvanced && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  style={{
+                    background: `${colors.parchment}30`,
+                    border: `1px solid ${colors.golden}40`,
+                    borderRadius: '8px',
+                    padding: '16px',
+                    overflow: 'hidden',
+                  }}
+                >
+                  {/* Auto Execute */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '12px',
+                      marginBottom: '16px',
+                    }}
+                  >
                     <input
-                      type="range"
-                      value={consensusThreshold}
-                      onChange={(e) => setConsensusThreshold(parseInt(e.target.value))}
-                      min={50}
-                      max={100}
-                      step={5}
-                      className="w-full"
+                      type="checkbox"
+                      id="autoExecute"
+                      checked={autoExecute}
+                      onChange={(e) => setAutoExecute(e.target.checked)}
+                      style={{
+                        width: '18px',
+                        height: '18px',
+                        accentColor: colors.terracotta,
+                        cursor: 'pointer',
+                      }}
                     />
+                    <div style={{ flex: 1 }}>
+                      <label
+                        htmlFor="autoExecute"
+                        style={{
+                          fontFamily: 'Georgia, serif',
+                          fontSize: '14px',
+                          fontWeight: 600,
+                          color: colors.espresso,
+                          cursor: 'pointer',
+                          display: 'block',
+                        }}
+                      >
+                        Auto-execute winning option
+                      </label>
+                      <p
+                        style={{
+                          fontFamily: '"Courier New", monospace',
+                          fontSize: '11px',
+                          color: colors.lightBrown,
+                          marginTop: '4px',
+                        }}
+                      >
+                        Automatically apply when consensus is reached
+                      </p>
+                    </div>
                   </div>
-                )}
-              </div>
-            </details>
+
+                  {/* Consensus Threshold */}
+                  {autoExecute && (
+                    <div>
+                      <label
+                        style={{
+                          fontFamily: '"Courier New", monospace',
+                          fontSize: '11px',
+                          fontWeight: 700,
+                          color: colors.mediumBrown,
+                          display: 'block',
+                          marginBottom: '8px',
+                        }}
+                      >
+                        CONSENSUS THRESHOLD: {consensusThreshold}%
+                      </label>
+                      <input
+                        type="range"
+                        value={consensusThreshold}
+                        onChange={(e) => setConsensusThreshold(parseInt(e.target.value))}
+                        min={50}
+                        max={100}
+                        step={5}
+                        style={{
+                          width: '100%',
+                          accentColor: colors.terracotta,
+                        }}
+                      />
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-end gap-3 p-6 border-t bg-gray-50">
-            <button
+          <div
+            style={{
+              padding: '20px 24px',
+              background: `linear-gradient(180deg, ${colors.parchment}30 0%, ${colors.parchment}60 100%)`,
+              borderTop: `1px solid ${colors.golden}`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'flex-end',
+              gap: '12px',
+            }}
+          >
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               onClick={onClose}
-              className="px-6 py-3 text-gray-700 hover:bg-gray-100 rounded-lg font-medium transition-colors"
+              style={{
+                padding: '12px 24px',
+                background: 'transparent',
+                border: `1px solid ${colors.golden}`,
+                borderRadius: '8px',
+                fontFamily: '"Courier New", monospace',
+                fontSize: '12px',
+                fontWeight: 700,
+                letterSpacing: '1px',
+                color: colors.mediumBrown,
+                cursor: 'pointer',
+              }}
             >
-              Cancel
-            </button>
-            <button
+              CANCEL
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               onClick={handleSubmit}
               disabled={loading}
-              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white rounded-lg font-medium transition-colors"
+              style={{
+                padding: '12px 28px',
+                background: loading
+                  ? colors.lightBrown
+                  : `linear-gradient(135deg, ${colors.sage} 0%, ${colors.sageLight} 100%)`,
+                border: 'none',
+                borderRadius: '8px',
+                fontFamily: '"Courier New", monospace',
+                fontSize: '12px',
+                fontWeight: 700,
+                letterSpacing: '1px',
+                color: colors.cream,
+                cursor: loading ? 'not-allowed' : 'pointer',
+                boxShadow: loading ? 'none' : `0 4px 12px ${colors.sage}40`,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
             >
-              {loading ? 'Creating...' : 'Create Poll'}
-            </button>
+              {loading ? (
+                <>
+                  <Loader2
+                    style={{
+                      width: 16,
+                      height: 16,
+                      animation: 'spin 1s linear infinite',
+                    }}
+                  />
+                  CREATING...
+                </>
+              ) : (
+                <>CREATE BALLOT</>
+              )}
+            </motion.button>
           </div>
         </motion.div>
       </div>

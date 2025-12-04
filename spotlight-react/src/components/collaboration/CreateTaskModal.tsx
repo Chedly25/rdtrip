@@ -1,7 +1,38 @@
+/**
+ * Create Task Modal - "The Travel Bureau Assignment"
+ *
+ * A vintage travel bureau assignment form with typewriter styling,
+ * brass accents, and manifest-style organization.
+ *
+ * Design: Wanderlust Editorial with vintage form aesthetics
+ */
+
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Calendar, AlertCircle, User } from 'lucide-react';
+import { X, Calendar, AlertCircle, User, ChevronDown, Loader2 } from 'lucide-react';
 import type { TaskType, TaskPriority, Collaborator } from '../../types';
+
+// =============================================================================
+// WANDERLUST EDITORIAL COLOR PALETTE
+// =============================================================================
+const colors = {
+  cream: '#FFFBF5',
+  warmWhite: '#FAF7F2',
+  terracotta: '#C45830',
+  terracottaLight: '#D96A42',
+  golden: '#D4A853',
+  goldenLight: '#E4BE73',
+  goldenDark: '#B8923D',
+  sage: '#6B8E7B',
+  sageLight: '#8BA99A',
+  espresso: '#2C1810',
+  darkBrown: '#3D2A1E',
+  mediumBrown: '#5C4033',
+  lightBrown: '#8B7355',
+  parchment: '#F5E6C8',
+  stampRed: '#8B2323',
+  inkBlue: '#1C3A5F',
+};
 
 interface CreateTaskModalProps {
   routeId: string;
@@ -11,29 +42,153 @@ interface CreateTaskModalProps {
   onTaskCreated?: (task: any) => void;
 }
 
-const TASK_TYPES: { value: TaskType; label: string; description: string }[] = [
-  { value: 'book_hotel', label: 'Book Hotel', description: 'Reserve accommodation' },
-  { value: 'book_restaurant', label: 'Book Restaurant', description: 'Make dining reservation' },
-  { value: 'purchase_tickets', label: 'Purchase Tickets', description: 'Buy activity/attraction tickets' },
-  { value: 'research', label: 'Research', description: 'Find information' },
-  { value: 'pack', label: 'Pack Items', description: 'Prepare items to bring' },
-  { value: 'transport', label: 'Transportation', description: 'Arrange travel logistics' },
-  { value: 'custom', label: 'Custom Task', description: 'Other task' }
+const TASK_TYPES: { value: TaskType; label: string; description: string; icon: string }[] = [
+  { value: 'book_hotel', label: 'Book Accommodation', description: 'Reserve lodging', icon: '🏨' },
+  { value: 'book_restaurant', label: 'Book Restaurant', description: 'Make dining reservation', icon: '🍽️' },
+  { value: 'purchase_tickets', label: 'Purchase Tickets', description: 'Buy attraction tickets', icon: '🎫' },
+  { value: 'research', label: 'Research', description: 'Gather information', icon: '🔍' },
+  { value: 'pack', label: 'Pack Items', description: 'Prepare belongings', icon: '🧳' },
+  { value: 'transport', label: 'Transportation', description: 'Arrange travel', icon: '🚗' },
+  { value: 'custom', label: 'Custom Task', description: 'Other assignment', icon: '📝' },
 ];
 
-const PRIORITY_LEVELS: { value: TaskPriority; label: string; color: string }[] = [
-  { value: 'urgent', label: 'Urgent', color: 'bg-red-100 text-red-700 border-red-300' },
-  { value: 'high', label: 'High', color: 'bg-orange-100 text-orange-700 border-orange-300' },
-  { value: 'medium', label: 'Medium', color: 'bg-yellow-100 text-yellow-700 border-yellow-300' },
-  { value: 'low', label: 'Low', color: 'bg-green-100 text-green-700 border-green-300' }
+const PRIORITY_LEVELS: { value: TaskPriority; label: string; color: string; icon: string }[] = [
+  { value: 'urgent', label: 'URGENT', color: colors.stampRed, icon: '🚨' },
+  { value: 'high', label: 'HIGH', color: colors.terracotta, icon: '⚡' },
+  { value: 'medium', label: 'MEDIUM', color: colors.golden, icon: '📌' },
+  { value: 'low', label: 'LOW', color: colors.sage, icon: '📎' },
 ];
+
+// =============================================================================
+// DECORATIVE ELEMENTS
+// =============================================================================
+
+function TypewriterHeader() {
+  return (
+    <div
+      style={{
+        textAlign: 'center',
+        marginBottom: '8px',
+        paddingBottom: '16px',
+        borderBottom: `2px solid ${colors.golden}`,
+        position: 'relative',
+      }}
+    >
+      {/* Decorative corner stamps */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '24px',
+          height: '24px',
+          borderLeft: `3px solid ${colors.terracotta}`,
+          borderTop: `3px solid ${colors.terracotta}`,
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          top: 0,
+          right: 0,
+          width: '24px',
+          height: '24px',
+          borderRight: `3px solid ${colors.terracotta}`,
+          borderTop: `3px solid ${colors.terracotta}`,
+        }}
+      />
+
+      <p
+        style={{
+          fontFamily: '"Courier New", monospace',
+          fontSize: '10px',
+          letterSpacing: '3px',
+          color: colors.lightBrown,
+          marginBottom: '4px',
+        }}
+      >
+        TRAVEL BUREAU
+      </p>
+      <h2
+        style={{
+          fontFamily: 'Georgia, serif',
+          fontSize: '22px',
+          fontWeight: 700,
+          color: colors.espresso,
+          margin: 0,
+        }}
+      >
+        New Assignment
+      </h2>
+      <p
+        style={{
+          fontFamily: '"Courier New", monospace',
+          fontSize: '10px',
+          letterSpacing: '2px',
+          color: colors.mediumBrown,
+          marginTop: '4px',
+        }}
+      >
+        TASK REQUISITION FORM
+      </p>
+    </div>
+  );
+}
+
+function FormField({
+  label,
+  required,
+  hint,
+  children,
+}: {
+  label: string;
+  required?: boolean;
+  hint?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div style={{ marginBottom: '20px' }}>
+      <label
+        style={{
+          display: 'block',
+          fontFamily: '"Courier New", monospace',
+          fontSize: '11px',
+          fontWeight: 700,
+          letterSpacing: '1px',
+          color: colors.mediumBrown,
+          marginBottom: '6px',
+          textTransform: 'uppercase',
+        }}
+      >
+        {label}
+        {required && (
+          <span style={{ color: colors.stampRed, marginLeft: '4px' }}>*</span>
+        )}
+      </label>
+      {children}
+      {hint && (
+        <p
+          style={{
+            fontFamily: '"Courier New", monospace',
+            fontSize: '10px',
+            color: colors.lightBrown,
+            marginTop: '4px',
+            fontStyle: 'italic',
+          }}
+        >
+          {hint}
+        </p>
+      )}
+    </div>
+  );
+}
 
 export function CreateTaskModal({
   routeId,
   itineraryId,
   dayNumber,
   onClose,
-  onTaskCreated
+  onTaskCreated,
 }: CreateTaskModalProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -44,19 +199,20 @@ export function CreateTaskModal({
   const [relatedActivity, setRelatedActivity] = useState('');
   const [relatedRestaurant, setRelatedRestaurant] = useState('');
   const [relatedDay, setRelatedDay] = useState(dayNumber?.toString() || '');
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Fetch collaborators for assignment dropdown
+  // Fetch collaborators
   useEffect(() => {
     const fetchCollaborators = async () => {
       try {
         const response = await fetch(`/api/routes/${routeId}/collaborators`, {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('rdtrip_token')}`
-          }
+            Authorization: `Bearer ${localStorage.getItem('rdtrip_token')}`,
+          },
         });
 
         if (response.ok) {
@@ -71,12 +227,11 @@ export function CreateTaskModal({
     fetchCollaborators();
   }, [routeId]);
 
-  // Validate form
   const validateForm = (): boolean => {
     setError('');
 
     if (!title.trim()) {
-      setError('Title is required');
+      setError('Assignment title is required');
       return false;
     }
 
@@ -88,7 +243,6 @@ export function CreateTaskModal({
     return true;
   };
 
-  // Submit task
   const handleSubmit = async () => {
     if (!validateForm()) return;
 
@@ -100,7 +254,7 @@ export function CreateTaskModal({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('rdtrip_token')}`
+          Authorization: `Bearer ${localStorage.getItem('rdtrip_token')}`,
         },
         body: JSON.stringify({
           title: title.trim(),
@@ -112,8 +266,8 @@ export function CreateTaskModal({
           relatedActivity: relatedActivity.trim() || undefined,
           relatedRestaurant: relatedRestaurant.trim() || undefined,
           relatedDay: relatedDay ? parseInt(relatedDay) : undefined,
-          itineraryId
-        })
+          itineraryId,
+        }),
       });
 
       if (!response.ok) {
@@ -128,7 +282,6 @@ export function CreateTaskModal({
       }
 
       onClose();
-
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -136,224 +289,450 @@ export function CreateTaskModal({
     }
   };
 
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    padding: '12px 14px',
+    fontFamily: 'Georgia, serif',
+    fontSize: '14px',
+    color: colors.espresso,
+    background: colors.warmWhite,
+    border: `1px solid ${colors.golden}`,
+    borderRadius: '6px',
+    outline: 'none',
+    transition: 'all 0.2s ease',
+  };
+
+  const selectStyle: React.CSSProperties = {
+    ...inputStyle,
+    appearance: 'none',
+    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%235C4033' d='M6 8L2 4h8z'/%3E%3C/svg%3E")`,
+    backgroundRepeat: 'no-repeat',
+    backgroundPosition: 'right 12px center',
+    paddingRight: '36px',
+    cursor: 'pointer',
+  };
+
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div
+        style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(44, 24, 16, 0.6)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 50,
+          padding: '16px',
+        }}
+        onClick={onClose}
+      >
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.95 }}
-          className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 20 }}
+          transition={{ duration: 0.2 }}
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            background: `linear-gradient(180deg, ${colors.cream} 0%, ${colors.warmWhite} 100%)`,
+            borderRadius: '16px',
+            border: `2px solid ${colors.golden}`,
+            boxShadow: `0 25px 50px -12px rgba(44, 24, 16, 0.4), inset 0 1px 0 ${colors.parchment}`,
+            maxWidth: '600px',
+            width: '100%',
+            maxHeight: '90vh',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+          }}
         >
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b">
-            <h2 className="text-2xl font-bold text-gray-900">Create New Task</h2>
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+          <div style={{ padding: '24px 24px 0' }}>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'flex-end',
+                marginBottom: '8px',
+              }}
             >
-              <X className="w-6 h-6" />
-            </button>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={onClose}
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  background: `${colors.terracotta}15`,
+                  border: `1px solid ${colors.terracotta}`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: colors.terracotta,
+                }}
+              >
+                <X style={{ width: 16, height: 16 }} />
+              </motion.button>
+            </div>
+            <TypewriterHeader />
           </div>
 
           {/* Body - Scrollable */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          <div
+            style={{
+              flex: 1,
+              overflowY: 'auto',
+              padding: '20px 24px',
+            }}
+          >
             {/* Error Message */}
             {error && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3"
+                style={{
+                  background: `${colors.stampRed}10`,
+                  border: `1px solid ${colors.stampRed}`,
+                  borderRadius: '8px',
+                  padding: '12px 14px',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '10px',
+                  marginBottom: '20px',
+                }}
               >
-                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-red-800">{error}</p>
+                <AlertCircle
+                  style={{
+                    width: 18,
+                    height: 18,
+                    color: colors.stampRed,
+                    flexShrink: 0,
+                    marginTop: '1px',
+                  }}
+                />
+                <p
+                  style={{
+                    fontFamily: 'Georgia, serif',
+                    fontSize: '13px',
+                    color: colors.stampRed,
+                    margin: 0,
+                  }}
+                >
+                  {error}
+                </p>
               </motion.div>
             )}
 
             {/* Title */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Task Title *
-              </label>
+            <FormField label="Assignment Title" required hint={`${title.length}/200 characters`}>
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g., Book hotel in Paris for Day 3"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="e.g., Book boutique hotel in Marrakech for Day 3"
+                style={inputStyle}
                 maxLength={200}
               />
-              <p className="text-xs text-gray-500 mt-1">{title.length}/200</p>
-            </div>
+            </FormField>
 
             {/* Description */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Description (optional)
-              </label>
+            <FormField label="Additional Notes" hint={`${description.length}/500 characters`}>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Add more details about this task..."
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
-                rows={3}
+                placeholder="Add details, requirements, or special instructions..."
+                style={{
+                  ...inputStyle,
+                  resize: 'none',
+                  minHeight: '80px',
+                }}
                 maxLength={500}
               />
-              <p className="text-xs text-gray-500 mt-1">{description.length}/500</p>
-            </div>
+            </FormField>
 
             {/* Task Type & Priority Row */}
-            <div className="grid grid-cols-2 gap-4">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               {/* Task Type */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Task Type
-                </label>
+              <FormField label="Category">
                 <select
                   value={taskType}
                   onChange={(e) => setTaskType(e.target.value as TaskType)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  style={selectStyle}
                 >
-                  {TASK_TYPES.map(type => (
+                  {TASK_TYPES.map((type) => (
                     <option key={type.value} value={type.value}>
-                      {type.label}
+                      {type.icon} {type.label}
                     </option>
                   ))}
                 </select>
-                <p className="text-xs text-gray-500 mt-1">
-                  {TASK_TYPES.find(t => t.value === taskType)?.description}
-                </p>
-              </div>
+              </FormField>
 
               {/* Priority */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Priority
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {PRIORITY_LEVELS.map(level => (
-                    <button
+              <FormField label="Priority Level">
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '6px' }}>
+                  {PRIORITY_LEVELS.map((level) => (
+                    <motion.button
                       key={level.value}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
                       onClick={() => setPriority(level.value)}
-                      className={`px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
-                        priority === level.value
-                          ? level.color + ' border-opacity-100'
-                          : 'bg-gray-50 text-gray-600 border-gray-200'
-                      }`}
+                      style={{
+                        padding: '8px 10px',
+                        borderRadius: '6px',
+                        border: `2px solid ${priority === level.value ? level.color : colors.golden}40`,
+                        background:
+                          priority === level.value ? `${level.color}15` : colors.warmWhite,
+                        fontFamily: '"Courier New", monospace',
+                        fontSize: '10px',
+                        fontWeight: 700,
+                        letterSpacing: '0.5px',
+                        color: priority === level.value ? level.color : colors.mediumBrown,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '4px',
+                        transition: 'all 0.2s ease',
+                      }}
                     >
+                      <span>{level.icon}</span>
                       {level.label}
-                    </button>
+                    </motion.button>
                   ))}
                 </div>
-              </div>
+              </FormField>
             </div>
 
             {/* Assign To & Due Date Row */}
-            <div className="grid grid-cols-2 gap-4">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               {/* Assign To */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                  <User className="w-4 h-4" />
-                  Assign To (optional)
-                </label>
-                <select
-                  value={assignedTo}
-                  onChange={(e) => setAssignedTo(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="">Unassigned</option>
-                  {collaborators
-                    .filter(c => c.status === 'accepted')
-                    .map(collab => (
-                      <option key={collab.userId} value={collab.userId}>
-                        {collab.name} ({collab.role})
-                      </option>
-                    ))}
-                </select>
-              </div>
+              <FormField label="Assign To">
+                <div style={{ position: 'relative' }}>
+                  <User
+                    style={{
+                      position: 'absolute',
+                      left: '12px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      width: 16,
+                      height: 16,
+                      color: colors.lightBrown,
+                    }}
+                  />
+                  <select
+                    value={assignedTo}
+                    onChange={(e) => setAssignedTo(e.target.value)}
+                    style={{
+                      ...selectStyle,
+                      paddingLeft: '36px',
+                    }}
+                  >
+                    <option value="">Unassigned</option>
+                    {collaborators
+                      .filter((c) => c.status === 'accepted')
+                      .map((collab) => (
+                        <option key={collab.userId} value={collab.userId}>
+                          {collab.name} ({collab.role})
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              </FormField>
 
               {/* Due Date */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                  <Calendar className="w-4 h-4" />
-                  Due Date (optional)
-                </label>
-                <input
-                  type="datetime-local"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
+              <FormField label="Due Date">
+                <div style={{ position: 'relative' }}>
+                  <Calendar
+                    style={{
+                      position: 'absolute',
+                      left: '12px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      width: 16,
+                      height: 16,
+                      color: colors.lightBrown,
+                    }}
+                  />
+                  <input
+                    type="datetime-local"
+                    value={dueDate}
+                    onChange={(e) => setDueDate(e.target.value)}
+                    style={{
+                      ...inputStyle,
+                      paddingLeft: '36px',
+                    }}
+                  />
+                </div>
+              </FormField>
             </div>
 
-            {/* Related Context (Collapsible) */}
-            <details className="border border-gray-200 rounded-lg p-4">
-              <summary className="font-medium text-gray-700 cursor-pointer">
-                Link to Itinerary (optional)
-              </summary>
-              <div className="mt-4 space-y-4">
-                {/* Related Day */}
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">
-                    Related Day Number
-                  </label>
-                  <input
-                    type="number"
-                    value={relatedDay}
-                    onChange={(e) => setRelatedDay(e.target.value)}
-                    placeholder="e.g., 3"
-                    min={1}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
+            {/* Advanced Options Toggle */}
+            <motion.button
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              style={{
+                width: '100%',
+                padding: '12px 14px',
+                background: `${colors.parchment}50`,
+                border: `1px dashed ${colors.golden}`,
+                borderRadius: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                cursor: 'pointer',
+                marginBottom: showAdvanced ? '16px' : 0,
+              }}
+            >
+              <span
+                style={{
+                  fontFamily: '"Courier New", monospace',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  letterSpacing: '1px',
+                  color: colors.mediumBrown,
+                  textTransform: 'uppercase',
+                }}
+              >
+                Link to Itinerary (Optional)
+              </span>
+              <motion.div
+                animate={{ rotate: showAdvanced ? 180 : 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <ChevronDown
+                  style={{
+                    width: 16,
+                    height: 16,
+                    color: colors.mediumBrown,
+                  }}
+                />
+              </motion.div>
+            </motion.button>
 
-                {/* Related Activity */}
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">
-                    Related Activity
-                  </label>
-                  <input
-                    type="text"
-                    value={relatedActivity}
-                    onChange={(e) => setRelatedActivity(e.target.value)}
-                    placeholder="e.g., Eiffel Tower visit"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
+            {/* Advanced Options */}
+            <AnimatePresence>
+              {showAdvanced && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  style={{
+                    background: `${colors.parchment}30`,
+                    border: `1px solid ${colors.golden}40`,
+                    borderRadius: '8px',
+                    padding: '16px',
+                    overflow: 'hidden',
+                  }}
+                >
+                  <FormField label="Related Day Number">
+                    <input
+                      type="number"
+                      value={relatedDay}
+                      onChange={(e) => setRelatedDay(e.target.value)}
+                      placeholder="e.g., 3"
+                      min={1}
+                      style={inputStyle}
+                    />
+                  </FormField>
 
-                {/* Related Restaurant */}
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">
-                    Related Restaurant
-                  </label>
-                  <input
-                    type="text"
-                    value={relatedRestaurant}
-                    onChange={(e) => setRelatedRestaurant(e.target.value)}
-                    placeholder="e.g., Le Jules Verne"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-              </div>
-            </details>
+                  <FormField label="Related Activity">
+                    <input
+                      type="text"
+                      value={relatedActivity}
+                      onChange={(e) => setRelatedActivity(e.target.value)}
+                      placeholder="e.g., Eiffel Tower visit"
+                      style={inputStyle}
+                    />
+                  </FormField>
+
+                  <FormField label="Related Restaurant">
+                    <input
+                      type="text"
+                      value={relatedRestaurant}
+                      onChange={(e) => setRelatedRestaurant(e.target.value)}
+                      placeholder="e.g., Le Jules Verne"
+                      style={{
+                        ...inputStyle,
+                        marginBottom: 0,
+                      }}
+                    />
+                  </FormField>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-end gap-3 p-6 border-t bg-gray-50">
-            <button
+          <div
+            style={{
+              padding: '20px 24px',
+              background: `linear-gradient(180deg, ${colors.parchment}30 0%, ${colors.parchment}60 100%)`,
+              borderTop: `1px solid ${colors.golden}`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'flex-end',
+              gap: '12px',
+            }}
+          >
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               onClick={onClose}
-              className="px-6 py-3 text-gray-700 hover:bg-gray-100 rounded-lg font-medium transition-colors"
+              style={{
+                padding: '12px 24px',
+                background: 'transparent',
+                border: `1px solid ${colors.golden}`,
+                borderRadius: '8px',
+                fontFamily: '"Courier New", monospace',
+                fontSize: '12px',
+                fontWeight: 700,
+                letterSpacing: '1px',
+                color: colors.mediumBrown,
+                cursor: 'pointer',
+              }}
             >
-              Cancel
-            </button>
-            <button
+              CANCEL
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               onClick={handleSubmit}
               disabled={loading}
-              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white rounded-lg font-medium transition-colors"
+              style={{
+                padding: '12px 28px',
+                background: loading
+                  ? colors.lightBrown
+                  : `linear-gradient(135deg, ${colors.terracotta} 0%, ${colors.terracottaLight} 100%)`,
+                border: 'none',
+                borderRadius: '8px',
+                fontFamily: '"Courier New", monospace',
+                fontSize: '12px',
+                fontWeight: 700,
+                letterSpacing: '1px',
+                color: colors.cream,
+                cursor: loading ? 'not-allowed' : 'pointer',
+                boxShadow: loading ? 'none' : `0 4px 12px ${colors.terracotta}40`,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
             >
-              {loading ? 'Creating...' : 'Create Task'}
-            </button>
+              {loading ? (
+                <>
+                  <Loader2
+                    style={{
+                      width: 16,
+                      height: 16,
+                      animation: 'spin 1s linear infinite',
+                    }}
+                  />
+                  CREATING...
+                </>
+              ) : (
+                <>CREATE ASSIGNMENT</>
+              )}
+            </motion.button>
           </div>
         </motion.div>
       </div>

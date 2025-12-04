@@ -1,5 +1,32 @@
+/**
+ * Comment Badge - "The Stamp Counter"
+ *
+ * A vintage passport stamp style badge for comment counts.
+ * Features stamp borders, count displays, and unresolved indicators.
+ *
+ * Design: Wanderlust Editorial with vintage stamp aesthetics
+ */
+
 import { MessageCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
+
+// =============================================================================
+// WANDERLUST EDITORIAL COLOR PALETTE
+// =============================================================================
+const colors = {
+  cream: '#FFFBF5',
+  warmWhite: '#FAF7F2',
+  terracotta: '#C45830',
+  terracottaLight: '#D96A42',
+  golden: '#D4A853',
+  goldenDark: '#B8923D',
+  sage: '#6B8E7B',
+  espresso: '#2C1810',
+  mediumBrown: '#5C4033',
+  lightBrown: '#8B7355',
+  parchment: '#F5E6C8',
+  stampRed: '#8B2323',
+};
 
 interface CommentBadgeProps {
   count: number;
@@ -10,14 +37,31 @@ interface CommentBadgeProps {
 export function CommentBadge({ count, hasUnresolved = false, onClick }: CommentBadgeProps) {
   if (count === 0) {
     return (
-      <button
+      <motion.button
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
         onClick={onClick}
-        className="flex items-center gap-1 px-2 py-1 text-xs text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
-        title="Add comment"
+        title="Add correspondence"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px',
+          padding: '4px 10px',
+          background: 'transparent',
+          border: `1px dashed ${colors.golden}`,
+          borderRadius: '12px',
+          fontFamily: '"Courier New", monospace',
+          fontSize: '10px',
+          fontWeight: 700,
+          letterSpacing: '0.5px',
+          color: colors.lightBrown,
+          cursor: 'pointer',
+          transition: 'all 0.2s ease',
+        }}
       >
-        <MessageCircle className="w-3.5 h-3.5" />
-        <span>Comment</span>
-      </button>
+        <MessageCircle style={{ width: 12, height: 12 }} />
+        NOTE
+      </motion.button>
     );
   }
 
@@ -25,20 +69,47 @@ export function CommentBadge({ count, hasUnresolved = false, onClick }: CommentB
     <motion.button
       initial={{ scale: 0 }}
       animate={{ scale: 1 }}
-      whileHover={{ scale: 1.05 }}
+      whileHover={{ scale: 1.08 }}
       whileTap={{ scale: 0.95 }}
       onClick={onClick}
-      className={`flex items-center gap-1 px-2 py-1 text-xs rounded-full transition-colors ${
-        hasUnresolved
-          ? 'bg-orange-100 text-orange-700 hover:bg-orange-200'
-          : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-      }`}
-      title={`${count} comment${count !== 1 ? 's' : ''}${hasUnresolved ? ' (unresolved)' : ''}`}
+      title={`${count} note${count !== 1 ? 's' : ''}${hasUnresolved ? ' (unresolved)' : ''}`}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '5px',
+        padding: '4px 10px',
+        background: hasUnresolved ? `${colors.terracotta}15` : `${colors.sage}15`,
+        border: `2px solid ${hasUnresolved ? colors.terracotta : colors.sage}`,
+        borderRadius: '14px',
+        fontFamily: '"Courier New", monospace',
+        fontSize: '11px',
+        fontWeight: 700,
+        color: hasUnresolved ? colors.terracotta : colors.sage,
+        cursor: 'pointer',
+        transition: 'all 0.2s ease',
+        position: 'relative',
+      }}
     >
-      <MessageCircle className="w-3.5 h-3.5" />
-      <span className="font-medium">{count}</span>
+      <MessageCircle style={{ width: 13, height: 13 }} />
+      <span>{count}</span>
+
+      {/* Unresolved indicator dot */}
       {hasUnresolved && (
-        <span className="w-1.5 h-1.5 bg-orange-500 rounded-full" />
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          style={{
+            position: 'absolute',
+            top: '-3px',
+            right: '-3px',
+            width: '8px',
+            height: '8px',
+            borderRadius: '50%',
+            background: colors.stampRed,
+            border: `1.5px solid ${colors.cream}`,
+            boxShadow: `0 1px 3px ${colors.stampRed}40`,
+          }}
+        />
       )}
     </motion.button>
   );

@@ -1,6 +1,33 @@
+/**
+ * Mention Autocomplete - "The Address Book"
+ *
+ * A vintage address book style dropdown for mentioning collaborators.
+ * Features passport-style avatars, typewriter text, and editorial styling.
+ *
+ * Design: Wanderlust Editorial with vintage address book aesthetics
+ */
+
 import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AtSign } from 'lucide-react';
+
+// =============================================================================
+// WANDERLUST EDITORIAL COLOR PALETTE
+// =============================================================================
+const colors = {
+  cream: '#FFFBF5',
+  warmWhite: '#FAF7F2',
+  terracotta: '#C45830',
+  terracottaLight: '#D96A42',
+  golden: '#D4A853',
+  goldenLight: '#E4BE73',
+  goldenDark: '#B8923D',
+  sage: '#6B8E7B',
+  espresso: '#2C1810',
+  mediumBrown: '#5C4033',
+  lightBrown: '#8B7355',
+  parchment: '#F5E6C8',
+};
 
 interface User {
   id: string;
@@ -11,7 +38,7 @@ interface User {
 interface MentionAutocompleteProps {
   users: User[];
   onSelect: (user: User) => void;
-  trigger: string; // The text after @
+  trigger: string;
   isOpen: boolean;
   onClose: () => void;
   inputRef: React.RefObject<HTMLInputElement | HTMLTextAreaElement>;
@@ -23,18 +50,17 @@ export function MentionAutocomplete({
   trigger,
   isOpen,
   onClose,
-  inputRef
+  inputRef,
 }: MentionAutocompleteProps) {
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Filter users based on trigger text
   useEffect(() => {
     if (!trigger) {
       setFilteredUsers(users);
     } else {
-      const filtered = users.filter(user =>
+      const filtered = users.filter((user) =>
         user.name.toLowerCase().includes(trigger.toLowerCase())
       );
       setFilteredUsers(filtered);
@@ -42,7 +68,6 @@ export function MentionAutocomplete({
     setSelectedIndex(0);
   }, [trigger, users]);
 
-  // Handle keyboard navigation
   useEffect(() => {
     if (!isOpen) return;
 
@@ -52,16 +77,12 @@ export function MentionAutocomplete({
       switch (e.key) {
         case 'ArrowDown':
           e.preventDefault();
-          setSelectedIndex(prev =>
-            prev < filteredUsers.length - 1 ? prev + 1 : 0
-          );
+          setSelectedIndex((prev) => (prev < filteredUsers.length - 1 ? prev + 1 : 0));
           break;
 
         case 'ArrowUp':
           e.preventDefault();
-          setSelectedIndex(prev =>
-            prev > 0 ? prev - 1 : filteredUsers.length - 1
-          );
+          setSelectedIndex((prev) => (prev > 0 ? prev - 1 : filteredUsers.length - 1));
           break;
 
         case 'Enter':
@@ -83,7 +104,6 @@ export function MentionAutocomplete({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, filteredUsers, selectedIndex, onSelect, onClose]);
 
-  // Close on click outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -105,14 +125,13 @@ export function MentionAutocomplete({
     };
   }, [isOpen, onClose, inputRef]);
 
-  // Calculate position relative to input
   const getPosition = () => {
     if (!inputRef.current) return { top: 0, left: 0 };
 
     const rect = inputRef.current.getBoundingClientRect();
     return {
-      top: rect.top - 200, // Above the input
-      left: rect.left
+      top: rect.top - 200,
+      left: rect.left,
     };
   };
 
@@ -128,72 +147,200 @@ export function MentionAutocomplete({
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 10 }}
         transition={{ duration: 0.15 }}
-        className="fixed z-50 bg-white rounded-lg shadow-xl border border-gray-200 max-h-48 overflow-y-auto"
         style={{
+          position: 'fixed',
+          zIndex: 50,
           top: position.top,
           left: position.left,
-          minWidth: '250px'
+          minWidth: '260px',
+          background: `linear-gradient(180deg, ${colors.cream} 0%, ${colors.warmWhite} 100%)`,
+          borderRadius: '12px',
+          border: `2px solid ${colors.golden}`,
+          boxShadow: `0 12px 32px rgba(44, 24, 16, 0.25)`,
+          overflow: 'hidden',
+          maxHeight: '200px',
         }}
       >
         {/* Header */}
-        <div className="px-3 py-2 border-b border-gray-100 bg-gray-50 sticky top-0">
-          <div className="flex items-center gap-2 text-xs font-medium text-gray-600">
-            <AtSign className="w-3 h-3" />
-            <span>Mention someone</span>
+        <div
+          style={{
+            padding: '10px 14px',
+            borderBottom: `1px solid ${colors.golden}`,
+            background: `${colors.parchment}50`,
+            position: 'sticky',
+            top: 0,
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            <AtSign style={{ width: 12, height: 12, color: colors.terracotta }} />
+            <span
+              style={{
+                fontFamily: '"Courier New", monospace',
+                fontSize: '10px',
+                fontWeight: 700,
+                letterSpacing: '1px',
+                color: colors.mediumBrown,
+                textTransform: 'uppercase',
+              }}
+            >
+              Address Book
+            </span>
           </div>
         </div>
 
         {/* User list */}
-        <div className="py-1">
+        <div style={{ overflowY: 'auto', maxHeight: '140px' }}>
           {filteredUsers.map((user, index) => (
-            <button
+            <motion.button
               key={user.id}
               onClick={() => onSelect(user)}
               onMouseEnter={() => setSelectedIndex(index)}
-              className={`
-                w-full px-3 py-2 flex items-center gap-3 transition-colors text-left
-                ${index === selectedIndex
-                  ? 'bg-blue-50 text-blue-700'
-                  : 'text-gray-700 hover:bg-gray-50'}
-              `}
+              whileHover={{ x: 2 }}
+              style={{
+                width: '100%',
+                padding: '10px 14px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                background: index === selectedIndex ? `${colors.golden}20` : 'transparent',
+                border: 'none',
+                borderLeft: index === selectedIndex ? `3px solid ${colors.terracotta}` : '3px solid transparent',
+                cursor: 'pointer',
+                textAlign: 'left',
+                transition: 'all 0.15s ease',
+              }}
             >
-              {/* Avatar */}
-              <div className="flex-shrink-0">
+              {/* Passport-style avatar */}
+              <div
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '4px',
+                  flexShrink: 0,
+                  overflow: 'hidden',
+                  border: `2px solid ${index === selectedIndex ? colors.terracotta : colors.golden}`,
+                }}
+              >
                 {user.avatarUrl ? (
                   <img
                     src={user.avatarUrl}
                     alt={user.name}
-                    className="w-8 h-8 rounded-full"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   />
                 ) : (
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-sm font-medium">
+                  <div
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      background: `linear-gradient(135deg, ${colors.golden} 0%, ${colors.goldenDark} 100%)`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontFamily: '"Courier New", monospace',
+                      fontSize: '13px',
+                      fontWeight: 700,
+                      color: colors.cream,
+                    }}
+                  >
                     {user.name.charAt(0).toUpperCase()}
                   </div>
                 )}
               </div>
 
               {/* Name */}
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{user.name}</p>
-                <p className="text-xs text-gray-500">@{user.name.toLowerCase().replace(/\s+/g, '')}</p>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p
+                  style={{
+                    fontFamily: 'Georgia, serif',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    color: index === selectedIndex ? colors.espresso : colors.mediumBrown,
+                    margin: 0,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {user.name}
+                </p>
+                <p
+                  style={{
+                    fontFamily: '"Courier New", monospace',
+                    fontSize: '10px',
+                    color: colors.lightBrown,
+                    margin: 0,
+                  }}
+                >
+                  @{user.name.toLowerCase().replace(/\s+/g, '')}
+                </p>
               </div>
 
-              {/* Selected indicator */}
+              {/* Selection indicator */}
               {index === selectedIndex && (
-                <div className="flex-shrink-0">
-                  <div className="w-1.5 h-1.5 rounded-full bg-blue-600" />
-                </div>
+                <div
+                  style={{
+                    width: '6px',
+                    height: '6px',
+                    borderRadius: '50%',
+                    background: colors.terracotta,
+                    flexShrink: 0,
+                  }}
+                />
               )}
-            </button>
+            </motion.button>
           ))}
         </div>
 
         {/* Footer hint */}
-        <div className="px-3 py-2 border-t border-gray-100 bg-gray-50 sticky bottom-0">
-          <p className="text-xs text-gray-500">
-            <kbd className="px-1 py-0.5 bg-white border border-gray-300 rounded text-xs">↑↓</kbd> to navigate
-            {' • '}
-            <kbd className="px-1 py-0.5 bg-white border border-gray-300 rounded text-xs">Enter</kbd> to select
+        <div
+          style={{
+            padding: '8px 14px',
+            borderTop: `1px solid ${colors.golden}`,
+            background: `${colors.parchment}40`,
+            position: 'sticky',
+            bottom: 0,
+          }}
+        >
+          <p
+            style={{
+              fontFamily: '"Courier New", monospace',
+              fontSize: '9px',
+              color: colors.lightBrown,
+              margin: 0,
+            }}
+          >
+            <kbd
+              style={{
+                padding: '2px 4px',
+                background: colors.warmWhite,
+                border: `1px solid ${colors.golden}`,
+                borderRadius: '3px',
+                fontFamily: '"Courier New", monospace',
+                fontSize: '9px',
+              }}
+            >
+              ↑↓
+            </kbd>{' '}
+            navigate •{' '}
+            <kbd
+              style={{
+                padding: '2px 4px',
+                background: colors.warmWhite,
+                border: `1px solid ${colors.golden}`,
+                borderRadius: '3px',
+                fontFamily: '"Courier New", monospace',
+                fontSize: '9px',
+              }}
+            >
+              Enter
+            </kbd>{' '}
+            select
           </p>
         </div>
       </motion.div>

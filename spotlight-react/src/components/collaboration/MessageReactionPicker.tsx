@@ -1,6 +1,33 @@
+/**
+ * Message Reaction Picker - "The Travel Stamps"
+ *
+ * A vintage travel stamp style reaction picker for message reactions.
+ * Features stamp-style emoji displays and editorial styling.
+ *
+ * Design: Wanderlust Editorial with vintage stamp aesthetics
+ */
+
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Smile } from 'lucide-react';
+
+// =============================================================================
+// WANDERLUST EDITORIAL COLOR PALETTE
+// =============================================================================
+const colors = {
+  cream: '#FFFBF5',
+  warmWhite: '#FAF7F2',
+  terracotta: '#C45830',
+  terracottaLight: '#D96A42',
+  golden: '#D4A853',
+  goldenLight: '#E4BE73',
+  goldenDark: '#B8923D',
+  sage: '#6B8E7B',
+  espresso: '#2C1810',
+  mediumBrown: '#5C4033',
+  lightBrown: '#8B7355',
+  parchment: '#F5E6C8',
+};
 
 interface MessageReactionPickerProps {
   messageId: string;
@@ -16,22 +43,18 @@ interface Reaction {
   createdAt: string;
 }
 
-const COMMON_EMOJIS = [
-  '👍', '❤️', '😂', '😮', '😢', '🙏',
-  '🎉', '🔥', '✨', '👏', '💯', '🚀'
-];
+const COMMON_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏', '🎉', '🔥', '✨', '👏', '💯', '🚀'];
 
 export function MessageReactionPicker({
   messageId,
   routeId,
   onReactionAdd,
   existingReactions = [],
-  currentUserId
+  currentUserId,
 }: MessageReactionPickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const pickerRef = useRef<HTMLDivElement>(null);
 
-  // Close picker when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (pickerRef.current && !pickerRef.current.contains(event.target as Node)) {
@@ -50,16 +73,13 @@ export function MessageReactionPicker({
 
   const handleEmojiClick = async (emoji: string) => {
     try {
-      // Check if user already reacted with this emoji
       const userHasReacted = existingReactions.some(
-        r => r.emoji === emoji && r.userId === currentUserId
+        (r) => r.emoji === emoji && r.userId === currentUserId
       );
 
       if (userHasReacted) {
-        // Remove reaction
         await removeReaction(emoji);
       } else {
-        // Add reaction
         onReactionAdd(messageId, emoji);
       }
 
@@ -77,9 +97,9 @@ export function MessageReactionPicker({
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ emoji })
+        body: JSON.stringify({ emoji }),
       });
 
       if (!response.ok) {
@@ -90,24 +110,26 @@ export function MessageReactionPicker({
     }
   };
 
-  // Group reactions by emoji with counts
-  const reactionCounts = existingReactions.reduce((acc, reaction) => {
-    if (!acc[reaction.emoji]) {
-      acc[reaction.emoji] = {
-        count: 0,
-        userIds: []
-      };
-    }
-    acc[reaction.emoji].count++;
-    acc[reaction.emoji].userIds.push(reaction.userId);
-    return acc;
-  }, {} as Record<string, { count: number; userIds: string[] }>);
+  const reactionCounts = existingReactions.reduce(
+    (acc, reaction) => {
+      if (!acc[reaction.emoji]) {
+        acc[reaction.emoji] = {
+          count: 0,
+          userIds: [],
+        };
+      }
+      acc[reaction.emoji].count++;
+      acc[reaction.emoji].userIds.push(reaction.userId);
+      return acc;
+    },
+    {} as Record<string, { count: number; userIds: string[] }>
+  );
 
   return (
-    <div className="relative inline-block" ref={pickerRef}>
+    <div style={{ position: 'relative', display: 'inline-block' }} ref={pickerRef}>
       {/* Existing reactions display */}
       {Object.keys(reactionCounts).length > 0 && (
-        <div className="flex flex-wrap gap-1 mb-1">
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '6px' }}>
           {Object.entries(reactionCounts).map(([emoji, data]) => {
             const userReacted = data.userIds.includes(currentUserId);
 
@@ -118,17 +140,30 @@ export function MessageReactionPicker({
                 animate={{ scale: 1 }}
                 whileHover={{ scale: 1.1 }}
                 onClick={() => handleEmojiClick(emoji)}
-                className={`
-                  flex items-center gap-1 px-2 py-1 rounded-full text-sm
-                  transition-colors
-                  ${userReacted
-                    ? 'bg-blue-100 border-2 border-blue-500 text-blue-700'
-                    : 'bg-gray-100 border border-gray-300 text-gray-700 hover:bg-gray-200'}
-                `}
-                title={userReacted ? 'Click to remove your reaction' : 'Click to add this reaction'}
+                title={userReacted ? 'Remove your reaction' : 'Add this reaction'}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '3px 8px',
+                  borderRadius: '10px',
+                  background: userReacted ? `${colors.terracotta}15` : `${colors.parchment}80`,
+                  border: `1.5px solid ${userReacted ? colors.terracotta : colors.golden}`,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
               >
-                <span className="text-base">{emoji}</span>
-                <span className="text-xs font-medium">{data.count}</span>
+                <span style={{ fontSize: '14px', lineHeight: 1 }}>{emoji}</span>
+                <span
+                  style={{
+                    fontFamily: '"Courier New", monospace',
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    color: userReacted ? colors.terracotta : colors.mediumBrown,
+                  }}
+                >
+                  {data.count}
+                </span>
               </motion.button>
             );
           })}
@@ -136,13 +171,23 @@ export function MessageReactionPicker({
       )}
 
       {/* Add reaction button */}
-      <button
+      <motion.button
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.9 }}
         onClick={() => setIsOpen(!isOpen)}
-        className="p-1 rounded-full hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
         title="Add reaction"
+        style={{
+          padding: '4px',
+          borderRadius: '50%',
+          background: 'transparent',
+          border: 'none',
+          cursor: 'pointer',
+          color: colors.lightBrown,
+          transition: 'all 0.15s ease',
+        }}
       >
-        <Smile className="w-4 h-4" />
-      </button>
+        <Smile style={{ width: 16, height: 16 }} />
+      </motion.button>
 
       {/* Emoji picker popup */}
       <AnimatePresence>
@@ -152,12 +197,46 @@ export function MessageReactionPicker({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -10 }}
             transition={{ duration: 0.15 }}
-            className="absolute bottom-full left-0 mb-2 bg-white rounded-lg shadow-xl border border-gray-200 p-2 z-50"
+            style={{
+              position: 'absolute',
+              bottom: '100%',
+              left: 0,
+              marginBottom: '8px',
+              background: `linear-gradient(180deg, ${colors.cream} 0%, ${colors.warmWhite} 100%)`,
+              borderRadius: '12px',
+              border: `2px solid ${colors.golden}`,
+              boxShadow: `0 8px 24px rgba(44, 24, 16, 0.2)`,
+              padding: '10px',
+              zIndex: 50,
+            }}
           >
-            <div className="grid grid-cols-6 gap-1">
+            {/* Header */}
+            <p
+              style={{
+                fontFamily: '"Courier New", monospace',
+                fontSize: '9px',
+                fontWeight: 700,
+                letterSpacing: '1px',
+                color: colors.mediumBrown,
+                textTransform: 'uppercase',
+                margin: '0 0 8px 0',
+                textAlign: 'center',
+              }}
+            >
+              Travel Stamps
+            </p>
+
+            {/* Emoji grid */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(6, 1fr)',
+                gap: '4px',
+              }}
+            >
               {COMMON_EMOJIS.map((emoji) => {
                 const userHasThis = existingReactions.some(
-                  r => r.emoji === emoji && r.userId === currentUserId
+                  (r) => r.emoji === emoji && r.userId === currentUserId
                 );
 
                 return (
@@ -166,14 +245,20 @@ export function MessageReactionPicker({
                     whileHover={{ scale: 1.2 }}
                     whileTap={{ scale: 0.9 }}
                     onClick={() => handleEmojiClick(emoji)}
-                    className={`
-                      w-10 h-10 flex items-center justify-center text-2xl rounded-lg
-                      transition-colors
-                      ${userHasThis
-                        ? 'bg-blue-100 ring-2 ring-blue-500'
-                        : 'hover:bg-gray-100'}
-                    `}
                     title={emoji}
+                    style={{
+                      width: '36px',
+                      height: '36px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '20px',
+                      borderRadius: '8px',
+                      background: userHasThis ? `${colors.terracotta}15` : 'transparent',
+                      border: userHasThis ? `2px solid ${colors.terracotta}` : '2px solid transparent',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                    }}
                   >
                     {emoji}
                   </motion.button>

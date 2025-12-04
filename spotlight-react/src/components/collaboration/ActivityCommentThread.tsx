@@ -1,7 +1,38 @@
+/**
+ * Activity Comment Thread - "The Postcard Thread"
+ *
+ * A vintage postcard-style comment thread for discussing activities.
+ * Features postcard borders, wax seal resolved markers, and typewriter text.
+ *
+ * Design: Wanderlust Editorial with vintage correspondence aesthetics
+ */
+
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageCircle, Send, Reply, Check, X, Trash2 } from 'lucide-react';
+import { MessageCircle, Send, Reply, Check, X, Trash2, Loader2 } from 'lucide-react';
 import type { ActivityComment } from '../../types';
+
+// =============================================================================
+// WANDERLUST EDITORIAL COLOR PALETTE
+// =============================================================================
+const colors = {
+  cream: '#FFFBF5',
+  warmWhite: '#FAF7F2',
+  terracotta: '#C45830',
+  terracottaLight: '#D96A42',
+  golden: '#D4A853',
+  goldenLight: '#E4BE73',
+  goldenDark: '#B8923D',
+  sage: '#6B8E7B',
+  sageLight: '#8BA99A',
+  espresso: '#2C1810',
+  darkBrown: '#3D2A1E',
+  mediumBrown: '#5C4033',
+  lightBrown: '#8B7355',
+  parchment: '#F5E6C8',
+  stampRed: '#8B2323',
+  waxRed: '#A52A2A',
+};
 
 interface ActivityCommentThreadProps {
   routeId: string;
@@ -13,6 +44,36 @@ interface ActivityCommentThreadProps {
   onClose: () => void;
 }
 
+// =============================================================================
+// PASSPORT AVATAR
+// =============================================================================
+
+function PassportAvatar({ name, isCurrentUser }: { name: string; isCurrentUser: boolean }) {
+  return (
+    <div
+      style={{
+        width: '32px',
+        height: '32px',
+        borderRadius: '4px',
+        background: isCurrentUser
+          ? `linear-gradient(135deg, ${colors.terracotta} 0%, ${colors.terracottaLight} 100%)`
+          : `linear-gradient(135deg, ${colors.golden} 0%, ${colors.goldenDark} 100%)`,
+        border: `2px solid ${isCurrentUser ? colors.terracotta : colors.golden}`,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontFamily: '"Courier New", monospace',
+        fontSize: '13px',
+        fontWeight: 700,
+        color: colors.cream,
+        flexShrink: 0,
+      }}
+    >
+      {name.charAt(0).toUpperCase()}
+    </div>
+  );
+}
+
 export function ActivityCommentThread({
   routeId,
   targetType,
@@ -20,7 +81,7 @@ export function ActivityCommentThread({
   dayNumber,
   currentUserId,
   userRole = 'viewer',
-  onClose
+  onClose,
 }: ActivityCommentThreadProps) {
   const [comments, setComments] = useState<ActivityComment[]>([]);
   const [newComment, setNewComment] = useState('');
@@ -28,7 +89,6 @@ export function ActivityCommentThread({
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
 
-  // Fetch comments
   useEffect(() => {
     fetchComments();
   }, [routeId, targetType, targetId]);
@@ -38,14 +98,14 @@ export function ActivityCommentThread({
       const params = new URLSearchParams({
         targetType,
         targetId,
-        ...(dayNumber && { dayNumber: dayNumber.toString() })
+        ...(dayNumber && { dayNumber: dayNumber.toString() }),
       });
 
       const token = localStorage.getItem('rdtrip_auth_token');
       const response = await fetch(`/api/routes/${routeId}/comments?${params}`, {
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       if (response.ok) {
@@ -69,21 +129,21 @@ export function ActivityCommentThread({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           targetType,
           targetId,
           dayNumber,
           comment: newComment.trim(),
-          parentCommentId: replyTo
-        })
+          parentCommentId: replyTo,
+        }),
       });
 
       if (response.ok) {
         setNewComment('');
         setReplyTo(null);
-        fetchComments(); // Refresh comments
+        fetchComments();
       }
     } catch (error) {
       console.error('Error adding comment:', error);
@@ -99,13 +159,13 @@ export function ActivityCommentThread({
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ resolved })
+        body: JSON.stringify({ resolved }),
       });
 
       if (response.ok) {
-        fetchComments(); // Refresh to show updated status
+        fetchComments();
       }
     } catch (error) {
       console.error('Error resolving comment:', error);
@@ -113,19 +173,19 @@ export function ActivityCommentThread({
   }
 
   async function handleDelete(commentId: string) {
-    if (!confirm('Delete this comment?')) return;
+    if (!confirm('Delete this correspondence?')) return;
 
     try {
       const token = localStorage.getItem('rdtrip_auth_token');
       const response = await fetch(`/api/routes/${routeId}/comments/${commentId}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       if (response.ok) {
-        fetchComments(); // Refresh comments
+        fetchComments();
       }
     } catch (error) {
       console.error('Error deleting comment:', error);
@@ -142,69 +202,160 @@ export function ActivityCommentThread({
         key={comment.id}
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className={`${isReply ? 'ml-8 mt-2' : 'mt-3'}`}
+        style={{ marginLeft: isReply ? '40px' : 0, marginTop: isReply ? '10px' : '14px' }}
       >
-        <div className={`p-3 rounded-lg ${
-          comment.resolved ? 'bg-green-50 border border-green-200' : 'bg-gray-50'
-        }`}>
-          {/* Header */}
-          <div className="flex items-start justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-sm font-medium">
-                {comment.userName.charAt(0).toUpperCase()}
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-900">
-                  {isCurrentUser ? 'You' : comment.userName}
-                </p>
-                <p className="text-xs text-gray-500">
-                  {new Date(comment.createdAt).toLocaleString()}
-                </p>
-              </div>
+        <div
+          style={{
+            padding: '14px',
+            borderRadius: '10px',
+            background: comment.resolved ? `${colors.sage}10` : colors.warmWhite,
+            border: `1px solid ${comment.resolved ? colors.sage : colors.golden}`,
+            position: 'relative',
+          }}
+        >
+          {/* Resolved wax seal */}
+          {comment.resolved && (
+            <div
+              style={{
+                position: 'absolute',
+                top: '-8px',
+                right: '12px',
+                width: '24px',
+                height: '24px',
+                borderRadius: '50%',
+                background: `radial-gradient(circle at 30% 30%, ${colors.sage} 0%, #4A6B5A 100%)`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: `0 2px 4px ${colors.sage}40`,
+              }}
+            >
+              <Check style={{ width: 12, height: 12, color: colors.cream }} />
             </div>
+          )}
 
-            <div className="flex items-center gap-2">
-              {comment.resolved && (
-                <span className="flex items-center gap-1 text-xs text-green-700 bg-green-100 px-2 py-1 rounded-full">
-                  <Check className="w-3 h-3" />
-                  Resolved
-                </span>
-              )}
+          {/* Header */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              marginBottom: '10px',
+            }}
+          >
+            <PassportAvatar name={comment.userName} isCurrentUser={isCurrentUser} />
+            <div style={{ flex: 1 }}>
+              <p
+                style={{
+                  fontFamily: 'Georgia, serif',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  color: colors.espresso,
+                  margin: 0,
+                }}
+              >
+                {isCurrentUser ? 'You' : comment.userName}
+              </p>
+              <p
+                style={{
+                  fontFamily: '"Courier New", monospace',
+                  fontSize: '10px',
+                  color: colors.lightBrown,
+                  margin: 0,
+                }}
+              >
+                {new Date(comment.createdAt).toLocaleString()}
+              </p>
             </div>
           </div>
 
           {/* Comment text */}
-          <p className="text-sm text-gray-700 mb-2">{comment.comment}</p>
+          <p
+            style={{
+              fontFamily: 'Georgia, serif',
+              fontSize: '13px',
+              color: colors.darkBrown,
+              margin: 0,
+              lineHeight: 1.5,
+            }}
+          >
+            {comment.comment}
+          </p>
 
           {/* Actions */}
-          <div className="flex items-center gap-3 text-xs">
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              marginTop: '12px',
+              paddingTop: '10px',
+              borderTop: `1px dashed ${colors.golden}40`,
+            }}
+          >
             {!isReply && (
               <button
                 onClick={() => setReplyTo(comment.id)}
-                className="flex items-center gap-1 text-gray-600 hover:text-blue-600 transition-colors"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontFamily: '"Courier New", monospace',
+                  fontSize: '10px',
+                  fontWeight: 700,
+                  color: colors.mediumBrown,
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: 0,
+                }}
               >
-                <Reply className="w-3 h-3" />
-                Reply
+                <Reply style={{ width: 12, height: 12 }} />
+                REPLY
               </button>
             )}
 
             {canResolve && !isReply && (
               <button
                 onClick={() => handleResolve(comment.id, !comment.resolved)}
-                className="flex items-center gap-1 text-gray-600 hover:text-green-600 transition-colors"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontFamily: '"Courier New", monospace',
+                  fontSize: '10px',
+                  fontWeight: 700,
+                  color: comment.resolved ? colors.lightBrown : colors.sage,
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: 0,
+                }}
               >
-                {comment.resolved ? <X className="w-3 h-3" /> : <Check className="w-3 h-3" />}
-                {comment.resolved ? 'Unresolve' : 'Resolve'}
+                {comment.resolved ? <X style={{ width: 12, height: 12 }} /> : <Check style={{ width: 12, height: 12 }} />}
+                {comment.resolved ? 'UNRESOLVE' : 'RESOLVE'}
               </button>
             )}
 
             {canDelete && (
               <button
                 onClick={() => handleDelete(comment.id)}
-                className="flex items-center gap-1 text-gray-600 hover:text-red-600 transition-colors"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontFamily: '"Courier New", monospace',
+                  fontSize: '10px',
+                  fontWeight: 700,
+                  color: colors.stampRed,
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: 0,
+                }}
               >
-                <Trash2 className="w-3 h-3" />
-                Delete
+                <Trash2 style={{ width: 12, height: 12 }} />
+                DELETE
               </button>
             )}
           </div>
@@ -212,9 +363,7 @@ export function ActivityCommentThread({
 
         {/* Replies */}
         {comment.replies && comment.replies.length > 0 && (
-          <div className="mt-2">
-            {comment.replies.map(reply => renderComment(reply, true))}
-          </div>
+          <div>{comment.replies.map((reply) => renderComment(reply, true))}</div>
         )}
 
         {/* Reply input */}
@@ -222,9 +371,9 @@ export function ActivityCommentThread({
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
-            className="ml-8 mt-2"
+            style={{ marginLeft: '40px', marginTop: '10px' }}
           >
-            <div className="flex gap-2">
+            <div style={{ display: 'flex', gap: '8px' }}>
               <input
                 type="text"
                 value={newComment}
@@ -234,22 +383,51 @@ export function ActivityCommentThread({
                   if (e.key === 'Escape') setReplyTo(null);
                 }}
                 placeholder="Write a reply..."
-                className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                style={{
+                  flex: 1,
+                  padding: '10px 12px',
+                  fontFamily: 'Georgia, serif',
+                  fontSize: '13px',
+                  color: colors.espresso,
+                  background: colors.warmWhite,
+                  border: `1px solid ${colors.golden}`,
+                  borderRadius: '6px',
+                  outline: 'none',
+                }}
                 autoFocus
               />
-              <button
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={handleSubmit}
                 disabled={!newComment.trim() || isSending}
-                className="px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-300 transition-colors"
+                style={{
+                  padding: '10px 14px',
+                  background: `linear-gradient(135deg, ${colors.terracotta} 0%, ${colors.terracottaLight} 100%)`,
+                  border: 'none',
+                  borderRadius: '6px',
+                  color: colors.cream,
+                  cursor: !newComment.trim() || isSending ? 'not-allowed' : 'pointer',
+                  opacity: !newComment.trim() || isSending ? 0.5 : 1,
+                }}
               >
-                <Send className="w-4 h-4" />
-              </button>
-              <button
+                <Send style={{ width: 14, height: 14 }} />
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={() => setReplyTo(null)}
-                className="px-3 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                style={{
+                  padding: '10px 14px',
+                  background: colors.parchment,
+                  border: `1px solid ${colors.golden}`,
+                  borderRadius: '6px',
+                  color: colors.mediumBrown,
+                  cursor: 'pointer',
+                }}
               >
-                <X className="w-4 h-4" />
-              </button>
+                <X style={{ width: 14, height: 14 }} />
+              </motion.button>
             </div>
           </motion.div>
         )}
@@ -262,74 +440,223 @@ export function ActivityCommentThread({
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 50,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '16px',
+        background: 'rgba(44, 24, 16, 0.6)',
+        backdropFilter: 'blur(4px)',
+      }}
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col"
+        style={{
+          background: `linear-gradient(180deg, ${colors.cream} 0%, ${colors.warmWhite} 100%)`,
+          borderRadius: '16px',
+          border: `2px solid ${colors.golden}`,
+          boxShadow: `0 25px 50px -12px rgba(44, 24, 16, 0.4)`,
+          width: '100%',
+          maxWidth: '600px',
+          maxHeight: '80vh',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+        }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
-          <div className="flex items-center gap-2">
-            <MessageCircle className="w-5 h-5 text-blue-600" />
-            <h3 className="text-lg font-semibold text-gray-900">
-              Comments: {targetId}
-            </h3>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '16px 20px',
+            borderBottom: `1px solid ${colors.golden}`,
+            background: `${colors.parchment}40`,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div
+              style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '6px',
+                background: `${colors.terracotta}15`,
+                border: `1px solid ${colors.terracotta}`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <MessageCircle style={{ width: 16, height: 16, color: colors.terracotta }} />
+            </div>
+            <div>
+              <h3
+                style={{
+                  fontFamily: 'Georgia, serif',
+                  fontSize: '16px',
+                  fontWeight: 700,
+                  color: colors.espresso,
+                  margin: 0,
+                }}
+              >
+                Correspondence Thread
+              </h3>
+              <p
+                style={{
+                  fontFamily: '"Courier New", monospace',
+                  fontSize: '10px',
+                  color: colors.lightBrown,
+                  margin: 0,
+                }}
+              >
+                {targetId}
+              </p>
+            </div>
           </div>
-          <button
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '50%',
+              background: `${colors.terracotta}15`,
+              border: `1px solid ${colors.terracotta}`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              color: colors.terracotta,
+            }}
           >
-            <X className="w-5 h-5 text-gray-500" />
-          </button>
+            <X style={{ width: 16, height: 16 }} />
+          </motion.button>
         </div>
 
         {/* Comments list */}
-        <div className="flex-1 overflow-y-auto p-4">
+        <div style={{ flex: 1, overflowY: 'auto', padding: '12px 20px' }}>
           {isLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full" />
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '40px',
+              }}
+            >
+              <Loader2
+                style={{
+                  width: 32,
+                  height: 32,
+                  color: colors.golden,
+                  animation: 'spin 1s linear infinite',
+                }}
+              />
             </div>
           ) : comments.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <MessageCircle className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-              <p className="text-sm">No comments yet</p>
-              <p className="text-xs mt-1">Be the first to comment!</p>
+            <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+              <MessageCircle
+                style={{
+                  width: 48,
+                  height: 48,
+                  color: colors.parchment,
+                  margin: '0 auto 12px',
+                }}
+              />
+              <p
+                style={{
+                  fontFamily: 'Georgia, serif',
+                  fontSize: '14px',
+                  fontStyle: 'italic',
+                  color: colors.lightBrown,
+                  margin: 0,
+                }}
+              >
+                No correspondence yet
+              </p>
+              <p
+                style={{
+                  fontFamily: '"Courier New", monospace',
+                  fontSize: '11px',
+                  color: colors.lightBrown,
+                  marginTop: '4px',
+                }}
+              >
+                Be the first to leave a note!
+              </p>
             </div>
           ) : (
-            <AnimatePresence>
-              {comments.map(comment => renderComment(comment))}
-            </AnimatePresence>
+            <AnimatePresence>{comments.map((comment) => renderComment(comment))}</AnimatePresence>
           )}
         </div>
 
         {/* New comment input */}
         {!replyTo && (
-          <div className="p-4 border-t border-gray-200">
-            <div className="flex gap-2">
+          <div
+            style={{
+              padding: '16px 20px',
+              borderTop: `1px solid ${colors.golden}`,
+              background: `${colors.parchment}30`,
+            }}
+          >
+            <div style={{ display: 'flex', gap: '10px' }}>
               <input
                 type="text"
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
-                placeholder="Add a comment..."
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Add a note..."
+                style={{
+                  flex: 1,
+                  padding: '12px 14px',
+                  fontFamily: 'Georgia, serif',
+                  fontSize: '14px',
+                  color: colors.espresso,
+                  background: colors.warmWhite,
+                  border: `1px solid ${colors.golden}`,
+                  borderRadius: '8px',
+                  outline: 'none',
+                }}
               />
-              <button
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={handleSubmit}
                 disabled={!newComment.trim() || isSending}
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                style={{
+                  padding: '12px 20px',
+                  background:
+                    !newComment.trim() || isSending
+                      ? colors.lightBrown
+                      : `linear-gradient(135deg, ${colors.terracotta} 0%, ${colors.terracottaLight} 100%)`,
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontFamily: '"Courier New", monospace',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  letterSpacing: '0.5px',
+                  color: colors.cream,
+                  cursor: !newComment.trim() || isSending ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
               >
                 {isSending ? (
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <Loader2 style={{ width: 14, height: 14, animation: 'spin 1s linear infinite' }} />
                 ) : (
                   <>
-                    <Send className="w-5 h-5" />
-                    <span>Send</span>
+                    <Send style={{ width: 14, height: 14 }} />
+                    SEND
                   </>
                 )}
-              </button>
+              </motion.button>
             </div>
           </div>
         )}
