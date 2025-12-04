@@ -1,0 +1,589 @@
+/**
+ * TripService - Trip in Progress Mode
+ *
+ * Phase 2: Real-time trip tracking and management
+ *
+ * Responsibilities:
+ * - Start/pause/complete trips
+ * - Track current day and location
+ * - Manage check-ins
+ * - Update trip statistics
+ * - Get today's activities from itinerary
+ */
+
+const pool = require('../../db/connection');
+
+class TripService {
+  /**
+   * Start a new trip (or resume existing)
+   */
+  async startTrip(routeId, userId, itineraryId = null) {
+    // Check for existing active trip
+    const existingQuery = `
+      SELECT id, status, current_day, started_at
+      FROM active_trips
+      WHERE route_id = $1 AND user_id = $2
+    `;
+
+    try {
+      const existing = await pool.query(existingQuery, [routeId, userId]);
+
+      if (existing.rows.length > 0) {
+        const trip = existing.rows[0];
+
+        // If paused, resume it
+        if (trip.status === 'paused') {
+          const resumeQuery = `
+            UPDATE active_trips
+            SET status = 'active', paused_at = NULL, updated_at = NOW()
+            WHERE id = $1
+            RETURNING *
+          `;
+          const result = await pool.query(resumeQuery, [trip.id]);
+          console.log(`[TripService] ▶️ Resumed trip ${trip.id}`);
+          return { trip: result.rows[0], isNew: false, resumed: true };
+        }
+
+        // If already active, return it
+        if (trip.status === 'active') {
+          return { trip, isNew: false, resumed: false };
+        }
+
+        // If completed/cancelled, create new
+      }
+
+      // Get total checkins count from itinerary
+      let totalCheckins = 0;
+      if (itineraryId) {
+        const itineraryQuery = `
+          SELECT content FROM itineraries WHERE id = $1
+        `;
+        const itResult = await pool.query(itineraryQuery, [itineraryId]);
+        if (itResult.rows.length > 0 && itResult.rows[0].content) {
+          const content = typeof itResult.rows[0].content === 'string'
+            ? JSON.parse(itResult.rows[0].content)
+            : itResult.rows[0].content;
+
+          // Count all activities
+          if (content.days) {
+            totalCheckins = content.days.reduce((sum, day) => {
+              return sum + (day.activities?.length || 0) + (day.meals?.length || 0);
+            }, 0);
+          }
+        }
+      }
+
+      // Create new trip
+      const insertQuery = `
+        INSERT INTO active_trips (
+          route_id,
+          user_id,
+          itinerary_id,
+          status,
+          current_day,
+          current_city_index,
+          stats,
+          started_at
+        ) VALUES ($1, $2, $3, 'active', 1, 0, $4, NOW())
+        ON CONFLICT (route_id, user_id)
+        DO UPDATE SET
+          status = 'active',
+          current_day = 1,
+          current_city_index = 0,
+          stats = $4,
+          started_at = NOW(),
+          completed_at = NULL,
+          paused_at = NULL,
+          updated_at = NOW()
+        RETURNING *
+      `;
+
+      const stats = JSON.stringify({
+        distance_traveled: 0,
+        photos_captured: 0,
+        checkins_complete: 0,
+        total_checkins: totalCheckins
+      });
+
+      const result = await pool.query(insertQuery, [routeId, userId, itineraryId, stats]);
+      console.log(`[TripService] 🚀 Started new trip for route ${routeId}`);
+
+      return { trip: result.rows[0], isNew: true, resumed: false };
+
+    } catch (error) {
+      console.error('[TripService] ❌ Error starting trip:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get active trip for a user
+   */
+  async getActiveTrip(userId) {
+    const query = `
+      SELECT
+        at.*,
+        r.origin_city,
+        r.destination_city,
+        r.route_data,
+        i.content as itinerary_content
+      FROM active_trips at
+      LEFT JOIN routes r ON at.route_id = r.id
+      LEFT JOIN itineraries i ON at.itinerary_id = i.id
+      WHERE at.user_id = $1 AND at.status = 'active'
+      ORDER BY at.started_at DESC
+      LIMIT 1
+    `;
+
+    try {
+      const result = await pool.query(query, [userId]);
+      return result.rows[0] || null;
+
+    } catch (error) {
+      console.error('[TripService] ❌ Error fetching active trip:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get trip by ID
+   */
+  async getTripById(tripId, userId = null) {
+    let query = `
+      SELECT
+        at.*,
+        r.origin_city,
+        r.destination_city,
+        r.route_data,
+        i.content as itinerary_content
+      FROM active_trips at
+      LEFT JOIN routes r ON at.route_id = r.id
+      LEFT JOIN itineraries i ON at.itinerary_id = i.id
+      WHERE at.id = $1
+    `;
+    const params = [tripId];
+
+    if (userId) {
+      query += ` AND at.user_id = $2`;
+      params.push(userId);
+    }
+
+    try {
+      const result = await pool.query(query, params);
+      return result.rows[0] || null;
+
+    } catch (error) {
+      console.error('[TripService] ❌ Error fetching trip:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get today's activities from itinerary
+   */
+  async getTodayActivities(tripId) {
+    try {
+      const trip = await this.getTripById(tripId);
+      if (!trip) {
+        throw new Error('Trip not found');
+      }
+
+      const currentDay = trip.current_day;
+      let itineraryContent = trip.itinerary_content;
+
+      if (typeof itineraryContent === 'string') {
+        itineraryContent = JSON.parse(itineraryContent);
+      }
+
+      if (!itineraryContent || !itineraryContent.days) {
+        return { activities: [], day: currentDay, city: trip.origin_city };
+      }
+
+      // Get the current day's data (0-indexed)
+      const dayData = itineraryContent.days[currentDay - 1];
+      if (!dayData) {
+        return { activities: [], day: currentDay, city: trip.origin_city };
+      }
+
+      // Combine all activities into timeline
+      const activities = [];
+
+      // Add morning activities
+      if (dayData.activities) {
+        dayData.activities.forEach((activity, index) => {
+          activities.push({
+            id: `activity-${currentDay}-${index}`,
+            time: activity.time || `${9 + index * 2}:00`,
+            endTime: activity.endTime,
+            title: activity.name || activity.title,
+            description: activity.description || activity.why,
+            type: 'activity',
+            location: activity.location || activity.address,
+            coordinates: activity.coordinates,
+            photo: activity.image,
+            rating: activity.rating,
+            phone: activity.phone,
+            duration: activity.duration,
+            status: 'upcoming' // Will be determined client-side based on time
+          });
+        });
+      }
+
+      // Add meals
+      if (dayData.meals) {
+        ['breakfast', 'lunch', 'dinner'].forEach(mealType => {
+          const meal = dayData.meals[mealType] || dayData.meals.find(m => m.type === mealType);
+          if (meal) {
+            const timeMap = { breakfast: '08:00', lunch: '12:30', dinner: '19:30' };
+            activities.push({
+              id: `meal-${currentDay}-${mealType}`,
+              time: meal.time || timeMap[mealType],
+              title: meal.name || meal.restaurant,
+              description: meal.description || meal.cuisine,
+              type: 'restaurant',
+              location: meal.location || meal.address,
+              coordinates: meal.coordinates,
+              photo: meal.image,
+              rating: meal.rating,
+              phone: meal.phone,
+              status: 'upcoming'
+            });
+          }
+        });
+      }
+
+      // Sort by time
+      activities.sort((a, b) => {
+        const timeA = a.time.split(':').map(Number);
+        const timeB = b.time.split(':').map(Number);
+        return (timeA[0] * 60 + timeA[1]) - (timeB[0] * 60 + timeB[1]);
+      });
+
+      return {
+        activities,
+        day: currentDay,
+        totalDays: itineraryContent.days.length,
+        city: dayData.city || trip.origin_city,
+        date: dayData.date
+      };
+
+    } catch (error) {
+      console.error('[TripService] ❌ Error fetching today activities:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update trip location
+   */
+  async updateLocation(tripId, userId, locationData) {
+    const { latitude, longitude, accuracy, altitude, speed, heading, city, country, address } = locationData;
+
+    // Update last_location on trip
+    const updateQuery = `
+      UPDATE active_trips
+      SET
+        last_location = $2,
+        last_location_update = NOW(),
+        updated_at = NOW()
+      WHERE id = $1 AND user_id = $3
+      RETURNING id
+    `;
+
+    const locationJson = JSON.stringify({
+      lat: latitude,
+      lng: longitude,
+      accuracy,
+      timestamp: new Date().toISOString(),
+      city,
+      country,
+      address
+    });
+
+    // Also insert into location history
+    const historyQuery = `
+      INSERT INTO trip_location_updates (
+        trip_id, user_id, latitude, longitude, accuracy,
+        altitude, speed, heading, city, country, address
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      RETURNING id
+    `;
+
+    try {
+      await Promise.all([
+        pool.query(updateQuery, [tripId, locationJson, userId]),
+        pool.query(historyQuery, [
+          tripId, userId, latitude, longitude, accuracy,
+          altitude, speed, heading, city, country, address
+        ])
+      ]);
+
+      console.log(`[TripService] 📍 Updated location for trip ${tripId}`);
+      return true;
+
+    } catch (error) {
+      console.error('[TripService] ❌ Error updating location:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create a check-in
+   */
+  async createCheckin(tripId, userId, checkinData) {
+    const {
+      activityId,
+      activityName,
+      activityType,
+      dayNumber,
+      locationName,
+      coordinates,
+      photoUrls,
+      note,
+      rating,
+      mood,
+      weather,
+      status = 'completed'
+    } = checkinData;
+
+    const query = `
+      INSERT INTO trip_checkins (
+        trip_id, user_id, activity_id, activity_name, activity_type,
+        day_number, location_name, coordinates, photo_urls, note,
+        rating, mood, weather, status
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+      RETURNING *
+    `;
+
+    try {
+      const result = await pool.query(query, [
+        tripId, userId, activityId, activityName, activityType,
+        dayNumber, locationName,
+        coordinates ? JSON.stringify(coordinates) : null,
+        photoUrls || [],
+        note, rating, mood, weather, status
+      ]);
+
+      console.log(`[TripService] ✅ Created check-in for ${activityName}`);
+      return result.rows[0];
+
+    } catch (error) {
+      console.error('[TripService] ❌ Error creating check-in:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get check-ins for a trip
+   */
+  async getCheckins(tripId, options = {}) {
+    const { dayNumber = null, limit = 50 } = options;
+
+    let query = `
+      SELECT *
+      FROM trip_checkins
+      WHERE trip_id = $1
+    `;
+    const params = [tripId];
+    let paramCounter = 2;
+
+    if (dayNumber) {
+      query += ` AND day_number = $${paramCounter}`;
+      params.push(dayNumber);
+      paramCounter++;
+    }
+
+    query += ` ORDER BY checked_in_at DESC LIMIT $${paramCounter}`;
+    params.push(limit);
+
+    try {
+      const result = await pool.query(query, params);
+
+      // Parse coordinates JSON
+      return result.rows.map(row => ({
+        ...row,
+        coordinates: row.coordinates ? JSON.parse(row.coordinates) : null
+      }));
+
+    } catch (error) {
+      console.error('[TripService] ❌ Error fetching check-ins:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Advance to next day
+   */
+  async advanceDay(tripId, userId) {
+    const query = `
+      UPDATE active_trips
+      SET current_day = current_day + 1, updated_at = NOW()
+      WHERE id = $1 AND user_id = $2 AND status = 'active'
+      RETURNING current_day
+    `;
+
+    try {
+      const result = await pool.query(query, [tripId, userId]);
+      if (result.rows.length > 0) {
+        console.log(`[TripService] ➡️ Advanced to day ${result.rows[0].current_day}`);
+        return result.rows[0].current_day;
+      }
+      return null;
+
+    } catch (error) {
+      console.error('[TripService] ❌ Error advancing day:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update trip stats (distance traveled)
+   */
+  async updateStats(tripId, statsUpdate) {
+    const query = `
+      UPDATE active_trips
+      SET stats = stats || $2, updated_at = NOW()
+      WHERE id = $1
+      RETURNING stats
+    `;
+
+    try {
+      const result = await pool.query(query, [tripId, JSON.stringify(statsUpdate)]);
+      return result.rows[0]?.stats;
+
+    } catch (error) {
+      console.error('[TripService] ❌ Error updating stats:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Pause trip
+   */
+  async pauseTrip(tripId, userId) {
+    const query = `
+      UPDATE active_trips
+      SET status = 'paused', paused_at = NOW(), updated_at = NOW()
+      WHERE id = $1 AND user_id = $2 AND status = 'active'
+      RETURNING *
+    `;
+
+    try {
+      const result = await pool.query(query, [tripId, userId]);
+      if (result.rows.length > 0) {
+        console.log(`[TripService] ⏸️ Paused trip ${tripId}`);
+        return result.rows[0];
+      }
+      return null;
+
+    } catch (error) {
+      console.error('[TripService] ❌ Error pausing trip:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Complete trip
+   */
+  async completeTrip(tripId, userId) {
+    const query = `
+      UPDATE active_trips
+      SET status = 'completed', completed_at = NOW(), updated_at = NOW()
+      WHERE id = $1 AND user_id = $2
+      RETURNING *
+    `;
+
+    try {
+      const result = await pool.query(query, [tripId, userId]);
+      if (result.rows.length > 0) {
+        console.log(`[TripService] 🏁 Completed trip ${tripId}`);
+        return result.rows[0];
+      }
+      return null;
+
+    } catch (error) {
+      console.error('[TripService] ❌ Error completing trip:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get trip progress data for dashboard
+   */
+  async getTripProgress(tripId) {
+    try {
+      const trip = await this.getTripById(tripId);
+      if (!trip) {
+        throw new Error('Trip not found');
+      }
+
+      // Get check-ins
+      const checkins = await this.getCheckins(tripId);
+
+      // Parse itinerary for cities
+      let itineraryContent = trip.itinerary_content;
+      if (typeof itineraryContent === 'string') {
+        itineraryContent = JSON.parse(itineraryContent);
+      }
+
+      const totalDays = itineraryContent?.days?.length || 1;
+      const cities = itineraryContent?.days?.map(d => ({
+        name: d.city,
+        country: d.country,
+        dates: d.date
+      })).filter((c, i, arr) => arr.findIndex(x => x.name === c.name) === i) || [];
+
+      // Parse stats
+      const stats = typeof trip.stats === 'string' ? JSON.parse(trip.stats) : trip.stats;
+
+      // Get photos from check-ins
+      const photos = checkins
+        .filter(c => c.photo_urls && c.photo_urls.length > 0)
+        .flatMap(c => c.photo_urls.map(url => ({
+          url,
+          city: c.location_name,
+          caption: c.note
+        })));
+
+      return {
+        tripId: trip.id,
+        currentDay: trip.current_day,
+        totalDays,
+        currentCityIndex: trip.current_city_index,
+        cities,
+        stats: {
+          distanceTraveled: stats.distance_traveled || 0,
+          photosCaptures: stats.photos_captured || 0,
+          checkinsComplete: stats.checkins_complete || 0,
+          totalCheckins: stats.total_checkins || 0
+        },
+        photos
+      };
+
+    } catch (error) {
+      console.error('[TripService] ❌ Error fetching trip progress:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Calculate distance between two coordinates (Haversine formula)
+   */
+  calculateDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371; // Earth's radius in km
+    const dLat = this.toRad(lat2 - lat1);
+    const dLon = this.toRad(lon2 - lon1);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(this.toRad(lat1)) * Math.cos(this.toRad(lat2)) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }
+
+  toRad(deg) {
+    return deg * (Math.PI / 180);
+  }
+}
+
+module.exports = TripService;

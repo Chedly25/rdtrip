@@ -12,6 +12,7 @@ import { CommandBar } from './CommandBar';
 import { CityReplacementSheet } from './CityReplacementSheet';
 import { ConstraintChangeSheet } from './ConstraintChangeSheet';
 import { TripActivation } from '../../trip/TripActivation';
+import { LiveTripPanel } from '../../trip/LiveTripPanel';
 import { Loader2, Users, CalendarDays, Command, Clock, Plane } from 'lucide-react';
 import { CollaborationPanel } from '../../collaboration/CollaborationPanel';
 import { CompanionPanel, CompanionTab, ProactiveBubble, MobileCompanionDrawer } from '../../companion/CompanionPanel';
@@ -47,6 +48,7 @@ const SpotlightV2 = () => {
     type: 'duration' | 'budget' | 'travelers' | 'dates';
   }>({ isOpen: false, type: 'duration' });
   const [showTripActivation, setShowTripActivation] = useState(false);
+  const [showLiveTripPanel, setShowLiveTripPanel] = useState(false);
 
   // Companion state
   const {
@@ -892,8 +894,29 @@ const SpotlightV2 = () => {
         onActivate={() => {
           startTrip();
           setShowTripActivation(false);
+          setShowLiveTripPanel(true);
         }}
       />
+
+      {/* Live Trip Panel - Shows during active trip */}
+      <AnimatePresence>
+        {showLiveTripPanel && route?.id && (
+          <motion.div
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="fixed right-0 top-0 h-full w-96 z-50 shadow-2xl"
+          >
+            <LiveTripPanel
+              routeId={route.id}
+              itineraryId={getStoredItineraryId() || undefined}
+              onClose={() => setShowLiveTripPanel(false)}
+              className="h-full"
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Floating Action Buttons - Bottom right corner */}
       <div className="fixed bottom-6 right-6 z-40 hidden md:flex flex-col gap-2">
@@ -921,19 +944,23 @@ const SpotlightV2 = () => {
 
         {/* Trip Active Indicator - Show when trip mode is active */}
         {tripMode.isActive && (
-          <motion.div
+          <motion.button
+            onClick={() => setShowLiveTripPanel(true)}
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl cursor-pointer"
             style={{
               background: 'linear-gradient(135deg, #6B8E7B 0%, #8BA99A 100%)',
               border: '1px solid rgba(107, 142, 123, 0.3)',
               boxShadow: '0 4px 20px rgba(107, 142, 123, 0.3)'
             }}
+            whileHover={{ scale: 1.05, boxShadow: '0 6px 24px rgba(107, 142, 123, 0.4)' }}
+            whileTap={{ scale: 0.98 }}
+            title="Open trip panel"
           >
             <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
             <span className="text-sm font-medium text-white">Day {tripMode.currentDay}</span>
-          </motion.div>
+          </motion.button>
         )}
 
         {/* Adapt Trip Button */}
