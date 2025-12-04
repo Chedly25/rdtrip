@@ -8194,6 +8194,9 @@ app.use('/api/trip', tripRoutes);
 const nearbyRoutes = require('./server/routes/nearby');
 app.use('/api/nearby', nearbyRoutes);
 
+const weatherRoutes = require('./server/routes/weather');
+app.use('/api/weather', weatherRoutes);
+
 // =====================================================
 // CATCH-ALL ROUTE - Serve React app for client-side routing
 // =====================================================
