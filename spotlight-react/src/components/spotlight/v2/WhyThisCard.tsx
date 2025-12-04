@@ -1,5 +1,5 @@
 /**
- * Why This Card
+ * Why This Card - Enhanced Personalization Visibility
  *
  * A compact, expandable card that shows WHY a specific activity or
  * restaurant was selected based on the user's personalization preferences.
@@ -7,6 +7,12 @@
  *
  * Design: Subtle glass-morphism with warm accents, appearing as an
  * overlay or inline element within activity/restaurant cards.
+ *
+ * Enhanced Features (Phase 3):
+ * - Richer personalizationMatch.reasons from backend
+ * - Category badges for each reason
+ * - "Find alternatives" action button
+ * - Animated reason reveals with staggered timing
  */
 
 import { useState } from 'react';
@@ -27,9 +33,29 @@ import {
   Camera,
   X,
   Check,
+  RefreshCw,
+  Accessibility,
+  Wallet,
+  Gauge,
+  Star,
+  ChevronRight,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { MatchReason } from '../../../stores/spotlightStoreV2';
+
+// Enhanced reason type from backend (Phase 3)
+export interface EnhancedMatchReason {
+  category: 'occasion' | 'dietary' | 'accessibility' | 'style' | 'interests' | 'pace' | 'budget';
+  text: string;
+  icon?: string;
+  confidence?: number; // 0-1
+}
+
+// Full personalization match data from backend
+export interface PersonalizationMatch {
+  score: number; // Overall match score (0-100)
+  reasons: EnhancedMatchReason[];
+}
 
 interface WhyThisCardProps {
   matchReasons?: MatchReason[];
@@ -37,7 +63,21 @@ interface WhyThisCardProps {
   placeName: string;
   variant?: 'badge' | 'inline' | 'floating';
   className?: string;
+  // Enhanced props for Phase 3
+  personalizationMatch?: PersonalizationMatch;
+  onFindAlternatives?: () => void;
 }
+
+// Category config for enhanced reasons (Phase 3)
+const CATEGORY_CONFIG: Record<string, { icon: LucideIcon; color: string; bg: string; label: string }> = {
+  occasion: { icon: Heart, color: '#C45830', bg: '#FEF3EE', label: 'Occasion' },
+  dietary: { icon: Leaf, color: '#4A7C59', bg: '#E8F4E8', label: 'Dietary' },
+  accessibility: { icon: Accessibility, color: '#4A90A4', bg: '#E8F4F7', label: 'Accessibility' },
+  style: { icon: Sparkles, color: '#8B6914', bg: '#FEF8E8', label: 'Style' },
+  interests: { icon: Star, color: '#D4A853', bg: '#FEF8E8', label: 'Interest' },
+  pace: { icon: Gauge, color: '#8B7355', bg: '#F5F0E8', label: 'Pace' },
+  budget: { icon: Wallet, color: '#4A7C59', bg: '#E8F4E8', label: 'Budget' },
+};
 
 // Map factor types to icons and colors
 const FACTOR_CONFIG: Record<string, { icon: LucideIcon; color: string; label: string }> = {
@@ -86,18 +126,24 @@ export function WhyThisCard({
   placeName,
   variant = 'badge',
   className = '',
+  personalizationMatch,
+  onFindAlternatives,
 }: WhyThisCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
+  // Use enhanced data if available, otherwise fall back to legacy
+  const effectiveScore = personalizationMatch?.score ?? matchScore;
+  const hasEnhancedReasons = personalizationMatch?.reasons && personalizationMatch.reasons.length > 0;
+
   // Don't render if no match reasons
-  if (!matchReasons || matchReasons.length === 0) {
+  if (!matchReasons?.length && !hasEnhancedReasons) {
     return null;
   }
 
   // Calculate overall sentiment based on score
-  const scoreLabel = matchScore && matchScore >= 80 ? 'Excellent match' :
-                     matchScore && matchScore >= 60 ? 'Great match' :
-                     matchScore && matchScore >= 40 ? 'Good match' : 'Matches your style';
+  const scoreLabel = effectiveScore && effectiveScore >= 80 ? 'Excellent match' :
+                     effectiveScore && effectiveScore >= 60 ? 'Great match' :
+                     effectiveScore && effectiveScore >= 40 ? 'Good match' : 'Matches your style';
 
   if (variant === 'badge') {
     return (
@@ -116,7 +162,7 @@ export function WhyThisCard({
         >
           <Sparkles className="h-3 w-3" style={{ color: '#C45830' }} />
           <span className="text-[10px] font-semibold" style={{ color: '#C45830' }}>
-            {matchScore ? `${matchScore}% match` : 'Why this?'}
+            {effectiveScore ? `${effectiveScore}% match` : 'Why this?'}
           </span>
           <motion.div
             animate={{ rotate: isExpanded ? 180 : 0 }}
@@ -170,7 +216,7 @@ export function WhyThisCard({
               </div>
 
               {/* Match score indicator */}
-              {matchScore && (
+              {effectiveScore && (
                 <div className="px-3 pt-3">
                   <div className="flex items-center justify-between text-xs">
                     <span style={{ color: '#8B7355' }}>{scoreLabel}</span>
@@ -178,19 +224,19 @@ export function WhyThisCard({
                       className="font-semibold"
                       style={{ color: '#C45830' }}
                     >
-                      {matchScore}%
+                      {effectiveScore}%
                     </span>
                   </div>
                   <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-black/5">
                     <motion.div
                       initial={{ width: 0 }}
-                      animate={{ width: `${matchScore}%` }}
+                      animate={{ width: `${effectiveScore}%` }}
                       transition={{ duration: 0.5, delay: 0.1, ease: [0.15, 0.5, 0.5, 1] }}
                       className="h-full rounded-full"
                       style={{
-                        background: matchScore >= 80
+                        background: effectiveScore >= 80
                           ? 'linear-gradient(90deg, #C45830 0%, #D4A853 100%)'
-                          : matchScore >= 60
+                          : effectiveScore >= 60
                             ? 'linear-gradient(90deg, #D4A853 0%, #8B6914 100%)'
                             : '#8B7355',
                       }}
@@ -199,49 +245,94 @@ export function WhyThisCard({
                 </div>
               )}
 
-              {/* Match reasons */}
+              {/* Match reasons - Enhanced or Legacy */}
               <div className="space-y-2 p-3">
-                {matchReasons.slice(0, 4).map((reason, idx) => {
-                  const config = getFactorConfig(reason.factor);
-                  const Icon = config.icon;
+                {/* Enhanced reasons with category badges (Phase 3) */}
+                {hasEnhancedReasons ? (
+                  personalizationMatch!.reasons.slice(0, 4).map((reason, idx) => {
+                    const catConfig = CATEGORY_CONFIG[reason.category] || CATEGORY_CONFIG['style'];
+                    const Icon = catConfig.icon;
 
-                  return (
-                    <motion.div
-                      key={idx}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.1 + idx * 0.05 }}
-                      className="flex items-start gap-2"
-                    >
-                      <div
-                        className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full"
-                        style={{ background: `${config.color}15` }}
+                    return (
+                      <motion.div
+                        key={idx}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.1 + idx * 0.05 }}
+                        className="flex items-start gap-2"
                       >
-                        <Icon className="h-2.5 w-2.5" style={{ color: config.color }} />
-                      </div>
-                      <p
-                        className="text-xs leading-relaxed"
-                        style={{
-                          color: '#5C4D3D',
-                          fontFamily: "'Satoshi', sans-serif",
-                        }}
-                      >
-                        {reason.explanation}
-                      </p>
-                    </motion.div>
-                  );
-                })}
+                        <div className="flex flex-col items-center gap-1">
+                          <div
+                            className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full"
+                            style={{ background: catConfig.bg }}
+                          >
+                            <Icon className="h-2.5 w-2.5" style={{ color: catConfig.color }} />
+                          </div>
+                          <span
+                            className="text-[8px] font-medium uppercase tracking-wider"
+                            style={{ color: catConfig.color }}
+                          >
+                            {catConfig.label}
+                          </span>
+                        </div>
+                        <p
+                          className="flex-1 text-xs leading-relaxed"
+                          style={{
+                            color: '#5C4D3D',
+                            fontFamily: "'Satoshi', sans-serif",
+                          }}
+                        >
+                          {reason.text}
+                        </p>
+                      </motion.div>
+                    );
+                  })
+                ) : (
+                  /* Legacy reasons */
+                  matchReasons?.slice(0, 4).map((reason, idx) => {
+                    const config = getFactorConfig(reason.factor);
+                    const Icon = config.icon;
 
-                {matchReasons.length > 4 && (
+                    return (
+                      <motion.div
+                        key={idx}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.1 + idx * 0.05 }}
+                        className="flex items-start gap-2"
+                      >
+                        <div
+                          className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full"
+                          style={{ background: `${config.color}15` }}
+                        >
+                          <Icon className="h-2.5 w-2.5" style={{ color: config.color }} />
+                        </div>
+                        <p
+                          className="text-xs leading-relaxed"
+                          style={{
+                            color: '#5C4D3D',
+                            fontFamily: "'Satoshi', sans-serif",
+                          }}
+                        >
+                          {reason.explanation}
+                        </p>
+                      </motion.div>
+                    );
+                  })
+                )}
+
+                {/* More reasons indicator */}
+                {((hasEnhancedReasons && personalizationMatch!.reasons.length > 4) ||
+                  (!hasEnhancedReasons && matchReasons && matchReasons.length > 4)) && (
                   <p className="text-[10px] text-center" style={{ color: '#8B7355' }}>
-                    +{matchReasons.length - 4} more reasons
+                    +{(hasEnhancedReasons ? personalizationMatch!.reasons.length : matchReasons!.length) - 4} more reasons
                   </p>
                 )}
               </div>
 
-              {/* Footer */}
+              {/* Footer with Find Alternatives button */}
               <div
-                className="px-3 py-2 text-center"
+                className="flex items-center justify-between px-3 py-2"
                 style={{
                   background: '#FAF7F2',
                   borderTop: '1px solid rgba(139, 115, 85, 0.1)',
@@ -250,6 +341,21 @@ export function WhyThisCard({
                 <p className="text-[10px]" style={{ color: '#8B7355' }}>
                   Selected based on your preferences
                 </p>
+                {onFindAlternatives && (
+                  <motion.button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onFindAlternatives();
+                    }}
+                    className="flex items-center gap-1 text-[10px] font-medium"
+                    style={{ color: '#C45830' }}
+                    whileHover={{ x: 2 }}
+                  >
+                    <RefreshCw className="h-2.5 w-2.5" />
+                    Find alternatives
+                    <ChevronRight className="h-2.5 w-2.5" />
+                  </motion.button>
+                )}
               </div>
             </motion.div>
           )}
@@ -281,7 +387,7 @@ export function WhyThisCard({
               Why this pick
             </span>
           </div>
-          {matchScore && (
+          {effectiveScore && (
             <span
               className="rounded-full px-2 py-0.5 text-[10px] font-semibold"
               style={{
@@ -289,35 +395,76 @@ export function WhyThisCard({
                 color: '#C45830',
               }}
             >
-              {matchScore}% match
+              {effectiveScore}% match
             </span>
           )}
         </div>
 
-        {/* Reasons list */}
+        {/* Reasons list - Enhanced or Legacy */}
         <div className="space-y-1.5">
-          {matchReasons.slice(0, 3).map((reason, idx) => {
-            const config = getFactorConfig(reason.factor);
-            const Icon = config.icon;
+          {hasEnhancedReasons ? (
+            personalizationMatch!.reasons.slice(0, 3).map((reason, idx) => {
+              const catConfig = CATEGORY_CONFIG[reason.category] || CATEGORY_CONFIG['style'];
+              const Icon = catConfig.icon;
 
-            return (
-              <div key={idx} className="flex items-center gap-2">
-                <Icon className="h-3 w-3 flex-shrink-0" style={{ color: config.color }} />
-                <span
-                  className="text-[11px] leading-tight"
-                  style={{ color: '#5C4D3D' }}
-                >
-                  {reason.explanation}
-                </span>
-              </div>
-            );
-          })}
+              return (
+                <div key={idx} className="flex items-center gap-2">
+                  <div
+                    className="flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full"
+                    style={{ background: catConfig.bg }}
+                  >
+                    <Icon className="h-2.5 w-2.5" style={{ color: catConfig.color }} />
+                  </div>
+                  <span
+                    className="text-[11px] leading-tight"
+                    style={{ color: '#5C4D3D' }}
+                  >
+                    {reason.text}
+                  </span>
+                </div>
+              );
+            })
+          ) : (
+            matchReasons?.slice(0, 3).map((reason, idx) => {
+              const config = getFactorConfig(reason.factor);
+              const Icon = config.icon;
+
+              return (
+                <div key={idx} className="flex items-center gap-2">
+                  <Icon className="h-3 w-3 flex-shrink-0" style={{ color: config.color }} />
+                  <span
+                    className="text-[11px] leading-tight"
+                    style={{ color: '#5C4D3D' }}
+                  >
+                    {reason.explanation}
+                  </span>
+                </div>
+              );
+            })
+          )}
         </div>
+
+        {/* Find alternatives link for inline variant */}
+        {onFindAlternatives && (
+          <motion.button
+            onClick={onFindAlternatives}
+            className="mt-2 flex items-center gap-1 text-[10px] font-medium"
+            style={{ color: '#C45830' }}
+            whileHover={{ x: 2 }}
+          >
+            Not quite right?
+            <ChevronRight className="h-2.5 w-2.5" />
+          </motion.button>
+        )}
       </motion.div>
     );
   }
 
   // Floating variant - absolute positioned overlay
+  const floatingReason = hasEnhancedReasons
+    ? personalizationMatch!.reasons[0]?.text
+    : matchReasons?.[0]?.explanation;
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.9 }}
@@ -342,13 +489,13 @@ export function WhyThisCard({
             className="truncate text-[10px] font-medium"
             style={{ color: '#C45830' }}
           >
-            {matchScore ? `${matchScore}% match` : 'Matches your style'}
+            {effectiveScore ? `${effectiveScore}% match` : 'Matches your style'}
           </p>
           <p
             className="truncate text-[10px]"
             style={{ color: '#8B7355' }}
           >
-            {matchReasons[0]?.explanation || 'Selected for you'}
+            {floatingReason || 'Selected for you'}
           </p>
         </div>
       </div>
