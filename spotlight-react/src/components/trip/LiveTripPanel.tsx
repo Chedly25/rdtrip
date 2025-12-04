@@ -22,13 +22,17 @@ import {
   AlertCircle,
   ChevronRight,
   X,
+  Sparkles,
 } from 'lucide-react';
 import { TodayView, type TimeSlot } from './TodayView';
 import { TripProgress } from './TripProgress';
 import { CheckinModal, type CheckinData } from './CheckinModal';
 import { TripActivation } from './TripActivation';
+import { QuickActions } from './QuickActions';
+import { NearbySheet } from './NearbySheet';
 import { useTrip } from '../../hooks/useTrip';
 import { useGPS } from '../../hooks/useGPS';
+import { fetchNearbyPlaces, navigateToPlace, type NearbyPlace } from '../../services/nearby';
 
 // Wanderlust Editorial Colors
 const colors = {
@@ -93,6 +97,11 @@ export function LiveTripPanel({
   const [showActivation, setShowActivation] = useState(false);
   const [showCheckin, setShowCheckin] = useState(false);
   const [checkinActivity, setCheckinActivity] = useState<TimeSlot | null>(null);
+  const [showQuickActions, setShowQuickActions] = useState(false);
+  const [showNearby, setShowNearby] = useState(false);
+  const [nearbyPlaces, setNearbyPlaces] = useState<NearbyPlace[]>([]);
+  const [nearbyLoading, setNearbyLoading] = useState(false);
+  const [currentActivity, setCurrentActivity] = useState<TimeSlot | null>(null);
 
   // Start tracking when trip is active
   useEffect(() => {
@@ -193,6 +202,71 @@ export function LiveTripPanel({
     },
     [checkinActivity, checkin]
   );
+
+  // Find nearby places
+  const handleFindNearby = useCallback(async (category: string) => {
+    if (!gpsLocation) return;
+
+    setNearbyLoading(true);
+    setShowNearby(true);
+
+    try {
+      const result = await fetchNearbyPlaces({
+        latitude: gpsLocation.latitude,
+        longitude: gpsLocation.longitude,
+        category: category === 'all' ? undefined : category,
+        radius: 2000,
+        limit: 15,
+      });
+      setNearbyPlaces(result.places);
+    } catch (error) {
+      console.error('[LiveTripPanel] Failed to fetch nearby places:', error);
+      setNearbyPlaces([]);
+    } finally {
+      setNearbyLoading(false);
+    }
+  }, [gpsLocation]);
+
+  // Navigate to nearby place
+  const handleNearbyNavigate = useCallback((place: { coordinates: { lat: number; lng: number }; name: string; id: string }) => {
+    navigateToPlace({
+      ...place,
+      distance: '',
+      distanceMeters: 0,
+      walkingTime: 0,
+      drivingTime: 0,
+      category: '',
+      rating: null,
+      reviewCount: null,
+      priceLevel: null,
+      isOpen: null,
+      closingTime: null,
+      photo: null,
+      tags: [],
+      address: null,
+      matchReason: null,
+    });
+    setShowNearby(false);
+  }, []);
+
+  // Get context for quick actions
+  const getActivityContext = useCallback((): 'restaurant' | 'hotel' | 'driving' | 'walking' | 'attraction' | 'general' => {
+    if (!currentActivity) return 'general';
+    switch (currentActivity.type) {
+      case 'restaurant': return 'restaurant';
+      case 'hotel': return 'hotel';
+      case 'scenic': return 'attraction';
+      default: return 'general';
+    }
+  }, [currentActivity]);
+
+  // Track current activity from today data
+  useEffect(() => {
+    if (todayData?.activities) {
+      const current = todayData.activities.find(a => a.status === 'current');
+      setCurrentActivity(current || null);
+    }
+  }, [todayData]);
 
   // Show activation screen if no active trip
   if (!loading && !trip) {
@@ -489,22 +563,41 @@ export function LiveTripPanel({
         </AnimatePresence>
       </div>
 
-      {/* GPS indicator */}
-      {gpsLocation && isActive && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="absolute bottom-4 left-4 px-3 py-2 rounded-full flex items-center gap-2"
-          style={{
-            background: `${colors.sage}15`,
-            border: `1px solid ${colors.sage}30`,
-          }}
-        >
-          <MapPin className="w-3.5 h-3.5" style={{ color: colors.sage }} />
-          <span className="text-xs" style={{ color: colors.sage }}>
-            {gpsLocation.city || 'Tracking location...'}
-          </span>
-        </motion.div>
+      {/* Bottom action bar */}
+      {isActive && (
+        <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between">
+          {/* GPS indicator */}
+          {gpsLocation && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="px-3 py-2 rounded-full flex items-center gap-2"
+              style={{
+                background: `${colors.sage}15`,
+                border: `1px solid ${colors.sage}30`,
+              }}
+            >
+              <MapPin className="w-3.5 h-3.5" style={{ color: colors.sage }} />
+              <span className="text-xs" style={{ color: colors.sage }}>
+                {gpsLocation.city || 'Tracking location...'}
+              </span>
+            </motion.div>
+          )}
+
+          {/* Quick Actions FAB */}
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setShowQuickActions(true)}
+            className="w-14 h-14 rounded-full flex items-center justify-center shadow-lg"
+            style={{
+              background: `linear-gradient(135deg, ${colors.golden} 0%, ${colors.goldenLight} 100%)`,
+              boxShadow: `0 6px 20px ${colors.golden}40`,
+            }}
+          >
+            <Sparkles className="w-6 h-6 text-white" />
+          </motion.button>
+        </div>
       )}
 
       {/* Check-in modal */}
@@ -518,6 +611,54 @@ export function LiveTripPanel({
         activityName={checkinActivity?.title || ''}
         activityType={checkinActivity?.type}
         coordinates={checkinActivity?.coordinates}
+      />
+
+      {/* Quick Actions Sheet */}
+      <QuickActions
+        isOpen={showQuickActions}
+        onClose={() => setShowQuickActions(false)}
+        context={getActivityContext()}
+        currentActivity={currentActivity ? {
+          name: currentActivity.title,
+          type: currentActivity.type,
+          phone: currentActivity.phone,
+          coordinates: currentActivity.coordinates,
+        } : undefined}
+        onNavigate={currentActivity?.coordinates ? () => handleNavigate(currentActivity) : undefined}
+        onCall={currentActivity?.phone ? () => handleCall(currentActivity) : undefined}
+        onCheckin={() => {
+          setShowQuickActions(false);
+          if (currentActivity) handleCheckinStart(currentActivity);
+        }}
+        onFindNearby={(category) => {
+          setShowQuickActions(false);
+          handleFindNearby(category);
+        }}
+      />
+
+      {/* Nearby Places Sheet */}
+      <NearbySheet
+        isOpen={showNearby}
+        onClose={() => setShowNearby(false)}
+        places={nearbyPlaces.map(p => ({
+          id: p.id,
+          name: p.name,
+          category: p.category,
+          distance: p.distance,
+          walkingTime: p.walkingTime,
+          drivingTime: p.drivingTime,
+          rating: p.rating ?? undefined,
+          reviewCount: p.reviewCount ?? undefined,
+          priceLevel: p.priceLevel ?? undefined,
+          isOpen: p.isOpen ?? undefined,
+          closingTime: p.closingTime ?? undefined,
+          photo: p.photo ?? undefined,
+          tags: p.tags,
+          coordinates: p.coordinates,
+        }))}
+        onNavigate={handleNearbyNavigate}
+        onCategoryChange={(category) => handleFindNearby(category)}
+        isLoading={nearbyLoading}
       />
     </div>
   );
