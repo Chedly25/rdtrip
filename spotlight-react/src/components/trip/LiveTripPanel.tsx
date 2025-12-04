@@ -30,8 +30,11 @@ import { CheckinModal, type CheckinData } from './CheckinModal';
 import { TripActivation } from './TripActivation';
 import { QuickActions } from './QuickActions';
 import { NearbySheet } from './NearbySheet';
+import { PlanChangeAssistant } from './PlanChangeAssistant';
+import { SmartAlertsContainer, useSmartAlertsMonitor, type SmartAlert, type MonitoredActivity } from './SmartAlerts';
 import { useTrip } from '../../hooks/useTrip';
 import { useGPS } from '../../hooks/useGPS';
+import { useWeather } from '../../hooks/useWeather';
 import { fetchNearbyPlaces, navigateToPlace, type NearbyPlace } from '../../services/nearby';
 
 // Wanderlust Editorial Colors
@@ -102,6 +105,73 @@ export function LiveTripPanel({
   const [nearbyPlaces, setNearbyPlaces] = useState<NearbyPlace[]>([]);
   const [nearbyLoading, setNearbyLoading] = useState(false);
   const [currentActivity, setCurrentActivity] = useState<TimeSlot | null>(null);
+
+  // Weather & Alerts state
+  const [alerts, setAlerts] = useState<SmartAlert[]>([]);
+  const [showPlanChange, setShowPlanChange] = useState(false);
+  const [affectedActivity, setAffectedActivity] = useState<TimeSlot | null>(null);
+
+  // Weather hook - track weather at current location
+  const {
+    current: currentWeather,
+  } = useWeather(
+    gpsLocation?.latitude,
+    gpsLocation?.longitude,
+    {
+      refreshInterval: 10 * 60 * 1000, // 10 minutes
+      enableAlerts: true,
+      onDisruptiveWeather: () => {
+        // Find outdoor activities that might be affected (scenic = outdoor)
+        const outdoorActivities = todayData?.activities?.filter(
+          a => a.type === 'scenic' || a.type === 'activity'
+        );
+        if (outdoorActivities?.length) {
+          setAffectedActivity(outdoorActivities[0]);
+          setShowPlanChange(true);
+        }
+      },
+    }
+  );
+
+  // Convert TimeSlot activities to MonitoredActivity for alerts
+  const monitoredActivities: MonitoredActivity[] = (todayData?.activities || []).map(slot => ({
+    id: slot.id,
+    name: slot.title,
+    type: slot.type === 'restaurant' ? 'restaurant'
+      : slot.type === 'hotel' ? 'hotel'
+      : slot.type === 'scenic' ? 'outdoor'
+      : 'indoor',
+    startTime: new Date(`${new Date().toDateString()} ${slot.time}`),
+    location: {
+      name: slot.location || slot.title,
+      lat: slot.coordinates?.lat || 0,
+      lng: slot.coordinates?.lng || 0,
+    },
+    hasReservation: slot.type === 'restaurant', // Assume restaurants have reservations
+    reservationPhone: slot.phone,
+  }));
+
+  // Smart alerts monitor
+  useSmartAlertsMonitor({
+    weather: currentWeather,
+    activities: monitoredActivities,
+    userLocation: gpsLocation ? { lat: gpsLocation.latitude, lng: gpsLocation.longitude } : undefined,
+    onAlert: (alert) => {
+      setAlerts(prev => [...prev, alert]);
+    },
+    onWeatherDisruption: (activity) => {
+      const slot = todayData?.activities?.find(a => a.id === activity.id);
+      if (slot) {
+        setAffectedActivity(slot);
+        setShowPlanChange(true);
+      }
+    },
+  });
+
+  // Dismiss alert
+  const handleDismissAlert = useCallback((alertId: string) => {
+    setAlerts(prev => prev.filter(a => a.id !== alertId));
+  }, []);
 
   // Start tracking when trip is active
   useEffect(() => {
@@ -527,7 +597,10 @@ export function LiveTripPanel({
                   totalDays={totalDays}
                   cityName={todayData?.city || trip?.origin_city || 'Your City'}
                   activities={todayData?.activities || []}
-                  weather={undefined} // TODO: Integrate weather service
+                  weather={currentWeather ? {
+                    temp: Math.round(currentWeather.temperature),
+                    condition: currentWeather.description,
+                  } : undefined}
                   onNavigate={handleNavigate}
                   onCall={handleCall}
                   onCheckin={handleCheckinStart}
@@ -660,6 +733,77 @@ export function LiveTripPanel({
         onCategoryChange={(category) => handleFindNearby(category)}
         isLoading={nearbyLoading}
       />
+
+      {/* Smart Alerts Display */}
+      {alerts.length > 0 && (
+        <div className="absolute top-24 left-4 right-4 z-40">
+          <SmartAlertsContainer
+            alerts={alerts}
+            onDismiss={handleDismissAlert}
+            maxVisible={2}
+          />
+        </div>
+      )}
+
+      {/* Plan Change Assistant Modal */}
+      {currentWeather && affectedActivity && (
+        <PlanChangeAssistant
+          isOpen={showPlanChange}
+          onClose={() => {
+            setShowPlanChange(false);
+            setAffectedActivity(null);
+          }}
+          weather={currentWeather}
+          affectedActivity={{
+            id: affectedActivity.id,
+            name: affectedActivity.title,
+            type: 'outdoor',
+            time: affectedActivity.time,
+            location: affectedActivity.location || affectedActivity.title,
+          }}
+          alternatives={[
+            {
+              id: 'alt-museum',
+              name: 'Local Museum',
+              category: 'museum',
+              distance: '0.8 km',
+              rating: 4.6,
+              matchReason: 'Highly rated indoor attraction nearby',
+            },
+            {
+              id: 'alt-cafe',
+              name: 'Cozy Corner Cafe',
+              category: 'cafe',
+              distance: '0.3 km',
+              rating: 4.8,
+              matchReason: 'Perfect for a warm drink while waiting out the rain',
+            },
+            {
+              id: 'alt-gallery',
+              name: 'Modern Art Gallery',
+              category: 'gallery',
+              distance: '1.2 km',
+              rating: 4.4,
+              matchReason: 'Popular cultural destination',
+            },
+          ]}
+          onAcceptAlternative={(alt) => {
+            // In production, this would update the itinerary
+            console.log('Accepted alternative:', alt);
+            setShowPlanChange(false);
+            setAffectedActivity(null);
+          }}
+          onKeepOriginal={() => {
+            setShowPlanChange(false);
+            setAffectedActivity(null);
+          }}
+          onPostpone={() => {
+            // In production, this would reschedule the activity
+            setShowPlanChange(false);
+            setAffectedActivity(null);
+          }}
+        />
+      )}
     </div>
   );
 }
