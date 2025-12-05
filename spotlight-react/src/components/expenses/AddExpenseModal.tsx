@@ -23,7 +23,17 @@ import {
   MapPin,
   Calendar,
   SplitSquareHorizontal,
-  FileText
+  FileText,
+  UtensilsCrossed,
+  Hotel,
+  Car,
+  Ticket,
+  Fuel,
+  CircleDollarSign,
+  ParkingCircle,
+  ShoppingBag,
+  MoreHorizontal,
+  type LucideIcon
 } from 'lucide-react'
 import type { ExpenseCategory, SplitMethod, ReceiptData } from '../../types'
 
@@ -69,16 +79,67 @@ const CATEGORIES: ExpenseCategory[] = [
   'other'
 ]
 
-const CATEGORY_CONFIG: Record<ExpenseCategory, { icon: string; label: string; color: string }> = {
-  food: { icon: '🍽️', label: 'Dining', color: colors.terracotta },
-  accommodation: { icon: '🏨', label: 'Lodging', color: colors.sage },
-  transportation: { icon: '🚗', label: 'Transport', color: colors.mediumBrown },
-  activities: { icon: '🎭', label: 'Activities', color: colors.golden },
-  fuel: { icon: '⛽', label: 'Fuel', color: colors.darkBrown },
-  tolls: { icon: '🛣️', label: 'Tolls', color: colors.lightBrown },
-  parking: { icon: '🅿️', label: 'Parking', color: colors.mediumBrown },
-  shopping: { icon: '🛍️', label: 'Shopping', color: colors.terracottaLight },
-  other: { icon: '📝', label: 'Other', color: colors.lightBrown }
+// Category configuration with proper React icons and refined colors
+const CATEGORY_CONFIG: Record<ExpenseCategory, {
+  Icon: LucideIcon
+  label: string
+  color: string
+  bgColor: string
+}> = {
+  food: {
+    Icon: UtensilsCrossed,
+    label: 'Dining',
+    color: colors.terracotta,
+    bgColor: `${colors.terracotta}12`
+  },
+  accommodation: {
+    Icon: Hotel,
+    label: 'Lodging',
+    color: colors.sage,
+    bgColor: `${colors.sage}15`
+  },
+  transportation: {
+    Icon: Car,
+    label: 'Transport',
+    color: '#5B7C99',
+    bgColor: 'rgba(91, 124, 153, 0.12)'
+  },
+  activities: {
+    Icon: Ticket,
+    label: 'Activities',
+    color: colors.golden,
+    bgColor: `${colors.golden}15`
+  },
+  fuel: {
+    Icon: Fuel,
+    label: 'Fuel',
+    color: '#7B6B5B',
+    bgColor: 'rgba(123, 107, 91, 0.12)'
+  },
+  tolls: {
+    Icon: CircleDollarSign,
+    label: 'Tolls',
+    color: colors.mediumBrown,
+    bgColor: `${colors.mediumBrown}12`
+  },
+  parking: {
+    Icon: ParkingCircle,
+    label: 'Parking',
+    color: '#6B8E8E',
+    bgColor: 'rgba(107, 142, 142, 0.12)'
+  },
+  shopping: {
+    Icon: ShoppingBag,
+    label: 'Shopping',
+    color: colors.terracottaLight,
+    bgColor: `${colors.terracottaLight}12`
+  },
+  other: {
+    Icon: MoreHorizontal,
+    label: 'Other',
+    color: colors.lightBrown,
+    bgColor: `${colors.lightBrown}12`
+  }
 }
 
 const CURRENCIES = ['EUR', 'USD', 'GBP', 'CHF', 'SEK', 'NOK', 'DKK', 'PLN', 'CZK']
@@ -590,8 +651,8 @@ export function AddExpenseModal({
                 />
               </div>
 
-              {/* Category Grid */}
-              <div style={{ marginBottom: '20px' }}>
+              {/* Category Grid - Refined Icon Buttons */}
+              <div style={{ marginBottom: '24px' }}>
                 <label style={labelStyle}>
                   Category <span style={{ color: colors.terracotta }}>*</span>
                   {showAiSuggestion && (
@@ -600,9 +661,10 @@ export function AddExpenseModal({
                     </span>
                   )}
                 </label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
                   {CATEGORIES.map((cat) => {
                     const config = CATEGORY_CONFIG[cat]
+                    const IconComponent = config.Icon
                     const isSelected = category === cat
                     return (
                       <motion.button
@@ -610,31 +672,69 @@ export function AddExpenseModal({
                         type="button"
                         onClick={() => setCategory(cat)}
                         disabled={isSubmitting || success}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
+                        whileHover={{ scale: 1.03, y: -2 }}
+                        whileTap={{ scale: 0.97 }}
+                        initial={false}
+                        animate={{
+                          borderColor: isSelected ? config.color : colors.warmGray,
+                          backgroundColor: isSelected ? config.bgColor : colors.warmWhite,
+                        }}
+                        transition={{ duration: 0.2 }}
                         style={{
-                          padding: '12px 8px',
-                          border: `2px solid ${isSelected ? colors.terracotta : colors.warmGray}`,
-                          borderRadius: '10px',
-                          background: isSelected ? `${colors.terracotta}10` : colors.warmWhite,
+                          padding: '14px 8px',
+                          border: `2px solid ${isSelected ? config.color : colors.warmGray}`,
+                          borderRadius: '14px',
+                          background: isSelected ? config.bgColor : colors.warmWhite,
                           cursor: isSubmitting || success ? 'not-allowed' : 'pointer',
                           opacity: isSubmitting || success ? 0.6 : 1,
-                          transition: 'all 0.2s ease',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: '8px',
+                          boxShadow: isSelected
+                            ? `0 4px 12px ${config.color}20`
+                            : '0 1px 3px rgba(0,0,0,0.04)',
                         }}
                       >
-                        <div style={{ fontSize: '24px', marginBottom: '4px' }}>{config.icon}</div>
-                        <div
+                        {/* Icon container with subtle background */}
+                        <motion.div
+                          animate={{
+                            backgroundColor: isSelected ? `${config.color}18` : 'rgba(139, 115, 85, 0.08)',
+                            scale: isSelected ? 1.05 : 1,
+                          }}
+                          transition={{ duration: 0.2 }}
+                          style={{
+                            width: '40px',
+                            height: '40px',
+                            borderRadius: '12px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <IconComponent
+                            style={{
+                              width: '20px',
+                              height: '20px',
+                              color: isSelected ? config.color : colors.lightBrown,
+                              strokeWidth: 1.75,
+                              transition: 'color 0.2s ease',
+                            }}
+                          />
+                        </motion.div>
+                        <span
                           style={{
                             fontFamily: '"Courier New", monospace',
                             fontSize: '10px',
                             fontWeight: 600,
-                            color: isSelected ? colors.terracotta : colors.mediumBrown,
+                            color: isSelected ? config.color : colors.mediumBrown,
                             textTransform: 'uppercase',
                             letterSpacing: '0.5px',
+                            transition: 'color 0.2s ease',
                           }}
                         >
                           {config.label}
-                        </div>
+                        </span>
                       </motion.button>
                     )
                   })}
