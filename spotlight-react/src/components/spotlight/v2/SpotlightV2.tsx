@@ -13,14 +13,13 @@ import { CityReplacementSheet } from './CityReplacementSheet';
 import { ConstraintChangeSheet } from './ConstraintChangeSheet';
 import { TripActivation } from '../../trip/TripActivation';
 import { LiveTripPanel } from '../../trip/LiveTripPanel';
-import { Loader2, Users, CalendarDays, Command, Clock, Plane } from 'lucide-react';
+import { Loader2, CalendarDays, Command, Clock, Plane } from 'lucide-react';
 import { CollaborationPanel } from '../../collaboration/CollaborationPanel';
 import { CompanionPanel, CompanionTab, ProactiveBubble, MobileCompanionDrawer } from '../../companion/CompanionPanel';
 import { useCompanion } from '../../../contexts/CompanionProvider';
 import { useAgent } from '../../../contexts/AgentProvider';
 import { getStoredItineraryId } from '../../../hooks/useItineraryGeneration';
 import { PersonalizedIntroBanner } from './PersonalizedIntroBanner';
-import { PersonalizationBadge } from './PersonalizationBadge';
 import { FeatureTour, MarketplacePrompt } from '../../onboarding';
 
 const SpotlightV2 = () => {
@@ -691,14 +690,6 @@ const SpotlightV2 = () => {
   // Check if we should show the personalized intro banner
   const hasPersonalizedIntro = route?.personalizedIntro?.headline;
 
-  // Check if route has personalization context
-  const hasPersonalization = route?.personalization && (
-    route.personalization.tripStory ||
-    route.personalization.occasion ||
-    route.personalization.travelStyle ||
-    route.personalization.interests?.length
-  );
-
   return (
     <div className="h-screen w-screen overflow-hidden bg-[#FFFBF5] relative flex">
       {/* Main Content Area - Takes remaining space when companion is open */}
@@ -790,16 +781,8 @@ const SpotlightV2 = () => {
         onClose={handleItineraryPanelClose}
       />
 
-      {/* Floating Action Buttons - Fixed position */}
-      <div className="fixed top-20 left-4 z-50 flex flex-col gap-2">
-        {/* Personalization Badge - Shows when route has personalization context */}
-        {hasPersonalization && route?.personalization && (
-          <PersonalizationBadge
-            personalization={route.personalization}
-            className="mb-1"
-          />
-        )}
-
+      {/* Floating Action Buttons - Fixed position, below personalized intro banner */}
+      <div className="fixed top-20 left-4 z-30 flex flex-col gap-2" style={{ top: hasPersonalizedIntro ? '140px' : '80px' }}>
         {/* View Itinerary Button - Shows when stored itinerary exists */}
         {hasStoredItinerary && (
           <motion.button
@@ -812,19 +795,6 @@ const SpotlightV2 = () => {
           >
             <CalendarDays className="w-4 h-4" />
             <span className="text-sm font-medium">View Itinerary</span>
-          </motion.button>
-        )}
-
-        {/* Collaborate Button */}
-        {routeId && (
-          <motion.button
-            onClick={() => setShowCollaboration(!showCollaboration)}
-            className="bg-[#2C2417] hover:bg-[#3D3328] text-white rounded-xl px-4 py-2.5 shadow-lg transition-all duration-200 flex items-center gap-2"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <Users className="w-4 h-4" />
-            <span className="text-sm font-medium">Collaborate</span>
           </motion.button>
         )}
       </div>

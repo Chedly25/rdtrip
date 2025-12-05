@@ -30,17 +30,17 @@ import { CollaborationEmptyState, ExpensesEmptyState } from '../../onboarding';
 type BottomSheetTab = 'route' | 'collaborate' | 'expenses';
 
 // Companion panel width for desktop layout
-const COMPANION_PANEL_WIDTH = 340;
+const COMPANION_PANEL_WIDTH = 300;
 
 interface BottomSheetProps {
   onCityDetailsClick?: (cityIndex: number) => void;
 }
 
 // Card height: 120px image + ~56px content = 176px
-// Header: ~50px, drag handle area: ~28px, padding: ~16px
-// Total needed for collapsed: ~270px
-const COLLAPSED_HEIGHT = 280;
-const EXPANDED_HEIGHT = 560;
+// Header: ~80px (route row + tabs), drag handle area: ~24px, padding: ~24px
+// Total needed for collapsed: ~310px to show full cards
+const COLLAPSED_HEIGHT = 320;
+const EXPANDED_HEIGHT = 580;
 
 const BottomSheet = ({ onCityDetailsClick }: BottomSheetProps) => {
   const {
@@ -79,12 +79,12 @@ const BottomSheet = ({ onCityDetailsClick }: BottomSheetProps) => {
 
   // Motion values for drag
   const y = useMotionValue(0);
+  const dragAmount = EXPANDED_HEIGHT - COLLAPSED_HEIGHT; // 260px
   const height = useTransform(
     y,
-    [-280, 0],
+    [-dragAmount, 0],
     [EXPANDED_HEIGHT, COLLAPSED_HEIGHT]
   );
-  const dragAmount = -280;
 
   // Drag sensors for reordering cards
   const sensors = useSensors(
@@ -102,9 +102,9 @@ const BottomSheet = ({ onCityDetailsClick }: BottomSheetProps) => {
   useEffect(() => {
     if (selectedCityIndex !== null && !isExpanded) {
       setIsExpanded(true);
-      animate(y, -280, { type: 'spring', stiffness: 300, damping: 30 });
+      animate(y, -dragAmount, { type: 'spring', stiffness: 300, damping: 30 });
     }
-  }, [selectedCityIndex]);
+  }, [selectedCityIndex, dragAmount]);
 
   if (!route) return null;
 
@@ -117,7 +117,7 @@ const BottomSheet = ({ onCityDetailsClick }: BottomSheetProps) => {
 
     if (shouldExpand) {
       setIsExpanded(true);
-      animate(y, -280, { type: 'spring', stiffness: 300, damping: 30 });
+      animate(y, -dragAmount, { type: 'spring', stiffness: 300, damping: 30 });
     } else {
       setIsExpanded(false);
       animate(y, 0, { type: 'spring', stiffness: 300, damping: 30 });
@@ -135,7 +135,7 @@ const BottomSheet = ({ onCityDetailsClick }: BottomSheetProps) => {
       setSelectedCity(null);
     } else {
       setIsExpanded(true);
-      animate(y, -280, { type: 'spring', stiffness: 300, damping: 30 });
+      animate(y, -dragAmount, { type: 'spring', stiffness: 300, damping: 30 });
     }
   };
 
@@ -194,7 +194,7 @@ const BottomSheet = ({ onCityDetailsClick }: BottomSheetProps) => {
     // Auto-expand when switching tabs
     if (!isExpanded) {
       setIsExpanded(true);
-      animate(y, -280, { type: 'spring', stiffness: 300, damping: 30 });
+      animate(y, -dragAmount, { type: 'spring', stiffness: 300, damping: 30 });
     }
   };
 
