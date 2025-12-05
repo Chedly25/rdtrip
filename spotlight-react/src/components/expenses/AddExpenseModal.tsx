@@ -182,7 +182,18 @@ export function AddExpenseModal({
       setIsScanning(true)
       setScanError(null)
 
-      const token = localStorage.getItem('auth_token')
+      const token = localStorage.getItem('token')
+
+      if (!token) {
+        throw new Error('Please log in to scan receipts')
+      }
+
+      // Check if route is saved
+      const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(routeId)
+      if (!isValidUUID) {
+        throw new Error('Please save your route first to scan receipts')
+      }
+
       const formData = new FormData()
       formData.append('receipt', file)
 
@@ -243,7 +254,23 @@ export function AddExpenseModal({
     setIsSubmitting(true)
 
     try {
-      const token = localStorage.getItem('auth_token')
+      const token = localStorage.getItem('token')
+
+      // Check if user is authenticated
+      if (!token) {
+        setError('Please log in to track expenses')
+        setIsSubmitting(false)
+        return
+      }
+
+      // Check if route is saved (has valid UUID format)
+      const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(routeId)
+      if (!isValidUUID) {
+        setError('Please save your route first to track expenses')
+        setIsSubmitting(false)
+        return
+      }
+
       const response = await fetch(`/api/routes/${routeId}/expenses`, {
         method: 'POST',
         headers: {
