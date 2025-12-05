@@ -782,7 +782,7 @@ app.post('/api/routes', authenticate, async (req, res) => {
       });
     }
 
-    // Extract totalNights and tripPace (from new format or routeData)
+    // Extract totalNights, tripPace, and stops (from request or routeData)
     let finalTotalNights = totalNights;
     let finalTripPace = tripPace;
     let finalStops = stops;
@@ -790,11 +790,21 @@ app.post('/api/routes', authenticate, async (req, res) => {
     if (!finalTotalNights && routeData.totalNights) {
       finalTotalNights = routeData.totalNights;
     }
+    // Compute totalNights from cities if still not set
+    if (!finalTotalNights && routeData.cities && Array.isArray(routeData.cities)) {
+      finalTotalNights = routeData.cities.reduce((sum, city) => sum + (city.nights || 0), 0);
+    }
     if (!finalTripPace && routeData.tripPace) {
       finalTripPace = routeData.tripPace;
     }
-    if (!finalStops && stops) {
-      finalStops = stops;
+    // Compute stops from cities array if not provided (exclude origin and destination)
+    if (finalStops === undefined || finalStops === null) {
+      if (routeData.cities && Array.isArray(routeData.cities)) {
+        // Cities array includes origin and destination, so subtract 2 for waypoints only
+        finalStops = Math.max(0, routeData.cities.length - 2);
+      } else {
+        finalStops = 0; // Default to 0 stops if no cities data
+      }
     }
 
     // Ensure selectedAgents is an array for PostgreSQL
