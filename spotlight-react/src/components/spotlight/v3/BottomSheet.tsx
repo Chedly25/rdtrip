@@ -241,77 +241,84 @@ const BottomSheet = ({ onCityDetailsClick }: BottomSheetProps) => {
         </motion.div>
 
         {/* Content Container */}
-        <div className="h-full flex flex-col pt-7">
+        <div className="h-full flex flex-col pt-6">
           {/* Header: Trip Summary + Tabs - Editorial style */}
-          <div className="px-5 pb-3">
-            {/* Top row: Route info and expand button */}
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-3">
+          <div className="px-5 pb-4">
+            {/* Top row: Route info and controls - clean single line */}
+            <div className="flex items-center justify-between gap-4 mb-4">
+              {/* Left section: Route with visual separator */}
+              <div className="flex items-center gap-3 min-w-0">
                 {/* Route text */}
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-[15px] text-[#2C2417]">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="font-semibold text-[15px] text-[#2C2417] truncate max-w-[120px] sm:max-w-none">
                     {originName}
                   </span>
-                  <ChevronRight className="w-4 h-4 text-[#C45830]" />
-                  <span className="font-semibold text-[15px] text-[#2C2417]">
+                  <ChevronRight className="w-4 h-4 text-[#C45830] flex-shrink-0" />
+                  <span className="font-semibold text-[15px] text-[#2C2417] truncate max-w-[120px] sm:max-w-none">
                     {destinationName}
                   </span>
                 </div>
 
-                {/* Stats pills */}
-                <div className="flex items-center gap-2 ml-2">
-                  <span className="px-2.5 py-1 bg-[#F5F0E8] rounded-full text-xs font-medium text-[#8B7355]">
+                {/* Vertical divider */}
+                <div className="hidden sm:block w-px h-5 bg-[#E5DDD0]" />
+
+                {/* Stats pills - inline with route */}
+                <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
+                  <span className="px-2.5 py-1 bg-[#F5F0E8] rounded-full text-[11px] font-medium text-[#8B7355]">
                     {route.cities.length} stops
                   </span>
-                  <span className="px-2.5 py-1 bg-[#F5F0E8] rounded-full text-xs font-medium text-[#8B7355]">
+                  <span className="px-2.5 py-1 bg-[#F5F0E8] rounded-full text-[11px] font-medium text-[#8B7355]">
                     {totalNights} nights
                   </span>
-                  {/* Personalization badge - shows when route has personalization context */}
-                  {route.personalization && (
-                    <PersonalizationBadge personalization={route.personalization} />
-                  )}
                 </div>
               </div>
 
-              {/* Expand indicator */}
-              <motion.button
-                onClick={toggleExpanded}
-                animate={{ rotate: isExpanded ? 180 : 0 }}
-                transition={{ duration: 0.2 }}
-                className="w-8 h-8 rounded-full bg-[#F5F0E8] flex items-center justify-center text-[#8B7355] hover:bg-[#E8DFD3] transition-colors"
-              >
-                <ChevronRight className="w-4 h-4 rotate-90" />
-              </motion.button>
+              {/* Right section: Personalization badge + Expand */}
+              <div className="flex items-center gap-3 flex-shrink-0">
+                {/* Personalization badge - only show if no intro banner is active */}
+                {route.personalization && !route.personalizedIntro?.headline && (
+                  <PersonalizationBadge personalization={route.personalization} />
+                )}
+
+                {/* Expand indicator */}
+                <motion.button
+                  onClick={toggleExpanded}
+                  animate={{ rotate: isExpanded ? 180 : 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="w-8 h-8 rounded-full bg-[#F5F0E8] flex items-center justify-center text-[#8B7355] hover:bg-[#E8DFD3] hover:text-[#C45830] transition-colors"
+                >
+                  <ChevronRight className="w-4 h-4 rotate-90" />
+                </motion.button>
+              </div>
             </div>
 
-            {/* Tab bar - Editorial style */}
-            <div className="flex items-center gap-1 p-1 bg-[#F5F0E8] rounded-xl" data-tour="bottom-sheet-tabs">
+            {/* Tab bar - Clean segmented control style */}
+            <div className="flex items-center gap-1.5 p-1.5 bg-[#F5F0E8]/80 rounded-xl backdrop-blur-sm" data-tour="bottom-sheet-tabs">
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => handleTabChange(tab.id)}
                   className={`
-                    relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200
+                    relative flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-medium transition-all duration-200
                     ${activeTab === tab.id
                       ? 'bg-white text-[#2C2417] shadow-sm'
-                      : 'text-[#8B7355] hover:text-[#2C2417] hover:bg-white/50'
+                      : 'text-[#8B7355] hover:text-[#2C2417] hover:bg-white/60'
                     }
                   `}
                   data-tour={tab.id === 'collaborate' ? 'collaborate-button' : undefined}
                 >
-                  <span className={activeTab === tab.id ? 'text-[#C45830]' : ''}>
+                  <span className={`transition-colors ${activeTab === tab.id ? 'text-[#C45830]' : ''}`}>
                     {tab.icon}
                   </span>
                   <span>{tab.label}</span>
-                  {/* NEW badge */}
+                  {/* NEW badge - positioned inline for cleaner look */}
                   {tab.badge && (
                     <motion.span
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      className="absolute -top-1 -right-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold text-white"
+                      initial={{ scale: 0, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      className="ml-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold text-white"
                       style={{
                         background: 'linear-gradient(135deg, #C45830 0%, #D4A853 100%)',
-                        boxShadow: '0 2px 6px rgba(196, 88, 48, 0.35)',
                       }}
                     >
                       {tab.badge}
@@ -335,7 +342,7 @@ const BottomSheet = ({ onCityDetailsClick }: BottomSheetProps) => {
                 className="flex-1 flex flex-col overflow-hidden"
               >
                 {/* City Cards Carousel */}
-                <div className="px-5 pb-3">
+                <div className="px-5 pb-4">
                   <DndContext
                     sensors={sensors}
                     collisionDetection={closestCenter}
@@ -346,7 +353,7 @@ const BottomSheet = ({ onCityDetailsClick }: BottomSheetProps) => {
                       items={route.cities.map((_, index) => `city-${index}`)}
                       strategy={horizontalListSortingStrategy}
                     >
-                      <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide scroll-smooth snap-x">
+                      <div className="flex gap-4 overflow-x-auto pb-3 scrollbar-hide scroll-smooth snap-x">
                         {route.cities.map((city, index) => {
                           const cityName = getCityName(city.city);
                           const country = typeof city.city === 'object' ? city.city.country : undefined;
@@ -377,12 +384,12 @@ const BottomSheet = ({ onCityDetailsClick }: BottomSheetProps) => {
                         {/* Add City Button */}
                         <button
                           onClick={() => setIsAddingLandmark(true)}
-                          className="flex-shrink-0 w-[180px] h-[176px] rounded-2xl border-2 border-dashed border-[#D4C4B0] bg-[#FAF7F2] flex flex-col items-center justify-center gap-2 text-[#8B7355] hover:border-[#C45830] hover:text-[#C45830] hover:bg-[#FFF8F5] transition-all snap-start"
+                          className="flex-shrink-0 w-[180px] h-[176px] rounded-2xl border-2 border-dashed border-[#D4C4B0] bg-[#FAF7F2]/50 flex flex-col items-center justify-center gap-3 text-[#8B7355] hover:border-[#C45830] hover:text-[#C45830] hover:bg-[#FFF8F5] transition-all duration-200 snap-start group"
                         >
-                          <div className="w-10 h-10 rounded-full bg-[#F5F0E8] flex items-center justify-center">
+                          <div className="w-11 h-11 rounded-full bg-[#F5F0E8] flex items-center justify-center group-hover:bg-[#FEF3EE] transition-colors">
                             <Plus className="w-5 h-5" />
                           </div>
-                          <span className="text-xs font-medium">Add City</span>
+                          <span className="text-[13px] font-medium">Add City</span>
                         </button>
                       </div>
                     </SortableContext>
@@ -408,11 +415,11 @@ const BottomSheet = ({ onCityDetailsClick }: BottomSheetProps) => {
                 {/* Selected City Panel (visible when expanded) */}
                 {isExpanded && (
                   <motion.div
-                    initial={{ opacity: 0, y: 20 }}
+                    initial={{ opacity: 0, y: 16 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 20 }}
-                    transition={{ delay: 0.1 }}
-                    className="flex-1 px-5 pb-5 overflow-hidden"
+                    exit={{ opacity: 0, y: 16 }}
+                    transition={{ delay: 0.1, duration: 0.25 }}
+                    className="flex-1 px-5 pb-6 overflow-hidden"
                   >
                     {selectedCity && selectedCityIndex !== null ? (
                       <SelectedCityPanel
@@ -424,14 +431,14 @@ const BottomSheet = ({ onCityDetailsClick }: BottomSheetProps) => {
                       />
                     ) : (
                       /* Editorial Empty State */
-                      <div className="h-full flex flex-col items-center justify-center text-center">
-                        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#F5F0E8] to-[#E8DFD3] flex items-center justify-center mb-4">
-                          <Compass className="w-7 h-7 text-[#C45830]" />
+                      <div className="h-full flex flex-col items-center justify-center text-center py-6">
+                        <div className="w-14 h-14 rounded-full bg-gradient-to-br from-[#F5F0E8] to-[#E8DFD3] flex items-center justify-center mb-3 shadow-sm">
+                          <Compass className="w-6 h-6 text-[#C45830]" />
                         </div>
-                        <h3 className="text-[15px] font-semibold text-[#2C2417] mb-1">
+                        <h3 className="text-[15px] font-semibold text-[#2C2417] mb-1.5">
                           Explore Your Journey
                         </h3>
-                        <p className="text-sm text-[#8B7355] max-w-[200px]">
+                        <p className="text-[13px] text-[#8B7355] max-w-[220px] leading-relaxed">
                           Tap a destination card to view details and customize your stay
                         </p>
                       </div>
