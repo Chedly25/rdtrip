@@ -32,7 +32,7 @@ import { AddExpenseModal } from '../../expenses/AddExpenseModal';
 type BottomSheetTab = 'route' | 'collaborate' | 'expenses';
 
 // Companion panel width for desktop layout
-const COMPANION_PANEL_WIDTH = 300;
+const COMPANION_PANEL_WIDTH = 280;
 
 interface BottomSheetProps {
   onCityDetailsClick?: (cityIndex: number) => void;
