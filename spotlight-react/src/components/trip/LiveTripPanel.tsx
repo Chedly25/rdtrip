@@ -193,11 +193,20 @@ export function LiveTripPanel({
 
   // Start trip
   const handleStartTrip = useCallback(async () => {
-    const newTrip = await start(routeId, itineraryId);
-    if (newTrip) {
-      setShowActivation(false);
+    try {
+      const newTrip = await start(routeId, itineraryId);
+      if (newTrip) {
+        setShowActivation(false);
+        setIsAutoStarting(false);
+        startTracking();
+      } else {
+        // Trip start failed - reset auto-starting state
+        setIsAutoStarting(false);
+        console.warn('[LiveTripPanel] Trip start returned null');
+      }
+    } catch (err) {
+      console.error('[LiveTripPanel] Failed to start trip:', err);
       setIsAutoStarting(false);
-      startTracking();
     }
   }, [routeId, itineraryId, start, startTracking]);
 
@@ -428,8 +437,10 @@ export function LiveTripPanel({
     );
   }
 
-  // Show preparing state when auto-starting
-  if (!trip && (autoStart || isAutoStarting)) {
+  // Show preparing state when auto-starting OR error state when failed
+  if (!trip && (autoStart || isAutoStarting || error)) {
+    const hasError = !!error && !isAutoStarting;
+
     return (
       <div className={`h-full flex flex-col ${className}`} style={{ background: colors.cream }}>
         {/* Header */}
@@ -453,73 +464,132 @@ export function LiveTripPanel({
           )}
         </div>
 
-        {/* Preparing Trip State - Elegant loading with compass animation */}
-        <div className="flex-1 flex flex-col items-center justify-center p-8">
-          <motion.div
-            className="w-24 h-24 rounded-full flex items-center justify-center mb-8 relative"
-            style={{
-              background: `linear-gradient(135deg, ${colors.golden}20 0%, ${colors.terracotta}15 100%)`,
-              boxShadow: `0 0 60px ${colors.golden}30`,
-            }}
-          >
-            {/* Rotating outer ring */}
-            <motion.div
-              className="absolute inset-0 rounded-full"
-              style={{ border: `2px solid ${colors.golden}40` }}
-              animate={{ rotate: 360 }}
-              transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
-            />
-            {/* Compass icon */}
-            <motion.div
-              animate={{ rotate: [0, 10, -10, 0] }}
-              transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+        {hasError ? (
+          /* Error State */
+          <div className="flex-1 flex flex-col items-center justify-center p-8">
+            <div
+              className="w-20 h-20 rounded-full flex items-center justify-center mb-6"
+              style={{
+                background: `${colors.terracotta}15`,
+                border: `2px solid ${colors.terracotta}30`,
+              }}
             >
-              <Play
-                className="w-10 h-10"
-                style={{ color: colors.terracotta }}
-              />
-            </motion.div>
-          </motion.div>
+              <AlertCircle className="w-10 h-10" style={{ color: colors.terracotta }} />
+            </div>
 
-          <motion.h3
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-2xl font-serif font-medium mb-3 text-center"
-            style={{ color: colors.darkBrown }}
-          >
-            Preparing Your Journey
-          </motion.h3>
+            <h3
+              className="text-xl font-serif font-medium mb-2 text-center"
+              style={{ color: colors.darkBrown }}
+            >
+              Unable to Start Trip
+            </h3>
+            <p className="text-center mb-6 max-w-xs text-sm" style={{ color: colors.lightBrown }}>
+              {error || 'Trip tracking is not available yet. Please try again later.'}
+            </p>
 
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
-            className="text-center mb-6 max-w-xs"
-            style={{ color: colors.lightBrown }}
-          >
-            Setting up real-time tracking, loading your itinerary, and getting everything ready...
-          </motion.p>
-
-          {/* Animated progress dots */}
-          <div className="flex gap-2">
-            {[0, 1, 2].map((i) => (
-              <motion.div
-                key={i}
-                className="w-2 h-2 rounded-full"
-                style={{ background: colors.golden }}
-                animate={{
-                  scale: [1, 1.3, 1],
-                  opacity: [0.5, 1, 0.5],
+            <div className="flex gap-3">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => {
+                  setIsAutoStarting(true);
+                  handleStartTrip();
                 }}
-                transition={{
-                  duration: 1,
-                  repeat: Infinity,
-                  delay: i * 0.2,
+                className="px-6 py-3 rounded-full flex items-center gap-2"
+                style={{
+                  background: `linear-gradient(135deg, ${colors.sage} 0%, ${colors.sageLight} 100%)`,
+                  boxShadow: `0 4px 12px ${colors.sage}30`,
                 }}
-              />
-            ))}
+              >
+                <span className="text-white font-medium">Try Again</span>
+              </motion.button>
+
+              {onClose && (
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={onClose}
+                  className="px-6 py-3 rounded-full"
+                  style={{
+                    background: colors.warmWhite,
+                    border: `1px solid ${colors.border}`,
+                    color: colors.mediumBrown,
+                  }}
+                >
+                  Close
+                </motion.button>
+              )}
+            </div>
           </div>
-        </div>
+        ) : (
+          /* Preparing Trip State - Elegant loading with compass animation */
+          <div className="flex-1 flex flex-col items-center justify-center p-8">
+            <motion.div
+              className="w-24 h-24 rounded-full flex items-center justify-center mb-8 relative"
+              style={{
+                background: `linear-gradient(135deg, ${colors.golden}20 0%, ${colors.terracotta}15 100%)`,
+                boxShadow: `0 0 60px ${colors.golden}30`,
+              }}
+            >
+              {/* Rotating outer ring */}
+              <motion.div
+                className="absolute inset-0 rounded-full"
+                style={{ border: `2px solid ${colors.golden}40` }}
+                animate={{ rotate: 360 }}
+                transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
+              />
+              {/* Compass icon */}
+              <motion.div
+                animate={{ rotate: [0, 10, -10, 0] }}
+                transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+              >
+                <Play
+                  className="w-10 h-10"
+                  style={{ color: colors.terracotta }}
+                />
+              </motion.div>
+            </motion.div>
+
+            <motion.h3
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-2xl font-serif font-medium mb-3 text-center"
+              style={{ color: colors.darkBrown }}
+            >
+              Preparing Your Journey
+            </motion.h3>
+
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.2 }}
+              className="text-center mb-6 max-w-xs"
+              style={{ color: colors.lightBrown }}
+            >
+              Setting up real-time tracking, loading your itinerary, and getting everything ready...
+            </motion.p>
+
+            {/* Animated progress dots */}
+            <div className="flex gap-2">
+              {[0, 1, 2].map((i) => (
+                <motion.div
+                  key={i}
+                  className="w-2 h-2 rounded-full"
+                  style={{ background: colors.golden }}
+                  animate={{
+                    scale: [1, 1.3, 1],
+                    opacity: [0.5, 1, 0.5],
+                  }}
+                  transition={{
+                    duration: 1,
+                    repeat: Infinity,
+                    delay: i * 0.2,
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
