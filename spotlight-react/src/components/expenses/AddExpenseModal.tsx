@@ -1,5 +1,16 @@
+/**
+ * Add Expense Modal - "The Travel Ledger"
+ *
+ * A warm, editorial-style expense tracking modal inspired by vintage
+ * travel journals and accounting ledgers. Features hand-crafted aesthetics
+ * with the Wanderlust Editorial color palette.
+ *
+ * Design: Warm cream backgrounds, terracotta accents, golden highlights,
+ * with subtle paper textures and elegant typography.
+ */
+
 import { useState, useRef } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   X,
   Camera,
@@ -7,10 +18,35 @@ import {
   Loader2,
   Check,
   AlertCircle,
-  DollarSign,
-  Sparkles
+  Receipt,
+  Sparkles,
+  MapPin,
+  Calendar,
+  SplitSquareHorizontal,
+  FileText
 } from 'lucide-react'
 import type { ExpenseCategory, SplitMethod, ReceiptData } from '../../types'
+
+// =============================================================================
+// WANDERLUST EDITORIAL COLOR PALETTE
+// =============================================================================
+const colors = {
+  cream: '#FFFBF5',
+  warmWhite: '#FAF7F2',
+  parchment: '#F5E6C8',
+  terracotta: '#C45830',
+  terracottaLight: '#D96A42',
+  terracottaDark: '#A04020',
+  golden: '#D4A853',
+  goldenLight: '#E4BE73',
+  sage: '#6B8E7B',
+  sageLight: '#8BA99A',
+  espresso: '#2C2417',
+  darkBrown: '#3D2A1E',
+  mediumBrown: '#5C4033',
+  lightBrown: '#8B7355',
+  warmGray: '#E8DFD3',
+}
 
 interface AddExpenseModalProps {
   isOpen: boolean
@@ -33,16 +69,16 @@ const CATEGORIES: ExpenseCategory[] = [
   'other'
 ]
 
-const CATEGORY_ICONS: Record<ExpenseCategory, string> = {
-  accommodation: '🏨',
-  food: '🍽️',
-  transportation: '🚗',
-  activities: '🎭',
-  shopping: '🛍️',
-  fuel: '⛽',
-  tolls: '🛣️',
-  parking: '🅿️',
-  other: '📝'
+const CATEGORY_CONFIG: Record<ExpenseCategory, { icon: string; label: string; color: string }> = {
+  food: { icon: '🍽️', label: 'Dining', color: colors.terracotta },
+  accommodation: { icon: '🏨', label: 'Lodging', color: colors.sage },
+  transportation: { icon: '🚗', label: 'Transport', color: colors.mediumBrown },
+  activities: { icon: '🎭', label: 'Activities', color: colors.golden },
+  fuel: { icon: '⛽', label: 'Fuel', color: colors.darkBrown },
+  tolls: { icon: '🛣️', label: 'Tolls', color: colors.lightBrown },
+  parking: { icon: '🅿️', label: 'Parking', color: colors.mediumBrown },
+  shopping: { icon: '🛍️', label: 'Shopping', color: colors.terracottaLight },
+  other: { icon: '📝', label: 'Other', color: colors.lightBrown }
 }
 
 const CURRENCIES = ['EUR', 'USD', 'GBP', 'CHF', 'SEK', 'NOK', 'DKK', 'PLN', 'CZK']
@@ -216,74 +252,246 @@ export function AddExpenseModal({
 
   if (!isOpen) return null
 
+  // Shared input styles
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    padding: '12px 14px',
+    fontFamily: 'Georgia, serif',
+    fontSize: '14px',
+    color: colors.espresso,
+    background: colors.warmWhite,
+    border: `1px solid ${colors.warmGray}`,
+    borderRadius: '8px',
+    outline: 'none',
+    transition: 'all 0.2s ease',
+  }
+
+  const labelStyle: React.CSSProperties = {
+    display: 'block',
+    fontFamily: '"Courier New", monospace',
+    fontSize: '11px',
+    fontWeight: 700,
+    letterSpacing: '1px',
+    color: colors.mediumBrown,
+    marginBottom: '8px',
+    textTransform: 'uppercase' as const,
+  }
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        transition={{ duration: 0.2 }}
-        className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
-        onClick={(e) => e.stopPropagation()}
+    <AnimatePresence>
+      <div
+        style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 50,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '16px',
+          background: 'rgba(44, 36, 23, 0.6)',
+          backdropFilter: 'blur(4px)',
+        }}
+        onClick={handleClose}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-green-50 to-emerald-50">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-green-600 rounded-lg">
-              <DollarSign className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900">Add Expense</h2>
-              <p className="text-xs text-gray-600">Track a new trip expense</p>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 20 }}
+          transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
+          style={{
+            width: '100%',
+            maxWidth: '520px',
+            maxHeight: '90vh',
+            background: `linear-gradient(180deg, ${colors.cream} 0%, ${colors.warmWhite} 100%)`,
+            borderRadius: '20px',
+            border: `1px solid ${colors.warmGray}`,
+            boxShadow: `0 25px 50px -12px rgba(44, 36, 23, 0.4), inset 0 1px 0 rgba(255,255,255,0.5)`,
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header - Ledger Style */}
+          <div
+            style={{
+              padding: '20px 24px',
+              borderBottom: `2px solid ${colors.golden}`,
+              background: `linear-gradient(180deg, ${colors.cream} 0%, ${colors.warmWhite} 100%)`,
+              position: 'relative',
+            }}
+          >
+            {/* Decorative top border */}
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: '3px',
+                background: `linear-gradient(90deg, ${colors.terracotta} 0%, ${colors.golden} 50%, ${colors.terracotta} 100%)`,
+              }}
+            />
+
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <div
+                  style={{
+                    width: '44px',
+                    height: '44px',
+                    borderRadius: '12px',
+                    background: `linear-gradient(135deg, ${colors.terracotta} 0%, ${colors.terracottaLight} 100%)`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: `0 4px 12px rgba(196, 88, 48, 0.3)`,
+                  }}
+                >
+                  <Receipt style={{ width: 22, height: 22, color: 'white' }} />
+                </div>
+                <div>
+                  <h2
+                    style={{
+                      fontFamily: "'Fraunces', Georgia, serif",
+                      fontSize: '20px',
+                      fontWeight: 600,
+                      color: colors.espresso,
+                      margin: 0,
+                      letterSpacing: '-0.02em',
+                    }}
+                  >
+                    Travel Ledger
+                  </h2>
+                  <p
+                    style={{
+                      fontFamily: '"Courier New", monospace',
+                      fontSize: '11px',
+                      letterSpacing: '1px',
+                      color: colors.lightBrown,
+                      marginTop: '2px',
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    Record a new expense
+                  </p>
+                </div>
+              </div>
+
+              <motion.button
+                whileHover={{ scale: 1.05, backgroundColor: `${colors.terracotta}15` }}
+                whileTap={{ scale: 0.95 }}
+                onClick={handleClose}
+                disabled={isSubmitting}
+                style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '10px',
+                  background: 'transparent',
+                  border: `1px solid ${colors.warmGray}`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                  color: colors.lightBrown,
+                  opacity: isSubmitting ? 0.5 : 1,
+                }}
+              >
+                <X style={{ width: 18, height: 18 }} />
+              </motion.button>
             </div>
           </div>
-          <button
-            onClick={handleClose}
-            className="p-1 hover:bg-white/50 rounded-lg transition-colors"
-            disabled={isSubmitting}
+
+          {/* Content */}
+          <div
+            style={{
+              flex: 1,
+              overflowY: 'auto',
+              padding: '24px',
+            }}
           >
-            <X className="h-5 w-5 text-gray-500" />
-          </button>
-        </div>
+            <form onSubmit={handleSubmit}>
+              {/* Success message */}
+              {success && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '14px',
+                    background: `${colors.sage}15`,
+                    border: `1px solid ${colors.sage}`,
+                    borderRadius: '10px',
+                    marginBottom: '20px',
+                  }}
+                >
+                  <Check style={{ width: 20, height: 20, color: colors.sage, flexShrink: 0 }} />
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontFamily: 'Georgia, serif', fontSize: '14px', fontWeight: 600, color: colors.sage, margin: 0 }}>
+                      Expense recorded!
+                    </p>
+                    <p style={{ fontFamily: '"Courier New", monospace', fontSize: '11px', color: colors.sageLight, marginTop: '2px' }}>
+                      Your expense has been added to the ledger.
+                    </p>
+                  </div>
+                </motion.div>
+              )}
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Success message */}
-            {success && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-lg"
+              {/* Error message */}
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '14px',
+                    background: `${colors.terracotta}10`,
+                    border: `1px solid ${colors.terracotta}`,
+                    borderRadius: '10px',
+                    marginBottom: '20px',
+                  }}
+                >
+                  <AlertCircle style={{ width: 20, height: 20, color: colors.terracotta, flexShrink: 0 }} />
+                  <p style={{ fontFamily: 'Georgia, serif', fontSize: '13px', color: colors.terracotta, margin: 0 }}>
+                    {error}
+                  </p>
+                </motion.div>
+              )}
+
+              {/* Receipt Scanning - Vintage ticket style */}
+              <div
+                style={{
+                  border: `2px dashed ${colors.golden}`,
+                  borderRadius: '12px',
+                  padding: '20px',
+                  background: `${colors.parchment}30`,
+                  marginBottom: '24px',
+                  textAlign: 'center',
+                }}
               >
-                <Check className="h-5 w-5 text-green-600 flex-shrink-0" />
-                <div>
-                  <p className="text-sm font-medium text-green-900">Expense added!</p>
-                  <p className="text-xs text-green-700 mt-0.5">Your expense has been saved.</p>
-                </div>
-              </motion.div>
-            )}
-
-            {/* Error message */}
-            {error && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-lg"
-              >
-                <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0" />
-                <p className="text-sm text-red-900">{error}</p>
-              </motion.div>
-            )}
-
-            {/* Receipt scanning */}
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 bg-gray-50">
-              <div className="text-center">
-                <Camera className="h-10 w-10 text-gray-400 mx-auto mb-3" />
-                <h3 className="text-sm font-medium text-gray-900 mb-1">
-                  Scan Receipt (Optional)
+                <Camera style={{ width: 32, height: 32, color: colors.golden, margin: '0 auto 12px' }} />
+                <h3
+                  style={{
+                    fontFamily: 'Georgia, serif',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    color: colors.espresso,
+                    marginBottom: '4px',
+                  }}
+                >
+                  Scan Receipt
                 </h3>
-                <p className="text-xs text-gray-600 mb-4">
+                <p
+                  style={{
+                    fontFamily: '"Courier New", monospace',
+                    fontSize: '11px',
+                    color: colors.lightBrown,
+                    marginBottom: '16px',
+                  }}
+                >
                   AI will extract details automatically
                 </p>
 
@@ -296,276 +504,432 @@ export function AddExpenseModal({
                     const file = e.target.files?.[0]
                     if (file) handleReceiptUpload(file)
                   }}
-                  className="hidden"
+                  style={{ display: 'none' }}
                 />
 
-                <div className="flex gap-2 justify-center">
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isScanning}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 transition-colors text-sm font-medium flex items-center gap-2"
-                  >
-                    {isScanning ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        <span>Scanning...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="h-4 w-4" />
-                        <span>Upload Receipt</span>
-                      </>
-                    )}
-                  </button>
-                </div>
+                <motion.button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isScanning}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  style={{
+                    padding: '10px 20px',
+                    background: isScanning ? colors.lightBrown : `linear-gradient(135deg, ${colors.golden} 0%, ${colors.goldenLight} 100%)`,
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontFamily: '"Courier New", monospace',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    letterSpacing: '0.5px',
+                    color: 'white',
+                    cursor: isScanning ? 'not-allowed' : 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    boxShadow: isScanning ? 'none' : `0 4px 12px rgba(212, 168, 83, 0.35)`,
+                  }}
+                >
+                  {isScanning ? (
+                    <>
+                      <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />
+                      <span>Scanning...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Upload style={{ width: 16, height: 16 }} />
+                      <span>Upload Receipt</span>
+                    </>
+                  )}
+                </motion.button>
 
                 {scanError && (
-                  <p className="text-xs text-red-600 mt-2">{scanError}</p>
+                  <p style={{ fontFamily: '"Courier New", monospace', fontSize: '11px', color: colors.terracotta, marginTop: '12px' }}>
+                    {scanError}
+                  </p>
                 )}
 
                 {scannedData && (
-                  <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-                    <div className="flex items-center gap-2 text-green-700">
-                      <Sparkles className="h-4 w-4" />
-                      <span className="text-xs font-medium">
-                        Receipt scanned! Form auto-filled.
-                      </span>
-                    </div>
+                  <div
+                    style={{
+                      marginTop: '12px',
+                      padding: '10px',
+                      background: `${colors.sage}15`,
+                      border: `1px solid ${colors.sage}`,
+                      borderRadius: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                    }}
+                  >
+                    <Sparkles style={{ width: 14, height: 14, color: colors.sage }} />
+                    <span style={{ fontFamily: '"Courier New", monospace', fontSize: '11px', color: colors.sage, fontWeight: 600 }}>
+                      Receipt scanned! Form auto-filled.
+                    </span>
                   </div>
                 )}
               </div>
-            </div>
 
-            {/* Description */}
-            <div>
-              <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
-                Description <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="e.g., Dinner at La Piazza"
-                disabled={isSubmitting || success}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-50"
-                required
-              />
-            </div>
-
-            {/* Category */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Category <span className="text-red-500">*</span>
-                {showAiSuggestion && (
-                  <span className="ml-2 text-xs text-blue-600 font-normal">
-                    ✨ AI suggested
-                  </span>
-                )}
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                {CATEGORIES.map((cat) => (
-                  <button
-                    key={cat}
-                    type="button"
-                    onClick={() => setCategory(cat)}
-                    disabled={isSubmitting || success}
-                    className={`p-3 border-2 rounded-lg transition-all ${
-                      category === cat
-                        ? 'border-green-500 bg-green-50'
-                        : 'border-gray-200 hover:border-gray-300'
-                    } disabled:opacity-50`}
-                  >
-                    <div className="text-2xl mb-1">{CATEGORY_ICONS[cat]}</div>
-                    <div className="text-xs font-medium text-gray-700 capitalize">
-                      {cat}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Amount and Currency */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="amount" className="block text-sm font-medium text-gray-700 mb-2">
-                  Amount <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="number"
-                  id="amount"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  placeholder="0.00"
-                  step="0.01"
-                  min="0"
-                  disabled={isSubmitting || success}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-50"
-                  required
-                />
-              </div>
-              <div>
-                <label htmlFor="currency" className="block text-sm font-medium text-gray-700 mb-2">
-                  Currency
-                </label>
-                <select
-                  id="currency"
-                  value={currency}
-                  onChange={(e) => setCurrency(e.target.value)}
-                  disabled={isSubmitting || success}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-50"
-                >
-                  {CURRENCIES.map((cur) => (
-                    <option key={cur} value={cur}>
-                      {cur}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Date and Location */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="expenseDate" className="block text-sm font-medium text-gray-700 mb-2">
-                  Date <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  id="expenseDate"
-                  value={expenseDate}
-                  onChange={(e) => setExpenseDate(e.target.value)}
-                  disabled={isSubmitting || success}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-50"
-                  required
-                />
-              </div>
-              <div>
-                <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-2">
-                  Location
+              {/* Description */}
+              <div style={{ marginBottom: '20px' }}>
+                <label style={labelStyle}>
+                  Description <span style={{ color: colors.terracotta }}>*</span>
                 </label>
                 <input
                   type="text"
-                  id="location"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  placeholder="e.g., Rome, Italy"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="e.g., Dinner at La Piazza"
                   disabled={isSubmitting || success}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-50"
+                  style={{
+                    ...inputStyle,
+                    opacity: isSubmitting || success ? 0.6 : 1,
+                  }}
+                  required
                 />
               </div>
-            </div>
 
-            {/* Split method */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Split Method
-              </label>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setSplitMethod('equal')}
-                  disabled={isSubmitting || success}
-                  className={`flex-1 px-4 py-2 border-2 rounded-lg text-sm font-medium ${
-                    splitMethod === 'equal'
-                      ? 'border-green-500 bg-green-50 text-green-700'
-                      : 'border-gray-200 text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  Equal Split
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSplitMethod('custom')}
-                  disabled={isSubmitting || success}
-                  className={`flex-1 px-4 py-2 border-2 rounded-lg text-sm font-medium ${
-                    splitMethod === 'custom'
-                      ? 'border-green-500 bg-green-50 text-green-700'
-                      : 'border-gray-200 text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  Custom Split
-                </button>
+              {/* Category Grid */}
+              <div style={{ marginBottom: '20px' }}>
+                <label style={labelStyle}>
+                  Category <span style={{ color: colors.terracotta }}>*</span>
+                  {showAiSuggestion && (
+                    <span style={{ marginLeft: '8px', color: colors.golden, fontWeight: 400, fontStyle: 'italic', textTransform: 'none' }}>
+                      ✨ AI suggested
+                    </span>
+                  )}
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                  {CATEGORIES.map((cat) => {
+                    const config = CATEGORY_CONFIG[cat]
+                    const isSelected = category === cat
+                    return (
+                      <motion.button
+                        key={cat}
+                        type="button"
+                        onClick={() => setCategory(cat)}
+                        disabled={isSubmitting || success}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        style={{
+                          padding: '12px 8px',
+                          border: `2px solid ${isSelected ? colors.terracotta : colors.warmGray}`,
+                          borderRadius: '10px',
+                          background: isSelected ? `${colors.terracotta}10` : colors.warmWhite,
+                          cursor: isSubmitting || success ? 'not-allowed' : 'pointer',
+                          opacity: isSubmitting || success ? 0.6 : 1,
+                          transition: 'all 0.2s ease',
+                        }}
+                      >
+                        <div style={{ fontSize: '24px', marginBottom: '4px' }}>{config.icon}</div>
+                        <div
+                          style={{
+                            fontFamily: '"Courier New", monospace',
+                            fontSize: '10px',
+                            fontWeight: 600,
+                            color: isSelected ? colors.terracotta : colors.mediumBrown,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px',
+                          }}
+                        >
+                          {config.label}
+                        </div>
+                      </motion.button>
+                    )
+                  })}
+                </div>
               </div>
-            </div>
 
-            {/* Participants */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Split Among <span className="text-red-500">*</span>
-              </label>
-              <div className="space-y-2">
-                {collaborators.map((collab) => (
-                  <label
-                    key={collab.id}
-                    className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={participants.includes(collab.id)}
-                      onChange={() => toggleParticipant(collab.id)}
-                      disabled={isSubmitting || success}
-                      className="h-4 w-4 text-green-600 rounded"
-                    />
-                    <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium text-gray-700">
-                      {collab.name.charAt(0).toUpperCase()}
-                    </div>
-                    <span className="text-sm font-medium text-gray-900">{collab.name}</span>
+              {/* Amount and Currency Row */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 120px', gap: '12px', marginBottom: '20px' }}>
+                <div>
+                  <label style={labelStyle}>
+                    Amount <span style={{ color: colors.terracotta }}>*</span>
                   </label>
-                ))}
+                  <div style={{ position: 'relative' }}>
+                    <span
+                      style={{
+                        position: 'absolute',
+                        left: '14px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        fontFamily: 'Georgia, serif',
+                        fontSize: '16px',
+                        fontWeight: 600,
+                        color: colors.lightBrown,
+                      }}
+                    >
+                      {currency === 'EUR' ? '€' : currency === 'USD' ? '$' : currency === 'GBP' ? '£' : currency}
+                    </span>
+                    <input
+                      type="number"
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                      placeholder="0.00"
+                      step="0.01"
+                      min="0"
+                      disabled={isSubmitting || success}
+                      style={{
+                        ...inputStyle,
+                        paddingLeft: '36px',
+                        fontFamily: "'Fraunces', Georgia, serif",
+                        fontSize: '18px',
+                        fontWeight: 600,
+                        opacity: isSubmitting || success ? 0.6 : 1,
+                      }}
+                      required
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label style={labelStyle}>Currency</label>
+                  <select
+                    value={currency}
+                    onChange={(e) => setCurrency(e.target.value)}
+                    disabled={isSubmitting || success}
+                    style={{
+                      ...inputStyle,
+                      fontFamily: '"Courier New", monospace',
+                      fontWeight: 600,
+                      opacity: isSubmitting || success ? 0.6 : 1,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {CURRENCIES.map((cur) => (
+                      <option key={cur} value={cur}>{cur}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
-            </div>
 
-            {/* Notes */}
-            <div>
-              <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-2">
-                Notes (Optional)
-              </label>
-              <textarea
-                id="notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Add any additional notes..."
-                disabled={isSubmitting || success}
-                rows={3}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-50 resize-none"
-              />
-            </div>
+              {/* Date and Location Row */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
+                <div>
+                  <label style={labelStyle}>
+                    <Calendar style={{ width: 12, height: 12, display: 'inline', marginRight: '6px', verticalAlign: 'middle' }} />
+                    Date <span style={{ color: colors.terracotta }}>*</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={expenseDate}
+                    onChange={(e) => setExpenseDate(e.target.value)}
+                    disabled={isSubmitting || success}
+                    style={{
+                      ...inputStyle,
+                      fontFamily: '"Courier New", monospace',
+                      opacity: isSubmitting || success ? 0.6 : 1,
+                    }}
+                    required
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>
+                    <MapPin style={{ width: 12, height: 12, display: 'inline', marginRight: '6px', verticalAlign: 'middle' }} />
+                    Location
+                  </label>
+                  <input
+                    type="text"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    placeholder="e.g., Rome"
+                    disabled={isSubmitting || success}
+                    style={{
+                      ...inputStyle,
+                      opacity: isSubmitting || success ? 0.6 : 1,
+                    }}
+                  />
+                </div>
+              </div>
 
-            {/* Action buttons */}
-            <div className="flex gap-3 pt-4 border-t border-gray-200">
-              <button
-                type="button"
-                onClick={handleClose}
-                disabled={isSubmitting}
-                className="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 disabled:opacity-50 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isSubmitting || success || !description || !amount || participants.length === 0}
-                className="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 disabled:bg-gray-300 transition-colors flex items-center justify-center gap-2"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                    <span>Adding...</span>
-                  </>
-                ) : success ? (
-                  <>
-                    <Check className="h-5 w-5" />
-                    <span>Added!</span>
-                  </>
-                ) : (
-                  <span>Add Expense</span>
-                )}
-              </button>
-            </div>
-          </form>
-        </div>
-      </motion.div>
-    </div>
+              {/* Split Method */}
+              <div style={{ marginBottom: '20px' }}>
+                <label style={labelStyle}>
+                  <SplitSquareHorizontal style={{ width: 12, height: 12, display: 'inline', marginRight: '6px', verticalAlign: 'middle' }} />
+                  Split Method
+                </label>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {(['equal', 'custom'] as SplitMethod[]).map((method) => (
+                    <motion.button
+                      key={method}
+                      type="button"
+                      onClick={() => setSplitMethod(method)}
+                      disabled={isSubmitting || success}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      style={{
+                        flex: 1,
+                        padding: '12px',
+                        border: `2px solid ${splitMethod === method ? colors.sage : colors.warmGray}`,
+                        borderRadius: '8px',
+                        background: splitMethod === method ? `${colors.sage}10` : colors.warmWhite,
+                        fontFamily: '"Courier New", monospace',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        letterSpacing: '0.5px',
+                        color: splitMethod === method ? colors.sage : colors.mediumBrown,
+                        textTransform: 'uppercase',
+                        cursor: isSubmitting || success ? 'not-allowed' : 'pointer',
+                        opacity: isSubmitting || success ? 0.6 : 1,
+                      }}
+                    >
+                      {method === 'equal' ? 'Equal Split' : 'Custom Split'}
+                    </motion.button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Participants - Only show if there are collaborators */}
+              {collaborators.length > 0 && (
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={labelStyle}>
+                    Split Among <span style={{ color: colors.terracotta }}>*</span>
+                  </label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {collaborators.map((collab) => (
+                      <label
+                        key={collab.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          padding: '12px',
+                          border: `1px solid ${participants.includes(collab.id) ? colors.sage : colors.warmGray}`,
+                          borderRadius: '8px',
+                          background: participants.includes(collab.id) ? `${colors.sage}08` : colors.warmWhite,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={participants.includes(collab.id)}
+                          onChange={() => toggleParticipant(collab.id)}
+                          disabled={isSubmitting || success}
+                          style={{ accentColor: colors.sage }}
+                        />
+                        <div
+                          style={{
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '50%',
+                            background: `linear-gradient(135deg, ${colors.golden} 0%, ${colors.goldenLight} 100%)`,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontFamily: 'Georgia, serif',
+                            fontSize: '14px',
+                            fontWeight: 600,
+                            color: 'white',
+                          }}
+                        >
+                          {collab.name.charAt(0).toUpperCase()}
+                        </div>
+                        <span style={{ fontFamily: 'Georgia, serif', fontSize: '14px', color: colors.espresso }}>
+                          {collab.name}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Notes */}
+              <div style={{ marginBottom: '24px' }}>
+                <label style={labelStyle}>
+                  <FileText style={{ width: 12, height: 12, display: 'inline', marginRight: '6px', verticalAlign: 'middle' }} />
+                  Notes <span style={{ color: colors.lightBrown, fontWeight: 400, fontStyle: 'italic', textTransform: 'none' }}>(Optional)</span>
+                </label>
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Add any additional notes..."
+                  disabled={isSubmitting || success}
+                  rows={2}
+                  style={{
+                    ...inputStyle,
+                    resize: 'none',
+                    opacity: isSubmitting || success ? 0.6 : 1,
+                  }}
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', gap: '12px', paddingTop: '16px', borderTop: `1px solid ${colors.warmGray}` }}>
+                <motion.button
+                  type="button"
+                  onClick={handleClose}
+                  disabled={isSubmitting}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  style={{
+                    flex: 1,
+                    padding: '14px 20px',
+                    background: 'transparent',
+                    border: `1px solid ${colors.warmGray}`,
+                    borderRadius: '10px',
+                    fontFamily: '"Courier New", monospace',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    letterSpacing: '1px',
+                    color: colors.mediumBrown,
+                    cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                    opacity: isSubmitting ? 0.5 : 1,
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  Cancel
+                </motion.button>
+                <motion.button
+                  type="submit"
+                  disabled={isSubmitting || success || !description || !amount}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  style={{
+                    flex: 1,
+                    padding: '14px 20px',
+                    background: isSubmitting || success || !description || !amount
+                      ? colors.lightBrown
+                      : `linear-gradient(135deg, ${colors.terracotta} 0%, ${colors.terracottaLight} 100%)`,
+                    border: 'none',
+                    borderRadius: '10px',
+                    fontFamily: '"Courier New", monospace',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    letterSpacing: '1px',
+                    color: colors.cream,
+                    cursor: isSubmitting || success || !description || !amount ? 'not-allowed' : 'pointer',
+                    boxShadow: isSubmitting || success || !description || !amount
+                      ? 'none'
+                      : `0 4px 14px rgba(196, 88, 48, 0.35)`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} />
+                      Recording...
+                    </>
+                  ) : success ? (
+                    <>
+                      <Check style={{ width: 16, height: 16 }} />
+                      Recorded!
+                    </>
+                  ) : (
+                    <>
+                      <Receipt style={{ width: 16, height: 16 }} />
+                      Record Expense
+                    </>
+                  )}
+                </motion.button>
+              </div>
+            </form>
+          </div>
+        </motion.div>
+      </div>
+    </AnimatePresence>
   )
 }
