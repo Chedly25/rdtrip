@@ -731,8 +731,15 @@ const SpotlightV2 = () => {
         <BottomSheet onCityDetailsClick={setCityDetailIndex} />
       </div>
 
-      {/* Companion Panel - Desktop Sidebar (hidden on mobile) */}
-      <div className="hidden md:flex h-full flex-shrink-0">
+      {/* Companion Panel - Desktop Sidebar (fixed positioned, hidden on mobile) */}
+      {/* Spacer to reserve space in layout when panel is expanded */}
+      <div
+        className="hidden md:block flex-shrink-0 transition-all duration-300"
+        style={{ width: isPanelExpanded ? '280px' : '0px' }}
+      />
+
+      {/* Fixed-position companion panel/tab */}
+      <div className="hidden md:block">
         <AnimatePresence mode="wait">
           {isPanelExpanded ? (
             <CompanionPanel

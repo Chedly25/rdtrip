@@ -810,9 +810,12 @@ export function CompanionPanel({
         ${className}
       `}
       style={{
-        height: 'calc(100vh - 60px)', // Account for header
-        maxHeight: 'calc(100vh - 60px)',
-        position: 'relative',
+        position: 'fixed',
+        top: '60px', // Below header
+        right: 0,
+        bottom: 0,
+        height: 'auto', // Let top/bottom constraints define height
+        zIndex: 30,
       }}
     >
       {/* Header - Compact */}
@@ -1032,7 +1035,7 @@ export function CompanionTab({ onClick, hasUnread = false }: CompanionTabProps) 
         shadow-lg
         hover:bg-[#F5F0E8]
         transition-colors
-        z-40
+        z-30
       "
     >
       <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#C45830] to-[#D4A853] flex items-center justify-center relative">
