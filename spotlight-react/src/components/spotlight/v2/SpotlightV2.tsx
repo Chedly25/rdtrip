@@ -889,8 +889,8 @@ const SpotlightV2 = () => {
         )}
       </AnimatePresence>
 
-      {/* Floating Action Buttons - Bottom right corner */}
-      <div className="fixed bottom-6 right-6 z-40 hidden md:flex flex-col gap-2">
+      {/* Floating Action Buttons - Positioned to left of companion panel */}
+      <div className="fixed bottom-6 z-40 hidden md:flex flex-col gap-2" style={{ right: '296px' }}>
         {/* Start Trip Button - Only show when trip mode is not active */}
         {!tripMode.isActive && (
           <motion.button

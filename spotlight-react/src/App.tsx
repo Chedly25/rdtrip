@@ -6,7 +6,6 @@ import { TodayView } from './components/today/TodayView'
 import { AgentProvider } from './contexts/AgentProvider'
 import { CompanionProvider } from './contexts/CompanionProvider'
 import { AuthProvider } from './contexts/AuthContext'
-import { AgentChatBubble } from './components/agent/AgentChatBubble'
 import { AgentModal } from './components/agent/AgentModal'
 
 // Create a client
@@ -34,9 +33,6 @@ function App() {
 
               {/* AI Agent Modal - Available for full-screen agent interactions */}
               <AgentModal />
-
-              {/* Legacy Agent Chat Bubble - Kept for pages without companion panel */}
-              <AgentChatBubble />
             </CompanionProvider>
           </AgentProvider>
         </Router>
