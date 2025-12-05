@@ -797,6 +797,14 @@ app.post('/api/routes', authenticate, async (req, res) => {
       finalStops = stops;
     }
 
+    // Ensure selectedAgents is an array for PostgreSQL
+    let agentsArray = selectedAgents;
+    if (typeof selectedAgents === 'string') {
+      agentsArray = [selectedAgents];
+    } else if (!Array.isArray(selectedAgents)) {
+      agentsArray = ['best-overall'];
+    }
+
     // Save route to database (with new columns)
     const result = await db.query(
       `INSERT INTO routes (user_id, name, origin, destination, stops, budget, selected_agents, route_data, total_nights, trip_pace)
@@ -809,7 +817,7 @@ app.post('/api/routes', authenticate, async (req, res) => {
         destination,
         finalStops,
         budget,
-        selectedAgents,
+        agentsArray,
         JSON.stringify(routeData),
         finalTotalNights,
         finalTripPace
