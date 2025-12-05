@@ -300,22 +300,15 @@ export function FeatureTour({ forceRun = false, onComplete }: FeatureTourProps) 
   const [stepIndex, setStepIndex] = useState(0)
 
   useEffect(() => {
-    // Check if tour should run
+    // Only run tour when explicitly triggered via forceRun
+    // Auto-tour disabled due to missing target elements causing failures
     if (forceRun) {
       setRun(true)
       return
     }
 
-    const hasSeenTour = localStorage.getItem(TOUR_KEY)
-
-    // Run tour if never seen or outdated version
-    if (!hasSeenTour || hasSeenTour !== TOUR_VERSION) {
-      // Small delay to let the app render first
-      const timer = setTimeout(() => {
-        setRun(true)
-      }, 1500)
-      return () => clearTimeout(timer)
-    }
+    // Tour is now opt-in only - users can trigger via "Take a tour" button
+    // This prevents the broken popup from appearing on every refresh
   }, [forceRun])
 
   const handleCallback = (data: CallBackProps) => {
