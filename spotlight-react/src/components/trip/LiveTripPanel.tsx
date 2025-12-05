@@ -32,7 +32,7 @@ import { QuickActions } from './QuickActions';
 import { NearbySheet } from './NearbySheet';
 import { PlanChangeAssistant } from './PlanChangeAssistant';
 import { SmartAlertsContainer, useSmartAlertsMonitor, type SmartAlert, type MonitoredActivity } from './SmartAlerts';
-import { TripDayView } from './TripDayView';
+import { PocketLocal } from './PocketLocal';
 import { useTrip } from '../../hooks/useTrip';
 import { useGPS } from '../../hooks/useGPS';
 import { useWeather } from '../../hooks/useWeather';
@@ -786,23 +786,27 @@ export function LiveTripPanel({
                   <Loader2 className="w-8 h-8 animate-spin" style={{ color: colors.golden }} />
                 </div>
               ) : (
-                <TripDayView
+                <PocketLocal
                   activities={todayData?.activities || []}
                   dayNumber={currentDay}
                   totalDays={totalDays}
                   cityName={todayData?.city || trip?.origin_city || 'Your City'}
-                  onNavigate={handleNavigate}
+                  onNavigate={(activity) => {
+                    // Navigate to the selected activity using Google Maps
+                    if (activity.coordinates) {
+                      const { lat, lng } = activity.coordinates;
+                      const name = encodeURIComponent(activity.title);
+                      // Open Google Maps with destination
+                      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+                      const url = isIOS
+                        ? `maps://maps.google.com/maps?daddr=${lat},${lng}&q=${name}`
+                        : `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&destination_place_id=${name}`;
+                      window.open(url, '_blank');
+                    }
+                  }}
                   onActivityComplete={(activityId) => {
                     console.log('[LiveTripPanel] Activity completed:', activityId);
                     // Could call checkin API here
-                  }}
-                  onActivitySkip={(activityId) => {
-                    console.log('[LiveTripPanel] Activity skipped:', activityId);
-                    // Could call skip API here
-                  }}
-                  onSwapActivity={(activityId, newActivity) => {
-                    console.log('[LiveTripPanel] Swap activity:', activityId, '->', newActivity);
-                    // Could call swap API here
                   }}
                 />
               )}
