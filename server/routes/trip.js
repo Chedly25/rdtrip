@@ -8,33 +8,21 @@
 const express = require('express');
 const router = express.Router();
 const TripService = require('../services/TripService');
+const { authenticate } = require('../../middleware/auth');
 
 const tripService = new TripService();
 
-// Simple auth middleware - extracts user ID from token
-// In production, use proper JWT verification
+// Use proper JWT authentication middleware
+// Wrapper to also set req.userId for backward compatibility
 const authMiddleware = (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-
-  // For now, we'll extract user info from a simple token format
-  // In production, verify JWT and extract user ID
-  try {
-    const token = authHeader.split(' ')[1];
-    // Decode base64 token to get user info
-    const decoded = JSON.parse(Buffer.from(token, 'base64').toString('utf-8'));
-    req.userId = decoded.userId || decoded.id;
-    next();
-  } catch {
-    // Fallback: try to get user from query or body
-    req.userId = req.query.userId || req.body?.userId;
-    if (!req.userId) {
-      return res.status(401).json({ error: 'Invalid token' });
+  authenticate(req, res, (err) => {
+    if (err) return next(err);
+    // Set userId from the authenticated user for backward compatibility
+    if (req.user) {
+      req.userId = req.user.id;
     }
     next();
-  }
+  });
 };
 
 /**
