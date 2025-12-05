@@ -127,8 +127,8 @@ class TripService {
     const query = `
       SELECT
         at.*,
-        r.origin_city,
-        r.destination_city,
+        r.origin as origin_city,
+        r.destination as destination_city,
         r.route_data,
         i.day_structure,
         i.activities as itinerary_activities,
@@ -159,8 +159,8 @@ class TripService {
     let query = `
       SELECT
         at.*,
-        r.origin_city,
-        r.destination_city,
+        r.origin as origin_city,
+        r.destination as destination_city,
         r.route_data,
         i.day_structure,
         i.activities as itinerary_activities,
