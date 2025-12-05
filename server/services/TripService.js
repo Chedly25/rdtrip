@@ -94,6 +94,7 @@ class TripService {
           status = 'active',
           current_day = 1,
           current_city_index = 0,
+          itinerary_id = COALESCE(EXCLUDED.itinerary_id, active_trips.itinerary_id),
           stats = $4,
           started_at = NOW(),
           completed_at = NULL,
