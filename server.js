@@ -12085,7 +12085,7 @@ async function warmCacheForPopularCities() {
  * Start or resume a trip
  * POST /api/trip/:routeId/start
  */
-app.post('/api/trip/:routeId/start', authenticateToken, async (req, res) => {
+app.post('/api/trip/:routeId/start', authenticate, async (req, res) => {
   const { routeId } = req.params;
   const { itineraryId } = req.body;
   const userId = req.user.id;
@@ -12214,7 +12214,7 @@ app.post('/api/trip/:routeId/start', authenticateToken, async (req, res) => {
  * Get user's currently active trip
  * GET /api/trip/active
  */
-app.get('/api/trip/active', authenticateToken, async (req, res) => {
+app.get('/api/trip/active', authenticate, async (req, res) => {
   const userId = req.user.id;
 
   try {
@@ -12252,7 +12252,7 @@ app.get('/api/trip/active', authenticateToken, async (req, res) => {
  * Get trip by ID
  * GET /api/trip/:tripId
  */
-app.get('/api/trip/:tripId', authenticateToken, async (req, res) => {
+app.get('/api/trip/:tripId', authenticate, async (req, res) => {
   const { tripId } = req.params;
   const userId = req.user.id;
 
@@ -12293,7 +12293,7 @@ app.get('/api/trip/:tripId', authenticateToken, async (req, res) => {
  * Get today's activities for a trip
  * GET /api/trip/:tripId/today
  */
-app.get('/api/trip/:tripId/today', authenticateToken, async (req, res) => {
+app.get('/api/trip/:tripId/today', authenticate, async (req, res) => {
   const { tripId } = req.params;
   const userId = req.user.id;
 
@@ -12413,7 +12413,7 @@ app.get('/api/trip/:tripId/today', authenticateToken, async (req, res) => {
  * Get trip progress dashboard
  * GET /api/trip/:tripId/progress
  */
-app.get('/api/trip/:tripId/progress', authenticateToken, async (req, res) => {
+app.get('/api/trip/:tripId/progress', authenticate, async (req, res) => {
   const { tripId } = req.params;
   const userId = req.user.id;
 
@@ -12488,7 +12488,7 @@ app.get('/api/trip/:tripId/progress', authenticateToken, async (req, res) => {
  * Update trip location (GPS tracking)
  * POST /api/trip/:tripId/location
  */
-app.post('/api/trip/:tripId/location', authenticateToken, async (req, res) => {
+app.post('/api/trip/:tripId/location', authenticate, async (req, res) => {
   const { tripId } = req.params;
   const { latitude, longitude, accuracy, altitude, speed, heading, city, country, address } = req.body;
   const userId = req.user.id;
@@ -12541,7 +12541,7 @@ app.post('/api/trip/:tripId/location', authenticateToken, async (req, res) => {
  * Create a check-in
  * POST /api/trip/:tripId/checkin
  */
-app.post('/api/trip/:tripId/checkin', authenticateToken, async (req, res) => {
+app.post('/api/trip/:tripId/checkin', authenticate, async (req, res) => {
   const { tripId } = req.params;
   const {
     activityId, activityName, activityType, dayNumber,
@@ -12591,7 +12591,7 @@ app.post('/api/trip/:tripId/checkin', authenticateToken, async (req, res) => {
  * Get check-ins for a trip
  * GET /api/trip/:tripId/checkins
  */
-app.get('/api/trip/:tripId/checkins', authenticateToken, async (req, res) => {
+app.get('/api/trip/:tripId/checkins', authenticate, async (req, res) => {
   const { tripId } = req.params;
   const { dayNumber, limit } = req.query;
   const userId = req.user.id;
@@ -12627,7 +12627,7 @@ app.get('/api/trip/:tripId/checkins', authenticateToken, async (req, res) => {
  * Advance to the next day
  * POST /api/trip/:tripId/advance-day
  */
-app.post('/api/trip/:tripId/advance-day', authenticateToken, async (req, res) => {
+app.post('/api/trip/:tripId/advance-day', authenticate, async (req, res) => {
   const { tripId } = req.params;
   const userId = req.user.id;
 
@@ -12658,7 +12658,7 @@ app.post('/api/trip/:tripId/advance-day', authenticateToken, async (req, res) =>
  * Pause the trip
  * POST /api/trip/:tripId/pause
  */
-app.post('/api/trip/:tripId/pause', authenticateToken, async (req, res) => {
+app.post('/api/trip/:tripId/pause', authenticate, async (req, res) => {
   const { tripId } = req.params;
   const userId = req.user.id;
 
@@ -12687,7 +12687,7 @@ app.post('/api/trip/:tripId/pause', authenticateToken, async (req, res) => {
  * Complete the trip
  * POST /api/trip/:tripId/complete
  */
-app.post('/api/trip/:tripId/complete', authenticateToken, async (req, res) => {
+app.post('/api/trip/:tripId/complete', authenticate, async (req, res) => {
   const { tripId } = req.params;
   const userId = req.user.id;
 
@@ -12716,7 +12716,7 @@ app.post('/api/trip/:tripId/complete', authenticateToken, async (req, res) => {
  * Update trip statistics
  * POST /api/trip/:tripId/stats
  */
-app.post('/api/trip/:tripId/stats', authenticateToken, async (req, res) => {
+app.post('/api/trip/:tripId/stats', authenticate, async (req, res) => {
   const { tripId } = req.params;
   const statsUpdate = req.body;
   const userId = req.user.id;
