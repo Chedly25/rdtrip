@@ -25,6 +25,8 @@ import AddCityLandmarkModal from '../v2/AddCityLandmarkModal';
 import { useCompanion } from '../../../contexts/CompanionProvider';
 import { PersonalizationBadge } from '../v2/PersonalizationBadge';
 import { CollaborationEmptyState, ExpensesEmptyState } from '../../onboarding';
+import { InviteCollaboratorModal } from '../../collaboration/InviteCollaboratorModal';
+import { AddExpenseModal } from '../../expenses/AddExpenseModal';
 
 // Tab types for the bottom sheet
 type BottomSheetTab = 'route' | 'collaborate' | 'expenses';
@@ -67,6 +69,8 @@ const BottomSheet = ({ onCityDetailsClick }: BottomSheetProps) => {
   const [hasSeenExpensesTab, setHasSeenExpensesTab] = useState(() =>
     localStorage.getItem('rdtrip_seen_expenses_tab') === 'true'
   );
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showAddExpenseModal, setShowAddExpenseModal] = useState(false);
   const sheetRef = useRef<HTMLDivElement>(null);
 
   // Track if we're on desktop for companion panel offset
@@ -459,10 +463,7 @@ const BottomSheet = ({ onCityDetailsClick }: BottomSheetProps) => {
                 className="flex-1 overflow-hidden"
               >
                 <CollaborationEmptyState
-                  onAction={() => {
-                    // TODO: Open invite collaborator modal
-                    console.log('Open invite modal');
-                  }}
+                  onAction={() => setShowInviteModal(true)}
                 />
               </motion.div>
             )}
@@ -478,16 +479,41 @@ const BottomSheet = ({ onCityDetailsClick }: BottomSheetProps) => {
                 className="flex-1 overflow-hidden"
               >
                 <ExpensesEmptyState
-                  onAction={() => {
-                    // TODO: Open add expense modal
-                    console.log('Open add expense modal');
-                  }}
+                  onAction={() => setShowAddExpenseModal(true)}
                 />
               </motion.div>
             )}
           </AnimatePresence>
         </div>
       </motion.div>
+
+      {/* Invite Collaborator Modal */}
+      {route?.id && (
+        <InviteCollaboratorModal
+          isOpen={showInviteModal}
+          onClose={() => setShowInviteModal(false)}
+          routeId={route.id}
+          onSuccess={() => {
+            setShowInviteModal(false);
+            // Could refresh collaborators list here
+          }}
+        />
+      )}
+
+      {/* Add Expense Modal */}
+      {route?.id && (
+        <AddExpenseModal
+          isOpen={showAddExpenseModal}
+          onClose={() => setShowAddExpenseModal(false)}
+          routeId={route.id}
+          userId={localStorage.getItem('userId') || 'guest'}
+          collaborators={[]}
+          onSuccess={() => {
+            setShowAddExpenseModal(false);
+            // Could refresh expenses list here
+          }}
+        />
+      )}
     </>
   );
 };
