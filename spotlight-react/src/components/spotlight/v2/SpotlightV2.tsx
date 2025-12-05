@@ -69,7 +69,6 @@ const SpotlightV2 = () => {
     getCityName,
     getAgentColors,
     tripMode,
-    startTrip,
   } = useSpotlightStoreV2();
 
   useEffect(() => {
@@ -918,7 +917,8 @@ const SpotlightV2 = () => {
         isOpen={showTripActivation}
         onClose={() => setShowTripActivation(false)}
         onActivate={() => {
-          startTrip();
+          // Close the activation modal and open the live trip panel
+          // The LiveTripPanel will auto-start the trip via the API
           setShowTripActivation(false);
           setShowLiveTripPanel(true);
         }}
@@ -939,6 +939,7 @@ const SpotlightV2 = () => {
               itineraryId={getStoredItineraryId() || undefined}
               onClose={() => setShowLiveTripPanel(false)}
               className="h-full"
+              autoStart={true}
             />
           </motion.div>
         )}
