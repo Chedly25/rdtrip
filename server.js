@@ -656,6 +656,24 @@ app.post('/api/auth/register', async (req, res) => {
 
     const user = result.rows[0];
 
+    // Link any pending invitations for this email
+    try {
+      const pendingInvitations = await db.query(
+        `UPDATE route_collaborators
+         SET user_id = $1, invited_email = NULL
+         WHERE invited_email = $2 AND user_id IS NULL
+         RETURNING route_id, role`,
+        [user.id, email.toLowerCase()]
+      );
+
+      if (pendingInvitations.rows.length > 0) {
+        console.log(`🔗 Linked ${pendingInvitations.rows.length} pending invitation(s) for ${user.email}`);
+      }
+    } catch (linkError) {
+      // Don't fail registration if linking fails
+      console.error('Failed to link pending invitations:', linkError);
+    }
+
     // Generate JWT token
     const token = generateToken(user);
 
@@ -8554,35 +8572,48 @@ app.post('/api/routes/:id/collaborators', authMiddleware, async (req, res) => {
       return res.status(403).json({ error: 'Not authorized to invite collaborators' });
     }
 
-    // Find user by email
-    const invitee = await pool.query('SELECT id, name FROM users WHERE email = $1', [email]);
-    if (!invitee.rows.length) {
-      return res.status(404).json({ error: 'User not found. They need to create an account first.' });
-    }
-
-    const inviteeId = invitee.rows[0].id;
-    const inviteeName = invitee.rows[0].name;
+    // Find user by email (they may or may not exist)
+    const invitee = await pool.query('SELECT id, name, email FROM users WHERE email = $1', [email]);
+    const userExists = invitee.rows.length > 0;
+    const inviteeId = userExists ? invitee.rows[0].id : null;
+    const inviteeName = userExists ? invitee.rows[0].name : email;
 
     // Check if user is inviting themselves
-    if (inviteeId === inviterId) {
+    if (userExists && inviteeId === inviterId) {
       return res.status(400).json({ error: 'You cannot invite yourself' });
     }
 
-    // Check if already a collaborator
-    const existing = await pool.query(
-      'SELECT * FROM route_collaborators WHERE route_id = $1 AND user_id = $2',
-      [routeId, inviteeId]
-    );
-
-    if (existing.rows.length > 0) {
-      return res.status(400).json({ error: 'User is already a collaborator on this trip' });
+    // Check if already a collaborator (by user_id or by email)
+    let existing;
+    if (userExists) {
+      existing = await pool.query(
+        'SELECT * FROM route_collaborators WHERE route_id = $1 AND user_id = $2',
+        [routeId, inviteeId]
+      );
+    } else {
+      existing = await pool.query(
+        'SELECT * FROM route_collaborators WHERE route_id = $1 AND invited_email = $2',
+        [routeId, email.toLowerCase()]
+      );
     }
 
-    // Insert collaborator
-    await pool.query(`
-      INSERT INTO route_collaborators (route_id, user_id, role, invited_by, status)
-      VALUES ($1, $2, $3, $4, 'pending')
-    `, [routeId, inviteeId, role, inviterId]);
+    if (existing.rows.length > 0) {
+      return res.status(400).json({ error: 'This email has already been invited to this trip' });
+    }
+
+    // Insert collaborator (with user_id if they exist, or just email if they don't)
+    if (userExists) {
+      await pool.query(`
+        INSERT INTO route_collaborators (route_id, user_id, role, invited_by, status)
+        VALUES ($1, $2, $3, $4, 'pending')
+      `, [routeId, inviteeId, role, inviterId]);
+    } else {
+      // Store pending invitation by email - will be linked when user signs up
+      await pool.query(`
+        INSERT INTO route_collaborators (route_id, invited_email, role, invited_by, status)
+        VALUES ($1, $2, $3, $4, 'pending')
+      `, [routeId, email.toLowerCase(), role, inviterId]);
+    }
 
     // Get route details for notification
     const route = await pool.query('SELECT name, destination FROM routes WHERE id = $1', [routeId]);
@@ -8594,13 +8625,21 @@ app.post('/api/routes/:id/collaborators', authMiddleware, async (req, res) => {
       inviterId,
       'collaborator_invited',
       `Invited ${inviteeName} as ${role}`,
-      { invitee: email, role }
+      { invitee: email, role, isPending: !userExists }
     );
 
     // TODO: Send email notification (implement sendCollaborationInvite)
     console.log(`📧 Would send invitation email to ${email} for route ${routeId}`);
 
-    res.json({ success: true, message: 'Collaborator invited successfully' });
+    const responseMessage = userExists
+      ? 'Invitation sent! They can now see this trip.'
+      : 'Invitation sent! They\'ll get access when they create an account with this email.';
+
+    res.json({
+      success: true,
+      message: responseMessage,
+      isPending: !userExists
+    });
   } catch (error) {
     console.error('Error inviting collaborator:', error);
     res.status(500).json({ error: 'Failed to invite collaborator' });
