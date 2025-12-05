@@ -1,1053 +1,1147 @@
-# Living Travel Companion - Implementation Plan
+# Living Travel Companion - Master Implementation Plan
 
-## Vision: Transform the Trip Panel from Checklist to Magic
+## The Vision
 
-**The Problem**: Current panel is a glorified checklist. Click "done". Repeat. Boring.
+**The detailed itinerary is the brain. The companion is the voice.**
 
-**The Solution**: An AI-powered serendipity engine that makes every moment of your trip feel alive, contextual, and full of discovery.
+The detailed itinerary contains all the raw data - every restaurant, every museum, every hidden gem. But during a trip, users shouldn't have to wade through it. The Travel Companion becomes THE interface - an intelligent layer that surfaces the right thing at the right moment.
 
----
-
-## Design Direction: "Wanderlust Field Notes"
-
-### Aesthetic Choices (Frontend Design Skill)
-
-**Typography**:
-- Display: **Playfair Display** (editorial, refined, travel magazine feel)
-- Body: **Source Serif 4** (readable, warm, humanist)
-- UI Accents: **DM Sans** (clean, modern)
-
-**Color System - Time-Aware Palette**:
-```css
-:root {
-  /* Dawn (5-7am) - Awakening */
-  --dawn-primary: #FFB4A2;
-  --dawn-secondary: #FFCDB2;
-  --dawn-bg: linear-gradient(180deg, #FFCDB2 0%, #FFE5D9 100%);
-
-  /* Morning (7am-12pm) - Fresh */
-  --morning-primary: #87CEEB;
-  --morning-secondary: #B4E4FF;
-  --morning-bg: linear-gradient(180deg, #E8F4F8 0%, #FFFBF5 100%);
-
-  /* Afternoon (12-5pm) - Golden Hour */
-  --afternoon-primary: #D4A853;
-  --afternoon-secondary: #E4BE73;
-  --afternoon-bg: linear-gradient(180deg, #FFF8E7 0%, #FFFBF5 100%);
-
-  /* Evening (5-9pm) - Warm Amber */
-  --evening-primary: #E07B39;
-  --evening-secondary: #F4A261;
-  --evening-bg: linear-gradient(180deg, #FFE8D6 0%, #FFF0E5 100%);
-
-  /* Night (9pm-5am) - Indigo Dreams */
-  --night-primary: #6D6875;
-  --night-secondary: #9D8189;
-  --night-bg: linear-gradient(180deg, #2C2417 0%, #3D3835 100%);
-
-  /* Brand Constants */
-  --terracotta: #C45830;
-  --sage: #6B8E7B;
-  --cream: #FFFBF5;
-  --dark-brown: #2C2417;
-}
 ```
-
-**Key Design Elements**:
-- Grain overlay texture (subtle, 3-5% opacity)
-- Organic border-radius (8px default, 16px cards, 24px panels)
-- Layered shadows with warm undertones
-- Motion: spring physics, staggered reveals, scroll-triggered animations
+┌─────────────────────────────────────────────────────────────────┐
+│                                                                 │
+│   DETAILED ITINERARY              TRAVEL COMPANION              │
+│   ══════════════════              ════════════════              │
+│                                                                 │
+│   The Database                    The Intelligence              │
+│   (all options)                   (curated, contextual)         │
+│                                                                 │
+│   User access: Reference          User access: PRIMARY          │
+│   When: Planning, review          When: ALWAYS during trip      │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
 ## Architecture Overview
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                           FRONTEND (React)                               │
-├─────────────────────────────────────────────────────────────────────────┤
-│  ┌──────────────┐  ┌───────────────┐  ┌────────────────────┐            │
-│  │ NOW Hero     │  │ Serendipity   │  │ Smart Time Hints   │            │
-│  │ Card         │  │ Carousel      │  │ Component          │            │
-│  └──────────────┘  └───────────────┘  └────────────────────┘            │
-│  ┌──────────────┐  ┌───────────────┐  ┌────────────────────┐            │
-│  │ Trip Story   │  │ Moment        │  │ Weather-Aware      │            │
-│  │ Snippet      │  │ Capture       │  │ Suggestions        │            │
-│  └──────────────┘  └───────────────┘  └────────────────────┘            │
-├─────────────────────────────────────────────────────────────────────────┤
-│                          API Layer (/api/trip)                           │
-├─────────────────────────────────────────────────────────────────────────┤
-│  ┌────────────────────────────────────────────────────────────────┐     │
-│  │                   SERENDIPITY AGENT                             │     │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐     │     │
-│  │  │ Tool:       │  │ Tool:       │  │ Tool:               │     │     │
-│  │  │ Perplexity  │  │ Google      │  │ Weather Check       │     │     │
-│  │  │ Discovery   │  │ Places      │  │                     │     │     │
-│  │  └─────────────┘  └─────────────┘  └─────────────────────┘     │     │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐     │     │
-│  │  │ Tool:       │  │ Tool:       │  │ Tool:               │     │     │
-│  │  │ Time        │  │ Story       │  │ Nearby              │     │     │
-│  │  │ Optimizer   │  │ Generator   │  │ Discovery           │     │     │
-│  │  └─────────────┘  └─────────────┘  └─────────────────────┘     │     │
-│  └────────────────────────────────────────────────────────────────┘     │
-├─────────────────────────────────────────────────────────────────────────┤
-│                         SERVICES                                         │
-│  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐             │
-│  │ PerplexityAI   │  │ GooglePlaces   │  │ WeatherMonitor │             │
-│  │ Service        │  │ Service        │  │ Service        │             │
-│  │ (existing)     │  │ (existing)     │  │ (existing)     │             │
-│  └────────────────┘  └────────────────┘  └────────────────┘             │
-├─────────────────────────────────────────────────────────────────────────┤
-│                         DATABASE                                         │
-│  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐             │
-│  │ trip_moments   │  │ serendipity_   │  │ trip_narrative │             │
-│  │ (new)          │  │ cache (new)    │  │ (new)          │             │
-│  └────────────────┘  └────────────────┘  └────────────────┘             │
-└─────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                      TRIP BRAIN SERVICE                          │
+│  ┌─────────────────────────────────────────────────────────────┐│
+│  │                    RAW ITINERARY DATA                        ││
+│  │  (activities, restaurants, hotels, scenic spots, etc.)       ││
+│  └─────────────────────────────────────────────────────────────┘│
+│                              ↓                                   │
+│  ┌─────────────────────────────────────────────────────────────┐│
+│  │                 INTELLIGENCE PIPELINE                        ││
+│  │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐            ││
+│  │  │ Time    │ │Location │ │Preference│ │ Weather │            ││
+│  │  │ Filter  │ │ Filter  │ │ Score   │ │ Check   │            ││
+│  │  └─────────┘ └─────────┘ └─────────┘ └─────────┘            ││
+│  └─────────────────────────────────────────────────────────────┘│
+│                              ↓                                   │
+│  ┌─────────────────────────────────────────────────────────────┐│
+│  │                  ENRICHMENT LAYER                            ││
+│  │  • "Why Now" reasoning                                       ││
+│  │  • Contextual tips                                           ││
+│  │  • Distance calculations                                     ││
+│  │  • Insider knowledge                                         ││
+│  └─────────────────────────────────────────────────────────────┘│
+│                              ↓                                   │
+│  ┌─────────────────────────────────────────────────────────────┐│
+│  │               COMPANION UI (Pocket Local)                    ││
+│  │  Choice Mode | Experience Mode | Craving Mode | etc.         ││
+│  └─────────────────────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Phase 1: Serendipity Agent with Tools
+## Companion Modes
 
-### 1.1 Create SerendipityAgent Service
+| Mode | Trigger | What It Does |
+|------|---------|--------------|
+| **Choice** | Default | "What calls to you?" - 3 curated options |
+| **Experience** | User selects | Deep dive into one activity + tips |
+| **Craving** | "I want..." | Instant contextual search ("I want sushi") |
+| **Serendipity** | "Surprise me" | Hidden gem discovery |
+| **Rest** | "I'm tired" | Nearby cafés, parks, hotels |
+| **Full Picture** | "Show all" | Access to detailed itinerary |
 
-**File**: `server/services/SerendipityAgent.js`
+---
 
-The Serendipity Agent is the brain that discovers unexpected delights near the traveler.
+## Work Items
 
-**Tools it has access to**:
+### Epic 1: Trip Brain Service (Foundation)
 
-```javascript
-const tools = [
-  {
-    name: "discover_nearby_gems",
-    description: "Find hidden gems, local favorites, and unexpected discoveries near current location",
-    parameters: {
-      location: { lat: number, lng: number },
-      radius: number, // meters
-      categories: string[], // ["cafe", "viewpoint", "street_art", "local_shop", etc.]
-      exclude: string[], // place_ids to exclude (already visited)
-      time_of_day: string, // "morning", "afternoon", "evening", "night"
-      weather: string // "sunny", "cloudy", "rainy"
-    }
-  },
-  {
-    name: "get_local_intel",
-    description: "Use Perplexity to discover local secrets, events happening today, temporary exhibitions",
-    parameters: {
-      city: string,
-      date: string, // "2024-01-15"
-      interests: string[], // user's interests
-      query_type: string // "events_today", "local_secrets", "photo_spots", "food_gems"
-    }
-  },
-  {
-    name: "check_optimal_timing",
-    description: "Determine best time to visit a place based on crowds, lighting, opening hours",
-    parameters: {
-      place_id: string,
-      current_time: string,
-      purpose: string // "photos", "dining", "exploration"
-    }
-  },
-  {
-    name: "find_weather_alternatives",
-    description: "If weather changes, find indoor/covered alternatives nearby",
-    parameters: {
-      location: { lat: number, lng: number },
-      weather_condition: string,
-      original_activity_type: string,
-      preferences: object
-    }
-  },
-  {
-    name: "generate_serendipity_card",
-    description: "Create a compelling discovery card with storytelling",
-    parameters: {
-      place: object, // Google Places data
-      local_intel: string, // Perplexity insights
-      user_context: object // current trip context
-    }
+The intelligence layer that powers everything.
+
+---
+
+#### WI-1.1: Create TripBrain TypeScript Types
+**File**: `spotlight-react/src/services/tripBrain/types.ts`
+**Effort**: Small
+**Description**: Define all TypeScript interfaces for the Trip Brain system.
+
+```typescript
+// Types to define:
+- TripBrainState
+- EnrichedActivity (extends TimeSlot with scoring, distance, whyNow)
+- UserPreferences
+- LocationContext
+- WeatherContext
+- RecommendationScore
+- WhyNowReason
+```
+
+**Acceptance Criteria**:
+- [ ] All types defined and exported
+- [ ] JSDoc comments on each interface
+- [ ] Types are reusable across components
+
+---
+
+#### WI-1.2: Create TripBrain Core Service
+**File**: `spotlight-react/src/services/tripBrain/tripBrain.ts`
+**Effort**: Medium
+**Description**: The main service that orchestrates all intelligence.
+
+```typescript
+class TripBrain {
+  // State
+  private activities: TimeSlot[];
+  private userLocation: Coordinates | null;
+  private preferences: UserPreferences;
+  private completedIds: Set<string>;
+  private skippedIds: Set<string>;
+
+  // Core methods
+  loadTripData(itineraryId: string): Promise<void>
+  getRecommendations(count: number): EnrichedActivity[]
+  recordChoice(activityId: string): void
+  recordSkip(activityId: string, reason?: string): void
+  searchCraving(query: string): EnrichedActivity[]
+  getSerendipity(): EnrichedActivity
+}
+```
+
+**Acceptance Criteria**:
+- [ ] Service can load activities from itinerary
+- [ ] Maintains user preferences in memory
+- [ ] Tracks completed/skipped activities
+- [ ] Exposes clean API for UI consumption
+
+---
+
+#### WI-1.3: Implement Time Filter
+**File**: `spotlight-react/src/services/tripBrain/filters/timeFilter.ts`
+**Effort**: Small (Already exists in PocketLocal, extract)
+**Description**: Filter activities based on current time appropriateness.
+
+```typescript
+// Time periods and appropriate activity types
+// Already implemented in PocketLocal.tsx - extract and enhance
+
+const timeAppropriateTypes: Record<TimePeriod, string[]>
+const nightlifeKeywords: string[]
+const daylightOnlyKeywords: string[]
+
+function isActivityAppropriate(activity: TimeSlot, hour: number): boolean
+```
+
+**Acceptance Criteria**:
+- [ ] Extracted from PocketLocal.tsx
+- [ ] No museums at night
+- [ ] Nightlife keywords recognized
+- [ ] Configurable time periods
+
+---
+
+#### WI-1.4: Implement Location Filter
+**File**: `spotlight-react/src/services/tripBrain/filters/locationFilter.ts`
+**Effort**: Medium
+**Description**: Filter and score activities by distance from user.
+
+```typescript
+interface LocationFilterOptions {
+  maxDistance: number; // meters
+  userLocation: Coordinates;
+}
+
+function filterByDistance(activities: TimeSlot[], options: LocationFilterOptions): TimeSlot[]
+function scoreByDistance(activity: TimeSlot, userLocation: Coordinates): number
+function calculateDistance(a: Coordinates, b: Coordinates): number
+function formatDistance(meters: number): string // "200m" or "1.2km"
+```
+
+**Acceptance Criteria**:
+- [ ] Haversine formula for accurate distance
+- [ ] Distance score (closer = higher)
+- [ ] Human-readable distance formatting
+- [ ] Configurable max distance
+
+---
+
+#### WI-1.5: Implement Preference Scorer
+**File**: `spotlight-react/src/services/tripBrain/scoring/preferenceScorer.ts`
+**Effort**: Medium
+**Description**: Score activities based on learned user preferences.
+
+```typescript
+interface UserPreferences {
+  preferredTypes: Record<string, number>; // { restaurant: 0.8, museum: 0.3 }
+  avoidedTypes: string[];
+  priceLevel: 1 | 2 | 3 | 4;
+  keywords: string[]; // ["wine", "outdoor", "local"]
+}
+
+function buildPreferencesFromHistory(
+  choices: string[],  // Activity IDs user chose
+  skips: string[]     // Activity IDs user skipped
+): UserPreferences
+
+function scoreByPreferences(activity: TimeSlot, prefs: UserPreferences): number
+```
+
+**Acceptance Criteria**:
+- [ ] Learns from user choices
+- [ ] Learns from user skips
+- [ ] Keyword matching
+- [ ] Type preference weighting
+
+---
+
+#### WI-1.6: Implement Combined Scoring Algorithm
+**File**: `spotlight-react/src/services/tripBrain/scoring/combinedScorer.ts`
+**Effort**: Medium
+**Description**: Combine all scores into final recommendation ranking.
+
+```typescript
+interface ScoringWeights {
+  time: number;      // 0.25 - must be appropriate
+  distance: number;  // 0.30 - closer is better
+  preference: number; // 0.25 - matches user taste
+  serendipity: number; // 0.10 - hidden gem bonus
+  rating: number;    // 0.10 - quality indicator
+}
+
+function calculateFinalScore(
+  activity: TimeSlot,
+  context: {
+    hour: number;
+    userLocation: Coordinates;
+    preferences: UserPreferences;
+    weather?: string;
   }
+): { score: number; breakdown: ScoreBreakdown }
+```
+
+**Acceptance Criteria**:
+- [ ] Configurable weights
+- [ ] Returns score breakdown for "why" layer
+- [ ] Handles missing data gracefully
+- [ ] Normalized 0-1 output
+
+---
+
+#### WI-1.7: Implement "Why Now" Generator
+**File**: `spotlight-react/src/services/tripBrain/enrichment/whyNowGenerator.ts`
+**Effort**: Medium
+**Description**: Generate human-readable reasons for each recommendation.
+
+```typescript
+interface WhyNowReason {
+  primary: string;    // "3 min walk from you"
+  secondary?: string; // "Perfect for this time of day"
+  tip?: string;       // "Locals love the terrace seats"
+}
+
+function generateWhyNow(
+  activity: TimeSlot,
+  scoreBreakdown: ScoreBreakdown,
+  context: Context
+): WhyNowReason
+
+// Examples:
+// - "3 min walk from you"
+// - "Opens in 10 minutes - beat the crowd"
+// - "You loved the last café we suggested"
+// - "Hidden gem - 4.8 stars but only 47 reviews"
+// - "Golden hour in 30 min - perfect for photos"
+```
+
+**Acceptance Criteria**:
+- [ ] Distance-based reasons
+- [ ] Time-based reasons
+- [ ] Preference-based reasons
+- [ ] Weather-based reasons
+- [ ] Serendipity-based reasons
+
+---
+
+#### WI-1.8: Create Geolocation Hook
+**File**: `spotlight-react/src/hooks/useGeolocation.ts`
+**Effort**: Small
+**Description**: React hook for user location tracking.
+
+```typescript
+interface UseGeolocationOptions {
+  enableHighAccuracy?: boolean;
+  maximumAge?: number;
+  timeout?: number;
+  watch?: boolean;
+}
+
+function useGeolocation(options?: UseGeolocationOptions): {
+  location: Coordinates | null;
+  error: GeolocationError | null;
+  loading: boolean;
+  refresh: () => void;
+  permissionState: 'granted' | 'denied' | 'prompt';
+}
+```
+
+**Acceptance Criteria**:
+- [ ] Works on mobile browsers
+- [ ] Handles permission denial gracefully
+- [ ] Battery-efficient watching
+- [ ] Manual refresh option
+
+---
+
+#### WI-1.9: Create TripBrain Context Provider
+**File**: `spotlight-react/src/contexts/TripBrainContext.tsx`
+**Effort**: Medium
+**Description**: React context to provide TripBrain throughout the app.
+
+```typescript
+interface TripBrainContextValue {
+  // State
+  recommendations: EnrichedActivity[];
+  loading: boolean;
+  error: Error | null;
+  userLocation: Coordinates | null;
+
+  // Actions
+  selectActivity: (id: string) => void;
+  skipActivity: (id: string, reason?: string) => void;
+  searchCraving: (query: string) => Promise<EnrichedActivity[]>;
+  getSurprise: () => EnrichedActivity;
+  refresh: () => void;
+}
+
+const TripBrainProvider: React.FC<{ tripId: string; children: React.ReactNode }>
+const useTripBrain: () => TripBrainContextValue
+```
+
+**Acceptance Criteria**:
+- [ ] Initializes TripBrain on mount
+- [ ] Provides all actions to children
+- [ ] Auto-refreshes on location change
+- [ ] Persists preferences
+
+---
+
+### Epic 2: Companion UI Redesign
+
+Transform PocketLocal into the intelligent companion.
+
+---
+
+#### WI-2.1: Refactor PocketLocal to Use TripBrain
+**File**: `spotlight-react/src/components/trip/PocketLocal.tsx`
+**Effort**: Medium
+**Description**: Replace hardcoded logic with TripBrain service.
+
+```typescript
+// Current: PocketLocal has all logic internally
+// Target: PocketLocal consumes TripBrain context
+
+const PocketLocal: React.FC<Props> = () => {
+  const {
+    recommendations,
+    selectActivity,
+    skipActivity,
+    userLocation,
+  } = useTripBrain();
+
+  // UI only - no business logic
+}
+```
+
+**Acceptance Criteria**:
+- [ ] All filtering/scoring moved to TripBrain
+- [ ] Component is purely presentational
+- [ ] Maintains current visual design
+- [ ] Smoother, no duplicated state
+
+---
+
+#### WI-2.2: Add "Why Now" Display to Choice Cards
+**File**: `spotlight-react/src/components/trip/PocketLocal.tsx`
+**Effort**: Small
+**Description**: Show the "why" for each recommendation.
+
+```tsx
+<ChoiceCard>
+  <h3>Café de Flore</h3>
+  <WhyNowBadge>
+    <span className="primary">3 min walk</span>
+    <span className="secondary">Opens in 10 min</span>
+  </WhyNowBadge>
+</ChoiceCard>
+```
+
+**Acceptance Criteria**:
+- [ ] Primary reason always visible
+- [ ] Secondary reason on expand/hover
+- [ ] Visual hierarchy (distance prominent)
+- [ ] Animated reveal
+
+---
+
+#### WI-2.3: Add Distance Badge to Cards
+**File**: `spotlight-react/src/components/trip/PocketLocal.tsx`
+**Effort**: Small
+**Description**: Show walking distance/time on each card.
+
+```tsx
+<DistanceBadge>
+  <WalkingIcon />
+  <span>3 min</span>
+</DistanceBadge>
+```
+
+**Acceptance Criteria**:
+- [ ] Shows walking time (not just meters)
+- [ ] Updates when location changes
+- [ ] Graceful fallback if no location
+
+---
+
+#### WI-2.4: Add Craving Mode UI
+**File**: `spotlight-react/src/components/trip/CravingMode.tsx`
+**Effort**: Medium
+**Description**: "I want sushi" instant search interface.
+
+```tsx
+interface CravingModeProps {
+  onSearch: (query: string) => void;
+  onClose: () => void;
+  results: EnrichedActivity[];
+  loading: boolean;
+}
+
+// UI:
+// - Text input with suggestions ("sushi", "coffee", "view", "quiet")
+// - Quick chips for common cravings
+// - Results appear below with distance
+```
+
+**Acceptance Criteria**:
+- [ ] Text input with debounce
+- [ ] Pre-defined quick chips
+- [ ] Shows results with distance
+- [ ] Smooth open/close animation
+
+---
+
+#### WI-2.5: Add Craving Quick Chips
+**File**: `spotlight-react/src/components/trip/CravingChips.tsx`
+**Effort**: Small
+**Description**: Quick tap chips for common cravings.
+
+```tsx
+const cravings = [
+  { label: "Coffee", icon: Coffee, keywords: ["café", "coffee", "espresso"] },
+  { label: "Sushi", icon: Fish, keywords: ["sushi", "japanese"] },
+  { label: "Wine", icon: Wine, keywords: ["wine", "bar"] },
+  { label: "View", icon: Mountain, keywords: ["scenic", "viewpoint"] },
+  { label: "Quiet", icon: Leaf, keywords: ["park", "garden"] },
 ];
 ```
 
-### 1.2 Perplexity Integration for Real-Time Discovery
-
-**Enhance existing PerplexityAIService** with new methods:
-
-```javascript
-// New methods to add to PerplexityAIService
-
-async discoverLocalSecrets(city, date, interests) {
-  const prompt = `You are a local expert in ${city}. Today is ${date}.
-
-What are the HIDDEN GEMS and LOCAL SECRETS that a curious traveler should know about?
-
-Focus on:
-1. Events happening TODAY or this week (markets, festivals, performances)
-2. Little-known spots locals love but tourists miss
-3. Best times to visit popular places (avoid crowds)
-4. Street food gems and hole-in-the-wall restaurants
-5. Photo spots with the best light at different times
-6. Free or cheap authentic experiences
-
-User interests: ${interests.join(', ')}
-
-Return as JSON array with format:
-[{
-  "type": "event|hidden_gem|timing_tip|food|photo_spot|experience",
-  "title": "Short catchy title",
-  "description": "2-3 engaging sentences",
-  "why_special": "What makes this unique",
-  "best_time": "When to go",
-  "location_hint": "General area or address",
-  "insider_tip": "The thing only locals know",
-  "confidence": 0-1 // how confident you are this is accurate
-}]`;
-
-  return await this.client.query(prompt, 'llama-3.1-sonar-large-128k-online', {
-    temperature: 0.8,
-    maxTokens: 3000
-  });
-}
-
-async generateMomentNarrative(activityName, city, userExperience, timeOfDay) {
-  const prompt = `Write a brief, evocative travel journal entry (2-3 sentences) about experiencing "${activityName}" in ${city} during the ${timeOfDay}.
-
-Capture:
-- The sensory details (what they might see, smell, hear)
-- The emotional resonance
-- A small unexpected detail that makes it memorable
-
-User's reflection: "${userExperience || 'No reflection provided'}"
-
-Write in second person ("You...") to make it personal and immersive.
-Keep it poetic but grounded in reality.`;
-
-  return await this.client.query(prompt, 'llama-3.1-sonar-large-128k-online', {
-    temperature: 0.9,
-    maxTokens: 200
-  });
-}
-
-async getTimingIntelligence(placeName, city, purpose) {
-  const prompt = `For "${placeName}" in ${city}, when is the BEST time to visit for ${purpose}?
-
-Consider:
-- Crowd levels throughout the day
-- Lighting conditions (for photos)
-- Opening hours and busy periods
-- Local patterns (lunch rush, tourist waves, etc.)
-- Day of week variations
-
-Return JSON:
-{
-  "best_time": "HH:MM",
-  "best_time_range": "HH:MM - HH:MM",
-  "avoid_times": ["HH:MM - HH:MM"],
-  "reasoning": "Why this time is optimal",
-  "insider_tip": "What locals know",
-  "golden_hour_tip": "For photography if applicable"
-}`;
-
-  return await this.client.query(prompt, 'llama-3.1-sonar-large-128k-online', {
-    temperature: 0.6,
-    maxTokens: 500
-  });
-}
-```
-
-### 1.3 Google Places Enhanced Discovery
-
-**Enhance GooglePlacesService** for serendipity:
-
-```javascript
-// New methods to add to GooglePlacesService
-
-async discoverSerendipity(options) {
-  const { location, radius = 500, exclude = [], categories } = options;
-
-  // Search for multiple categories that spark discovery
-  const discoveryTypes = categories || [
-    'cafe',
-    'bakery',
-    'art_gallery',
-    'book_store',
-    'park',
-    'point_of_interest',
-    'museum'
-  ];
-
-  const allResults = [];
-
-  for (const type of discoveryTypes) {
-    const results = await this.nearbySearch({
-      location,
-      radius,
-      type,
-      exclude
-    });
-
-    // Filter for high-quality, interesting places
-    const filtered = results
-      .filter(p => p.rating >= 4.0 && p.user_ratings_total >= 50)
-      .filter(p => !exclude.includes(p.place_id))
-      .slice(0, 3);
-
-    allResults.push(...filtered);
-  }
-
-  // Sort by a "serendipity score" - combination of rating, uniqueness, and proximity
-  return this.scoreSerendipity(allResults, location);
-}
-
-scoreSerendipity(places, userLocation) {
-  return places
-    .map(place => {
-      const distance = this.calculateDistance(userLocation, place.location);
-      const ratingScore = (place.rating || 4) / 5;
-      const popularityScore = Math.min(place.user_ratings_total / 1000, 1);
-
-      // Serendipity favors quality over popularity (hidden gems)
-      // But not too obscure (needs some validation)
-      const serendipityScore =
-        ratingScore * 0.4 +
-        (1 - popularityScore) * 0.3 + // Less popular = more serendipitous
-        (1 - distance / 1000) * 0.3; // Closer = more convenient
-
-      return { ...place, serendipityScore, distance };
-    })
-    .sort((a, b) => b.serendipityScore - a.serendipityScore);
-}
-```
+**Acceptance Criteria**:
+- [ ] 5-6 common cravings
+- [ ] Icons for each
+- [ ] Tapping triggers search
+- [ ] Scrollable horizontally
 
 ---
 
-## Phase 2: Backend API Endpoints
+#### WI-2.6: Add Serendipity Mode
+**File**: `spotlight-react/src/components/trip/SerendipityMode.tsx`
+**Effort**: Medium
+**Description**: "Surprise me" discovery interface.
 
-### 2.1 New Trip API Routes
+```tsx
+// Triggered by: Shake phone, tap button, or swipe gesture
+// Shows: One hidden gem with dramatic reveal
 
-**File**: `server/routes/trip.js` (additions)
+interface SerendipityModeProps {
+  activity: EnrichedActivity;
+  onAccept: () => void;
+  onReject: () => void; // Get another surprise
+}
 
-```javascript
-/**
- * GET /api/trip/:tripId/serendipity
- * Get serendipity discoveries for current location
- */
-router.get('/:tripId/serendipity', authMiddleware, async (req, res) => {
-  try {
-    const { tripId } = req.params;
-    const { lat, lng, radius = 500 } = req.query;
-
-    const discoveries = await serendipityAgent.discoverNearby({
-      tripId,
-      location: { lat: parseFloat(lat), lng: parseFloat(lng) },
-      radius: parseInt(radius),
-      userId: req.userId
-    });
-
-    res.json({ discoveries });
-  } catch (error) {
-    console.error('Serendipity error:', error);
-    res.status(500).json({ error: 'Failed to discover nearby gems' });
-  }
-});
-
-/**
- * GET /api/trip/:tripId/smart-hints
- * Get contextual time hints for current activity
- */
-router.get('/:tripId/smart-hints', authMiddleware, async (req, res) => {
-  try {
-    const { tripId } = req.params;
-    const { activityId, currentTime } = req.query;
-
-    const hints = await serendipityAgent.getSmartHints({
-      tripId,
-      activityId,
-      currentTime,
-      userId: req.userId
-    });
-
-    res.json({ hints });
-  } catch (error) {
-    console.error('Smart hints error:', error);
-    res.status(500).json({ error: 'Failed to generate hints' });
-  }
-});
-
-/**
- * POST /api/trip/:tripId/moment
- * Record a trip moment (enhanced check-in)
- */
-router.post('/:tripId/moment', authMiddleware, async (req, res) => {
-  try {
-    const { tripId } = req.params;
-    const {
-      activityId,
-      momentType, // 'highlight', 'memory', 'skip', 'discovery'
-      note,
-      photo,
-      rating,
-      coordinates
-    } = req.body;
-
-    const moment = await tripService.recordMoment(tripId, req.userId, {
-      activityId,
-      momentType,
-      note,
-      photo,
-      rating,
-      coordinates
-    });
-
-    // Generate narrative snippet asynchronously
-    serendipityAgent.generateMomentNarrative(moment).catch(console.error);
-
-    res.json({ success: true, moment });
-  } catch (error) {
-    console.error('Record moment error:', error);
-    res.status(500).json({ error: 'Failed to record moment' });
-  }
-});
-
-/**
- * GET /api/trip/:tripId/narrative
- * Get the evolving trip narrative
- */
-router.get('/:tripId/narrative', authMiddleware, async (req, res) => {
-  try {
-    const { tripId } = req.params;
-    const { dayNumber } = req.query;
-
-    const narrative = await tripService.getTripNarrative(tripId, dayNumber);
-
-    res.json({ narrative });
-  } catch (error) {
-    console.error('Get narrative error:', error);
-    res.status(500).json({ error: 'Failed to fetch narrative' });
-  }
-});
-
-/**
- * GET /api/trip/:tripId/weather-alternatives
- * Get weather-aware activity alternatives
- */
-router.get('/:tripId/weather-alternatives', authMiddleware, async (req, res) => {
-  try {
-    const { tripId } = req.params;
-    const { activityId, weatherCondition } = req.query;
-
-    const alternatives = await serendipityAgent.findWeatherAlternatives({
-      tripId,
-      activityId,
-      weatherCondition,
-      userId: req.userId
-    });
-
-    res.json({ alternatives });
-  } catch (error) {
-    console.error('Weather alternatives error:', error);
-    res.status(500).json({ error: 'Failed to find alternatives' });
-  }
-});
+// UI:
+// - Full screen takeover
+// - Photo with overlay
+// - "Why this is special" text
+// - Accept / Another buttons
 ```
+
+**Acceptance Criteria**:
+- [ ] Dramatic entrance animation
+- [ ] Shows "why special" not just "why now"
+- [ ] Can request another surprise
+- [ ] Prioritizes hidden gems
 
 ---
 
-## Phase 3: Database Schema
+#### WI-2.7: Add Rest Mode
+**File**: `spotlight-react/src/components/trip/RestMode.tsx`
+**Effort**: Small
+**Description**: "I'm tired" quick access to rest spots.
 
-### 3.1 New Tables
+```tsx
+// Shows: Nearby cafés, parks, benches, hotels (if staying there)
+// Filtered for: Quiet, seated, low energy
 
-**File**: `db/migrations/022_living_companion.sql`
-
-```sql
--- Trip Moments - Enhanced check-ins with emotional context
-CREATE TABLE IF NOT EXISTS trip_moments (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  trip_id UUID NOT NULL REFERENCES active_trips(id) ON DELETE CASCADE,
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  activity_id TEXT,
-  activity_name TEXT NOT NULL,
-
-  -- Moment type and content
-  moment_type VARCHAR(20) NOT NULL DEFAULT 'completed',
-  -- 'highlight', 'memory', 'completed', 'skipped', 'discovery'
-
-  note TEXT,
-  photo_url TEXT,
-  rating INTEGER CHECK (rating >= 1 AND rating <= 5),
-
-  -- Location context
-  coordinates JSONB, -- {lat, lng}
-  city TEXT,
-
-  -- AI-generated narrative
-  narrative_snippet TEXT,
-
-  -- Metadata
-  day_number INTEGER NOT NULL,
-  recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  time_of_day VARCHAR(20), -- 'dawn', 'morning', 'afternoon', 'evening', 'night'
-  weather_conditions JSONB, -- snapshot of weather at moment
-
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
--- Trip Narrative - The evolving story of the trip
-CREATE TABLE IF NOT EXISTS trip_narratives (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  trip_id UUID NOT NULL REFERENCES active_trips(id) ON DELETE CASCADE,
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-
-  -- Day-by-day narrative
-  day_number INTEGER NOT NULL,
-  narrative_text TEXT NOT NULL,
-
-  -- Story arc elements
-  opening_hook TEXT, -- "Day 3 began with unexpected rain..."
-  key_moments JSONB, -- array of moment highlights
-  closing_reflection TEXT,
-
-  -- Generation metadata
-  generated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  source_moments INTEGER[], -- moment IDs used to generate
-
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-
-  UNIQUE(trip_id, day_number)
-);
-
--- Serendipity Cache - Cache discovered gems to avoid re-discovery
-CREATE TABLE IF NOT EXISTS serendipity_cache (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-
-  -- Location key
-  city TEXT NOT NULL,
-  location_hash TEXT NOT NULL, -- geohash of coordinates
-
-  -- Discovery data
-  discovery_type VARCHAR(30) NOT NULL,
-  -- 'hidden_gem', 'local_event', 'photo_spot', 'food_gem', 'timing_tip'
-
-  place_id TEXT, -- Google Places ID if applicable
-  title TEXT NOT NULL,
-  description TEXT,
-  why_special TEXT,
-  insider_tip TEXT,
-
-  -- Rich data
-  photo_url TEXT,
-  coordinates JSONB,
-  opening_hours JSONB,
-
-  -- Metadata
-  source VARCHAR(20) NOT NULL, -- 'perplexity', 'google_places', 'user_submitted'
-  confidence DECIMAL(3,2), -- 0.00 to 1.00
-  valid_from DATE,
-  valid_until DATE, -- for time-limited events
-
-  -- Performance
-  view_count INTEGER DEFAULT 0,
-  save_count INTEGER DEFAULT 0,
-
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  expires_at TIMESTAMPTZ NOT NULL DEFAULT NOW() + INTERVAL '7 days',
-
-  UNIQUE(city, location_hash, title)
-);
-
--- Indexes for performance
-CREATE INDEX idx_trip_moments_trip_id ON trip_moments(trip_id);
-CREATE INDEX idx_trip_moments_day ON trip_moments(trip_id, day_number);
-CREATE INDEX idx_trip_narratives_trip ON trip_narratives(trip_id);
-CREATE INDEX idx_serendipity_cache_location ON serendipity_cache(city, location_hash);
-CREATE INDEX idx_serendipity_cache_expiry ON serendipity_cache(expires_at);
-
--- Smart Hints Cache - Cache computed timing recommendations
-CREATE TABLE IF NOT EXISTS smart_hints_cache (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-
-  place_id TEXT NOT NULL,
-  place_name TEXT NOT NULL,
-  city TEXT NOT NULL,
-
-  -- Timing intelligence
-  best_times JSONB, -- array of optimal time slots
-  avoid_times JSONB, -- times to avoid
-  golden_hour_info JSONB, -- photography timing
-  crowd_patterns JSONB, -- hourly crowd estimates
-
-  -- Tips
-  insider_tips TEXT[],
-
-  -- Freshness
-  computed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  expires_at TIMESTAMPTZ NOT NULL DEFAULT NOW() + INTERVAL '24 hours',
-
-  UNIQUE(place_id)
-);
-
-CREATE INDEX idx_smart_hints_place ON smart_hints_cache(place_id);
+interface RestModeProps {
+  restSpots: EnrichedActivity[];
+  onSelect: (activity: EnrichedActivity) => void;
+}
 ```
+
+**Acceptance Criteria**:
+- [ ] Filters for rest-appropriate places
+- [ ] Shows distance prominently
+- [ ] Quick access from main UI
+- [ ] Calming visual design
 
 ---
 
-## Phase 4: Frontend Components
-
-### 4.1 Component Architecture
-
-```
-spotlight-react/src/components/trip/
-├── LiveTripPanel.tsx (enhanced container)
-├── enhanced/
-│   ├── NowHeroCard.tsx           # Immersive current activity
-│   ├── SerendipityCarousel.tsx   # Swipeable discovery cards
-│   ├── SmartTimeHint.tsx         # Contextual time suggestions
-│   ├── TripStorySnippet.tsx      # Narrative being built
-│   ├── MomentCapture.tsx         # Enhanced check-in modal
-│   ├── WeatherAwareCard.tsx      # Weather-responsive suggestions
-│   └── TimeOfDayTheme.tsx        # Theme provider
-├── hooks/
-│   ├── useSerendipity.ts         # Discovery data fetching
-│   ├── useSmartHints.ts          # Time intelligence
-│   ├── useTripNarrative.ts       # Story fetching
-│   └── useTimeOfDay.ts           # Theme management
-└── services/
-    └── tripCompanion.ts          # API client
-```
-
-### 4.2 NowHeroCard Component
-
-**File**: `spotlight-react/src/components/trip/enhanced/NowHeroCard.tsx`
+#### WI-2.8: Add Mode Switcher UI
+**File**: `spotlight-react/src/components/trip/ModeSwitcher.tsx`
+**Effort**: Medium
+**Description**: Bottom bar or gesture system for switching modes.
 
 ```tsx
-/**
- * NowHeroCard - Immersive "Right Now" Experience
- *
- * Design: Full-bleed photo with gradient overlay
- * Shows current activity with rich context and one-tap actions
- */
+// Options:
+// 1. Bottom tab bar (always visible)
+// 2. Swipe gestures (left/right/up)
+// 3. Floating action button with menu
 
-import { motion, AnimatePresence } from 'framer-motion';
-import { useState } from 'react';
-
-interface NowHeroCardProps {
-  activity: {
-    name: string;
-    photo: string;
-    type: string;
-    address: string;
-    rating?: number;
-    whyYoureHere?: string; // AI-generated context
-    insiderTip?: string;
-    coordinates: { lat: number; lng: number };
-  };
-  timeContext: {
-    timeOfDay: 'dawn' | 'morning' | 'afternoon' | 'evening' | 'night';
-    timeRemaining?: string; // "2h 30min left"
-    optimalUntil?: string; // "Best until 4pm"
-  };
-  onNavigate: () => void;
-  onCaptureMoment: () => void;
-  onShowAlternatives: () => void;
-}
-
-// Component implementation with:
-// - Parallax scroll effect on photo
-// - Gradient overlays that shift with time of day
-// - Animated "Now" badge with pulse effect
-// - Swipe-up for quick actions
-// - One-tap navigation integration
-// - Insider tip reveal animation
+// Modes accessible:
+// - Choice (default)
+// - Craving ("I want...")
+// - Surprise ("Serendipity")
+// - Rest ("I'm tired")
+// - All ("Full picture")
 ```
 
-### 4.3 SerendipityCarousel Component
-
-**File**: `spotlight-react/src/components/trip/enhanced/SerendipityCarousel.tsx`
-
-```tsx
-/**
- * SerendipityCarousel - "While You're Here" Discoveries
- *
- * Design: Horizontal scroll with snap points
- * Cards have playful tilt on hover, photo backgrounds
- */
-
-interface SerendipityCardData {
-  id: string;
-  type: 'hidden_gem' | 'local_event' | 'photo_spot' | 'food_gem' | 'timing_tip';
-  title: string;
-  description: string;
-  whySpecial: string;
-  insiderTip?: string;
-  photo?: string;
-  distance?: string; // "2 min walk"
-  validUntil?: string; // for events
-  confidence: number;
-}
-
-// Features:
-// - Swipeable cards with momentum
-// - "Surprise Me" shuffle button
-// - Save to trip functionality
-// - Time-sensitive badges for events
-// - Distance indicators with walking time
-// - Photo backgrounds with blur fallback
-```
-
-### 4.4 SmartTimeHint Component
-
-**File**: `spotlight-react/src/components/trip/enhanced/SmartTimeHint.tsx`
-
-```tsx
-/**
- * SmartTimeHint - Contextual Time Intelligence
- *
- * Shows smart suggestions like:
- * - "Leave in 15 min to arrive perfectly"
- * - "Crowds thin out after 3pm"
- * - "Golden hour starts in 45 min - perfect for photos"
- */
-
-interface SmartHint {
-  type: 'departure' | 'crowd' | 'golden_hour' | 'weather' | 'closing';
-  message: string;
-  urgency: 'low' | 'medium' | 'high';
-  actionLabel?: string;
-  action?: () => void;
-  expiresIn?: number; // minutes until hint no longer relevant
-}
-
-// Features:
-// - Animated entrance with attention-grabbing motion
-// - Countdown timer for time-sensitive hints
-// - Color-coded urgency levels
-// - Dismissible but can reappear if relevant
-// - Integrates with navigation
-```
-
-### 4.5 TripStorySnippet Component
-
-**File**: `spotlight-react/src/components/trip/enhanced/TripStorySnippet.tsx`
-
-```tsx
-/**
- * TripStorySnippet - Your Trip Narrative Being Written
- *
- * Design: Typewriter effect, journal paper texture
- * Shows the evolving story of today's journey
- */
-
-interface TripNarrative {
-  dayNumber: number;
-  openingHook: string;
-  currentText: string;
-  keyMoments: Array<{
-    time: string;
-    snippet: string;
-    momentType: string;
-  }>;
-  wordCount: number;
-}
-
-// Features:
-// - Typewriter animation for new text
-// - Paper texture background
-// - Hand-drawn underlines for emphasis
-// - Expandable to show full day narrative
-// - "Continue the story" prompt after check-ins
-```
-
-### 4.6 MomentCapture Modal
-
-**File**: `spotlight-react/src/components/trip/enhanced/MomentCapture.tsx`
-
-```tsx
-/**
- * MomentCapture - Beyond the Checkbox
- *
- * Replace boring "Done" button with meaningful moment capture
- */
-
-type MomentType = 'highlight' | 'memory' | 'discovery' | 'skipped';
-
-interface MomentCaptureProps {
-  activity: Activity;
-  onCapture: (moment: CapturedMoment) => void;
-  onSkip: (reason?: string) => void;
-}
-
-// Options presented:
-// 1. "Highlight of the day" - Star rating, optional note
-// 2. "Captured a memory" - Photo upload, brief reflection
-// 3. "Quick note for later" - Voice or text note
-// 4. "Skipped" - Why? (weather, closed, timing) -> triggers alternatives
-
-// Features:
-// - Emotion-based quick reactions (loved, liked, meh)
-// - Photo upload with camera integration
-// - Voice note option
-// - Skip reasons that trigger smart alternatives
-// - Celebration animation for highlights
-```
+**Acceptance Criteria**:
+- [ ] All modes accessible
+- [ ] Current mode indicator
+- [ ] Smooth transitions
+- [ ] Thumb-friendly on mobile
 
 ---
 
-## Phase 5: Frontend Hooks & Services
+#### WI-2.9: Add Full Picture Mode (Detailed Itinerary Access)
+**File**: `spotlight-react/src/components/trip/FullPictureMode.tsx`
+**Effort**: Small
+**Description**: Access to the full detailed itinerary from companion.
 
-### 5.1 useSerendipity Hook
+```tsx
+// This is basically a link to the existing TripDayView
+// But integrated into the companion flow
 
-**File**: `spotlight-react/src/components/trip/hooks/useSerendipity.ts`
+// Shows:
+// - All activities for the day (not just top 3)
+// - Timeline view
+// - Can mark complete from here too
+```
+
+**Acceptance Criteria**:
+- [ ] Shows all day activities
+- [ ] Clearly labeled as "full view"
+- [ ] Easy return to companion
+- [ ] Maintains completed state
+
+---
+
+### Epic 3: Experience Mode Enhancement
+
+Make the focused experience richer.
+
+---
+
+#### WI-3.1: Add Map Preview to Experience Mode
+**File**: `spotlight-react/src/components/trip/ExperienceMode.tsx`
+**Effort**: Medium
+**Description**: Show small map with user location and destination.
+
+```tsx
+<MapPreview
+  userLocation={userLocation}
+  destination={activity.coordinates}
+  walkingTime="3 min"
+/>
+```
+
+**Acceptance Criteria**:
+- [ ] Shows user + destination markers
+- [ ] Walking route if possible
+- [ ] Tappable to open full navigation
+- [ ] Compact design
+
+---
+
+#### WI-3.2: Add "You're Here" Detection
+**File**: `spotlight-react/src/hooks/useProximityDetection.ts`
+**Effort**: Medium
+**Description**: Detect when user arrives at activity location.
 
 ```typescript
-import { useState, useEffect, useCallback } from 'react';
-import { tripCompanionApi } from '../services/tripCompanion';
+function useProximityDetection(
+  targetLocation: Coordinates,
+  thresholdMeters: number = 50
+): {
+  isNearby: boolean;
+  distance: number;
+}
 
-interface UseSerendipityOptions {
+// When isNearby becomes true:
+// - Prompt "You've arrived! How was it?"
+// - Enable check-in features
+```
+
+**Acceptance Criteria**:
+- [ ] Detects arrival within threshold
+- [ ] Triggers arrival prompt
+- [ ] Battery efficient
+- [ ] Configurable threshold
+
+---
+
+#### WI-3.3: Add Arrival Prompt
+**File**: `spotlight-react/src/components/trip/ArrivalPrompt.tsx`
+**Effort**: Small
+**Description**: Prompt shown when user arrives at location.
+
+```tsx
+<ArrivalPrompt>
+  <h3>You're at Café de Flore!</h3>
+  <p>How's it going?</p>
+  <QuickReactions>
+    <ReactionButton emoji="❤️" label="Love it" />
+    <ReactionButton emoji="👍" label="Nice" />
+    <ReactionButton emoji="😐" label="Meh" />
+  </QuickReactions>
+  <Button>I'm done here →</Button>
+</ArrivalPrompt>
+```
+
+**Acceptance Criteria**:
+- [ ] Shows on arrival detection
+- [ ] Quick emoji reactions
+- [ ] Updates preferences based on reaction
+- [ ] Can dismiss
+
+---
+
+#### WI-3.4: Enhance Insider Tips with Context
+**File**: `spotlight-react/src/services/tripBrain/enrichment/insiderTips.ts`
+**Effort**: Medium
+**Description**: Make insider tips contextual to time/weather/preferences.
+
+```typescript
+function getContextualTips(
+  activity: TimeSlot,
+  context: {
+    timeOfDay: TimePeriod;
+    weather?: string;
+    userPreferences?: UserPreferences;
+  }
+): string[]
+
+// Examples:
+// Morning + café: "The croissants sell out by 9am. You're early enough."
+// Evening + restaurant: "Ask for the terrace - sunset view is incredible."
+// Rainy + museum: "Perfect timing. It's pouring outside."
+```
+
+**Acceptance Criteria**:
+- [ ] Time-aware tips
+- [ ] Weather-aware tips
+- [ ] Preference-aware tips
+- [ ] Rotate tips to avoid repetition
+
+---
+
+### Epic 4: Preference Learning
+
+Make the companion smarter over time.
+
+---
+
+#### WI-4.1: Create Preference Storage
+**File**: `spotlight-react/src/services/tripBrain/storage/preferenceStorage.ts`
+**Effort**: Small
+**Description**: Persist user preferences in localStorage.
+
+```typescript
+interface StoredPreferences {
   tripId: string;
-  enabled?: boolean;
-  radius?: number;
-  refreshInterval?: number; // ms
+  choices: Array<{ activityId: string; type: string; timestamp: number }>;
+  skips: Array<{ activityId: string; type: string; reason?: string; timestamp: number }>;
+  ratings: Array<{ activityId: string; rating: number; timestamp: number }>;
+  computedPrefs: UserPreferences;
 }
 
-export function useSerendipity(options: UseSerendipityOptions) {
-  const [discoveries, setDiscoveries] = useState<SerendipityCard[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-  const [location, setLocation] = useState<GeolocationCoordinates | null>(null);
-
-  // Watch user location
-  useEffect(() => {
-    if (!options.enabled) return;
-
-    const watchId = navigator.geolocation.watchPosition(
-      (position) => setLocation(position.coords),
-      (error) => console.warn('Geolocation error:', error),
-      { enableHighAccuracy: true, maximumAge: 30000 }
-    );
-
-    return () => navigator.geolocation.clearWatch(watchId);
-  }, [options.enabled]);
-
-  // Fetch discoveries when location changes significantly
-  const fetchDiscoveries = useCallback(async () => {
-    if (!location) return;
-
-    setLoading(true);
-    try {
-      const data = await tripCompanionApi.getSerendipity({
-        tripId: options.tripId,
-        lat: location.latitude,
-        lng: location.longitude,
-        radius: options.radius || 500
-      });
-      setDiscoveries(data.discoveries);
-    } catch (err) {
-      setError(err as Error);
-    } finally {
-      setLoading(false);
-    }
-  }, [location, options.tripId, options.radius]);
-
-  // Refresh function for pull-to-refresh
-  const refresh = useCallback(() => {
-    return fetchDiscoveries();
-  }, [fetchDiscoveries]);
-
-  // Shuffle discoveries
-  const shuffle = useCallback(() => {
-    setDiscoveries(prev => [...prev].sort(() => Math.random() - 0.5));
-  }, []);
-
-  return {
-    discoveries,
-    loading,
-    error,
-    refresh,
-    shuffle,
-    location
-  };
+const preferenceStorage = {
+  save(tripId: string, prefs: StoredPreferences): void,
+  load(tripId: string): StoredPreferences | null,
+  clear(tripId: string): void,
 }
 ```
 
-### 5.2 Trip Companion API Service
+**Acceptance Criteria**:
+- [ ] Persists across sessions
+- [ ] Per-trip storage
+- [ ] Efficient read/write
+- [ ] Clear on trip end
 
-**File**: `spotlight-react/src/components/trip/services/tripCompanion.ts`
+---
+
+#### WI-4.2: Track User Choices
+**File**: `spotlight-react/src/services/tripBrain/learning/choiceTracker.ts`
+**Effort**: Small
+**Description**: Track which activities user selects.
 
 ```typescript
-const API_BASE = import.meta.env.VITE_API_URL || '/api';
-
-export const tripCompanionApi = {
-  async getSerendipity(params: {
-    tripId: string;
-    lat: number;
-    lng: number;
-    radius?: number;
-  }) {
-    const searchParams = new URLSearchParams({
-      lat: params.lat.toString(),
-      lng: params.lng.toString(),
-      radius: (params.radius || 500).toString()
-    });
-
-    const response = await fetch(
-      `${API_BASE}/trip/${params.tripId}/serendipity?${searchParams}`,
-      { credentials: 'include' }
-    );
-
-    if (!response.ok) throw new Error('Failed to fetch discoveries');
-    return response.json();
-  },
-
-  async getSmartHints(params: {
-    tripId: string;
-    activityId: string;
-    currentTime?: string;
-  }) {
-    const searchParams = new URLSearchParams({
-      activityId: params.activityId,
-      currentTime: params.currentTime || new Date().toISOString()
-    });
-
-    const response = await fetch(
-      `${API_BASE}/trip/${params.tripId}/smart-hints?${searchParams}`,
-      { credentials: 'include' }
-    );
-
-    if (!response.ok) throw new Error('Failed to fetch hints');
-    return response.json();
-  },
-
-  async recordMoment(tripId: string, moment: {
-    activityId: string;
-    momentType: string;
-    note?: string;
-    photo?: string;
-    rating?: number;
-    coordinates?: { lat: number; lng: number };
-  }) {
-    const response = await fetch(`${API_BASE}/trip/${tripId}/moment`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify(moment)
-    });
-
-    if (!response.ok) throw new Error('Failed to record moment');
-    return response.json();
-  },
-
-  async getNarrative(tripId: string, dayNumber?: number) {
-    const params = dayNumber ? `?dayNumber=${dayNumber}` : '';
-    const response = await fetch(
-      `${API_BASE}/trip/${tripId}/narrative${params}`,
-      { credentials: 'include' }
-    );
-
-    if (!response.ok) throw new Error('Failed to fetch narrative');
-    return response.json();
-  },
-
-  async getWeatherAlternatives(tripId: string, activityId: string, weather: string) {
-    const searchParams = new URLSearchParams({
-      activityId,
-      weatherCondition: weather
-    });
-
-    const response = await fetch(
-      `${API_BASE}/trip/${tripId}/weather-alternatives?${searchParams}`,
-      { credentials: 'include' }
-    );
-
-    if (!response.ok) throw new Error('Failed to fetch alternatives');
-    return response.json();
-  }
-};
+function trackChoice(activityId: string, activityType: string): void
+function getChoiceHistory(): Choice[]
+function getTypePreferences(): Record<string, number> // { restaurant: 0.8, museum: 0.3 }
 ```
+
+**Acceptance Criteria**:
+- [ ] Records every selection
+- [ ] Computes type preferences
+- [ ] Updates in real-time
 
 ---
 
-## Phase 6: Implementation Order
+#### WI-4.3: Track User Skips
+**File**: `spotlight-react/src/services/tripBrain/learning/skipTracker.ts`
+**Effort**: Small
+**Description**: Track which activities user skips and why.
 
-### Sprint 1: Foundation (Days 1-3)
-1. Database migrations for new tables
-2. SerendipityAgent service skeleton
-3. Basic API endpoints (serendipity, smart-hints)
-4. useSerendipity hook
-5. TimeOfDay theme provider
+```typescript
+interface Skip {
+  activityId: string;
+  activityType: string;
+  reason?: 'not_interested' | 'too_far' | 'wrong_time' | 'weather' | 'other';
+  timestamp: number;
+}
 
-### Sprint 2: Discovery Engine (Days 4-6)
-6. Enhanced PerplexityAIService methods
-7. Google Places serendipity scoring
-8. Serendipity caching layer
-9. SerendipityCarousel component
-10. NowHeroCard component
+function trackSkip(skip: Skip): void
+function getSkipPatterns(): { types: string[]; reasons: Record<string, number> }
+```
 
-### Sprint 3: Intelligence (Days 7-9)
-11. Smart timing calculations
-12. SmartTimeHint component
-13. Weather integration for alternatives
-14. WeatherAwareCard component
-
-### Sprint 4: Story & Polish (Days 10-12)
-15. MomentCapture modal
-16. Trip narrative generation
-17. TripStorySnippet component
-18. Animation polish
-19. Performance optimization
-20. Testing & bug fixes
+**Acceptance Criteria**:
+- [ ] Optional skip reason
+- [ ] Computes patterns
+- [ ] Influences future recommendations
 
 ---
 
-## Environment Variables Needed
+#### WI-4.4: Integrate Learning into Scoring
+**File**: `spotlight-react/src/services/tripBrain/scoring/learningIntegration.ts`
+**Effort**: Medium
+**Description**: Use learned preferences in recommendation scoring.
 
-```bash
-# Existing (should already have)
-ANTHROPIC_API_KEY=your_key
-GOOGLE_PLACES_API_KEY=your_key
-PERPLEXITY_API_KEY=your_key
+```typescript
+function adjustScoresWithLearning(
+  activities: EnrichedActivity[],
+  choiceHistory: Choice[],
+  skipHistory: Skip[]
+): EnrichedActivity[]
 
-# No new env vars needed - uses existing services
+// Examples of adjustments:
+// - User chose 3 wine bars → boost wine bars
+// - User skipped 2 museums → reduce museums
+// - User always chooses closest → boost distance weight
 ```
+
+**Acceptance Criteria**:
+- [ ] Boosts preferred types
+- [ ] Reduces skipped types
+- [ ] Adapts weights dynamically
+- [ ] Doesn't over-fit (keeps variety)
+
+---
+
+### Epic 5: Real-Time Intelligence
+
+Make the companion responsive to context.
+
+---
+
+#### WI-5.1: Add Weather Awareness
+**File**: `spotlight-react/src/services/tripBrain/context/weatherContext.ts`
+**Effort**: Medium
+**Description**: Factor weather into recommendations.
+
+```typescript
+interface WeatherContext {
+  condition: 'sunny' | 'cloudy' | 'rain' | 'snow' | 'hot' | 'cold';
+  temperature: number;
+  forecast: { hour: number; condition: string }[];
+}
+
+async function getWeatherContext(location: Coordinates): Promise<WeatherContext>
+function filterForWeather(activities: TimeSlot[], weather: WeatherContext): TimeSlot[]
+function getWeatherTip(activity: TimeSlot, weather: WeatherContext): string | null
+```
+
+**Acceptance Criteria**:
+- [ ] Fetches current weather
+- [ ] Filters outdoor activities in rain
+- [ ] Generates weather tips
+- [ ] Caches to reduce API calls
+
+---
+
+#### WI-5.2: Add Time-Sensitive Alerts
+**File**: `spotlight-react/src/components/trip/TimeAlert.tsx`
+**Effort**: Small
+**Description**: Alert user to time-sensitive opportunities.
+
+```tsx
+<TimeAlert
+  message="Golden hour in 30 min - perfect for photos at the viewpoint"
+  urgency="medium"
+  action={{ label: "Go now", onPress: () => {} }}
+  expiresIn={30} // minutes
+/>
+```
+
+**Acceptance Criteria**:
+- [ ] Countdown display
+- [ ] Urgency-based styling
+- [ ] Dismissible
+- [ ] Action button
+
+---
+
+#### WI-5.3: Add "Leave Now" Suggestions
+**File**: `spotlight-react/src/services/tripBrain/timing/departureCalculator.ts`
+**Effort**: Medium
+**Description**: Suggest optimal departure times.
+
+```typescript
+function calculateDepartureTime(
+  currentLocation: Coordinates,
+  destination: Coordinates,
+  targetArrivalTime: string, // "14:00"
+  walkingSpeed: number = 5 // km/h
+): {
+  departAt: string;
+  walkingTime: number; // minutes
+  arriveBy: string;
+}
+
+function shouldSuggestDeparture(
+  activity: TimeSlot,
+  userLocation: Coordinates
+): { suggest: boolean; message: string; urgency: 'low' | 'medium' | 'high' }
+```
+
+**Acceptance Criteria**:
+- [ ] Calculates walking time
+- [ ] Suggests when to leave
+- [ ] Accounts for "best time to arrive"
+- [ ] Urgency-based prompts
+
+---
+
+### Epic 6: Serendipity Engine
+
+Surprise discoveries that make travel magical.
+
+---
+
+#### WI-6.1: Create Hidden Gem Scorer
+**File**: `spotlight-react/src/services/tripBrain/serendipity/hiddenGemScorer.ts`
+**Effort**: Medium
+**Description**: Identify activities that are hidden gems.
+
+```typescript
+function scoreHiddenGem(activity: TimeSlot): number
+// Higher score = more hidden gem-like
+
+// Factors:
+// - High rating (4.5+) but low review count (<100)
+// - Not a common tourist attraction
+// - Unusual activity type
+// - Has "insider" keywords in description
+```
+
+**Acceptance Criteria**:
+- [ ] Identifies quality + obscurity
+- [ ] Avoids tourist traps
+- [ ] Favors unusual types
+- [ ] Normalized scoring
+
+---
+
+#### WI-6.2: Create Serendipity Algorithm
+**File**: `spotlight-react/src/services/tripBrain/serendipity/serendipityAlgorithm.ts`
+**Effort**: Medium
+**Description**: Select the perfect surprise activity.
+
+```typescript
+function selectSerendipity(
+  activities: EnrichedActivity[],
+  context: Context,
+  history: { seen: string[]; rejected: string[] }
+): EnrichedActivity
+
+// Algorithm:
+// 1. Filter for time-appropriate
+// 2. Filter for reasonable distance
+// 3. Exclude already seen/rejected
+// 4. Score by hidden gem score
+// 5. Add randomness (don't always pick top)
+// 6. Return winner
+```
+
+**Acceptance Criteria**:
+- [ ] Never repeats shown gems
+- [ ] Respects time/distance
+- [ ] Balances quality + randomness
+- [ ] Has "reject and get another" support
+
+---
+
+#### WI-6.3: Add "Why Special" Text Generation
+**File**: `spotlight-react/src/services/tripBrain/serendipity/whySpecialGenerator.ts`
+**Effort**: Small
+**Description**: Generate compelling text for surprises.
+
+```typescript
+function generateWhySpecial(activity: TimeSlot): string
+
+// Examples:
+// "A local secret with a cult following"
+// "Missed by most tourists, loved by locals"
+// "The kind of place you'll tell friends about"
+// "4.9 stars from only 42 reviews - they're onto something"
+```
+
+**Acceptance Criteria**:
+- [ ] Compelling, short text
+- [ ] Based on activity data
+- [ ] Varied language
+- [ ] Feels authentic
+
+---
+
+### Epic 7: UI Polish & Animations
+
+Make it feel magical.
+
+---
+
+#### WI-7.1: Add Staggered Card Entrance Animation
+**Effort**: Small
+**Description**: Cards fade/slide in sequence.
+
+**Acceptance Criteria**:
+- [ ] 0.1s delay between cards
+- [ ] Smooth spring physics
+- [ ] Works on initial load and mode switch
+
+---
+
+#### WI-7.2: Add Pull-to-Refresh Animation
+**Effort**: Small
+**Description**: Custom pull-to-refresh with brand flair.
+
+**Acceptance Criteria**:
+- [ ] Custom refresh indicator
+- [ ] Haptic feedback (if available)
+- [ ] Smooth release animation
+
+---
+
+#### WI-7.3: Add Mode Transition Animations
+**Effort**: Medium
+**Description**: Smooth transitions between companion modes.
+
+**Acceptance Criteria**:
+- [ ] Crossfade between modes
+- [ ] Shared element transitions where possible
+- [ ] No jarring jumps
+
+---
+
+#### WI-7.4: Add Haptic Feedback
+**Effort**: Small
+**Description**: Subtle haptics on key interactions.
+
+```typescript
+const haptics = {
+  selection: () => vibrate(10),
+  success: () => vibrate([10, 50, 10]),
+  arrival: () => vibrate([50, 100, 50]),
+}
+```
+
+**Acceptance Criteria**:
+- [ ] Works on supported devices
+- [ ] Silent fallback
+- [ ] Not overused
+
+---
+
+#### WI-7.5: Add Skeleton Loading States
+**Effort**: Small
+**Description**: Skeleton UI while loading.
+
+**Acceptance Criteria**:
+- [ ] Card skeletons
+- [ ] Animated shimmer
+- [ ] Matches card dimensions
+
+---
+
+### Epic 8: Integration & Testing
+
+Wire everything together.
+
+---
+
+#### WI-8.1: Integrate TripBrain with LiveTripPanel
+**Effort**: Medium
+**Description**: Replace current data flow with TripBrain.
+
+**Acceptance Criteria**:
+- [ ] LiveTripPanel uses TripBrainProvider
+- [ ] All child components receive context
+- [ ] No breaking changes to navigation
+
+---
+
+#### WI-8.2: Add Error Boundaries
+**Effort**: Small
+**Description**: Graceful error handling.
+
+**Acceptance Criteria**:
+- [ ] Catches component errors
+- [ ] Shows friendly fallback
+- [ ] Allows retry
+
+---
+
+#### WI-8.3: Add Analytics Events
+**Effort**: Small
+**Description**: Track key user interactions.
+
+```typescript
+// Events to track:
+// - companion_mode_switch
+// - activity_selected
+// - activity_skipped
+// - craving_search
+// - serendipity_accepted
+// - serendipity_rejected
+// - arrival_detected
+```
+
+**Acceptance Criteria**:
+- [ ] All key events tracked
+- [ ] Includes relevant metadata
+- [ ] Privacy-conscious
+
+---
+
+#### WI-8.4: Performance Optimization
+**Effort**: Medium
+**Description**: Ensure smooth 60fps experience.
+
+**Acceptance Criteria**:
+- [ ] No jank on scroll
+- [ ] Fast mode switches
+- [ ] Efficient re-renders
+- [ ] Memoized expensive calculations
+
+---
+
+## Implementation Order
+
+### Phase 1: Foundation (WI 1.1 - 1.9)
+Build the Trip Brain service and core infrastructure.
+
+### Phase 2: Core UI (WI 2.1 - 2.4)
+Integrate Trip Brain with existing UI, add Why Now.
+
+### Phase 3: Modes (WI 2.5 - 2.9)
+Add Craving, Serendipity, Rest, Full Picture modes.
+
+### Phase 4: Experience Enhancement (WI 3.1 - 3.4)
+Enhance the focused activity experience.
+
+### Phase 5: Learning (WI 4.1 - 4.4)
+Add preference learning system.
+
+### Phase 6: Real-Time (WI 5.1 - 5.3)
+Add weather and time intelligence.
+
+### Phase 7: Serendipity (WI 6.1 - 6.3)
+Build the surprise discovery engine.
+
+### Phase 8: Polish (WI 7.1 - 7.5, 8.1 - 8.4)
+Animations, haptics, and integration.
 
 ---
 
 ## Success Metrics
 
-1. **Engagement**: Time spent on Live Trip Panel increases 3x
-2. **Discovery**: 40%+ of users interact with serendipity cards
-3. **Moments**: Average of 5+ moment captures per trip day
-4. **Narrative**: 60%+ of users read their trip narrative
-5. **Weather Adaptation**: 80%+ alternative suggestions accepted
+| Metric | Current | Target |
+|--------|---------|--------|
+| Time in companion | Unknown | 5+ min per session |
+| Activities selected via companion | 0% | 80%+ |
+| Craving searches used | 0 | 3+ per trip |
+| Serendipity acceptances | N/A | 40%+ |
+| Return to detailed itinerary | 100% | <30% |
+| User satisfaction | Unknown | 4.5+ stars |
 
 ---
 
-## Risk Mitigation
+## Tech Stack
 
-| Risk | Mitigation |
-|------|------------|
-| API costs from Perplexity | Aggressive caching (7 days), batch queries, confidence filtering |
-| Location permission denied | Graceful degradation to city-level suggestions |
-| Slow discovery loading | Skeleton loading states, prefetch on activity view |
-| Narrative generation quality | Human-in-the-loop review option, tone presets |
-| Battery drain from location | Coarse location updates, manual refresh option |
-
----
-
-## Notes for Implementation
-
-1. **Start with Phase 1** - The Serendipity Agent is the brain; everything depends on it
-2. **Leverage existing services** - PerplexityAI and GooglePlaces services already work well
-3. **Cache aggressively** - Discovery data doesn't change minute-to-minute
-4. **Design mobile-first** - This is primarily a phone experience
-5. **Test with real trips** - Synthetic data won't capture the magic
+- **State Management**: React Context + hooks (no Redux needed)
+- **Storage**: localStorage for preferences
+- **Geolocation**: Browser Geolocation API
+- **Animations**: Framer Motion (already installed)
+- **Weather**: OpenWeather API (free tier)
+- **Distance Calc**: Haversine formula (client-side)
 
 ---
 
-*This plan transforms the trip panel from a task manager into a living companion that makes travel feel magical again.*
+## Notes
+
+1. **Detailed itinerary stays accessible** - It's the "Full Picture" mode, not hidden
+2. **Mobile-first design** - This is a phone experience
+3. **Offline-capable** - Cache itinerary data, work without network
+4. **Battery conscious** - Smart location watching, not continuous
+5. **Progressive enhancement** - Works without location, better with it
+
+---
+
+*This plan transforms the trip companion from a task list into an intelligent friend who knows what you need before you do.*
