@@ -1,21 +1,20 @@
 /**
- * Pocket Local - Your Friend in the City
+ * Pocket Local - The Midnight Confidant
  *
- * A revolutionary trip companion that feels like having a local friend
- * texting you suggestions. Not a checklist - a living, breathing companion.
+ * A time-aware travel companion that intuitively understands what you need.
+ * At 11pm, it won't suggest a museum. It knows you want a bar.
  *
  * Design Philosophy:
- * - Chat-like interface but elevated - luxury concierge meets friendly local
- * - Context-aware suggestions based on time, weather, location
- * - Three choices at decision points, single focus during experiences
- * - Subtle transitions, no screaming buttons
+ * - TIME-AWARE: Only shows what's actually relevant NOW
+ * - INTIMATE: Like a trusted friend whispering suggestions
+ * - DYNAMIC: Interface transforms based on time of day
+ * - NO FLUFF: No city name (you know where you are), no irrelevant options
  *
- * Aesthetic: "Parisian Concierge" - warm, sophisticated, effortlessly chic
- * Typography: Cormorant Garamond (elegant serif), Plus Jakarta Sans (modern)
- * Colors: Deep navy, warm gold, soft cream, accent coral
+ * Typography: Playfair Display (editorial) + DM Sans (friendly)
+ * Colors: Dynamic - midnight tones at night, warm cream by day
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Navigation,
@@ -24,152 +23,327 @@ import {
   Star,
   ChevronDown,
   Sparkles,
+  Moon,
   Sun,
   Coffee,
   Utensils,
+  Wine,
   Camera,
   Mountain,
   ArrowRight,
   Heart,
   Compass,
+  Sunrise,
+  Sunset,
 } from 'lucide-react';
 import type { TimeSlot } from './TodayView';
 
-// ==================== Design System ====================
-const colors = {
-  // Primary palette - Parisian elegance
-  navy: '#1A2A3A',
-  navyLight: '#2D4257',
-  navyDeep: '#0F1A24',
+// ==================== Time Intelligence System ====================
 
-  // Warm accents
-  gold: '#C9A962',
-  goldLight: '#E4D4A8',
-  goldMuted: '#9A8352',
+type TimePeriod = 'lateNight' | 'earlyMorning' | 'morning' | 'midday' | 'afternoon' | 'evening' | 'night';
 
-  // Background warmth
-  cream: '#FAF8F5',
-  warmWhite: '#FFFDF9',
-  linen: '#F5F1EA',
-
-  // Accent - coral touches
-  coral: '#E07B5A',
-  coralLight: '#F4A68D',
-  coralMuted: '#C46B4D',
-
-  // Neutrals
-  charcoal: '#2C2C2C',
-  stone: '#8B8680',
-  pebble: '#C5C0B8',
-  mist: '#E8E4DE',
-
-  // Transparent layers
-  overlay: 'rgba(26, 42, 58, 0.85)',
-  glassDark: 'rgba(26, 42, 58, 0.95)',
-  glassLight: 'rgba(255, 253, 249, 0.9)',
+const getTimePeriod = (hour: number): TimePeriod => {
+  if (hour >= 22 || hour < 5) return 'lateNight';
+  if (hour >= 5 && hour < 8) return 'earlyMorning';
+  if (hour >= 8 && hour < 11) return 'morning';
+  if (hour >= 11 && hour < 14) return 'midday';
+  if (hour >= 14 && hour < 18) return 'afternoon';
+  if (hour >= 18 && hour < 21) return 'evening';
+  return 'night'; // 21-22
 };
 
-// Contextual "whispers" based on activity type and time
-const generateWhisper = (activity: TimeSlot): string => {
-  const type = activity.type || 'activity';
+// What activity types are appropriate for each time period
+const timeAppropriateTypes: Record<TimePeriod, string[]> = {
+  lateNight: ['restaurant', 'hotel', 'free'], // NO museums, NO scenic at midnight
+  earlyMorning: ['restaurant', 'scenic', 'free', 'hotel'], // Sunrise, cafes
+  morning: ['restaurant', 'activity', 'scenic', 'free'], // Everything opens
+  midday: ['restaurant', 'activity', 'scenic', 'free'], // Lunch + activities
+  afternoon: ['activity', 'scenic', 'restaurant', 'free'], // Peak sightseeing
+  evening: ['restaurant', 'scenic', 'activity', 'free', 'hotel'], // Dinner, sunset
+  night: ['restaurant', 'hotel', 'free'], // Winding down
+};
 
-  const whispers: Record<string, string[]> = {
-    restaurant: [
-      `The locals have been coming here since before the tourists discovered it.`,
-      `Ask for the table by the window — the light is perfect right now.`,
-      `The chef's special is never on the menu. Just ask.`,
-      `This is where the neighborhood gathers. Notice the regulars at the bar.`,
-    ],
-    cafe: [
-      `Order what the person before you ordered. Trust the rhythm of the place.`,
-      `The best seats aren't the obvious ones. Find the corner with the view.`,
-      `Linger here. Some of the best conversations happen when you're not rushing.`,
-    ],
-    scenic: [
-      `The view is different every hour. This one, right now, is yours alone.`,
-      `Notice what others are walking past. The details are where the magic hides.`,
-      `Stand still for a moment. Let the city breathe around you.`,
-      `The best photo is the one you don't take — the memory that stays.`,
-    ],
-    activity: [
-      `Move slowly through this one. Speed kills wonder.`,
-      `Look up. Most people forget to look up.`,
-      `Find the quiet corner. Every place has one.`,
-    ],
-    hotel: [
-      `You've earned this rest. Tomorrow's adventures can wait.`,
-      `Ask the concierge what they'd do with an hour free. They know things.`,
-    ],
+// Keywords that indicate nightlife-appropriate activities
+const nightlifeKeywords = ['bar', 'wine', 'cocktail', 'pub', 'lounge', 'nightclub', 'jazz', 'live music'];
+const daylightOnlyKeywords = ['museum', 'musée', 'galerie', 'gallery', 'château', 'palace', 'church', 'cathedral', 'basilica', 'tour'];
+
+// Check if an activity is appropriate for the current time
+const isActivityAppropriate = (activity: TimeSlot, hour: number): boolean => {
+  const period = getTimePeriod(hour);
+  const appropriateTypes = timeAppropriateTypes[period];
+  const titleLower = activity.title.toLowerCase();
+  const descLower = (activity.description || '').toLowerCase();
+  const combined = titleLower + ' ' + descLower;
+
+  // Late night special handling
+  if (period === 'lateNight' || period === 'night') {
+    // Allow if it's explicitly nightlife
+    if (nightlifeKeywords.some(kw => combined.includes(kw))) {
+      return true;
+    }
+    // Block if it's daylight-only
+    if (daylightOnlyKeywords.some(kw => combined.includes(kw))) {
+      return false;
+    }
+    // Otherwise check type
+    return appropriateTypes.includes(activity.type);
+  }
+
+  // Daytime - block closed things but otherwise be permissive
+  if (period === 'earlyMorning') {
+    // Most museums aren't open at 6am
+    if (daylightOnlyKeywords.some(kw => combined.includes(kw))) {
+      return false;
+    }
+  }
+
+  return appropriateTypes.includes(activity.type);
+};
+
+// ==================== Dynamic Theme System ====================
+
+const getTheme = (hour: number) => {
+  const isNight = hour >= 20 || hour < 6;
+
+  if (isNight) {
+    return {
+      mode: 'dark' as const,
+      // Deep, intimate night colors
+      bg: {
+        primary: '#0A0A0B',
+        secondary: '#111113',
+        card: '#18181B',
+        cardHover: '#1F1F23',
+        elevated: '#0D0D0E',
+      },
+      text: {
+        primary: '#F4F4F5',
+        secondary: '#A1A1AA',
+        muted: '#71717A',
+        accent: '#D4A574',
+      },
+      accent: {
+        primary: '#D4A574', // Warm amber
+        secondary: '#E8C9A0',
+        muted: '#8B7355',
+        glow: 'rgba(212, 165, 116, 0.15)',
+      },
+      border: {
+        subtle: 'rgba(255, 255, 255, 0.06)',
+        medium: 'rgba(255, 255, 255, 0.1)',
+        accent: 'rgba(212, 165, 116, 0.3)',
+      },
+      shadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
+      gradient: 'linear-gradient(135deg, #D4A574 0%, #E8C9A0 50%, #D4A574 100%)',
+    };
+  }
+
+  return {
+    mode: 'light' as const,
+    // Warm, inviting day colors
+    bg: {
+      primary: '#FAF8F5',
+      secondary: '#FFFFFF',
+      card: '#FFFFFF',
+      cardHover: '#F5F3F0',
+      elevated: '#FFFDFB',
+    },
+    text: {
+      primary: '#1A1A1A',
+      secondary: '#525252',
+      muted: '#737373',
+      accent: '#C45830',
+    },
+    accent: {
+      primary: '#C45830', // Rich terracotta
+      secondary: '#D97650',
+      muted: '#A04828',
+      glow: 'rgba(196, 88, 48, 0.1)',
+    },
+    border: {
+      subtle: 'rgba(0, 0, 0, 0.04)',
+      medium: 'rgba(0, 0, 0, 0.08)',
+      accent: 'rgba(196, 88, 48, 0.2)',
+    },
+    shadow: '0 4px 24px rgba(0, 0, 0, 0.06)',
+    gradient: 'linear-gradient(135deg, #C45830 0%, #D97650 50%, #C45830 100%)',
   };
-
-  const typeWhispers = whispers[type] || whispers.activity;
-  const randomIndex = Math.floor(Math.random() * typeWhispers.length);
-  return typeWhispers[randomIndex];
 };
 
-// Time-aware greeting
-const getTimeGreeting = (hour: number): { greeting: string; suggestion: string; icon: typeof Sun } => {
-  if (hour >= 5 && hour < 9) {
+// ==================== Time-Aware Greetings ====================
+
+interface TimeGreeting {
+  headline: string;
+  subtext: string;
+  icon: typeof Sun;
+  mood: string;
+}
+
+const getTimeGreeting = (hour: number): TimeGreeting => {
+  if (hour >= 22 || hour < 5) {
     return {
-      greeting: "The city is waking up",
-      suggestion: "Morning light is kind to everything",
-      icon: Sun,
+      headline: "The night is yours",
+      subtext: "Where the city reveals its secrets",
+      icon: Moon,
+      mood: "intimate",
     };
   }
-  if (hour >= 9 && hour < 12) {
+  if (hour >= 5 && hour < 8) {
     return {
-      greeting: "The morning is yours",
-      suggestion: "Perfect time to wander before the crowds",
+      headline: "First light",
+      subtext: "The city awakens, and so do you",
+      icon: Sunrise,
+      mood: "peaceful",
+    };
+  }
+  if (hour >= 8 && hour < 11) {
+    return {
+      headline: "Morning unfolds",
+      subtext: "Time moves slowly for those who notice",
       icon: Coffee,
+      mood: "energizing",
     };
   }
-  if (hour >= 12 && hour < 15) {
+  if (hour >= 11 && hour < 14) {
     return {
-      greeting: "Midday warmth",
-      suggestion: "The golden hour of appetite",
-      icon: Utensils,
+      headline: "The golden hours",
+      subtext: "When appetite and curiosity align",
+      icon: Sun,
+      mood: "vibrant",
     };
   }
-  if (hour >= 15 && hour < 18) {
+  if (hour >= 14 && hour < 18) {
     return {
-      greeting: "The afternoon unfolds",
-      suggestion: "When the light gets interesting",
+      headline: "Afternoon wanders",
+      subtext: "The best discoveries are unplanned",
       icon: Camera,
+      mood: "adventurous",
     };
   }
   if (hour >= 18 && hour < 21) {
     return {
-      greeting: "Evening descends",
-      suggestion: "The city transforms after dark",
-      icon: Star,
+      headline: "Evening descends",
+      subtext: "The light softens everything",
+      icon: Sunset,
+      mood: "romantic",
     };
   }
   return {
-    greeting: "The night is yours",
-    suggestion: "Secret hours, secret places",
-    icon: Moon,
+    headline: "Twilight hour",
+    subtext: "Between day and night, magic happens",
+    icon: Star,
+    mood: "mysterious",
   };
 };
 
-// Placeholder for Moon since it's not in lucide by that name
-const Moon = Star; // Using Star as placeholder
+// ==================== Whispers - Contextual Insider Tips ====================
 
-// Activity type configurations
-const activityTypeConfig: Record<string, { icon: typeof MapPin; label: string; color: string }> = {
-  restaurant: { icon: Utensils, label: 'Dining', color: colors.coral },
-  cafe: { icon: Coffee, label: 'Café', color: colors.goldMuted },
-  scenic: { icon: Mountain, label: 'Experience', color: colors.navyLight },
-  activity: { icon: Camera, label: 'Discovery', color: colors.gold },
-  hotel: { icon: MapPin, label: 'Rest', color: colors.stone },
-  default: { icon: Compass, label: 'Explore', color: colors.navy },
+const generateWhisper = (activity: TimeSlot, hour: number): string => {
+  const type = activity.type || 'activity';
+  const period = getTimePeriod(hour);
+
+  const whispersByTypeAndTime: Record<string, Record<string, string[]>> = {
+    restaurant: {
+      lateNight: [
+        "The kitchen's winding down, but the best conversations are just starting.",
+        "Ask what the staff eats. That's the real menu.",
+        "The last seating is often the most honest.",
+      ],
+      earlyMorning: [
+        "The croissants just came out. You can smell it.",
+        "Sit at the bar. Watch the ritual of morning prep.",
+      ],
+      default: [
+        "The corner table has seen a thousand stories. Add yours.",
+        "Order what the regulars order. They know.",
+        "The chef's special isn't on the menu. Just ask.",
+      ],
+    },
+    hotel: {
+      lateNight: [
+        "Your pillow is patient. It's waited all day for you.",
+        "The city will be here tomorrow. Rest now.",
+      ],
+      default: [
+        "Ask the concierge what they'd do with a free hour. They know things.",
+        "The best travel stories happen between adventures.",
+      ],
+    },
+    scenic: {
+      earlyMorning: [
+        "The light right now? It won't look like this again today.",
+        "You'll have this view almost to yourself. That's rare.",
+      ],
+      evening: [
+        "The sunset paints differently every night. This one's yours.",
+        "Stand still. Let the view come to you.",
+      ],
+      default: [
+        "Look where no one's looking. That's where it hides.",
+        "The photo won't capture it. Your memory will.",
+      ],
+    },
+    activity: {
+      morning: [
+        "Arrive when doors open. The energy is different.",
+        "Start from the back. Everyone rushes the front.",
+      ],
+      afternoon: [
+        "Move slowly. Speed kills wonder.",
+        "Find the quiet corner. Every place has one.",
+      ],
+      default: [
+        "Look up. Most people forget to look up.",
+        "The gift shop has stories too. Don't skip it.",
+      ],
+    },
+    free: {
+      default: [
+        "Wander without a destination. That's when you find things.",
+        "Sit somewhere. Watch the locals. Learn their rhythm.",
+        "Get lost on purpose. The map can wait.",
+      ],
+    },
+  };
+
+  const typeWhispers = whispersByTypeAndTime[type] || whispersByTypeAndTime.activity;
+  const periodWhispers = typeWhispers[period] || typeWhispers.default || [];
+  const allWhispers = [...periodWhispers, ...(typeWhispers.default || [])];
+
+  return allWhispers[Math.floor(Math.random() * allWhispers.length)] || "Trust your instincts here.";
+};
+
+// ==================== Activity Type Configuration ====================
+
+const getActivityConfig = (activity: TimeSlot, hour: number) => {
+  const titleLower = activity.title.toLowerCase();
+  const isNightlife = nightlifeKeywords.some(kw => titleLower.includes(kw));
+
+  if (isNightlife) {
+    return { icon: Wine, label: 'Nightlife', color: '#A855F7' };
+  }
+
+  const configs: Record<string, { icon: typeof MapPin; label: string; color: string }> = {
+    restaurant: { icon: Utensils, label: 'Dining', color: hour >= 20 ? '#D4A574' : '#C45830' },
+    hotel: { icon: MapPin, label: 'Rest', color: '#6B7280' },
+    scenic: { icon: Mountain, label: 'Experience', color: '#059669' },
+    activity: { icon: Camera, label: 'Discovery', color: '#3B82F6' },
+    free: { icon: Compass, label: 'Explore', color: '#8B5CF6' },
+    transit: { icon: Navigation, label: 'Transit', color: '#6B7280' },
+  };
+
+  return configs[activity.type] || configs.activity;
 };
 
 // ==================== Choice Card Component ====================
+
 interface ChoiceCardProps {
   activity: TimeSlot;
   index: number;
   isSelected: boolean;
   onSelect: () => void;
+  theme: ReturnType<typeof getTheme>;
+  hour: number;
 }
 
 const ChoiceCard: React.FC<ChoiceCardProps> = ({
@@ -177,56 +351,54 @@ const ChoiceCard: React.FC<ChoiceCardProps> = ({
   index,
   isSelected,
   onSelect,
+  theme,
+  hour,
 }) => {
-  const config = activityTypeConfig[activity.type] || activityTypeConfig.default;
+  const config = getActivityConfig(activity, hour);
   const Icon = config.icon;
-
-  // Photo URL with fallback
   const photoUrl = activity.photo || (activity as unknown as { imageUrl?: string }).imageUrl;
-
-  // Generate a contextual tagline
-  const taglines = [
-    "A local favorite",
-    "Worth the detour",
-    "Hidden in plain sight",
-  ];
 
   return (
     <motion.button
       onClick={onSelect}
       className="relative w-full text-left overflow-hidden rounded-2xl"
       style={{
-        background: colors.warmWhite,
-        border: isSelected ? `2px solid ${colors.gold}` : `1px solid ${colors.mist}`,
-        boxShadow: isSelected
-          ? `0 8px 32px rgba(201, 169, 98, 0.25)`
-          : `0 2px 12px rgba(0,0,0,0.06)`,
+        background: theme.bg.card,
+        border: isSelected ? `2px solid ${theme.accent.primary}` : `1px solid ${theme.border.subtle}`,
+        boxShadow: isSelected ? `0 8px 32px ${theme.accent.glow}` : theme.shadow,
       }}
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.1, duration: 0.4 }}
+      transition={{ delay: index * 0.12, duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
       whileHover={{
-        y: -4,
-        boxShadow: `0 12px 40px rgba(0,0,0,0.12)`,
+        y: -6,
+        boxShadow: theme.mode === 'dark'
+          ? '0 20px 50px rgba(0,0,0,0.6)'
+          : '0 16px 40px rgba(0,0,0,0.12)',
       }}
       whileTap={{ scale: 0.98 }}
     >
       {/* Photo section */}
-      <div className="relative h-32 overflow-hidden">
+      <div className="relative h-36 overflow-hidden">
         {photoUrl ? (
-          <img
+          <motion.img
             src={photoUrl}
             alt={activity.title}
             className="w-full h-full object-cover"
+            initial={{ scale: 1.1 }}
+            animate={{ scale: 1 }}
+            transition={{ duration: 0.8 }}
           />
         ) : (
           <div
             className="w-full h-full flex items-center justify-center"
             style={{
-              background: `linear-gradient(135deg, ${colors.navy} 0%, ${colors.navyLight} 100%)`,
+              background: theme.mode === 'dark'
+                ? `linear-gradient(135deg, #1F1F23 0%, #0A0A0B 100%)`
+                : `linear-gradient(135deg, ${theme.accent.primary}22 0%, ${theme.accent.muted}33 100%)`,
             }}
           >
-            <Icon size={40} color={colors.goldLight} strokeWidth={1.5} />
+            <Icon size={44} color={theme.accent.primary} strokeWidth={1.2} />
           </div>
         )}
 
@@ -234,78 +406,96 @@ const ChoiceCard: React.FC<ChoiceCardProps> = ({
         <div
           className="absolute inset-0"
           style={{
-            background: `linear-gradient(to top, rgba(0,0,0,0.5) 0%, transparent 60%)`,
+            background: theme.mode === 'dark'
+              ? 'linear-gradient(to top, rgba(10,10,11,0.9) 0%, rgba(10,10,11,0.3) 40%, transparent 70%)'
+              : 'linear-gradient(to top, rgba(255,255,255,0.9) 0%, transparent 60%)',
           }}
         />
 
         {/* Type badge */}
-        <div
-          className="absolute top-3 left-3 px-2.5 py-1 rounded-full flex items-center gap-1.5"
+        <motion.div
+          className="absolute top-3 left-3 px-3 py-1.5 rounded-full flex items-center gap-2"
           style={{
-            background: colors.glassLight,
-            backdropFilter: 'blur(8px)',
+            background: theme.mode === 'dark' ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.9)',
+            backdropFilter: 'blur(12px)',
+            border: `1px solid ${theme.border.subtle}`,
           }}
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.3 + index * 0.1 }}
         >
           <Icon size={12} color={config.color} />
           <span
-            className="text-xs font-medium"
-            style={{ color: colors.navy, fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+            className="text-xs font-medium tracking-wide"
+            style={{
+              color: theme.text.primary,
+              fontFamily: "'DM Sans', sans-serif",
+            }}
           >
             {config.label}
           </span>
-        </div>
+        </motion.div>
 
-        {/* Rating if available */}
+        {/* Rating */}
         {activity.rating && (
-          <div
-            className="absolute top-3 right-3 px-2 py-1 rounded-full flex items-center gap-1"
+          <motion.div
+            className="absolute top-3 right-3 px-2.5 py-1.5 rounded-full flex items-center gap-1.5"
             style={{
-              background: colors.glassDark,
-              backdropFilter: 'blur(8px)',
+              background: theme.mode === 'dark' ? 'rgba(212,165,116,0.2)' : 'rgba(196,88,48,0.1)',
+              border: `1px solid ${theme.accent.primary}33`,
             }}
+            initial={{ opacity: 0, x: 10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.4 + index * 0.1 }}
           >
-            <Star size={10} fill={colors.gold} color={colors.gold} />
+            <Star size={11} fill={theme.accent.primary} color={theme.accent.primary} />
             <span
-              className="text-xs font-medium"
-              style={{ color: colors.cream }}
+              className="text-xs font-semibold"
+              style={{ color: theme.accent.primary }}
             >
               {activity.rating}
             </span>
-          </div>
+          </motion.div>
         )}
       </div>
 
       {/* Content section */}
       <div className="p-4">
         <h3
-          className="text-lg font-semibold mb-1 line-clamp-1"
+          className="text-xl mb-1.5 line-clamp-1"
           style={{
-            color: colors.navy,
-            fontFamily: "'Cormorant Garamond', Georgia, serif",
+            color: theme.text.primary,
+            fontFamily: "'Playfair Display', Georgia, serif",
             fontWeight: 600,
+            letterSpacing: '-0.01em',
           }}
         >
           {activity.title}
         </h3>
 
-        <p
-          className="text-sm mb-3 line-clamp-2"
-          style={{
-            color: colors.stone,
-            fontFamily: "'Plus Jakarta Sans', sans-serif",
-            lineHeight: 1.5,
-          }}
-        >
-          {activity.description || taglines[index % taglines.length]}
-        </p>
+        {activity.description && (
+          <p
+            className="text-sm mb-3 line-clamp-2"
+            style={{
+              color: theme.text.secondary,
+              fontFamily: "'DM Sans', sans-serif",
+              lineHeight: 1.55,
+            }}
+          >
+            {activity.description}
+          </p>
+        )}
 
-        {/* Location */}
+        {/* Location - subtle */}
         {activity.location && (
           <div className="flex items-center gap-1.5">
-            <MapPin size={12} color={colors.pebble} />
+            <MapPin size={11} color={theme.text.muted} />
             <span
               className="text-xs line-clamp-1"
-              style={{ color: colors.stone }}
+              style={{
+                color: theme.text.muted,
+                fontFamily: "'DM Sans', sans-serif",
+              }}
             >
               {activity.location}
             </span>
@@ -313,14 +503,17 @@ const ChoiceCard: React.FC<ChoiceCardProps> = ({
         )}
       </div>
 
-      {/* Selection indicator */}
+      {/* Selection glow */}
       {isSelected && (
         <motion.div
-          className="absolute bottom-0 left-0 right-0 h-1"
-          style={{ background: colors.gold }}
-          initial={{ scaleX: 0 }}
-          animate={{ scaleX: 1 }}
-          transition={{ duration: 0.3 }}
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            border: `2px solid ${theme.accent.primary}`,
+            borderRadius: '1rem',
+            boxShadow: `inset 0 0 20px ${theme.accent.glow}`,
+          }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
         />
       )}
     </motion.button>
@@ -328,85 +521,91 @@ const ChoiceCard: React.FC<ChoiceCardProps> = ({
 };
 
 // ==================== Experience Mode Component ====================
+
 interface ExperienceModeProps {
   activity: TimeSlot;
-  cityName: string;
   onNavigate: () => void;
   onComplete: () => void;
   onChangeChoice: () => void;
   whisper: string;
+  theme: ReturnType<typeof getTheme>;
+  hour: number;
 }
 
 const ExperienceMode: React.FC<ExperienceModeProps> = ({
   activity,
-  cityName: _cityName,
   onNavigate,
   onComplete,
   onChangeChoice,
   whisper,
+  theme,
+  hour,
 }) => {
-  // cityName is kept for potential future use (e.g., contextual tips)
-  void _cityName;
-  const config = activityTypeConfig[activity.type] || activityTypeConfig.default;
+  const config = getActivityConfig(activity, hour);
   const Icon = config.icon;
   const photoUrl = activity.photo || (activity as unknown as { imageUrl?: string }).imageUrl;
-
   const [showTips, setShowTips] = useState(false);
 
-  // Insider tips based on activity type
+  // Contextual insider tips
   const insiderTips = {
     restaurant: [
-      "Ask the server what they'd order",
-      "The bread is baked fresh - don't fill up before the main",
-      "Tip: The terrace is where regulars sit",
+      "The table by the window catches the best light",
+      "Ask what the chef recommends — it's never on the menu",
+      "Linger over coffee. The second hour is better than the first",
     ],
-    cafe: [
-      "The pastries are made in-house",
-      "Locals order at the bar - it's cheaper",
-      "Best seat: near the window, away from the door",
+    hotel: [
+      "Request a room away from the elevator",
+      "The minibar is overpriced. The neighborhood is better",
+      "Ask housekeeping for extra pillows. They have the good ones",
     ],
     scenic: [
-      "Early morning has the best light",
-      "Walk counterclockwise for better views",
-      "The side entrance is less crowded",
+      "The view changes every 20 minutes. Stay for two",
+      "Find where the locals stand. They know the angles",
+      "The best photos happen when you put the phone down",
     ],
     activity: [
-      "Start from the back and work forward",
-      "The gift shop has hidden gems",
-      "Audio guide is worth it - trust me",
+      "Start from the end and work backwards. Beat the crowds",
+      "The audio guide knows stories the plaques don't",
+      "Find the guard who's been here longest. They've seen everything",
     ],
-    default: [
-      "Take your time here",
-      "Notice the small details",
-      "This place rewards patience",
+    free: [
+      "Get lost on purpose. The map will still work later",
+      "Sit in one spot for 30 minutes. Watch. Listen",
+      "The side streets have the real character",
     ],
   };
 
-  const tips = insiderTips[activity.type as keyof typeof insiderTips] || insiderTips.default;
+  const tips = insiderTips[activity.type as keyof typeof insiderTips] || insiderTips.activity;
 
   return (
     <motion.div
       className="flex flex-col h-full"
+      style={{ background: theme.bg.primary }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
     >
-      {/* Hero image section */}
-      <div className="relative h-64 flex-shrink-0">
+      {/* Hero image */}
+      <div className="relative h-72 flex-shrink-0 overflow-hidden">
         {photoUrl ? (
-          <img
+          <motion.img
             src={photoUrl}
             alt={activity.title}
             className="w-full h-full object-cover"
+            initial={{ scale: 1.1 }}
+            animate={{ scale: 1 }}
+            transition={{ duration: 1.2, ease: [0.23, 1, 0.32, 1] }}
           />
         ) : (
           <div
             className="w-full h-full flex items-center justify-center"
             style={{
-              background: `linear-gradient(135deg, ${colors.navy} 0%, ${colors.navyDeep} 100%)`,
+              background: theme.mode === 'dark'
+                ? `linear-gradient(135deg, #1a1a1a 0%, #0a0a0b 100%)`
+                : `linear-gradient(135deg, ${theme.accent.primary}15 0%, ${theme.accent.muted}25 100%)`,
             }}
           >
-            <Icon size={64} color={colors.goldLight} strokeWidth={1} />
+            <Icon size={72} color={theme.accent.primary} strokeWidth={0.8} />
           </div>
         )}
 
@@ -414,87 +613,108 @@ const ExperienceMode: React.FC<ExperienceModeProps> = ({
         <div
           className="absolute inset-0"
           style={{
-            background: `linear-gradient(to top, ${colors.cream} 0%, transparent 40%, transparent 60%, rgba(0,0,0,0.3) 100%)`,
+            background: theme.mode === 'dark'
+              ? `linear-gradient(to top, ${theme.bg.primary} 0%, transparent 50%, rgba(0,0,0,0.4) 100%)`
+              : `linear-gradient(to top, ${theme.bg.primary} 0%, transparent 50%, rgba(0,0,0,0.2) 100%)`,
           }}
         />
 
-        {/* Change option - subtle, top right */}
+        {/* Back button - subtle compass */}
         <motion.button
           onClick={onChangeChoice}
-          className="absolute top-4 right-4 p-2.5 rounded-full"
+          className="absolute top-5 right-5 p-3 rounded-full"
           style={{
-            background: colors.glassLight,
-            backdropFilter: 'blur(8px)',
+            background: theme.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.9)',
+            backdropFilter: 'blur(12px)',
+            border: `1px solid ${theme.border.subtle}`,
           }}
-          whileHover={{ scale: 1.05 }}
+          whileHover={{ scale: 1.08, background: theme.mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,1)' }}
           whileTap={{ scale: 0.95 }}
         >
-          <Compass size={18} color={colors.navy} />
+          <Compass size={20} color={theme.text.secondary} />
         </motion.button>
 
         {/* Type badge */}
-        <div
-          className="absolute top-4 left-4 px-3 py-1.5 rounded-full flex items-center gap-2"
+        <motion.div
+          className="absolute top-5 left-5 px-4 py-2 rounded-full flex items-center gap-2"
           style={{
-            background: colors.glassDark,
-            backdropFilter: 'blur(8px)',
+            background: theme.mode === 'dark' ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.95)',
+            backdropFilter: 'blur(12px)',
+            border: `1px solid ${theme.border.medium}`,
           }}
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
         >
-          <Icon size={14} color={colors.gold} />
+          <Icon size={14} color={config.color} />
           <span
-            className="text-xs font-medium tracking-wide"
-            style={{ color: colors.cream }}
+            className="text-xs font-semibold tracking-widest uppercase"
+            style={{
+              color: theme.text.primary,
+              fontFamily: "'DM Sans', sans-serif",
+            }}
           >
-            {config.label.toUpperCase()}
+            {config.label}
           </span>
-        </div>
+        </motion.div>
       </div>
 
-      {/* Content section */}
+      {/* Content */}
       <div
-        className="flex-1 px-5 -mt-8 relative z-10"
-        style={{ background: colors.cream }}
+        className="flex-1 px-6 -mt-6 relative z-10 overflow-y-auto"
+        style={{ background: theme.bg.primary }}
       >
         {/* Title card */}
-        <div
-          className="p-5 rounded-xl mb-4"
+        <motion.div
+          className="p-6 rounded-2xl mb-5"
           style={{
-            background: colors.warmWhite,
-            boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+            background: theme.bg.card,
+            boxShadow: theme.shadow,
+            border: `1px solid ${theme.border.subtle}`,
           }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
         >
           <h1
-            className="text-2xl mb-2"
+            className="text-3xl mb-3"
             style={{
-              color: colors.navy,
-              fontFamily: "'Cormorant Garamond', Georgia, serif",
+              color: theme.text.primary,
+              fontFamily: "'Playfair Display', Georgia, serif",
               fontWeight: 600,
-              lineHeight: 1.2,
+              letterSpacing: '-0.02em',
+              lineHeight: 1.15,
             }}
           >
             {activity.title}
           </h1>
 
           {activity.location && (
-            <div className="flex items-center gap-2 mb-3">
-              <MapPin size={14} color={colors.stone} />
+            <div className="flex items-center gap-2 mb-4">
+              <MapPin size={14} color={theme.text.muted} />
               <span
                 className="text-sm"
-                style={{ color: colors.stone }}
+                style={{
+                  color: theme.text.secondary,
+                  fontFamily: "'DM Sans', sans-serif",
+                }}
               >
                 {activity.location}
               </span>
             </div>
           )}
 
-          {/* Rating and details row */}
-          <div className="flex items-center gap-4">
+          {/* Meta row */}
+          <div className="flex items-center gap-5">
             {activity.rating && (
-              <div className="flex items-center gap-1">
-                <Star size={14} fill={colors.gold} color={colors.gold} />
+              <div className="flex items-center gap-1.5">
+                <Star size={14} fill={theme.accent.primary} color={theme.accent.primary} />
                 <span
-                  className="text-sm font-medium"
-                  style={{ color: colors.navy }}
+                  className="text-sm font-semibold"
+                  style={{
+                    color: theme.text.primary,
+                    fontFamily: "'DM Sans', sans-serif",
+                  }}
                 >
                   {activity.rating}
                 </span>
@@ -502,48 +722,68 @@ const ExperienceMode: React.FC<ExperienceModeProps> = ({
             )}
 
             {activity.duration && (
-              <div className="flex items-center gap-1">
-                <Clock size={14} color={colors.stone} />
+              <div className="flex items-center gap-1.5">
+                <Clock size={14} color={theme.text.muted} />
                 <span
                   className="text-sm"
-                  style={{ color: colors.stone }}
+                  style={{
+                    color: theme.text.secondary,
+                    fontFamily: "'DM Sans', sans-serif",
+                  }}
                 >
                   {activity.duration}
                 </span>
               </div>
             )}
           </div>
-        </div>
+        </motion.div>
 
-        {/* Whisper - the pocket local message */}
+        {/* Whisper - the intimate suggestion */}
         <motion.div
-          className="mb-4 p-4 rounded-xl relative"
+          className="mb-5 p-5 rounded-2xl relative overflow-hidden"
           style={{
-            background: `linear-gradient(135deg, ${colors.navy} 0%, ${colors.navyLight} 100%)`,
+            background: theme.mode === 'dark'
+              ? 'linear-gradient(135deg, rgba(212,165,116,0.12) 0%, rgba(212,165,116,0.05) 100%)'
+              : 'linear-gradient(135deg, rgba(196,88,48,0.08) 0%, rgba(196,88,48,0.03) 100%)',
+            border: `1px solid ${theme.accent.primary}22`,
           }}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
         >
-          {/* Chat bubble tail */}
+          {/* Decorative element */}
           <div
-            className="absolute -top-2 left-6 w-4 h-4 rotate-45"
-            style={{ background: colors.navy }}
+            className="absolute top-0 right-0 w-32 h-32 opacity-10"
+            style={{
+              background: `radial-gradient(circle, ${theme.accent.primary} 0%, transparent 70%)`,
+              transform: 'translate(30%, -30%)',
+            }}
           />
 
-          <div className="flex items-start gap-3">
-            <div
-              className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-              style={{ background: colors.gold }}
-            >
-              <Sparkles size={14} color={colors.navy} />
-            </div>
-            <p
-              className="text-sm leading-relaxed italic"
+          <div className="flex items-start gap-4 relative z-10">
+            <motion.div
+              className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
               style={{
-                color: colors.cream,
-                fontFamily: "'Cormorant Garamond', Georgia, serif",
-                fontSize: '15px',
+                background: theme.gradient,
+              }}
+              animate={{
+                boxShadow: [
+                  `0 0 0 0 ${theme.accent.primary}00`,
+                  `0 0 0 8px ${theme.accent.primary}15`,
+                  `0 0 0 0 ${theme.accent.primary}00`,
+                ],
+              }}
+              transition={{ duration: 3, repeat: Infinity }}
+            >
+              <Sparkles size={16} color={theme.mode === 'dark' ? '#0A0A0B' : '#FFFFFF'} />
+            </motion.div>
+            <p
+              className="text-base leading-relaxed"
+              style={{
+                color: theme.text.primary,
+                fontFamily: "'Playfair Display', Georgia, serif",
+                fontStyle: 'italic',
+                fontWeight: 400,
               }}
             >
               "{whisper}"
@@ -551,30 +791,33 @@ const ExperienceMode: React.FC<ExperienceModeProps> = ({
           </div>
         </motion.div>
 
-        {/* Insider tips toggle */}
+        {/* Insider tips accordion */}
         <motion.button
           onClick={() => setShowTips(!showTips)}
-          className="w-full mb-4 p-3 rounded-xl flex items-center justify-between"
+          className="w-full mb-4 p-4 rounded-xl flex items-center justify-between"
           style={{
-            background: colors.linen,
-            border: `1px solid ${colors.mist}`,
+            background: theme.bg.secondary,
+            border: `1px solid ${theme.border.subtle}`,
           }}
-          whileTap={{ scale: 0.98 }}
+          whileTap={{ scale: 0.99 }}
         >
-          <div className="flex items-center gap-2">
-            <Heart size={16} color={colors.coral} />
+          <div className="flex items-center gap-3">
+            <Heart size={16} color={theme.accent.primary} />
             <span
               className="text-sm font-medium"
-              style={{ color: colors.navy }}
+              style={{
+                color: theme.text.primary,
+                fontFamily: "'DM Sans', sans-serif",
+              }}
             >
               Insider tips
             </span>
           </div>
           <motion.div
             animate={{ rotate: showTips ? 180 : 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.25 }}
           >
-            <ChevronDown size={18} color={colors.stone} />
+            <ChevronDown size={18} color={theme.text.muted} />
           </motion.div>
         </motion.button>
 
@@ -585,22 +828,33 @@ const ExperienceMode: React.FC<ExperienceModeProps> = ({
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               transition={{ duration: 0.3 }}
-              className="overflow-hidden mb-4"
+              className="overflow-hidden mb-6"
             >
-              <div className="space-y-2 pb-2">
+              <div className="space-y-2">
                 {tips.map((tip, index) => (
                   <motion.div
                     key={index}
-                    className="flex items-start gap-2 p-3 rounded-lg"
-                    style={{ background: colors.warmWhite }}
+                    className="flex items-start gap-3 p-4 rounded-xl"
+                    style={{
+                      background: theme.bg.card,
+                      border: `1px solid ${theme.border.subtle}`,
+                    }}
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.1 }}
+                    transition={{ delay: index * 0.08 }}
                   >
-                    <span style={{ color: colors.gold }}>•</span>
                     <span
-                      className="text-sm"
-                      style={{ color: colors.charcoal }}
+                      className="text-lg"
+                      style={{ color: theme.accent.primary }}
+                    >
+                      •
+                    </span>
+                    <span
+                      className="text-sm leading-relaxed"
+                      style={{
+                        color: theme.text.primary,
+                        fontFamily: "'DM Sans', sans-serif",
+                      }}
                     >
                       {tip}
                     </span>
@@ -612,63 +866,137 @@ const ExperienceMode: React.FC<ExperienceModeProps> = ({
         </AnimatePresence>
       </div>
 
-      {/* Action buttons - fixed at bottom */}
+      {/* Action buttons */}
       <div
-        className="flex-shrink-0 p-5 space-y-3"
+        className="flex-shrink-0 p-6 space-y-3"
         style={{
-          background: colors.cream,
-          borderTop: `1px solid ${colors.mist}`,
+          background: theme.bg.elevated,
+          borderTop: `1px solid ${theme.border.subtle}`,
         }}
       >
-        {/* Primary action - Navigate */}
+        {/* Primary - Navigate */}
         <motion.button
           onClick={onNavigate}
-          className="w-full py-4 rounded-xl flex items-center justify-center gap-3"
+          className="w-full py-4 rounded-2xl flex items-center justify-center gap-3 relative overflow-hidden"
           style={{
-            background: colors.navy,
+            background: theme.gradient,
           }}
           whileHover={{ scale: 1.01 }}
           whileTap={{ scale: 0.98 }}
         >
-          <Navigation size={18} color={colors.cream} />
+          <Navigation size={18} color={theme.mode === 'dark' ? '#0A0A0B' : '#FFFFFF'} />
           <span
-            className="text-base font-medium"
+            className="text-base font-semibold"
             style={{
-              color: colors.cream,
-              fontFamily: "'Plus Jakarta Sans', sans-serif",
+              color: theme.mode === 'dark' ? '#0A0A0B' : '#FFFFFF',
+              fontFamily: "'DM Sans', sans-serif",
             }}
           >
             Take me there
           </span>
         </motion.button>
 
-        {/* Secondary action - I'm here / Done */}
+        {/* Secondary - Done */}
         <motion.button
           onClick={onComplete}
-          className="w-full py-3 rounded-xl flex items-center justify-center gap-2"
+          className="w-full py-3.5 rounded-xl flex items-center justify-center gap-2"
           style={{
             background: 'transparent',
-            border: `1px solid ${colors.mist}`,
+            border: `1px solid ${theme.border.medium}`,
           }}
-          whileHover={{
-            background: colors.linen,
-          }}
+          whileHover={{ background: theme.bg.secondary }}
           whileTap={{ scale: 0.98 }}
         >
           <span
             className="text-sm"
-            style={{ color: colors.stone }}
+            style={{
+              color: theme.text.secondary,
+              fontFamily: "'DM Sans', sans-serif",
+            }}
           >
             I'm done here
           </span>
-          <ArrowRight size={14} color={colors.stone} />
+          <ArrowRight size={14} color={theme.text.secondary} />
         </motion.button>
       </div>
     </motion.div>
   );
 };
 
-// ==================== Main Pocket Local Component ====================
+// ==================== Empty State - Nothing Open ====================
+
+interface EmptyStateProps {
+  theme: ReturnType<typeof getTheme>;
+  timeGreeting: TimeGreeting;
+  hour: number;
+}
+
+const EmptyState: React.FC<EmptyStateProps> = ({ theme, timeGreeting, hour }) => {
+  const isLateNight = hour >= 22 || hour < 6;
+
+  return (
+    <motion.div
+      className="h-full flex flex-col items-center justify-center p-8 text-center"
+      style={{ background: theme.bg.primary }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+    >
+      <motion.div
+        className="mb-8"
+        initial={{ scale: 0.8, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ delay: 0.2 }}
+      >
+        <div
+          className="w-24 h-24 rounded-full flex items-center justify-center mx-auto"
+          style={{
+            background: theme.gradient,
+            boxShadow: `0 12px 40px ${theme.accent.glow}`,
+          }}
+        >
+          {isLateNight ? (
+            <Moon size={40} color={theme.mode === 'dark' ? '#0A0A0B' : '#FFFFFF'} />
+          ) : (
+            <Sparkles size={40} color={theme.mode === 'dark' ? '#0A0A0B' : '#FFFFFF'} />
+          )}
+        </div>
+      </motion.div>
+
+      <motion.h2
+        className="text-3xl mb-4"
+        style={{
+          color: theme.text.primary,
+          fontFamily: "'Playfair Display', Georgia, serif",
+          fontWeight: 600,
+          letterSpacing: '-0.02em',
+        }}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+      >
+        {isLateNight ? "The city rests" : timeGreeting.headline}
+      </motion.h2>
+
+      <motion.p
+        className="text-lg max-w-xs leading-relaxed"
+        style={{
+          color: theme.text.secondary,
+          fontFamily: "'DM Sans', sans-serif",
+        }}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+      >
+        {isLateNight
+          ? "Most places have closed for the night. Tomorrow brings new discoveries."
+          : "Nothing quite right for this moment. Check back soon."}
+      </motion.p>
+    </motion.div>
+  );
+};
+
+// ==================== Main Component ====================
+
 interface PocketLocalProps {
   activities: TimeSlot[];
   dayNumber: number;
@@ -682,39 +1010,46 @@ export const PocketLocal: React.FC<PocketLocalProps> = ({
   activities,
   dayNumber,
   totalDays,
-  cityName,
+  cityName: _cityName, // Intentionally unused - user knows where they are
   onNavigate,
   onActivityComplete,
 }) => {
+  // Suppress unused variable warning
+  void _cityName;
+
   const [mode, setMode] = useState<'choice' | 'experience'>('choice');
   const [selectedActivity, setSelectedActivity] = useState<TimeSlot | null>(null);
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
   const [currentWhisper, setCurrentWhisper] = useState('');
 
-  // Get current hour for time-aware content
+  // Current time context
   const currentHour = new Date().getHours();
-  const timeContext = getTimeGreeting(currentHour);
-  const TimeIcon = timeContext.icon;
+  const theme = getTheme(currentHour);
+  const timeGreeting = getTimeGreeting(currentHour);
+  const TimeIcon = timeGreeting.icon;
 
-  // Get uncompleted activities for choices
-  const availableActivities = activities.filter(a => !completedIds.has(a.id));
-  const choiceActivities = availableActivities.slice(0, 3);
+  // CRITICAL: Filter activities by time appropriateness
+  const timeAppropriateActivities = useMemo(() => {
+    return activities.filter(a =>
+      !completedIds.has(a.id) && isActivityAppropriate(a, currentHour)
+    );
+  }, [activities, completedIds, currentHour]);
 
-  // Handle activity selection
+  // Get top 3 for choices
+  const choiceActivities = timeAppropriateActivities.slice(0, 3);
+
   const handleSelect = useCallback((activity: TimeSlot) => {
     setSelectedActivity(activity);
-    setCurrentWhisper(generateWhisper(activity));
+    setCurrentWhisper(generateWhisper(activity, currentHour));
     setMode('experience');
-  }, []);
+  }, [currentHour]);
 
-  // Handle navigation
   const handleNavigate = useCallback(() => {
     if (selectedActivity) {
       onNavigate(selectedActivity);
     }
   }, [selectedActivity, onNavigate]);
 
-  // Handle completion
   const handleComplete = useCallback(() => {
     if (selectedActivity) {
       setCompletedIds(prev => new Set([...prev, selectedActivity.id]));
@@ -724,59 +1059,21 @@ export const PocketLocal: React.FC<PocketLocalProps> = ({
     }
   }, [selectedActivity, onActivityComplete]);
 
-  // Handle going back to choices
   const handleChangeChoice = useCallback(() => {
     setSelectedActivity(null);
     setMode('choice');
   }, []);
 
-  // If no activities left
-  if (availableActivities.length === 0) {
-    return (
-      <div
-        className="h-full flex flex-col items-center justify-center p-8 text-center"
-        style={{ background: colors.cream }}
-      >
-        <motion.div
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          className="mb-6"
-        >
-          <div
-            className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4"
-            style={{ background: colors.gold }}
-          >
-            <Sparkles size={32} color={colors.navy} />
-          </div>
-        </motion.div>
-
-        <h2
-          className="text-2xl mb-3"
-          style={{
-            color: colors.navy,
-            fontFamily: "'Cormorant Garamond', Georgia, serif",
-            fontWeight: 600,
-          }}
-        >
-          Day complete
-        </h2>
-
-        <p
-          className="text-base max-w-xs"
-          style={{
-            color: colors.stone,
-            fontFamily: "'Plus Jakarta Sans', sans-serif",
-            lineHeight: 1.6,
-          }}
-        >
-          You've made the most of {cityName} today. Rest well — tomorrow brings new discoveries.
-        </p>
-      </div>
-    );
+  // No time-appropriate activities available
+  if (choiceActivities.length === 0) {
+    return <EmptyState theme={theme} timeGreeting={timeGreeting} hour={currentHour} />;
   }
 
   return (
-    <div className="h-full flex flex-col" style={{ background: colors.cream }}>
+    <div
+      className="h-full flex flex-col transition-colors duration-700"
+      style={{ background: theme.bg.primary }}
+    >
       <AnimatePresence mode="wait">
         {mode === 'choice' ? (
           <motion.div
@@ -786,86 +1083,106 @@ export const PocketLocal: React.FC<PocketLocalProps> = ({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
-            {/* Header */}
-            <div className="px-5 pt-6 pb-4">
-              {/* Day indicator */}
-              <div className="flex items-center gap-2 mb-4">
+            {/* Header - No city name, just time context */}
+            <div className="px-6 pt-8 pb-5">
+              {/* Subtle day indicator */}
+              <motion.div
+                className="flex items-center gap-2 mb-5"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
                 <span
-                  className="text-xs tracking-widest"
-                  style={{ color: colors.stone }}
-                >
-                  DAY {dayNumber} OF {totalDays}
-                </span>
-                <span style={{ color: colors.pebble }}>·</span>
-                <span
-                  className="text-xs"
-                  style={{ color: colors.gold }}
-                >
-                  {cityName}
-                </span>
-              </div>
-
-              {/* Time-aware greeting */}
-              <div className="flex items-center gap-3 mb-2">
-                <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center"
+                  className="text-xs tracking-[0.2em] uppercase font-medium"
                   style={{
-                    background: `linear-gradient(135deg, ${colors.gold} 0%, ${colors.goldMuted} 100%)`,
+                    color: theme.text.muted,
+                    fontFamily: "'DM Sans', sans-serif",
                   }}
                 >
-                  <TimeIcon size={18} color={colors.navy} />
-                </div>
-                <div>
+                  Day {dayNumber} of {totalDays}
+                </span>
+              </motion.div>
+
+              {/* Time greeting - the hero moment */}
+              <motion.div
+                className="flex items-start gap-4"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+              >
+                <motion.div
+                  className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0"
+                  style={{
+                    background: theme.gradient,
+                    boxShadow: `0 8px 24px ${theme.accent.glow}`,
+                  }}
+                  animate={{
+                    boxShadow: [
+                      `0 8px 24px ${theme.accent.glow}`,
+                      `0 12px 32px ${theme.accent.primary}30`,
+                      `0 8px 24px ${theme.accent.glow}`,
+                    ],
+                  }}
+                  transition={{ duration: 4, repeat: Infinity }}
+                >
+                  <TimeIcon size={24} color={theme.mode === 'dark' ? '#0A0A0B' : '#FFFFFF'} />
+                </motion.div>
+                <div className="pt-1">
                   <h1
-                    className="text-xl"
+                    className="text-2xl mb-1"
                     style={{
-                      color: colors.navy,
-                      fontFamily: "'Cormorant Garamond', Georgia, serif",
+                      color: theme.text.primary,
+                      fontFamily: "'Playfair Display', Georgia, serif",
                       fontWeight: 600,
+                      letterSpacing: '-0.02em',
                     }}
                   >
-                    {timeContext.greeting}
+                    {timeGreeting.headline}
                   </h1>
                   <p
                     className="text-sm"
-                    style={{ color: colors.stone }}
+                    style={{
+                      color: theme.text.secondary,
+                      fontFamily: "'DM Sans', sans-serif",
+                    }}
                   >
-                    {timeContext.suggestion}
+                    {timeGreeting.subtext}
                   </p>
                 </div>
-              </div>
+              </motion.div>
             </div>
 
             {/* Choices prompt */}
-            <div className="px-5 mb-4">
-              <motion.div
+            <motion.div
+              className="px-6 mb-5"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              <div
                 className="p-4 rounded-xl"
                 style={{
-                  background: colors.linen,
-                  border: `1px solid ${colors.mist}`,
+                  background: theme.mode === 'dark'
+                    ? 'rgba(255,255,255,0.03)'
+                    : 'rgba(0,0,0,0.02)',
+                  border: `1px solid ${theme.border.subtle}`,
                 }}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
               >
                 <p
                   className="text-sm"
                   style={{
-                    color: colors.charcoal,
-                    fontFamily: "'Plus Jakarta Sans', sans-serif",
+                    color: theme.text.primary,
+                    fontFamily: "'DM Sans', sans-serif",
                     lineHeight: 1.6,
                   }}
                 >
-                  <span style={{ color: colors.navy, fontWeight: 500 }}>
-                    What are you in the mood for?
-                  </span>
-                  {' '}Here are three perfect options for right now.
+                  <span style={{ fontWeight: 600 }}>What calls to you?</span>
+                  {' '}Three perfect choices for right now.
                 </p>
-              </motion.div>
-            </div>
+              </div>
+            </motion.div>
 
             {/* Choice cards */}
-            <div className="flex-1 overflow-y-auto px-5 pb-6">
+            <div className="flex-1 overflow-y-auto px-6 pb-8">
               <div className="space-y-4">
                 {choiceActivities.map((activity, index) => (
                   <ChoiceCard
@@ -874,20 +1191,25 @@ export const PocketLocal: React.FC<PocketLocalProps> = ({
                     index={index}
                     isSelected={selectedActivity?.id === activity.id}
                     onSelect={() => handleSelect(activity)}
+                    theme={theme}
+                    hour={currentHour}
                   />
                 ))}
               </div>
 
-              {/* More options hint */}
-              {availableActivities.length > 3 && (
+              {/* More coming hint */}
+              {timeAppropriateActivities.length > 3 && (
                 <motion.p
-                  className="text-center mt-4 text-sm"
-                  style={{ color: colors.pebble }}
+                  className="text-center mt-5 text-sm"
+                  style={{
+                    color: theme.text.muted,
+                    fontFamily: "'DM Sans', sans-serif",
+                  }}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  transition={{ delay: 0.5 }}
+                  transition={{ delay: 0.6 }}
                 >
-                  +{availableActivities.length - 3} more for later
+                  +{timeAppropriateActivities.length - 3} more waiting
                 </motion.p>
               )}
             </div>
@@ -903,11 +1225,12 @@ export const PocketLocal: React.FC<PocketLocalProps> = ({
             {selectedActivity && (
               <ExperienceMode
                 activity={selectedActivity}
-                cityName={cityName}
                 onNavigate={handleNavigate}
                 onComplete={handleComplete}
                 onChangeChoice={handleChangeChoice}
                 whisper={currentWhisper}
+                theme={theme}
+                hour={currentHour}
               />
             )}
           </motion.div>
