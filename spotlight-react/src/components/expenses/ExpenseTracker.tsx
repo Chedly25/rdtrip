@@ -79,7 +79,7 @@ export function ExpenseTracker({ routeId, collaborators = [], onAddExpense }: Ex
   async function fetchExpenses() {
     try {
       setLoading(true)
-      const token = localStorage.getItem('auth_token')
+      const token = localStorage.getItem('token')
 
       const url = new URL(`/api/routes/${routeId}/expenses`, window.location.origin)
       if (selectedCategory !== 'all') {

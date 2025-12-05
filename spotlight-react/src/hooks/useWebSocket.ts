@@ -42,7 +42,7 @@ const DEFAULT_OPTIONS: Required<Omit<UseWebSocketOptions, 'onOpen' | 'onClose' |
   maxReconnectAttempts: 0, // infinite
   reconnectInterval: 1000, // 1 second
   maxReconnectInterval: 30000, // 30 seconds
-  getToken: () => localStorage.getItem('auth_token'),
+  getToken: () => localStorage.getItem('token'),
   queueMessages: true,
 }
 

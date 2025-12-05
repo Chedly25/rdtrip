@@ -89,7 +89,7 @@ export function TaskBoard({
 
       const response = await fetch(`/api/routes/${routeId}/tasks?${params}`, {
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('rdtrip_token')}`,
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
       });
 

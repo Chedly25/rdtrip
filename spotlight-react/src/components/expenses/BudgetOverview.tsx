@@ -55,7 +55,7 @@ export function BudgetOverview({ routeId }: BudgetOverviewProps) {
   async function fetchBudgets() {
     try {
       setLoading(true)
-      const token = localStorage.getItem('auth_token')
+      const token = localStorage.getItem('token')
 
       const response = await fetch(`/api/routes/${routeId}/budgets`, {
         headers: {

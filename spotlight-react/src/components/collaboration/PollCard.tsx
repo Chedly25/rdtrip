@@ -315,7 +315,7 @@ export function PollCard({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('rdtrip_token')}`,
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
         body: JSON.stringify({ selectedOptions }),
       });
@@ -340,7 +340,7 @@ export function PollCard({
       const response = await fetch(`/api/routes/${routeId}/polls/${poll.id}/close`, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('rdtrip_token')}`,
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
       });
 
