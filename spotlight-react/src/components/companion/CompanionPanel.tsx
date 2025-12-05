@@ -733,10 +733,12 @@ interface CompanionPanelProps {
 }
 
 export function CompanionPanel({
-  isExpanded = true,
+  // isExpanded is kept in props for API compatibility but not used (panel is always visible when rendered)
+  isExpanded: _isExpanded = true,
   onToggleExpand,
   className = '',
 }: CompanionPanelProps) {
+  void _isExpanded; // Silence unused variable warning
   const {
     messages,
     isLoading,
@@ -798,10 +800,7 @@ export function CompanionPanel({
   const showEmptyState = messages.length === 0;
 
   return (
-    <motion.div
-      initial={{ x: isExpanded ? 0 : 280 }}
-      animate={{ x: isExpanded ? 0 : 280 }}
-      transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+    <div
       className={`
         w-[280px]
         bg-[#FFFBF5]
@@ -814,7 +813,8 @@ export function CompanionPanel({
         top: '60px', // Below header
         right: 0,
         bottom: 0,
-        height: 'auto', // Let top/bottom constraints define height
+        width: '280px', // Explicit fixed width
+        maxWidth: '280px', // Prevent any growth
         zIndex: 30,
       }}
     >
@@ -847,7 +847,7 @@ export function CompanionPanel({
       </div>
 
       {/* Messages Area - Properly constrained */}
-      <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3 scrollbar-hide" style={{ minHeight: 0 }}>
+      <div className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-3 space-y-3 scrollbar-hide" style={{ minHeight: 0, maxWidth: '100%' }}>
         {showEmptyState ? (
           /* Welcome State - Very Compact */
           <div className="flex flex-col items-center text-center px-2 py-3">
@@ -1007,7 +1007,7 @@ export function CompanionPanel({
           </button>
         </form>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
