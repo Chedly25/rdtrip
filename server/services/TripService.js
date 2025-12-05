@@ -191,6 +191,11 @@ class TripService {
 
   /**
    * Get today's activities from itinerary
+   *
+   * Data structure:
+   * - day_structure: { days: [{ day, date, location, overnight, blocks, ... }] }
+   * - itinerary_activities: [{ day, date, city, activities: [...] }]
+   * - itinerary_restaurants: [{ day, city, restaurants: [...] }]
    */
   async getTodayActivities(tripId) {
     try {
@@ -200,147 +205,116 @@ class TripService {
       }
 
       const currentDay = trip.current_day;
+      const activities = [];
 
-      // Parse day_structure from the new schema columns
+      // Parse day_structure for day metadata (city, date, etc.)
       let dayStructure = trip.day_structure;
       if (typeof dayStructure === 'string') {
         dayStructure = JSON.parse(dayStructure);
       }
 
-      // Build activities array from the available data
-      const activities = [];
+      // Get current day metadata from day_structure
+      const dayMeta = dayStructure?.days?.[currentDay - 1] || {};
+      const currentCity = dayMeta.location || dayMeta.overnight || trip.origin_city;
+      const currentDate = dayMeta.date || null;
+      const totalDays = dayStructure?.totalDays || dayStructure?.days?.length || 1;
 
-      // Check if day_structure has days array (newer format)
-      if (dayStructure && dayStructure.days && dayStructure.days[currentDay - 1]) {
-        const dayData = dayStructure.days[currentDay - 1];
+      // Parse activities - format is [{ day, city, activities: [...] }]
+      let itineraryActivities = trip.itinerary_activities;
+      if (typeof itineraryActivities === 'string') {
+        itineraryActivities = JSON.parse(itineraryActivities);
+      }
 
-        // Add activities from day structure
-        if (dayData.activities) {
-          dayData.activities.forEach((activity, index) => {
+      // Find the day's activities from the array
+      if (itineraryActivities && Array.isArray(itineraryActivities)) {
+        // Find day entry matching currentDay
+        const dayActivities = itineraryActivities.find(d => d.day === currentDay);
+
+        if (dayActivities && dayActivities.activities && Array.isArray(dayActivities.activities)) {
+          dayActivities.activities.forEach((activity, index) => {
+            // Extract time from timeWindow or use fallback
+            let time = '09:00';
+            if (activity.timeWindow?.start) {
+              time = activity.timeWindow.start;
+            } else if (activity.time) {
+              time = activity.time;
+            }
+
             activities.push({
               id: `activity-${currentDay}-${index}`,
-              time: activity.time || `${9 + index * 2}:00`,
-              endTime: activity.endTime,
+              time: time,
+              endTime: activity.timeWindow?.end || activity.endTime,
               title: activity.name || activity.title,
-              description: activity.description || activity.why,
+              description: activity.description || activity.why || activity.reason,
               type: 'activity',
-              location: activity.location || activity.address,
-              coordinates: activity.coordinates,
-              photo: activity.image,
+              location: activity.location?.name || activity.address || activity.location,
+              coordinates: activity.location?.coordinates || activity.coordinates,
+              photo: activity.image || activity.imageUrl,
               rating: activity.rating,
               phone: activity.phone,
-              duration: activity.duration,
+              duration: activity.duration || activity.estimatedDuration,
+              category: activity.type || 'activity',
               status: 'upcoming'
             });
           });
         }
-
-        // Add meals from day structure
-        if (dayData.meals) {
-          ['breakfast', 'lunch', 'dinner'].forEach(mealType => {
-            const meal = dayData.meals[mealType] || (Array.isArray(dayData.meals) ? dayData.meals.find(m => m.type === mealType) : null);
-            if (meal) {
-              const timeMap = { breakfast: '08:00', lunch: '12:30', dinner: '19:30' };
-              activities.push({
-                id: `meal-${currentDay}-${mealType}`,
-                time: meal.time || timeMap[mealType],
-                title: meal.name || meal.restaurant,
-                description: meal.description || meal.cuisine,
-                type: 'restaurant',
-                location: meal.location || meal.address,
-                coordinates: meal.coordinates,
-                photo: meal.image,
-                rating: meal.rating,
-                phone: meal.phone,
-                status: 'upcoming'
-              });
-            }
-          });
-        }
-
-        // Sort by time
-        activities.sort((a, b) => {
-          const timeA = a.time.split(':').map(Number);
-          const timeB = b.time.split(':').map(Number);
-          return (timeA[0] * 60 + timeA[1]) - (timeB[0] * 60 + timeB[1]);
-        });
-
-        return {
-          activities,
-          day: currentDay,
-          totalDays: dayStructure.days.length,
-          city: dayData.city || trip.origin_city,
-          date: dayData.date
-        };
       }
 
-      // Fallback: Use separate itinerary_activities and itinerary_restaurants columns
-      let itineraryActivities = trip.itinerary_activities;
+      // Parse restaurants - format is [{ day, city, restaurants: [...] }]
       let itineraryRestaurants = trip.itinerary_restaurants;
-
-      if (typeof itineraryActivities === 'string') {
-        itineraryActivities = JSON.parse(itineraryActivities);
-      }
       if (typeof itineraryRestaurants === 'string') {
         itineraryRestaurants = JSON.parse(itineraryRestaurants);
       }
 
-      // Add activities from separate column
-      if (itineraryActivities && Array.isArray(itineraryActivities)) {
-        itineraryActivities.forEach((activity, index) => {
-          activities.push({
-            id: `activity-${currentDay}-${index}`,
-            time: activity.time || `${9 + index * 2}:00`,
-            endTime: activity.endTime,
-            title: activity.name || activity.title,
-            description: activity.description || activity.why,
-            type: 'activity',
-            location: activity.location || activity.address,
-            coordinates: activity.coordinates,
-            photo: activity.image,
-            rating: activity.rating,
-            phone: activity.phone,
-            duration: activity.duration,
-            status: 'upcoming'
-          });
-        });
-      }
-
-      // Add restaurants from separate column
       if (itineraryRestaurants && Array.isArray(itineraryRestaurants)) {
-        const mealTimes = ['08:00', '12:30', '19:30'];
-        itineraryRestaurants.forEach((restaurant, index) => {
-          activities.push({
-            id: `restaurant-${currentDay}-${index}`,
-            time: restaurant.time || mealTimes[index % 3],
-            title: restaurant.name || restaurant.restaurant,
-            description: restaurant.description || restaurant.cuisine,
-            type: 'restaurant',
-            location: restaurant.location || restaurant.address,
-            coordinates: restaurant.coordinates,
-            photo: restaurant.image,
-            rating: restaurant.rating,
-            phone: restaurant.phone,
-            status: 'upcoming'
+        // Find day entry matching currentDay
+        const dayRestaurants = itineraryRestaurants.find(d => d.day === currentDay);
+
+        if (dayRestaurants && dayRestaurants.restaurants && Array.isArray(dayRestaurants.restaurants)) {
+          const mealTimes = { breakfast: '08:00', lunch: '12:30', dinner: '19:30' };
+
+          dayRestaurants.restaurants.forEach((restaurant, index) => {
+            const mealType = restaurant.mealType || restaurant.type || ['breakfast', 'lunch', 'dinner'][index % 3];
+
+            activities.push({
+              id: `restaurant-${currentDay}-${index}`,
+              time: restaurant.time || mealTimes[mealType] || '12:30',
+              title: restaurant.name || restaurant.restaurant,
+              description: restaurant.description || restaurant.cuisine || restaurant.why,
+              type: 'restaurant',
+              mealType: mealType,
+              location: restaurant.location?.name || restaurant.address || restaurant.location,
+              coordinates: restaurant.location?.coordinates || restaurant.coordinates,
+              photo: restaurant.image || restaurant.imageUrl,
+              rating: restaurant.rating,
+              priceLevel: restaurant.priceLevel || restaurant.price,
+              phone: restaurant.phone,
+              status: 'upcoming'
+            });
           });
-        });
+        }
       }
 
       // Sort by time
       if (activities.length > 0) {
         activities.sort((a, b) => {
-          const timeA = a.time.split(':').map(Number);
-          const timeB = b.time.split(':').map(Number);
-          return (timeA[0] * 60 + timeA[1]) - (timeB[0] * 60 + timeB[1]);
+          const parseTime = (t) => {
+            if (!t) return 0;
+            const parts = t.split(':').map(Number);
+            return (parts[0] || 0) * 60 + (parts[1] || 0);
+          };
+          return parseTime(a.time) - parseTime(b.time);
         });
       }
+
+      console.log(`[TripService] 📅 Day ${currentDay}/${totalDays} in ${currentCity}: ${activities.length} activities`);
 
       return {
         activities,
         day: currentDay,
-        totalDays: dayStructure?.days?.length || 1,
-        city: trip.origin_city,
-        date: null
+        totalDays,
+        city: currentCity,
+        date: currentDate
       };
 
     } catch (error) {
