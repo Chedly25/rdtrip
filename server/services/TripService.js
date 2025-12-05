@@ -20,7 +20,7 @@ class TripService {
   async startTrip(routeId, userId, itineraryId = null) {
     // Check for existing active trip
     const existingQuery = `
-      SELECT id, status, current_day, started_at
+      SELECT id, status, current_day, started_at, itinerary_id
       FROM active_trips
       WHERE route_id = $1 AND user_id = $2
     `;
@@ -50,6 +50,24 @@ class TripService {
         }
 
         // If completed/cancelled, create new
+      }
+
+      // Auto-discover itinerary by route_id if not provided
+      if (!itineraryId) {
+        console.log(`[TripService] 🔍 No itinerary ID provided, searching for itinerary by route_id: ${routeId}`);
+        const findItineraryQuery = `
+          SELECT id FROM itineraries
+          WHERE route_id = $1
+          ORDER BY created_at DESC
+          LIMIT 1
+        `;
+        const itFindResult = await pool.query(findItineraryQuery, [routeId]);
+        if (itFindResult.rows.length > 0) {
+          itineraryId = itFindResult.rows[0].id;
+          console.log(`[TripService] ✅ Found itinerary: ${itineraryId}`);
+        } else {
+          console.log(`[TripService] ⚠️ No itinerary found for route ${routeId}`);
+        }
       }
 
       // Get total checkins count from itinerary
@@ -204,6 +222,9 @@ class TripService {
         throw new Error('Trip not found');
       }
 
+      console.log(`[TripService] 🔍 getTodayActivities called for trip ${tripId}`);
+      console.log(`[TripService] 📊 Trip has itinerary_id: ${trip.itinerary_id || 'NULL'}`);
+
       const currentDay = trip.current_day;
       const activities = [];
 
@@ -212,6 +233,7 @@ class TripService {
       if (typeof dayStructure === 'string') {
         dayStructure = JSON.parse(dayStructure);
       }
+      console.log(`[TripService] 📋 day_structure has ${dayStructure?.days?.length || 0} days`);
 
       // Get current day metadata from day_structure
       const dayMeta = dayStructure?.days?.[currentDay - 1] || {};
@@ -224,11 +246,16 @@ class TripService {
       if (typeof itineraryActivities === 'string') {
         itineraryActivities = JSON.parse(itineraryActivities);
       }
+      console.log(`[TripService] 🎯 itinerary_activities type: ${typeof itineraryActivities}, isArray: ${Array.isArray(itineraryActivities)}, length: ${itineraryActivities?.length || 0}`);
 
       // Find the day's activities from the array
       if (itineraryActivities && Array.isArray(itineraryActivities)) {
+        // Log available days for debugging
+        const availableDays = itineraryActivities.map(d => d.day);
+        console.log(`[TripService] 🗓️ Available days in activities: [${availableDays.join(', ')}], looking for day ${currentDay}`);
+
         // Find day entry matching currentDay
-        const dayActivities = itineraryActivities.find(d => d.day === currentDay);
+        const dayActivities = itineraryActivities.find(d => d.day === currentDay || d.day === String(currentDay));
 
         if (dayActivities && dayActivities.activities && Array.isArray(dayActivities.activities)) {
           dayActivities.activities.forEach((activity, index) => {
