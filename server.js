@@ -12076,6 +12076,684 @@ async function warmCacheForPopularCities() {
   console.log(`🔥 Cache warming status: ${alreadyCached} already cached, ${needsGeneration} generating...`);
 }
 
+// =====================================================
+// TRIP IN PROGRESS MODE API
+// Real-time trip tracking, check-ins, and location updates
+// =====================================================
+
+/**
+ * Start or resume a trip
+ * POST /api/trip/:routeId/start
+ */
+app.post('/api/trip/:routeId/start', authenticateToken, async (req, res) => {
+  const { routeId } = req.params;
+  const { itineraryId } = req.body;
+  const userId = req.user.id;
+
+  console.log(`🚀 [Trip] Starting trip for route ${routeId} by user ${userId}`);
+
+  try {
+    // Check if route exists and user has access
+    const routeResult = await pool.query(
+      `SELECT r.*,
+              COALESCE(r.total_nights, 0) + 1 as total_days
+       FROM routes r
+       LEFT JOIN route_collaborators rc ON r.id = rc.route_id AND rc.user_id = $2
+       WHERE r.id = $1 AND (r.user_id = $2 OR rc.user_id = $2 OR r.is_public = true)`,
+      [routeId, userId]
+    );
+
+    if (routeResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Route not found or access denied' });
+    }
+
+    const route = routeResult.rows[0];
+
+    // Check if user already has an active trip for this route
+    const existingTrip = await pool.query(
+      `SELECT * FROM active_trips
+       WHERE route_id = $1 AND user_id = $2 AND status IN ('active', 'paused')`,
+      [routeId, userId]
+    );
+
+    if (existingTrip.rows.length > 0) {
+      const trip = existingTrip.rows[0];
+
+      // If paused, resume it
+      if (trip.status === 'paused') {
+        const resumedTrip = await pool.query(
+          `UPDATE active_trips
+           SET status = 'active', paused_at = NULL, updated_at = NOW()
+           WHERE id = $1
+           RETURNING *`,
+          [trip.id]
+        );
+
+        console.log(`▶️ [Trip] Resumed trip ${trip.id}`);
+        return res.json({
+          success: true,
+          tripId: trip.id,
+          trip: {
+            ...resumedTrip.rows[0],
+            origin_city: route.origin,
+            destination_city: route.destination,
+            route_data: route.route_data,
+          },
+          isNew: false,
+          resumed: true,
+        });
+      }
+
+      // Already active
+      console.log(`ℹ️ [Trip] Trip ${trip.id} already active`);
+      return res.json({
+        success: true,
+        tripId: trip.id,
+        trip: {
+          ...trip,
+          origin_city: route.origin,
+          destination_city: route.destination,
+          route_data: route.route_data,
+        },
+        isNew: false,
+        resumed: false,
+      });
+    }
+
+    // Calculate total checkins from route data
+    const routeData = route.route_data || {};
+    const cities = routeData.cities || [];
+    let totalCheckins = 0;
+    cities.forEach(city => {
+      if (city.activities) totalCheckins += city.activities.length;
+      if (city.restaurants) totalCheckins += city.restaurants.length;
+    });
+
+    // Create new trip
+    const newTrip = await pool.query(
+      `INSERT INTO active_trips (
+        route_id, itinerary_id, user_id, status, current_day, current_city_index,
+        stats, started_at
+      ) VALUES ($1, $2, $3, 'active', 1, 0, $4, NOW())
+      RETURNING *`,
+      [
+        routeId,
+        itineraryId || null,
+        userId,
+        JSON.stringify({
+          distance_traveled: 0,
+          photos_captured: 0,
+          checkins_complete: 0,
+          total_checkins: totalCheckins,
+        }),
+      ]
+    );
+
+    const trip = newTrip.rows[0];
+    console.log(`✅ [Trip] Created new trip ${trip.id}`);
+
+    res.json({
+      success: true,
+      tripId: trip.id,
+      trip: {
+        ...trip,
+        origin_city: route.origin,
+        destination_city: route.destination,
+        route_data: route.route_data,
+      },
+      isNew: true,
+      resumed: false,
+    });
+  } catch (error) {
+    console.error('❌ [Trip] Error starting trip:', error);
+    res.status(500).json({ error: 'Failed to start trip' });
+  }
+});
+
+/**
+ * Get user's currently active trip
+ * GET /api/trip/active
+ */
+app.get('/api/trip/active', authenticateToken, async (req, res) => {
+  const userId = req.user.id;
+
+  try {
+    const result = await pool.query(
+      `SELECT t.*, r.origin, r.destination, r.route_data,
+              COALESCE(r.total_nights, 0) + 1 as total_days
+       FROM active_trips t
+       JOIN routes r ON t.route_id = r.id
+       WHERE t.user_id = $1 AND t.status = 'active'
+       ORDER BY t.started_at DESC
+       LIMIT 1`,
+      [userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.json({ hasActiveTrip: false, trip: null });
+    }
+
+    const trip = result.rows[0];
+    res.json({
+      hasActiveTrip: true,
+      trip: {
+        ...trip,
+        origin_city: trip.origin,
+        destination_city: trip.destination,
+      },
+    });
+  } catch (error) {
+    console.error('❌ [Trip] Error getting active trip:', error);
+    res.status(500).json({ error: 'Failed to get active trip' });
+  }
+});
+
+/**
+ * Get trip by ID
+ * GET /api/trip/:tripId
+ */
+app.get('/api/trip/:tripId', authenticateToken, async (req, res) => {
+  const { tripId } = req.params;
+  const userId = req.user.id;
+
+  // Skip if tripId looks like a routeId endpoint (e.g., "active")
+  if (tripId === 'active') {
+    return res.status(400).json({ error: 'Invalid trip ID' });
+  }
+
+  try {
+    const result = await pool.query(
+      `SELECT t.*, r.origin, r.destination, r.route_data,
+              COALESCE(r.total_nights, 0) + 1 as total_days
+       FROM active_trips t
+       JOIN routes r ON t.route_id = r.id
+       WHERE t.id = $1 AND t.user_id = $2`,
+      [tripId, userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Trip not found' });
+    }
+
+    const trip = result.rows[0];
+    res.json({
+      trip: {
+        ...trip,
+        origin_city: trip.origin,
+        destination_city: trip.destination,
+      },
+    });
+  } catch (error) {
+    console.error('❌ [Trip] Error getting trip:', error);
+    res.status(500).json({ error: 'Failed to get trip' });
+  }
+});
+
+/**
+ * Get today's activities for a trip
+ * GET /api/trip/:tripId/today
+ */
+app.get('/api/trip/:tripId/today', authenticateToken, async (req, res) => {
+  const { tripId } = req.params;
+  const userId = req.user.id;
+
+  try {
+    // Get trip with route data
+    const tripResult = await pool.query(
+      `SELECT t.*, r.route_data, r.origin, r.destination,
+              COALESCE(r.total_nights, 0) + 1 as total_days
+       FROM active_trips t
+       JOIN routes r ON t.route_id = r.id
+       WHERE t.id = $1 AND t.user_id = $2`,
+      [tripId, userId]
+    );
+
+    if (tripResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Trip not found' });
+    }
+
+    const trip = tripResult.rows[0];
+    const routeData = trip.route_data || {};
+    const cities = routeData.cities || [];
+    const currentDay = trip.current_day || 1;
+    const currentCityIndex = trip.current_city_index || 0;
+
+    // Get the current city
+    const currentCity = cities[currentCityIndex] || cities[0] || { name: 'Unknown', activities: [], restaurants: [] };
+
+    // Get check-ins for today to mark completed activities
+    const checkinsResult = await pool.query(
+      `SELECT activity_id, status FROM trip_checkins
+       WHERE trip_id = $1 AND day_number = $2`,
+      [tripId, currentDay]
+    );
+    const completedActivities = new Set(
+      checkinsResult.rows.filter(c => c.status === 'completed').map(c => c.activity_id)
+    );
+
+    // Build today's activities from route data
+    const activities = [];
+    let timeCounter = 9; // Start at 9 AM
+
+    // Add activities
+    const cityActivities = currentCity.activities || currentCity.agentResults?.activities || [];
+    cityActivities.forEach((activity, index) => {
+      const activityId = `activity-${currentDay}-${index}`;
+      const hour = timeCounter;
+      timeCounter += 2; // Each activity takes ~2 hours
+
+      activities.push({
+        id: activityId,
+        type: activity.type || 'activity',
+        time: `${hour.toString().padStart(2, '0')}:00`,
+        title: activity.name || activity.title || 'Activity',
+        location: activity.address || activity.location || currentCity.name,
+        duration: activity.duration || '2h',
+        description: activity.description || activity.why,
+        status: completedActivities.has(activityId) ? 'completed' : (hour <= new Date().getHours() ? 'current' : 'upcoming'),
+        coordinates: activity.coordinates,
+        image: activity.image,
+        rating: activity.rating,
+        phone: activity.phone,
+      });
+    });
+
+    // Add restaurants
+    const restaurants = currentCity.restaurants || currentCity.agentResults?.restaurants || [];
+    restaurants.forEach((restaurant, index) => {
+      const restaurantId = `restaurant-${currentDay}-${index}`;
+      // Lunch at 12, Dinner at 19
+      const hour = index === 0 ? 12 : 19;
+
+      activities.push({
+        id: restaurantId,
+        type: 'restaurant',
+        time: `${hour.toString().padStart(2, '0')}:00`,
+        title: restaurant.name || 'Restaurant',
+        location: restaurant.address || restaurant.location || currentCity.name,
+        duration: '1.5h',
+        description: restaurant.description || restaurant.cuisine,
+        status: completedActivities.has(restaurantId) ? 'completed' : (hour <= new Date().getHours() ? 'current' : 'upcoming'),
+        coordinates: restaurant.coordinates,
+        image: restaurant.image,
+        rating: restaurant.rating,
+        phone: restaurant.phone,
+        priceLevel: restaurant.price_level,
+      });
+    });
+
+    // Sort by time
+    activities.sort((a, b) => a.time.localeCompare(b.time));
+
+    // Mark the first non-completed activity as current
+    let foundCurrent = false;
+    activities.forEach(act => {
+      if (!foundCurrent && act.status !== 'completed') {
+        act.status = 'current';
+        foundCurrent = true;
+      } else if (act.status === 'current' && foundCurrent) {
+        act.status = 'upcoming';
+      }
+    });
+
+    res.json({
+      activities,
+      day: currentDay,
+      totalDays: trip.total_days || cities.length,
+      city: currentCity.name || currentCity.city || 'Unknown',
+      date: new Date().toISOString().split('T')[0],
+    });
+  } catch (error) {
+    console.error('❌ [Trip] Error getting today activities:', error);
+    res.status(500).json({ error: 'Failed to get today activities' });
+  }
+});
+
+/**
+ * Get trip progress dashboard
+ * GET /api/trip/:tripId/progress
+ */
+app.get('/api/trip/:tripId/progress', authenticateToken, async (req, res) => {
+  const { tripId } = req.params;
+  const userId = req.user.id;
+
+  try {
+    // Get trip with route data
+    const tripResult = await pool.query(
+      `SELECT t.*, r.route_data, r.origin, r.destination,
+              COALESCE(r.total_nights, 0) + 1 as total_days
+       FROM active_trips t
+       JOIN routes r ON t.route_id = r.id
+       WHERE t.id = $1 AND t.user_id = $2`,
+      [tripId, userId]
+    );
+
+    if (tripResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Trip not found' });
+    }
+
+    const trip = tripResult.rows[0];
+    const routeData = trip.route_data || {};
+    const cities = routeData.cities || [];
+    const stats = trip.stats || {};
+
+    // Get photos from check-ins
+    const photosResult = await pool.query(
+      `SELECT photo_urls, location_name, note
+       FROM trip_checkins
+       WHERE trip_id = $1 AND photo_urls IS NOT NULL AND array_length(photo_urls, 1) > 0
+       ORDER BY checked_in_at DESC
+       LIMIT 20`,
+      [tripId]
+    );
+
+    const photos = [];
+    photosResult.rows.forEach(row => {
+      if (row.photo_urls) {
+        row.photo_urls.forEach(url => {
+          photos.push({
+            url,
+            city: row.location_name || 'Unknown',
+            caption: row.note,
+          });
+        });
+      }
+    });
+
+    res.json({
+      tripId,
+      currentDay: trip.current_day || 1,
+      totalDays: trip.total_days || cities.length,
+      currentCityIndex: trip.current_city_index || 0,
+      cities: cities.map(city => ({
+        name: city.name || city.city || 'Unknown',
+        country: city.country,
+        dates: city.dates,
+      })),
+      stats: {
+        distanceTraveled: stats.distance_traveled || 0,
+        photosCaptures: stats.photos_captured || 0,
+        checkinsComplete: stats.checkins_complete || 0,
+        totalCheckins: stats.total_checkins || 0,
+      },
+      photos,
+    });
+  } catch (error) {
+    console.error('❌ [Trip] Error getting trip progress:', error);
+    res.status(500).json({ error: 'Failed to get trip progress' });
+  }
+});
+
+/**
+ * Update trip location (GPS tracking)
+ * POST /api/trip/:tripId/location
+ */
+app.post('/api/trip/:tripId/location', authenticateToken, async (req, res) => {
+  const { tripId } = req.params;
+  const { latitude, longitude, accuracy, altitude, speed, heading, city, country, address } = req.body;
+  const userId = req.user.id;
+
+  try {
+    // Verify trip ownership
+    const tripResult = await pool.query(
+      'SELECT id FROM active_trips WHERE id = $1 AND user_id = $2 AND status = $3',
+      [tripId, userId, 'active']
+    );
+
+    if (tripResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Active trip not found' });
+    }
+
+    // Update trip with latest location
+    const locationData = {
+      lat: latitude,
+      lng: longitude,
+      accuracy,
+      timestamp: new Date().toISOString(),
+      city,
+      country,
+      address,
+    };
+
+    await pool.query(
+      `UPDATE active_trips
+       SET last_location = $1, last_location_update = NOW(), updated_at = NOW()
+       WHERE id = $2`,
+      [JSON.stringify(locationData), tripId]
+    );
+
+    // Store in location history
+    await pool.query(
+      `INSERT INTO trip_location_updates
+       (trip_id, user_id, latitude, longitude, accuracy, altitude, speed, heading, city, country, address)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+      [tripId, userId, latitude, longitude, accuracy, altitude, speed, heading, city, country, address]
+    );
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('❌ [Trip] Error updating location:', error);
+    res.status(500).json({ error: 'Failed to update location' });
+  }
+});
+
+/**
+ * Create a check-in
+ * POST /api/trip/:tripId/checkin
+ */
+app.post('/api/trip/:tripId/checkin', authenticateToken, async (req, res) => {
+  const { tripId } = req.params;
+  const {
+    activityId, activityName, activityType, dayNumber,
+    locationName, coordinates, photoUrls, note, rating, mood, weather, status
+  } = req.body;
+  const userId = req.user.id;
+
+  try {
+    // Verify trip ownership
+    const tripResult = await pool.query(
+      'SELECT id, current_day FROM active_trips WHERE id = $1 AND user_id = $2',
+      [tripId, userId]
+    );
+
+    if (tripResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Trip not found' });
+    }
+
+    const trip = tripResult.rows[0];
+    const day = dayNumber || trip.current_day;
+
+    // Create check-in
+    const checkinResult = await pool.query(
+      `INSERT INTO trip_checkins (
+        trip_id, user_id, activity_id, activity_name, activity_type, day_number,
+        location_name, coordinates, photo_urls, note, rating, mood, weather, status
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+      RETURNING *`,
+      [
+        tripId, userId, activityId, activityName, activityType, day,
+        locationName, coordinates ? JSON.stringify(coordinates) : null,
+        photoUrls || null, note, rating, mood, weather, status || 'completed'
+      ]
+    );
+
+    const checkin = checkinResult.rows[0];
+    console.log(`📍 [Trip] Check-in created for trip ${tripId}: ${activityName}`);
+
+    res.json({ success: true, checkin });
+  } catch (error) {
+    console.error('❌ [Trip] Error creating check-in:', error);
+    res.status(500).json({ error: 'Failed to create check-in' });
+  }
+});
+
+/**
+ * Get check-ins for a trip
+ * GET /api/trip/:tripId/checkins
+ */
+app.get('/api/trip/:tripId/checkins', authenticateToken, async (req, res) => {
+  const { tripId } = req.params;
+  const { dayNumber, limit } = req.query;
+  const userId = req.user.id;
+
+  try {
+    let query = `
+      SELECT * FROM trip_checkins
+      WHERE trip_id = $1 AND user_id = $2
+    `;
+    const params = [tripId, userId];
+
+    if (dayNumber) {
+      query += ` AND day_number = $${params.length + 1}`;
+      params.push(dayNumber);
+    }
+
+    query += ` ORDER BY checked_in_at DESC`;
+
+    if (limit) {
+      query += ` LIMIT $${params.length + 1}`;
+      params.push(parseInt(limit));
+    }
+
+    const result = await pool.query(query, params);
+    res.json({ checkins: result.rows });
+  } catch (error) {
+    console.error('❌ [Trip] Error getting check-ins:', error);
+    res.status(500).json({ error: 'Failed to get check-ins' });
+  }
+});
+
+/**
+ * Advance to the next day
+ * POST /api/trip/:tripId/advance-day
+ */
+app.post('/api/trip/:tripId/advance-day', authenticateToken, async (req, res) => {
+  const { tripId } = req.params;
+  const userId = req.user.id;
+
+  try {
+    const result = await pool.query(
+      `UPDATE active_trips
+       SET current_day = current_day + 1,
+           current_city_index = current_city_index + 1,
+           updated_at = NOW()
+       WHERE id = $1 AND user_id = $2 AND status = 'active'
+       RETURNING current_day`,
+      [tripId, userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Active trip not found' });
+    }
+
+    console.log(`📅 [Trip] Advanced to day ${result.rows[0].current_day}`);
+    res.json({ success: true, currentDay: result.rows[0].current_day });
+  } catch (error) {
+    console.error('❌ [Trip] Error advancing day:', error);
+    res.status(500).json({ error: 'Failed to advance day' });
+  }
+});
+
+/**
+ * Pause the trip
+ * POST /api/trip/:tripId/pause
+ */
+app.post('/api/trip/:tripId/pause', authenticateToken, async (req, res) => {
+  const { tripId } = req.params;
+  const userId = req.user.id;
+
+  try {
+    const result = await pool.query(
+      `UPDATE active_trips
+       SET status = 'paused', paused_at = NOW(), updated_at = NOW()
+       WHERE id = $1 AND user_id = $2 AND status = 'active'
+       RETURNING *`,
+      [tripId, userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Active trip not found' });
+    }
+
+    console.log(`⏸️ [Trip] Paused trip ${tripId}`);
+    res.json({ success: true, trip: result.rows[0] });
+  } catch (error) {
+    console.error('❌ [Trip] Error pausing trip:', error);
+    res.status(500).json({ error: 'Failed to pause trip' });
+  }
+});
+
+/**
+ * Complete the trip
+ * POST /api/trip/:tripId/complete
+ */
+app.post('/api/trip/:tripId/complete', authenticateToken, async (req, res) => {
+  const { tripId } = req.params;
+  const userId = req.user.id;
+
+  try {
+    const result = await pool.query(
+      `UPDATE active_trips
+       SET status = 'completed', completed_at = NOW(), updated_at = NOW()
+       WHERE id = $1 AND user_id = $2 AND status IN ('active', 'paused')
+       RETURNING *`,
+      [tripId, userId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Trip not found' });
+    }
+
+    console.log(`🏁 [Trip] Completed trip ${tripId}`);
+    res.json({ success: true, trip: result.rows[0] });
+  } catch (error) {
+    console.error('❌ [Trip] Error completing trip:', error);
+    res.status(500).json({ error: 'Failed to complete trip' });
+  }
+});
+
+/**
+ * Update trip statistics
+ * POST /api/trip/:tripId/stats
+ */
+app.post('/api/trip/:tripId/stats', authenticateToken, async (req, res) => {
+  const { tripId } = req.params;
+  const statsUpdate = req.body;
+  const userId = req.user.id;
+
+  try {
+    // Get current stats
+    const tripResult = await pool.query(
+      'SELECT stats FROM active_trips WHERE id = $1 AND user_id = $2',
+      [tripId, userId]
+    );
+
+    if (tripResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Trip not found' });
+    }
+
+    const currentStats = tripResult.rows[0].stats || {};
+    const newStats = { ...currentStats, ...statsUpdate };
+
+    const result = await pool.query(
+      `UPDATE active_trips
+       SET stats = $1, updated_at = NOW()
+       WHERE id = $2 AND user_id = $3
+       RETURNING stats`,
+      [JSON.stringify(newStats), tripId, userId]
+    );
+
+    res.json({ success: true, stats: result.rows[0].stats });
+  } catch (error) {
+    console.error('❌ [Trip] Error updating stats:', error);
+    res.status(500).json({ error: 'Failed to update stats' });
+  }
+});
+
+// =====================================================
+// END TRIP IN PROGRESS MODE API
+// =====================================================
+
 // Run migrations and then start server
 runDatabaseMigrations().then(() => {
   const server = app.listen(PORT, () => {
