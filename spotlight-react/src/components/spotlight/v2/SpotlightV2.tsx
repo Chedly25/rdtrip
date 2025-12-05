@@ -788,8 +788,8 @@ const SpotlightV2 = () => {
         style={{ width: isPanelExpanded ? '280px' : '0px' }}
       />
 
-      {/* Fixed-position companion panel/tab */}
-      <div className="hidden md:block">
+      {/* Fixed-position companion panel/tab - wrapper has w-0 since content is fixed-positioned */}
+      <div className="hidden md:block w-0 flex-shrink-0">
         <AnimatePresence mode="wait">
           {isPanelExpanded ? (
             <CompanionPanel
