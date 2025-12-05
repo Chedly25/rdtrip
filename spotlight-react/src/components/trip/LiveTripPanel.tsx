@@ -32,7 +32,7 @@ import { QuickActions } from './QuickActions';
 import { NearbySheet } from './NearbySheet';
 import { PlanChangeAssistant } from './PlanChangeAssistant';
 import { SmartAlertsContainer, useSmartAlertsMonitor, type SmartAlert, type MonitoredActivity } from './SmartAlerts';
-import { LiveTripPanelEnhanced } from './enhanced';
+import { TripDayView } from './TripDayView';
 import { useTrip } from '../../hooks/useTrip';
 import { useGPS } from '../../hooks/useGPS';
 import { useWeather } from '../../hooks/useWeather';
@@ -786,19 +786,24 @@ export function LiveTripPanel({
                   <Loader2 className="w-8 h-8 animate-spin" style={{ color: colors.golden }} />
                 </div>
               ) : (
-                <LiveTripPanelEnhanced
-                  tripId={trip?.id || ''}
-                  routeId={routeId}
+                <TripDayView
                   activities={todayData?.activities || []}
                   dayNumber={currentDay}
                   totalDays={totalDays}
                   cityName={todayData?.city || trip?.origin_city || 'Your City'}
-                  isActive={isActive}
-                  isPaused={isPaused}
-                  onPause={handlePause}
-                  onResume={handleResume}
                   onNavigate={handleNavigate}
-                  userLocation={gpsLocation ? { lat: gpsLocation.latitude, lng: gpsLocation.longitude } : undefined}
+                  onActivityComplete={(activityId) => {
+                    console.log('[LiveTripPanel] Activity completed:', activityId);
+                    // Could call checkin API here
+                  }}
+                  onActivitySkip={(activityId) => {
+                    console.log('[LiveTripPanel] Activity skipped:', activityId);
+                    // Could call skip API here
+                  }}
+                  onSwapActivity={(activityId, newActivity) => {
+                    console.log('[LiveTripPanel] Swap activity:', activityId, '->', newActivity);
+                    // Could call swap API here
+                  }}
                 />
               )}
             </motion.div>
