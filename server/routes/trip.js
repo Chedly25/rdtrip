@@ -296,4 +296,227 @@ router.post('/:tripId/stats', authMiddleware, async (req, res) => {
   }
 });
 
+// ============================================================
+// LIVING COMPANION ENDPOINTS - Phase 4
+// Serendipity, Smart Hints, Moments, Narratives
+// ============================================================
+
+// Lazy-load SerendipityAgent to avoid circular dependencies
+let serendipityAgent = null;
+const getSerendipityAgent = () => {
+  if (!serendipityAgent) {
+    const SerendipityAgent = require('../services/SerendipityAgent');
+    const GooglePlacesService = require('../services/googlePlacesService');
+    const { Pool } = require('pg');
+
+    const db = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+    });
+
+    const googlePlaces = new GooglePlacesService(process.env.GOOGLE_PLACES_API_KEY, db);
+
+    // Perplexity service (optional)
+    let perplexityService = null;
+    try {
+      const PerplexityAIService = require('../../src/domain/services/perplexityAI.service');
+      const PerplexityClient = require('../../src/infrastructure/perplexity/perplexityClient');
+      const perplexityClient = new PerplexityClient(process.env.PERPLEXITY_API_KEY);
+      perplexityService = new PerplexityAIService(perplexityClient);
+    } catch (err) {
+      console.warn('Perplexity service not available:', err.message);
+    }
+
+    serendipityAgent = new SerendipityAgent(googlePlaces, perplexityService, null);
+  }
+  return serendipityAgent;
+};
+
+/**
+ * GET /api/trip/:tripId/serendipity
+ * Discover nearby gems and hidden treasures
+ */
+router.get('/:tripId/serendipity', authMiddleware, async (req, res) => {
+  try {
+    const { tripId } = req.params;
+    const { lat, lng, radius = 500 } = req.query;
+
+    if (!lat || !lng) {
+      return res.status(400).json({ error: 'Location (lat, lng) required' });
+    }
+
+    const agent = getSerendipityAgent();
+    const discoveries = await agent.discoverNearby({
+      tripId,
+      location: { lat: parseFloat(lat), lng: parseFloat(lng) },
+      radius: parseInt(radius, 10),
+      userId: req.userId
+    });
+
+    res.json({ discoveries });
+
+  } catch (error) {
+    console.error('Serendipity error:', error);
+    res.status(500).json({ error: 'Failed to discover nearby gems' });
+  }
+});
+
+/**
+ * GET /api/trip/:tripId/smart-hints
+ * Get contextual time hints for current activity
+ */
+router.get('/:tripId/smart-hints', authMiddleware, async (req, res) => {
+  try {
+    const { tripId } = req.params;
+    const { activityId, currentTime } = req.query;
+
+    if (!activityId) {
+      return res.status(400).json({ error: 'Activity ID required' });
+    }
+
+    const agent = getSerendipityAgent();
+    const result = await agent.getSmartHints({
+      tripId,
+      activityId,
+      currentTime,
+      userId: req.userId
+    });
+
+    res.json(result);
+
+  } catch (error) {
+    console.error('Smart hints error:', error);
+    res.status(500).json({ error: 'Failed to get smart hints' });
+  }
+});
+
+/**
+ * POST /api/trip/:tripId/moment
+ * Record a trip moment (enhanced check-in with emotional context)
+ */
+router.post('/:tripId/moment', authMiddleware, async (req, res) => {
+  try {
+    const { tripId } = req.params;
+    const {
+      activityId,
+      activityName,
+      momentType,
+      note,
+      photo,
+      rating,
+      coordinates,
+      dayNumber
+    } = req.body;
+
+    if (!activityName) {
+      return res.status(400).json({ error: 'Activity name required' });
+    }
+
+    const agent = getSerendipityAgent();
+    const moment = await agent.recordMoment(tripId, req.userId, {
+      activityId,
+      activityName,
+      momentType: momentType || 'completed',
+      note,
+      photo,
+      rating,
+      coordinates,
+      dayNumber: dayNumber || 1
+    });
+
+    res.json({ success: true, moment });
+
+  } catch (error) {
+    console.error('Record moment error:', error);
+    res.status(500).json({ error: 'Failed to record moment' });
+  }
+});
+
+/**
+ * GET /api/trip/:tripId/moments
+ * Get all moments for a trip
+ */
+router.get('/:tripId/moments', authMiddleware, async (req, res) => {
+  try {
+    const { tripId } = req.params;
+    const { dayNumber } = req.query;
+
+    const { Pool } = require('pg');
+    const db = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+    });
+
+    let query = `SELECT * FROM trip_moments WHERE trip_id = $1`;
+    const params = [tripId];
+
+    if (dayNumber) {
+      query += ` AND day_number = $2`;
+      params.push(parseInt(dayNumber, 10));
+    }
+
+    query += ` ORDER BY recorded_at ASC`;
+
+    const result = await db.query(query, params);
+
+    res.json({ moments: result.rows });
+
+  } catch (error) {
+    console.error('Get moments error:', error);
+    res.status(500).json({ error: 'Failed to fetch moments' });
+  }
+});
+
+/**
+ * GET /api/trip/:tripId/narrative
+ * Get the evolving trip narrative for a day
+ */
+router.get('/:tripId/narrative', authMiddleware, async (req, res) => {
+  try {
+    const { tripId } = req.params;
+    const { dayNumber } = req.query;
+
+    const agent = getSerendipityAgent();
+    const narrative = await agent.getTripNarrative(
+      tripId,
+      dayNumber ? parseInt(dayNumber, 10) : 1
+    );
+
+    res.json({ narrative });
+
+  } catch (error) {
+    console.error('Get narrative error:', error);
+    res.status(500).json({ error: 'Failed to fetch narrative' });
+  }
+});
+
+/**
+ * GET /api/trip/:tripId/weather-alternatives
+ * Get weather-aware activity alternatives
+ */
+router.get('/:tripId/weather-alternatives', authMiddleware, async (req, res) => {
+  try {
+    const { tripId } = req.params;
+    const { activityId, weatherCondition } = req.query;
+
+    if (!activityId) {
+      return res.status(400).json({ error: 'Activity ID required' });
+    }
+
+    const agent = getSerendipityAgent();
+    const result = await agent.findWeatherAlternatives({
+      tripId,
+      activityId,
+      weatherCondition: weatherCondition || 'rain',
+      userId: req.userId
+    });
+
+    res.json(result);
+
+  } catch (error) {
+    console.error('Weather alternatives error:', error);
+    res.status(500).json({ error: 'Failed to find alternatives' });
+  }
+});
+
 module.exports = router;
