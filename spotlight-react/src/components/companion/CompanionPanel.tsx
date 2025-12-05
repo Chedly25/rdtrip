@@ -799,17 +799,21 @@ export function CompanionPanel({
 
   return (
     <motion.div
-      initial={{ x: isExpanded ? 0 : 300 }}
-      animate={{ x: isExpanded ? 0 : 300 }}
+      initial={{ x: isExpanded ? 0 : 280 }}
+      animate={{ x: isExpanded ? 0 : 280 }}
       transition={{ type: 'spring', damping: 25, stiffness: 200 }}
       className={`
-        w-[300px] h-full
+        w-[280px]
         bg-[#FFFBF5]
         border-l border-[#E8DFD3]
         flex flex-col
-        overflow-hidden
         ${className}
       `}
+      style={{
+        height: 'calc(100vh - 60px)', // Account for header
+        maxHeight: 'calc(100vh - 60px)',
+        position: 'relative',
+      }}
     >
       {/* Header - Compact */}
       <div className="flex items-center justify-between px-3 py-2.5 border-b border-[#E8DFD3] flex-shrink-0">
@@ -839,25 +843,24 @@ export function CompanionPanel({
         )}
       </div>
 
-      {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3 scrollbar-hide min-h-0">
+      {/* Messages Area - Properly constrained */}
+      <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3 scrollbar-hide" style={{ minHeight: 0 }}>
         {showEmptyState ? (
-          /* Welcome State - Compact */
-          <div className="flex flex-col items-center justify-center text-center px-2 py-4">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#FFF0EB] to-[#F5F0E8] flex items-center justify-center mb-3">
-              <Sparkles className="w-5 h-5 text-[#C45830]" />
+          /* Welcome State - Very Compact */
+          <div className="flex flex-col items-center text-center px-2 py-3">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#FFF0EB] to-[#F5F0E8] flex items-center justify-center mb-2">
+              <Sparkles className="w-4 h-4 text-[#C45830]" />
             </div>
-            <h3 className="text-[15px] font-semibold text-[#2C2417] mb-1">
+            <h3 className="text-[14px] font-semibold text-[#2C2417] mb-0.5">
               Your Travel Companion
             </h3>
-            <p className="text-[13px] text-[#8B7355] mb-4 max-w-[220px] leading-relaxed">
-              I know everything about your destinations. Ask me anything about activities,
-              restaurants, weather, or local tips!
+            <p className="text-[12px] text-[#8B7355] mb-3 max-w-[200px] leading-relaxed">
+              Ask me anything about activities, restaurants, weather, or local tips!
             </p>
 
             {/* Quick Suggestions - Compact */}
             <div className="w-full">
-              <p className="text-[10px] font-medium text-[#8B7355] uppercase tracking-wide mb-2">
+              <p className="text-[9px] font-medium text-[#8B7355] uppercase tracking-wide mb-1.5">
                 Try asking
               </p>
               <div className="flex flex-wrap gap-1.5 justify-center">
@@ -865,7 +868,7 @@ export function CompanionPanel({
                   <button
                     key={i}
                     onClick={() => handleSuggestionClick(suggestion)}
-                    className="px-2.5 py-1 bg-[#F5F0E8] border border-[#E8DFD3] rounded-full text-[12px] text-[#2C2417] hover:bg-[#E8DFD3] transition-colors"
+                    className="px-2 py-1 bg-[#F5F0E8] border border-[#E8DFD3] rounded-full text-[11px] text-[#2C2417] hover:bg-[#E8DFD3] transition-colors"
                   >
                     {suggestion.label}
                   </button>
