@@ -24,7 +24,7 @@ import {
   X,
   Sparkles,
 } from 'lucide-react';
-import { TodayView, type TimeSlot } from './TodayView';
+import type { TimeSlot } from './TodayView';
 import { TripProgress } from './TripProgress';
 import { CheckinModal, type CheckinData } from './CheckinModal';
 import { TripActivation } from './TripActivation';
@@ -32,6 +32,7 @@ import { QuickActions } from './QuickActions';
 import { NearbySheet } from './NearbySheet';
 import { PlanChangeAssistant } from './PlanChangeAssistant';
 import { SmartAlertsContainer, useSmartAlertsMonitor, type SmartAlert, type MonitoredActivity } from './SmartAlerts';
+import { LiveTripPanelEnhanced } from './enhanced';
 import { useTrip } from '../../hooks/useTrip';
 import { useGPS } from '../../hooks/useGPS';
 import { useWeather } from '../../hooks/useWeather';
@@ -785,18 +786,19 @@ export function LiveTripPanel({
                   <Loader2 className="w-8 h-8 animate-spin" style={{ color: colors.golden }} />
                 </div>
               ) : (
-                <TodayView
+                <LiveTripPanelEnhanced
+                  tripId={trip?.id || ''}
+                  routeId={routeId}
+                  activities={todayData?.activities || []}
                   dayNumber={currentDay}
                   totalDays={totalDays}
                   cityName={todayData?.city || trip?.origin_city || 'Your City'}
-                  activities={todayData?.activities || []}
-                  weather={currentWeather ? {
-                    temp: Math.round(currentWeather.temperature),
-                    condition: currentWeather.description,
-                  } : undefined}
+                  isActive={isActive}
+                  isPaused={isPaused}
+                  onPause={handlePause}
+                  onResume={handleResume}
                   onNavigate={handleNavigate}
-                  onCall={handleCall}
-                  onCheckin={handleCheckinStart}
+                  userLocation={gpsLocation ? { lat: gpsLocation.latitude, lng: gpsLocation.longitude } : undefined}
                 />
               )}
             </motion.div>
