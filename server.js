@@ -782,6 +782,19 @@ app.post('/api/routes', authenticate, async (req, res) => {
       });
     }
 
+    // Helper to extract city name from string or object
+    const getCityName = (city) => {
+      if (typeof city === 'string') return city;
+      if (city && typeof city === 'object') {
+        return city.name || city.city || JSON.stringify(city);
+      }
+      return String(city);
+    };
+
+    // Extract city names for storage (keep full objects in routeData)
+    const originName = getCityName(origin);
+    const destinationName = getCityName(destination);
+
     // Extract totalNights, tripPace, and stops (from request or routeData)
     let finalTotalNights = totalNights;
     let finalTripPace = tripPace;
@@ -822,9 +835,9 @@ app.post('/api/routes', authenticate, async (req, res) => {
        RETURNING id, user_id, name, origin, destination, stops, budget, selected_agents, route_data, total_nights, trip_pace, is_favorite, is_public, created_at, updated_at`,
       [
         req.user.id,
-        name || `${origin} to ${destination}`,
-        origin,
-        destination,
+        name || `${originName} to ${destinationName}`,
+        originName,
+        destinationName,
         finalStops,
         budget,
         agentsArray,
