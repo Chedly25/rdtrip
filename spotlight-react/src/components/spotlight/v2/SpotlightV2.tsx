@@ -741,9 +741,14 @@ const SpotlightV2 = () => {
   const hasPersonalizedIntro = route?.personalizedIntro?.headline;
 
   return (
-    <div className="h-screen w-screen overflow-hidden bg-[#FFFBF5] relative flex">
-      {/* Main Content Area - Takes remaining space when companion is open */}
-      <div className={`flex-1 h-full relative transition-all duration-300 ${isPanelExpanded ? 'mr-0' : ''}`}>
+    <div className="h-screen w-screen overflow-hidden bg-[#FFFBF5] relative">
+      {/* Main Content Area - Uses margin-right to make space for companion panel */}
+      <div
+        className="h-full relative transition-[margin] duration-300"
+        style={{
+          marginRight: isPanelExpanded ? '280px' : '0px',
+        }}
+      >
         {/* Header */}
         <SpotlightHeader
           onGenerateItinerary={handleGenerateItinerary}
@@ -782,14 +787,7 @@ const SpotlightV2 = () => {
       </div>
 
       {/* Companion Panel - Desktop Sidebar (fixed positioned, hidden on mobile) */}
-      {/* Spacer to reserve space in layout when panel is expanded */}
-      <div
-        className="hidden md:block flex-shrink-0 transition-all duration-300"
-        style={{ width: isPanelExpanded ? '280px' : '0px' }}
-      />
-
-      {/* Fixed-position companion panel/tab - wrapper has w-0 since content is fixed-positioned */}
-      <div className="hidden md:block w-0 flex-shrink-0">
+      <div className="hidden md:block">
         <AnimatePresence mode="wait">
           {isPanelExpanded ? (
             <CompanionPanel
