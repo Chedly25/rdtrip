@@ -6,7 +6,11 @@
 
 import type { TimeSlot } from '../components/trip/TodayView';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+// Use empty string fallback for production (same-origin requests)
+// localhost fallback only used in development when VITE_API_URL is not set
+const API_BASE_URL = import.meta.env.VITE_API_URL || (
+  import.meta.env.DEV ? 'http://localhost:3000/api' : '/api'
+);
 
 // Get auth token from localStorage
 const getAuthHeaders = (): HeadersInit => {

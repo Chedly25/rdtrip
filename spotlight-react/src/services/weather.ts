@@ -5,7 +5,10 @@
  * Frontend service for fetching weather data during trips
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+// Use empty string fallback for production (same-origin requests)
+const API_BASE_URL = import.meta.env.VITE_API_URL || (
+  import.meta.env.DEV ? 'http://localhost:3000/api' : '/api'
+);
 
 // Get auth token from localStorage
 const getAuthHeaders = (): HeadersInit => {

@@ -1,6 +1,9 @@
 import type { City, Waypoint } from '../types'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
+// Use empty string fallback for production (same-origin requests)
+const API_BASE_URL = import.meta.env.VITE_API_URL || (
+  import.meta.env.DEV ? 'http://localhost:3000/api' : '/api'
+)
 
 // Error handling helper
 class ApiError extends Error {
