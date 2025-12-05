@@ -102,6 +102,8 @@ export function LiveTripPanel({
   const [activeTab, setActiveTab] = useState<TabType>('today');
   const [showActivation, setShowActivation] = useState(false);
   const [isAutoStarting, setIsAutoStarting] = useState(false);
+  const [autoStartAttempted, setAutoStartAttempted] = useState(false);
+  const [autoStartError, setAutoStartError] = useState<string | null>(null);
   const [showCheckin, setShowCheckin] = useState(false);
   const [checkinActivity, setCheckinActivity] = useState<TimeSlot | null>(null);
   const [showQuickActions, setShowQuickActions] = useState(false);
@@ -193,31 +195,39 @@ export function LiveTripPanel({
 
   // Start trip
   const handleStartTrip = useCallback(async () => {
+    setAutoStartError(null);
     try {
       const newTrip = await start(routeId, itineraryId);
       if (newTrip) {
         setShowActivation(false);
         setIsAutoStarting(false);
+        setAutoStartAttempted(true);
         startTracking();
       } else {
-        // Trip start failed - reset auto-starting state
+        // Trip start failed - mark as attempted to prevent infinite loop
         setIsAutoStarting(false);
+        setAutoStartAttempted(true);
+        setAutoStartError(error || 'Failed to start trip. Please try again or re-login.');
         console.warn('[LiveTripPanel] Trip start returned null');
       }
     } catch (err) {
       console.error('[LiveTripPanel] Failed to start trip:', err);
       setIsAutoStarting(false);
+      setAutoStartAttempted(true);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to start trip';
+      setAutoStartError(errorMessage);
     }
-  }, [routeId, itineraryId, start, startTracking]);
+  }, [routeId, itineraryId, start, startTracking, error]);
 
   // Auto-start trip when autoStart prop is true
   useEffect(() => {
-    if (autoStart && !loading && !trip && !isAutoStarting) {
+    // Only auto-start once - check autoStartAttempted to prevent infinite loop on failure
+    if (autoStart && !loading && !trip && !isAutoStarting && !autoStartAttempted) {
       console.log('[LiveTripPanel] Auto-starting trip...');
       setIsAutoStarting(true);
       handleStartTrip();
     }
-  }, [autoStart, loading, trip, isAutoStarting, handleStartTrip]);
+  }, [autoStart, loading, trip, isAutoStarting, autoStartAttempted, handleStartTrip]);
 
   // Pause trip
   const handlePause = useCallback(async () => {
@@ -438,8 +448,9 @@ export function LiveTripPanel({
   }
 
   // Show preparing state when auto-starting OR error state when failed
-  if (!trip && (autoStart || isAutoStarting || error)) {
-    const hasError = !!error && !isAutoStarting;
+  const combinedError = autoStartError || error;
+  if (!trip && (autoStart || isAutoStarting || combinedError)) {
+    const hasError = !!combinedError && !isAutoStarting;
 
     return (
       <div className={`h-full flex flex-col ${className}`} style={{ background: colors.cream }}>
@@ -484,7 +495,7 @@ export function LiveTripPanel({
               Unable to Start Trip
             </h3>
             <p className="text-center mb-6 max-w-xs text-sm" style={{ color: colors.lightBrown }}>
-              {error || 'Trip tracking is not available yet. Please try again later.'}
+              {combinedError || 'Trip tracking is not available yet. Please try again later.'}
             </p>
 
             <div className="flex gap-3">
@@ -492,6 +503,8 @@ export function LiveTripPanel({
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => {
+                  setAutoStartAttempted(false); // Reset to allow retry
+                  setAutoStartError(null);
                   setIsAutoStarting(true);
                   handleStartTrip();
                 }}
