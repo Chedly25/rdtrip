@@ -60,6 +60,8 @@ interface LiveTripPanelProps {
   itineraryId?: string;
   onClose?: () => void;
   className?: string;
+  /** When true, automatically starts the trip without showing the "Ready to begin?" screen */
+  autoStart?: boolean;
 }
 
 export function LiveTripPanel({
@@ -67,6 +69,7 @@ export function LiveTripPanel({
   itineraryId,
   onClose,
   className = '',
+  autoStart = false,
 }: LiveTripPanelProps) {
   // Trip state from API
   const {
@@ -98,6 +101,7 @@ export function LiveTripPanel({
   // Local state
   const [activeTab, setActiveTab] = useState<TabType>('today');
   const [showActivation, setShowActivation] = useState(false);
+  const [isAutoStarting, setIsAutoStarting] = useState(false);
   const [showCheckin, setShowCheckin] = useState(false);
   const [checkinActivity, setCheckinActivity] = useState<TimeSlot | null>(null);
   const [showQuickActions, setShowQuickActions] = useState(false);
@@ -192,9 +196,19 @@ export function LiveTripPanel({
     const newTrip = await start(routeId, itineraryId);
     if (newTrip) {
       setShowActivation(false);
+      setIsAutoStarting(false);
       startTracking();
     }
   }, [routeId, itineraryId, start, startTracking]);
+
+  // Auto-start trip when autoStart prop is true
+  useEffect(() => {
+    if (autoStart && !loading && !trip && !isAutoStarting) {
+      console.log('[LiveTripPanel] Auto-starting trip...');
+      setIsAutoStarting(true);
+      handleStartTrip();
+    }
+  }, [autoStart, loading, trip, isAutoStarting, handleStartTrip]);
 
   // Pause trip
   const handlePause = useCallback(async () => {
@@ -338,8 +352,8 @@ export function LiveTripPanel({
     }
   }, [todayData]);
 
-  // Show activation screen if no active trip
-  if (!loading && !trip) {
+  // Show activation screen if no active trip (only when NOT auto-starting)
+  if (!loading && !trip && !autoStart && !isAutoStarting) {
     return (
       <div className={`h-full flex flex-col ${className}`} style={{ background: colors.cream }}>
         {/* Header */}
@@ -410,6 +424,102 @@ export function LiveTripPanel({
             />
           )}
         </AnimatePresence>
+      </div>
+    );
+  }
+
+  // Show preparing state when auto-starting
+  if (!trip && (autoStart || isAutoStarting)) {
+    return (
+      <div className={`h-full flex flex-col ${className}`} style={{ background: colors.cream }}>
+        {/* Header */}
+        <div
+          className="flex items-center justify-between p-4 border-b"
+          style={{ borderColor: colors.border }}
+        >
+          <h2 className="text-lg font-serif font-medium" style={{ color: colors.darkBrown }}>
+            Trip Mode
+          </h2>
+          {onClose && (
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={onClose}
+              className="w-8 h-8 rounded-full flex items-center justify-center"
+              style={{ background: colors.warmWhite, border: `1px solid ${colors.border}` }}
+            >
+              <X className="w-4 h-4" style={{ color: colors.lightBrown }} />
+            </motion.button>
+          )}
+        </div>
+
+        {/* Preparing Trip State - Elegant loading with compass animation */}
+        <div className="flex-1 flex flex-col items-center justify-center p-8">
+          <motion.div
+            className="w-24 h-24 rounded-full flex items-center justify-center mb-8 relative"
+            style={{
+              background: `linear-gradient(135deg, ${colors.golden}20 0%, ${colors.terracotta}15 100%)`,
+              boxShadow: `0 0 60px ${colors.golden}30`,
+            }}
+          >
+            {/* Rotating outer ring */}
+            <motion.div
+              className="absolute inset-0 rounded-full"
+              style={{ border: `2px solid ${colors.golden}40` }}
+              animate={{ rotate: 360 }}
+              transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
+            />
+            {/* Compass icon */}
+            <motion.div
+              animate={{ rotate: [0, 10, -10, 0] }}
+              transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+            >
+              <Play
+                className="w-10 h-10"
+                style={{ color: colors.terracotta }}
+              />
+            </motion.div>
+          </motion.div>
+
+          <motion.h3
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-2xl font-serif font-medium mb-3 text-center"
+            style={{ color: colors.darkBrown }}
+          >
+            Preparing Your Journey
+          </motion.h3>
+
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2 }}
+            className="text-center mb-6 max-w-xs"
+            style={{ color: colors.lightBrown }}
+          >
+            Setting up real-time tracking, loading your itinerary, and getting everything ready...
+          </motion.p>
+
+          {/* Animated progress dots */}
+          <div className="flex gap-2">
+            {[0, 1, 2].map((i) => (
+              <motion.div
+                key={i}
+                className="w-2 h-2 rounded-full"
+                style={{ background: colors.golden }}
+                animate={{
+                  scale: [1, 1.3, 1],
+                  opacity: [0.5, 1, 0.5],
+                }}
+                transition={{
+                  duration: 1,
+                  repeat: Infinity,
+                  delay: i * 0.2,
+                }}
+              />
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
