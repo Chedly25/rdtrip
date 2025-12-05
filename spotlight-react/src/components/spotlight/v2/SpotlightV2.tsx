@@ -504,14 +504,70 @@ const SpotlightV2 = () => {
     console.log('🔄 transformBackendDataToRoute received:', data);
 
     // Backend returns { route: { id, routeData, ... } }
-    // Extract the route object and merge routeData into it
     const backendRoute = data.route || data;
     const routeData = backendRoute.routeData || {};
 
     console.log('📦 Extracted routeData:', routeData);
+    console.log('📦 Cities in routeData:', routeData.cities?.length || 0);
     console.log('📦 Landmarks in routeData:', routeData.landmarks?.length || 0);
 
-    // Merge routeData fields into the main data for transformation
+    // If routeData has a pre-built cities array, use it directly!
+    // This is the case for saved routes - they already have properly formatted cities
+    if (routeData.cities && Array.isArray(routeData.cities) && routeData.cities.length > 0) {
+      console.log('✅ Using pre-built cities array from saved route');
+
+      // Ensure each city has proper coordinates format
+      const cities: CityData[] = routeData.cities.map((cityData: any) => {
+        // Extract coordinates - handle both {lat,lng} and [lat,lng] formats
+        let coordinates = { lat: 0, lng: 0 };
+
+        // Try cityData.coordinates first
+        if (cityData.coordinates) {
+          if (Array.isArray(cityData.coordinates)) {
+            coordinates = { lat: cityData.coordinates[0], lng: cityData.coordinates[1] };
+          } else if (cityData.coordinates.lat !== undefined) {
+            coordinates = { lat: cityData.coordinates.lat, lng: cityData.coordinates.lng };
+          }
+        }
+        // Try cityData.city.coordinates as fallback
+        else if (cityData.city?.coordinates) {
+          if (Array.isArray(cityData.city.coordinates)) {
+            coordinates = { lat: cityData.city.coordinates[0], lng: cityData.city.coordinates[1] };
+          } else if (cityData.city.coordinates.lat !== undefined) {
+            coordinates = { lat: cityData.city.coordinates.lat, lng: cityData.city.coordinates.lng };
+          }
+        }
+
+        return {
+          ...cityData,
+          coordinates,
+          city: cityData.city || { name: 'Unknown', country: '', coordinates }
+        };
+      });
+
+      console.log('✅ Processed cities:', cities.map(c => `${getCityName(c.city)} @ [${c.coordinates.lat}, ${c.coordinates.lng}]`));
+
+      return {
+        id: backendRoute.id,
+        origin: backendRoute.origin || routeData.origin || cities[0]?.city,
+        destination: backendRoute.destination || routeData.destination || cities[cities.length - 1]?.city,
+        budget: backendRoute.budget || routeData.budget,
+        agent: backendRoute.selectedAgents?.[0] || routeData.agent || 'best-overall',
+        cities,
+        landmarks: routeData.landmarks || [],
+        nightAllocations: routeData.nightAllocations || {},
+        agentResults: routeData.agentResults || [],
+        personalization: routeData.personalization,
+        personalizedIntro: routeData.personalizedIntro,
+        tripStyleProfile: routeData.tripStyleProfile,
+        tripNarrative: routeData.tripNarrative,
+        routeData, // Keep for reference
+      };
+    }
+
+    // Fallback: No pre-built cities array - use the landing page transformation
+    console.log('⚠️ No pre-built cities array, falling back to transformLandingDataToRoute');
+
     const mergedData = {
       ...routeData,
       ...backendRoute,
@@ -519,14 +575,8 @@ const SpotlightV2 = () => {
       agent: backendRoute.selectedAgents || routeData.agent || 'best-overall'
     };
 
-    // Call the transformation with the merged data
     const transformed = transformLandingDataToRoute(mergedData);
-
-    // Preserve routeData for the store's setRoute to load landmarks
     transformed.routeData = routeData;
-
-    console.log('✅ Transformed route with', transformed.landmarks?.length || 0, 'landmarks from initial transform');
-    console.log('✅ RouteData attached with', transformed.routeData?.landmarks?.length || 0, 'landmarks for store loading');
 
     return transformed;
   };
