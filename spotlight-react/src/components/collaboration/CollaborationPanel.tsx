@@ -712,7 +712,7 @@ export function CollaborationPanel({
 
   async function fetchCollaborators() {
     try {
-      const token = localStorage.getItem('auth_token');
+      const token = localStorage.getItem('token');
       const response = await fetch(`/api/routes/${routeId}/collaborators`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -729,7 +729,7 @@ export function CollaborationPanel({
 
   async function fetchMessages() {
     try {
-      const token = localStorage.getItem('auth_token');
+      const token = localStorage.getItem('token');
       const response = await fetch(`/api/routes/${routeId}/messages`, {
         headers: { Authorization: `Bearer ${token}` },
       });

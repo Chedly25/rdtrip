@@ -211,7 +211,7 @@ export function CreateTaskModal({
       try {
         const response = await fetch(`/api/routes/${routeId}/collaborators`, {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem('rdtrip_token')}`,
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
           },
         });
 
@@ -254,7 +254,7 @@ export function CreateTaskModal({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('rdtrip_token')}`,
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
         body: JSON.stringify({
           title: title.trim(),

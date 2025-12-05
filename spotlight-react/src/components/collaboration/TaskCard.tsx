@@ -254,7 +254,7 @@ export function TaskCard({
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('rdtrip_token')}`,
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
         body: JSON.stringify({ status: newStatus }),
       });
@@ -278,7 +278,7 @@ export function TaskCard({
       const response = await fetch(`/api/routes/${routeId}/tasks/${task.id}`, {
         method: 'DELETE',
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('rdtrip_token')}`,
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
       });
 

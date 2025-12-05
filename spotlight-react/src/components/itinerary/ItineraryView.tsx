@@ -107,7 +107,7 @@ export function ItineraryView({ itineraryId, routeData }: ItineraryViewProps) {
       setPollsLoading(true);
       const response = await fetch(`/api/routes/${itinerary.routeId}/polls?status=active`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('rdtrip_token')}`
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
 
