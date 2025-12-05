@@ -56,19 +56,23 @@ class TripService {
       let totalCheckins = 0;
       if (itineraryId) {
         const itineraryQuery = `
-          SELECT content FROM itineraries WHERE id = $1
+          SELECT day_structure, activities, restaurants FROM itineraries WHERE id = $1
         `;
         const itResult = await pool.query(itineraryQuery, [itineraryId]);
-        if (itResult.rows.length > 0 && itResult.rows[0].content) {
-          const content = typeof itResult.rows[0].content === 'string'
-            ? JSON.parse(itResult.rows[0].content)
-            : itResult.rows[0].content;
+        if (itResult.rows.length > 0) {
+          const row = itResult.rows[0];
+          const dayStructure = row.day_structure;
+          const activities = row.activities;
+          const restaurants = row.restaurants;
 
-          // Count all activities
-          if (content.days) {
-            totalCheckins = content.days.reduce((sum, day) => {
+          // Count activities from day_structure (if it contains days array)
+          if (dayStructure && dayStructure.days) {
+            totalCheckins = dayStructure.days.reduce((sum, day) => {
               return sum + (day.activities?.length || 0) + (day.meals?.length || 0);
             }, 0);
+          } else {
+            // Count from separate columns
+            totalCheckins = (activities?.length || 0) + (restaurants?.length || 0);
           }
         }
       }
@@ -126,7 +130,10 @@ class TripService {
         r.origin_city,
         r.destination_city,
         r.route_data,
-        i.content as itinerary_content
+        i.day_structure,
+        i.activities as itinerary_activities,
+        i.restaurants as itinerary_restaurants,
+        i.accommodations as itinerary_accommodations
       FROM active_trips at
       LEFT JOIN routes r ON at.route_id = r.id
       LEFT JOIN itineraries i ON at.itinerary_id = i.id
@@ -155,7 +162,10 @@ class TripService {
         r.origin_city,
         r.destination_city,
         r.route_data,
-        i.content as itinerary_content
+        i.day_structure,
+        i.activities as itinerary_activities,
+        i.restaurants as itinerary_restaurants,
+        i.accommodations as itinerary_accommodations
       FROM active_trips at
       LEFT JOIN routes r ON at.route_id = r.id
       LEFT JOIN itineraries i ON at.itinerary_id = i.id
@@ -189,28 +199,94 @@ class TripService {
       }
 
       const currentDay = trip.current_day;
-      let itineraryContent = trip.itinerary_content;
 
-      if (typeof itineraryContent === 'string') {
-        itineraryContent = JSON.parse(itineraryContent);
+      // Parse day_structure from the new schema columns
+      let dayStructure = trip.day_structure;
+      if (typeof dayStructure === 'string') {
+        dayStructure = JSON.parse(dayStructure);
       }
 
-      if (!itineraryContent || !itineraryContent.days) {
-        return { activities: [], day: currentDay, city: trip.origin_city };
-      }
-
-      // Get the current day's data (0-indexed)
-      const dayData = itineraryContent.days[currentDay - 1];
-      if (!dayData) {
-        return { activities: [], day: currentDay, city: trip.origin_city };
-      }
-
-      // Combine all activities into timeline
+      // Build activities array from the available data
       const activities = [];
 
-      // Add morning activities
-      if (dayData.activities) {
-        dayData.activities.forEach((activity, index) => {
+      // Check if day_structure has days array (newer format)
+      if (dayStructure && dayStructure.days && dayStructure.days[currentDay - 1]) {
+        const dayData = dayStructure.days[currentDay - 1];
+
+        // Add activities from day structure
+        if (dayData.activities) {
+          dayData.activities.forEach((activity, index) => {
+            activities.push({
+              id: `activity-${currentDay}-${index}`,
+              time: activity.time || `${9 + index * 2}:00`,
+              endTime: activity.endTime,
+              title: activity.name || activity.title,
+              description: activity.description || activity.why,
+              type: 'activity',
+              location: activity.location || activity.address,
+              coordinates: activity.coordinates,
+              photo: activity.image,
+              rating: activity.rating,
+              phone: activity.phone,
+              duration: activity.duration,
+              status: 'upcoming'
+            });
+          });
+        }
+
+        // Add meals from day structure
+        if (dayData.meals) {
+          ['breakfast', 'lunch', 'dinner'].forEach(mealType => {
+            const meal = dayData.meals[mealType] || (Array.isArray(dayData.meals) ? dayData.meals.find(m => m.type === mealType) : null);
+            if (meal) {
+              const timeMap = { breakfast: '08:00', lunch: '12:30', dinner: '19:30' };
+              activities.push({
+                id: `meal-${currentDay}-${mealType}`,
+                time: meal.time || timeMap[mealType],
+                title: meal.name || meal.restaurant,
+                description: meal.description || meal.cuisine,
+                type: 'restaurant',
+                location: meal.location || meal.address,
+                coordinates: meal.coordinates,
+                photo: meal.image,
+                rating: meal.rating,
+                phone: meal.phone,
+                status: 'upcoming'
+              });
+            }
+          });
+        }
+
+        // Sort by time
+        activities.sort((a, b) => {
+          const timeA = a.time.split(':').map(Number);
+          const timeB = b.time.split(':').map(Number);
+          return (timeA[0] * 60 + timeA[1]) - (timeB[0] * 60 + timeB[1]);
+        });
+
+        return {
+          activities,
+          day: currentDay,
+          totalDays: dayStructure.days.length,
+          city: dayData.city || trip.origin_city,
+          date: dayData.date
+        };
+      }
+
+      // Fallback: Use separate itinerary_activities and itinerary_restaurants columns
+      let itineraryActivities = trip.itinerary_activities;
+      let itineraryRestaurants = trip.itinerary_restaurants;
+
+      if (typeof itineraryActivities === 'string') {
+        itineraryActivities = JSON.parse(itineraryActivities);
+      }
+      if (typeof itineraryRestaurants === 'string') {
+        itineraryRestaurants = JSON.parse(itineraryRestaurants);
+      }
+
+      // Add activities from separate column
+      if (itineraryActivities && Array.isArray(itineraryActivities)) {
+        itineraryActivities.forEach((activity, index) => {
           activities.push({
             id: `activity-${currentDay}-${index}`,
             time: activity.time || `${9 + index * 2}:00`,
@@ -224,47 +300,46 @@ class TripService {
             rating: activity.rating,
             phone: activity.phone,
             duration: activity.duration,
-            status: 'upcoming' // Will be determined client-side based on time
+            status: 'upcoming'
           });
         });
       }
 
-      // Add meals
-      if (dayData.meals) {
-        ['breakfast', 'lunch', 'dinner'].forEach(mealType => {
-          const meal = dayData.meals[mealType] || dayData.meals.find(m => m.type === mealType);
-          if (meal) {
-            const timeMap = { breakfast: '08:00', lunch: '12:30', dinner: '19:30' };
-            activities.push({
-              id: `meal-${currentDay}-${mealType}`,
-              time: meal.time || timeMap[mealType],
-              title: meal.name || meal.restaurant,
-              description: meal.description || meal.cuisine,
-              type: 'restaurant',
-              location: meal.location || meal.address,
-              coordinates: meal.coordinates,
-              photo: meal.image,
-              rating: meal.rating,
-              phone: meal.phone,
-              status: 'upcoming'
-            });
-          }
+      // Add restaurants from separate column
+      if (itineraryRestaurants && Array.isArray(itineraryRestaurants)) {
+        const mealTimes = ['08:00', '12:30', '19:30'];
+        itineraryRestaurants.forEach((restaurant, index) => {
+          activities.push({
+            id: `restaurant-${currentDay}-${index}`,
+            time: restaurant.time || mealTimes[index % 3],
+            title: restaurant.name || restaurant.restaurant,
+            description: restaurant.description || restaurant.cuisine,
+            type: 'restaurant',
+            location: restaurant.location || restaurant.address,
+            coordinates: restaurant.coordinates,
+            photo: restaurant.image,
+            rating: restaurant.rating,
+            phone: restaurant.phone,
+            status: 'upcoming'
+          });
         });
       }
 
       // Sort by time
-      activities.sort((a, b) => {
-        const timeA = a.time.split(':').map(Number);
-        const timeB = b.time.split(':').map(Number);
-        return (timeA[0] * 60 + timeA[1]) - (timeB[0] * 60 + timeB[1]);
-      });
+      if (activities.length > 0) {
+        activities.sort((a, b) => {
+          const timeA = a.time.split(':').map(Number);
+          const timeB = b.time.split(':').map(Number);
+          return (timeA[0] * 60 + timeA[1]) - (timeB[0] * 60 + timeB[1]);
+        });
+      }
 
       return {
         activities,
         day: currentDay,
-        totalDays: itineraryContent.days.length,
-        city: dayData.city || trip.origin_city,
-        date: dayData.date
+        totalDays: dayStructure?.days?.length || 1,
+        city: trip.origin_city,
+        date: null
       };
 
     } catch (error) {
