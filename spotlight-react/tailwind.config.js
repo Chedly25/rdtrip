@@ -8,6 +8,10 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Itinerary Display Theme Colors
+        terracotta: '#C45830',
+        gold: '#D4A853',
+        sage: '#4A7C59',
         // Waycraft "Wanderlust Editorial" Color System
         rui: {
           black: '#2C2417',
