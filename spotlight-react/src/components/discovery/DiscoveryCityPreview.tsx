@@ -4,6 +4,7 @@ import { X, MapPin, Gem, Moon, Plus, ChevronRight, ChevronDown, Sparkles } from 
 import type { DiscoveryCity } from '../../stores/discoveryStore';
 import { useDiscoveryStore } from '../../stores/discoveryStore';
 import { PlaceCard } from './PlaceCard';
+import { HotelBookingCard } from '../booking';
 
 interface DiscoveryCityPreviewProps {
   city: DiscoveryCity | null;
@@ -240,6 +241,7 @@ export function DiscoveryCityPreview({
                           isFavourited={isPlaceFavourited(place.id)}
                           onToggleFavourite={() => togglePlaceFavourite(place.id)}
                           delay={index * 0.05}
+                          cityName={city.name}
                         />
                       ))}
                     </AnimatePresence>
@@ -287,6 +289,23 @@ export function DiscoveryCityPreview({
                     Add this city to explore hidden gems
                   </p>
                 </div>
+              )}
+
+              {/* Hotel Booking Section */}
+              {isInTrip && (city.nights ?? city.suggestedNights ?? 0) > 0 && (
+                <HotelBookingCard
+                  cityName={city.name}
+                  country={city.country}
+                  nights={city.nights ?? city.suggestedNights ?? 1}
+                  guests={2}
+                  sourceContext={{
+                    type: 'city_preview',
+                    cityId: city.id,
+                  }}
+                  variant="default"
+                  dismissible
+                  className="mb-4"
+                />
               )}
             </div>
           </div>

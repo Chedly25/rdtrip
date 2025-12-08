@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import type { ItineraryDay, ItineraryActivity, TimeSlot } from '../../services/itinerary';
 import { ItineraryActivityCard } from './ItineraryActivityCard';
+import { HotelBookingCard } from '../booking';
 
 // ============================================================================
 // Types
@@ -39,6 +40,10 @@ interface ItineraryDayCardProps {
   isCompleted?: boolean;
   /** Completed activity IDs */
   completedActivityIds?: Set<string>;
+  /** Show hotel booking card (typically on first day of city stay) */
+  showHotelBooking?: boolean;
+  /** Trip ID for tracking */
+  tripId?: string;
   /** Callbacks */
   onActivityClick?: (activity: ItineraryActivity) => void;
   onSwapActivity?: (activity: ItineraryActivity) => void;
@@ -172,6 +177,8 @@ export function ItineraryDayCard({
   isToday = false,
   isCompleted = false,
   completedActivityIds = new Set(),
+  showHotelBooking = false,
+  tripId,
   onActivityClick,
   onSwapActivity,
   onRemoveActivity,
@@ -334,6 +341,26 @@ export function ItineraryDayCard({
                 </p>
               )}
 
+              {/* Hotel booking card - show on first day of city stay */}
+              {showHotelBooking && !day.isTravelDay && (
+                <HotelBookingCard
+                  cityName={day.city.name}
+                  country={day.city.country}
+                  checkIn={day.date}
+                  nights={day.city.nights || 1}
+                  guests={2}
+                  sourceContext={{
+                    type: 'itinerary',
+                    tripId,
+                    cityId: day.city.id,
+                    dayNumber: day.dayNumber,
+                  }}
+                  variant="compact"
+                  dismissible
+                  className="mb-4"
+                />
+              )}
+
               {/* Time slots */}
               <div className="space-y-6">
                 {slots.map(({ key, activities }) => {
@@ -357,6 +384,9 @@ export function ItineraryDayCard({
                             isActive={isToday && currentSlot === key && index === 0}
                             isCompleted={completedActivityIds.has(activity.id)}
                             showConnector={index < activities.length - 1}
+                            cityName={day.city.name}
+                            tripId={tripId}
+                            dayNumber={day.dayNumber}
                             onViewDetails={onActivityClick}
                             onSwap={onSwapActivity}
                             onRemove={onRemoveActivity}

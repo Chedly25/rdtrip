@@ -1,7 +1,13 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, Star, Gem, Utensils, Coffee, Wine, Building2, Palette, TreePine, Store, MapPin, Eye, Sparkles } from 'lucide-react';
+import { Heart, Star, Gem, Utensils, Coffee, Wine, Building2, Palette, TreePine, Store, MapPin, Eye, Sparkles, Ticket, UtensilsCrossed } from 'lucide-react';
 import type { DiscoveryPlace, PlaceType } from '../../stores/discoveryStore';
+import {
+  generateActivityLink,
+  generateRestaurantOptions,
+  trackBookingClick,
+  createPlaceDetailsSource,
+} from '../../services/booking';
 
 interface PlaceCardProps {
   place: DiscoveryPlace;
@@ -9,7 +15,17 @@ interface PlaceCardProps {
   onToggleFavourite: () => void;
   /** Animation delay for staggered entrance */
   delay?: number;
+  /** City name for booking links */
+  cityName?: string;
+  /** Trip ID for tracking */
+  tripId?: string;
 }
+
+/** Place types that typically have bookable tours/activities */
+const BOOKABLE_TYPES: PlaceType[] = ['museum', 'gallery', 'landmark', 'viewpoint', 'experience'];
+
+/** Place types that are dining establishments */
+const DINING_TYPES: PlaceType[] = ['restaurant', 'cafe', 'bar'];
 
 /**
  * PlaceCard
@@ -30,8 +46,50 @@ export function PlaceCard({
   isFavourited,
   onToggleFavourite,
   delay = 0,
+  cityName,
+  tripId,
 }: PlaceCardProps) {
   const [isHovered, setIsHovered] = useState(false);
+
+  // Check if this place type is bookable
+  const isBookable = BOOKABLE_TYPES.includes(place.type) && cityName;
+
+  // Check if this place is a dining establishment
+  const isDining = DINING_TYPES.includes(place.type) && cityName;
+
+  // Handle activity booking click
+  const handleBookingClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!cityName) return;
+
+    const link = generateActivityLink({
+      cityName,
+      activityName: place.name,
+      category: place.type,
+    });
+
+    const source = createPlaceDetailsSource(tripId || '', place.id);
+    trackBookingClick(link, source);
+    window.open(link.url, '_blank', 'noopener,noreferrer');
+  }, [cityName, place.name, place.type, place.id, tripId]);
+
+  // Handle restaurant reservation click
+  const handleReservationClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!cityName) return;
+
+    const options = generateRestaurantOptions({
+      cityName,
+      restaurantName: place.name,
+      partySize: 2,
+    });
+
+    if (options.primary) {
+      const source = createPlaceDetailsSource(tripId || '', place.id);
+      trackBookingClick(options.primary, source);
+      window.open(options.primary.url, '_blank', 'noopener,noreferrer');
+    }
+  }, [cityName, place.name, place.id, tripId]);
 
   // Type-specific styling
   const typeConfig: Record<PlaceType, { icon: typeof Utensils; color: string; bg: string; label: string }> = {
@@ -218,40 +276,90 @@ export function PlaceCard({
           </AnimatePresence>
         </div>
 
-        {/* Favourite button */}
-        <motion.button
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleFavourite();
-          }}
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-          className="
-            flex-shrink-0
-            w-9 h-9 rounded-full
-            flex items-center justify-center
-            transition-colors duration-200
-            hover:bg-rui-grey-5
-          "
-          aria-label={isFavourited ? 'Remove from favourites' : 'Add to favourites'}
-        >
-          <motion.div
-            animate={{
-              scale: isFavourited ? [1, 1.3, 1] : 1,
+        {/* Action buttons */}
+        <div className="flex flex-col items-center gap-1 flex-shrink-0">
+          {/* Booking button - shows on hover for bookable types */}
+          <AnimatePresence>
+            {isBookable && isHovered && (
+              <motion.button
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                transition={{ duration: 0.15 }}
+                onClick={handleBookingClick}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                className="
+                  w-9 h-9 rounded-full
+                  flex items-center justify-center
+                  bg-sage/10 hover:bg-sage/20
+                  transition-colors duration-200
+                "
+                aria-label="Book tour or activity"
+              >
+                <Ticket className="w-4 h-4 text-sage" />
+              </motion.button>
+            )}
+          </AnimatePresence>
+
+          {/* Reservation button - shows on hover for dining places */}
+          <AnimatePresence>
+            {isDining && isHovered && (
+              <motion.button
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                transition={{ duration: 0.15 }}
+                onClick={handleReservationClick}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                className="
+                  w-9 h-9 rounded-full
+                  flex items-center justify-center
+                  bg-rose-500/10 hover:bg-rose-500/20
+                  transition-colors duration-200
+                "
+                aria-label="Make a reservation"
+              >
+                <UtensilsCrossed className="w-4 h-4 text-rose-500" />
+              </motion.button>
+            )}
+          </AnimatePresence>
+
+          {/* Favourite button */}
+          <motion.button
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleFavourite();
             }}
-            transition={{ duration: 0.3 }}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            className="
+              w-9 h-9 rounded-full
+              flex items-center justify-center
+              transition-colors duration-200
+              hover:bg-rui-grey-5
+            "
+            aria-label={isFavourited ? 'Remove from favourites' : 'Add to favourites'}
           >
-            <Heart
-              className={`
-                w-5 h-5 transition-colors duration-200
-                ${isFavourited
-                  ? 'text-rose-500 fill-rose-500'
-                  : 'text-rui-grey-30 group-hover:text-rui-grey-50'
-                }
-              `}
-            />
-          </motion.div>
-        </motion.button>
+            <motion.div
+              animate={{
+                scale: isFavourited ? [1, 1.3, 1] : 1,
+              }}
+              transition={{ duration: 0.3 }}
+            >
+              <Heart
+                className={`
+                  w-5 h-5 transition-colors duration-200
+                  ${isFavourited
+                    ? 'text-rose-500 fill-rose-500'
+                    : 'text-rui-grey-30 group-hover:text-rui-grey-50'
+                  }
+                `}
+              />
+            </motion.div>
+          </motion.button>
+        </div>
       </motion.div>
     </motion.div>
   );

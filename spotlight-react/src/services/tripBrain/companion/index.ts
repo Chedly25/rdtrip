@@ -92,3 +92,91 @@ export {
   // Types
   type WeatherTriggerConfig,
 } from './weatherTriggers';
+
+// WI-10.2: Booking triggers
+export {
+  // Trigger creators
+  createNewCityHotelTrigger,
+  createEveningHotelReminderTrigger,
+
+  // Utilities
+  getAllBookingTriggers,
+  checkBookingTriggers,
+  markCityAccommodationBooked,
+  isCityAccommodationBooked,
+
+  // Configuration
+  DEFAULT_BOOKING_TRIGGER_CONFIG,
+
+  // Types
+  type BookingTriggerConfig,
+} from './bookingTriggers';
+
+// WI-10.3: Activity booking triggers
+export {
+  // Trigger creators
+  createPopularAttractionTrigger,
+  createMorningActivitySuggestionTrigger,
+
+  // Utilities
+  getAllActivityTriggers,
+  checkActivityTriggers,
+  dismissActivitySuggestion,
+  isActivitySuggestionDismissed,
+
+  // Configuration
+  DEFAULT_ACTIVITY_TRIGGER_CONFIG,
+
+  // Types
+  type ActivityTriggerConfig,
+} from './activityTriggers';
+
+// WI-10.4: Restaurant booking triggers
+export {
+  // Trigger creators
+  createMealTimeTrigger,
+  createPopularRestaurantTrigger,
+
+  // Utilities
+  getAllRestaurantTriggers,
+  checkRestaurantTriggers,
+  dismissRestaurantSuggestion,
+  isRestaurantSuggestionDismissed,
+
+  // Configuration
+  DEFAULT_RESTAURANT_TRIGGER_CONFIG,
+
+  // Types
+  type RestaurantTriggerConfig,
+} from './restaurantTriggers';
+
+// WI-10.5: Companion booking prompts
+export {
+  // Prompt constants
+  BOOKING_BEHAVIOUR,
+  BOOKING_PROACTIVE_FORMATS,
+
+  // Context generators
+  generateBookingContext,
+  generateBookingContextFromRecommendations,
+
+  // Learning system
+  getBookingLearningData,
+  recordBookingSuggestion,
+  recordBookingDismissal,
+  recordBookingClick,
+  shouldReduceBookingSuggestions,
+  shouldAvoidCategory,
+  getMinutesSinceLastSuggestion,
+
+  // Conversation helpers
+  generateBookingConversationPrompt,
+
+  // Utilities
+  isBookableActivity,
+  isDiningPlace,
+
+  // Types
+  type BookingContext,
+  type BookingLearningData,
+} from './bookingPrompts';

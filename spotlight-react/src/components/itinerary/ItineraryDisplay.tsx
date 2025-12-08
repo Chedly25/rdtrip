@@ -44,12 +44,16 @@ import { ItineraryDayCard } from './ItineraryDayCard';
 
 interface ItineraryDisplayProps {
   itinerary: Itinerary;
+  /** Trip ID for tracking */
+  tripId?: string;
   /** Current day number if user is on the trip */
   currentDay?: number;
   /** Start date of the trip (for calculating current day) */
   tripStartDate?: Date;
   /** Enable edit mode */
   editable?: boolean;
+  /** Show hotel booking options */
+  showHotelBooking?: boolean;
   /** Callbacks */
   onActivityClick?: (activity: ItineraryActivity, day: ItineraryDay) => void;
   onSwapActivity?: (activity: ItineraryActivity, day: ItineraryDay) => void;
@@ -310,9 +314,11 @@ function EmptyState() {
 
 export function ItineraryDisplay({
   itinerary,
+  tripId,
   currentDay,
   tripStartDate,
   editable = true,
+  showHotelBooking = true,
   onActivityClick,
   onSwapActivity,
   onRemoveActivity,
@@ -393,6 +399,20 @@ export function ItineraryDisplay({
     }
   });
 
+  // Calculate which days should show hotel booking (first day of each city stay)
+  const hotelBookingDays = new Set<number>();
+  if (showHotelBooking) {
+    let lastCityId: string | null = null;
+    for (const day of itinerary.days) {
+      if (day.city.id !== lastCityId && !day.isTravelDay) {
+        hotelBookingDays.add(day.dayNumber);
+        lastCityId = day.city.id;
+      } else if (day.isTravelDay) {
+        lastCityId = null; // Reset on travel day so next city shows booking
+      }
+    }
+  }
+
   // Handle scroll to top
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -467,6 +487,8 @@ export function ItineraryDisplay({
               isToday={day.dayNumber === computedCurrentDay}
               isCompleted={computedCurrentDay ? day.dayNumber < computedCurrentDay : false}
               completedActivityIds={completedActivityIds}
+              showHotelBooking={hotelBookingDays.has(day.dayNumber)}
+              tripId={tripId}
               onActivityClick={onActivityClick ? (a) => onActivityClick(a, day) : undefined}
               onSwapActivity={isEditMode && onSwapActivity ? (a) => onSwapActivity(a, day) : undefined}
               onRemoveActivity={isEditMode && onRemoveActivity ? (a) => onRemoveActivity(a, day) : undefined}

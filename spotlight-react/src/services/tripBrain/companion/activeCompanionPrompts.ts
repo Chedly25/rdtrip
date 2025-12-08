@@ -28,6 +28,13 @@ import type {
 
 import type { UserPreferences } from '../../preferences';
 
+import {
+  BOOKING_BEHAVIOUR,
+  BOOKING_PROACTIVE_FORMATS,
+  generateBookingContext,
+  generateBookingContextFromRecommendations,
+} from './bookingPrompts';
+
 // ============================================================================
 // Personality (Shared with Planning - Imported for reference)
 // ============================================================================
@@ -477,6 +484,10 @@ export interface ActivePromptContext {
   subMode: ActiveCompanionSubMode;
   /** City name if known */
   cityName?: string;
+  /** Whether user needs accommodation in current city */
+  needsAccommodation?: boolean;
+  /** Include booking suggestions context */
+  includeBookingContext?: boolean;
 }
 
 /**
@@ -493,6 +504,18 @@ export function generateActiveCompanionPrompt(context: ActivePromptContext): str
   const preferencesSection = generatePreferencesContext(context.preferences);
   const modeSection = SUB_MODE_PROMPTS[context.subMode] || SUB_MODE_PROMPTS.choice;
 
+  // Generate booking context if enabled
+  let bookingSection = '';
+  if (context.includeBookingContext !== false && context.cityName) {
+    const bookingCtx = generateBookingContextFromRecommendations(
+      context.cityName,
+      context.recommendations,
+      context.currentHour,
+      context.needsAccommodation
+    );
+    bookingSection = generateBookingContext(bookingCtx);
+  }
+
   return `${PERSONALITY_CORE}
 
 ${COMMUNICATION_STYLE}
@@ -502,6 +525,10 @@ ${ACTIVE_BEHAVIOUR}
 ${PROACTIVE_RULES}
 
 ${PROACTIVE_MESSAGE_FORMATS}
+
+${BOOKING_BEHAVIOUR}
+
+${BOOKING_PROACTIVE_FORMATS}
 
 ---
 
@@ -516,6 +543,8 @@ ${weatherSection}
 ${todaySection}
 
 ${preferencesSection}
+
+${bookingSection}
 
 ---
 
@@ -642,3 +671,12 @@ export {
   generateTodayContext,
   generatePreferencesContext,
 };
+
+// Re-export booking prompts for convenience
+export {
+  BOOKING_BEHAVIOUR,
+  BOOKING_PROACTIVE_FORMATS,
+  generateBookingContext,
+  generateBookingContextFromRecommendations,
+  type BookingContext,
+} from './bookingPrompts';

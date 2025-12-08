@@ -2,6 +2,7 @@
  * ItineraryActivityCard
  *
  * WI-5.5: Individual activity card for itinerary display
+ * WI-10.3: Activity booking integration
  *
  * Design: Travel Journal aesthetic with warm editorial palette
  * - Terracotta (#C45830), Gold (#D4A853), Sage (#4A7C59)
@@ -9,7 +10,7 @@
  * - Personal, editable feel - not a generated document
  */
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Clock,
@@ -26,8 +27,15 @@ import {
   Footprints,
   Utensils,
   Coffee,
+  Ticket,
 } from 'lucide-react';
 import type { ItineraryActivity, PlaceActivity, TravelActivity, MealActivity } from '../../services/itinerary';
+import {
+  generateActivityLink,
+  generateRestaurantOptions,
+  trackBookingClick,
+  createItinerarySource,
+} from '../../services/booking';
 
 // ============================================================================
 // Types
@@ -41,12 +49,21 @@ interface ItineraryActivityCardProps {
   isCompleted?: boolean;
   /** Show connecting line to next activity */
   showConnector?: boolean;
+  /** City name for booking links */
+  cityName?: string;
+  /** Trip ID for tracking */
+  tripId?: string;
+  /** Day number for tracking */
+  dayNumber?: number;
   /** Callbacks */
   onViewDetails?: (activity: ItineraryActivity) => void;
   onSwap?: (activity: ItineraryActivity) => void;
   onRemove?: (activity: ItineraryActivity) => void;
   onNavigate?: (activity: ItineraryActivity) => void;
 }
+
+/** Place categories that typically have bookable tours */
+const BOOKABLE_CATEGORIES = ['museum', 'gallery', 'landmark', 'monument', 'attraction', 'experience', 'viewpoint', 'castle', 'palace'];
 
 // ============================================================================
 // Sub-components
@@ -139,11 +156,15 @@ function ActionMenu({
   onSwap,
   onRemove,
   onNavigate,
+  onBookActivity,
+  isBookable,
 }: {
   onViewDetails?: () => void;
   onSwap?: () => void;
   onRemove?: () => void;
   onNavigate?: () => void;
+  onBookActivity?: () => void;
+  isBookable?: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -169,7 +190,7 @@ function ActionMenu({
               initial={{ opacity: 0, scale: 0.95, y: -8 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: -8 }}
-              className="absolute right-0 top-full mt-1 z-20 w-40 bg-white rounded-xl shadow-xl border border-stone-200 overflow-hidden"
+              className="absolute right-0 top-full mt-1 z-20 w-44 bg-white rounded-xl shadow-xl border border-stone-200 overflow-hidden"
             >
               {onViewDetails && (
                 <button
@@ -178,6 +199,15 @@ function ActionMenu({
                 >
                   <ChevronDown className="w-4 h-4" />
                   View details
+                </button>
+              )}
+              {isBookable && onBookActivity && (
+                <button
+                  onClick={() => { onBookActivity(); setIsOpen(false); }}
+                  className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-sage hover:bg-sage/5 transition-colors"
+                >
+                  <Ticket className="w-4 h-4" />
+                  Book tickets
                 </button>
               )}
               {onNavigate && (
@@ -321,7 +351,17 @@ function TravelActivityContent({ activity }: { activity: TravelActivity }) {
 /**
  * Meal activity card
  */
-function MealActivityContent({ activity }: { activity: MealActivity }) {
+function MealActivityContent({
+  activity,
+  cityName,
+  tripId,
+  dayNumber,
+}: {
+  activity: MealActivity;
+  cityName?: string;
+  tripId?: string;
+  dayNumber?: number;
+}) {
   const mealIcons = {
     breakfast: Coffee,
     lunch: Utensils,
@@ -334,6 +374,25 @@ function MealActivityContent({ activity }: { activity: MealActivity }) {
     lunch: '🍽️',
     dinner: '🌙',
   };
+
+  // Handle restaurant reservation click
+  const handleReservation = useCallback(() => {
+    if (!activity.suggestedPlace || !cityName) return;
+
+    const options = generateRestaurantOptions({
+      cityName,
+      restaurantName: activity.suggestedPlace.name,
+      partySize: 2,
+    });
+
+    if (options.primary) {
+      const source = createItinerarySource(tripId || '', activity.suggestedPlace.placeId || '', dayNumber || 1);
+      trackBookingClick(options.primary, source);
+      window.open(options.primary.url, '_blank', 'noopener,noreferrer');
+    }
+  }, [activity.suggestedPlace, cityName, tripId, dayNumber]);
+
+  const hasReservationOption = activity.suggestedPlace && cityName;
 
   return (
     <div className="flex items-center gap-3 py-1">
@@ -357,6 +416,24 @@ function MealActivityContent({ activity }: { activity: MealActivity }) {
           </p>
         )}
       </div>
+
+      {/* Reservation button */}
+      {hasReservationOption && (
+        <motion.button
+          onClick={handleReservation}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className="
+            flex items-center gap-1.5 px-3 py-1.5 rounded-lg
+            bg-rose-50 hover:bg-rose-100
+            text-rose-600 text-xs font-medium
+            transition-colors duration-200
+          "
+        >
+          <Utensils className="w-3.5 h-3.5" />
+          <span>Reserve</span>
+        </motion.button>
+      )}
     </div>
   );
 }
@@ -392,6 +469,9 @@ export function ItineraryActivityCard({
   isActive = false,
   isCompleted = false,
   showConnector = true,
+  cityName,
+  tripId,
+  dayNumber,
   onViewDetails,
   onSwap,
   onRemove,
@@ -399,6 +479,29 @@ export function ItineraryActivityCard({
 }: ItineraryActivityCardProps) {
   const isPlace = activity.type === 'place';
   const placeActivity = isPlace ? (activity as PlaceActivity) : null;
+
+  // Check if this activity is bookable
+  const isBookable = !!(isPlace &&
+    placeActivity &&
+    cityName &&
+    BOOKABLE_CATEGORIES.some(cat =>
+      placeActivity.place.category.toLowerCase().includes(cat)
+    ));
+
+  // Handle activity booking
+  const handleBookActivity = useCallback(() => {
+    if (!isBookable || !placeActivity || !cityName) return;
+
+    const link = generateActivityLink({
+      cityName,
+      activityName: placeActivity.place.name,
+      category: placeActivity.place.category,
+    });
+
+    const source = createItinerarySource(tripId || '', placeActivity.place.placeId, dayNumber || 1);
+    trackBookingClick(link, source);
+    window.open(link.url, '_blank', 'noopener,noreferrer');
+  }, [isBookable, placeActivity, cityName, tripId, dayNumber]);
 
   return (
     <div className="relative">
@@ -443,6 +546,8 @@ export function ItineraryActivityCard({
                 onSwap={onSwap ? () => onSwap(activity) : undefined}
                 onRemove={onRemove ? () => onRemove(activity) : undefined}
                 onNavigate={isPlace && onNavigate ? () => onNavigate(activity) : undefined}
+                onBookActivity={isBookable ? handleBookActivity : undefined}
+                isBookable={isBookable}
               />
             </div>
           </div>
@@ -458,7 +563,12 @@ export function ItineraryActivityCard({
             <TravelActivityContent activity={activity as TravelActivity} />
           )}
           {activity.type === 'meal' && (
-            <MealActivityContent activity={activity as MealActivity} />
+            <MealActivityContent
+              activity={activity as MealActivity}
+              cityName={cityName}
+              tripId={tripId}
+              dayNumber={dayNumber}
+            />
           )}
           {activity.type === 'free_time' && (
             <FreeTimeActivityContent suggestion={activity.suggestion} />
