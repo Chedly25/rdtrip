@@ -10,7 +10,13 @@ import { DiscoveryCityPreview } from './DiscoveryCityPreview';
 import { DiscoveryLoadingState } from './DiscoveryLoadingState';
 import { AddCityModal } from './AddCityModal';
 import { ProceedConfirmationModal } from './ProceedConfirmationModal';
+import { searchHiddenGemsInCity } from '../../services/hiddenGems';
 import type { DiscoveryRoute, DiscoveryCity, DiscoveryPlace } from '../../stores/discoveryStore';
+
+// API base URL
+const API_BASE_URL = import.meta.env.VITE_API_URL || (
+  import.meta.env.DEV ? 'http://localhost:3000' : ''
+);
 
 /**
  * DiscoveryPhaseContainer
@@ -99,9 +105,8 @@ export function DiscoveryPhaseContainer() {
     setPhase('loading');
 
     try {
-      // For now, create mock data - will integrate with real API later
-      // TODO: Replace with actual API call to get suggested cities
-      const mockRoute: DiscoveryRoute = {
+      // Create the route structure
+      const discoveryRoute: DiscoveryRoute = {
         origin: {
           id: 'origin',
           name: data.origin.name,
@@ -113,7 +118,7 @@ export function DiscoveryPhaseContainer() {
           isSelected: true,
           isFixed: true,
           suggestedNights: 1,
-          placeCount: 42,
+          placeCount: 0,
           description: 'Your starting point',
         },
         destination: {
@@ -127,37 +132,198 @@ export function DiscoveryPhaseContainer() {
           isSelected: true,
           isFixed: true,
           suggestedNights: 2,
-          placeCount: 67,
+          placeCount: 0,
           description: 'Your final destination',
         },
-        suggestedCities: [], // Will be populated by API
+        suggestedCities: [],
         totalDistanceKm: 0,
         totalDrivingMinutes: 0,
       };
 
-      // Simulate API delay
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      // Call the real API to get city suggestions
+      console.log('🔍 Calling /api/discover-cities...');
+      const response = await fetch(`${API_BASE_URL}/api/discover-cities`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          origin: {
+            name: data.origin.name,
+            country: data.origin.country,
+            coordinates: data.origin.coordinates,
+          },
+          destination: {
+            name: data.destination.name,
+            country: data.destination.country,
+            coordinates: data.destination.coordinates,
+          },
+          totalNights: data.totalNights,
+          travellerType: data.travellerType,
+        }),
+      });
 
-      // Generate mock suggested cities along the route
-      mockRoute.suggestedCities = generateMockCities(
-        mockRoute.origin,
-        mockRoute.destination,
-        data.totalNights
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ City suggestions received:', result);
+
+      // Transform API response to DiscoveryCity format
+      const suggestedCities: DiscoveryCity[] = await Promise.all(
+        (result.cities || []).map(async (city: any, index: number) => {
+          // Fetch hidden gems for each city (in parallel)
+          let places: DiscoveryPlace[] = [];
+          let placeCount = city.hiddenGemCount || 20;
+
+          try {
+            const hiddenGems = await searchHiddenGemsInCity(
+              city.name,
+              { lat: city.coordinates.lat, lng: city.coordinates.lng },
+              { limit: 10 }
+            );
+            places = hiddenGems.places.map((place) => ({
+              id: place.placeId,
+              name: place.name,
+              type: place.types[0] || 'attraction',
+              rating: place.rating,
+              reviewCount: place.reviewCount,
+              isHiddenGem: place.isHiddenGem,
+              description: place.editorialSummary,
+              priceLevel: place.priceLevel || undefined,
+            }));
+            placeCount = hiddenGems.totalCount || places.length;
+          } catch (err) {
+            console.warn(`Could not fetch places for ${city.name}:`, err);
+            // Use fallback places if API fails
+            places = generateMockPlaces(city.name, index);
+          }
+
+          return {
+            id: `city-${index}`,
+            name: city.name,
+            country: city.country,
+            description: city.description || `Discover ${city.name}`,
+            placeCount,
+            coordinates: {
+              lat: city.coordinates.lat,
+              lng: city.coordinates.lng,
+            },
+            isSelected: index === 0, // First suggestion selected by default
+            isFixed: false,
+            suggestedNights: city.suggestedNights || 1,
+            distanceFromRoute: city.distanceFromRouteKm || 0,
+            places,
+          };
+        })
       );
 
-      setRoute(mockRoute);
+      discoveryRoute.suggestedCities = suggestedCities;
+
+      // Also try to get places for origin and destination
+      try {
+        const originPlaces = await searchHiddenGemsInCity(
+          data.origin.name,
+          { lat: data.origin.coordinates[0], lng: data.origin.coordinates[1] },
+          { limit: 5 }
+        );
+        discoveryRoute.origin.placeCount = originPlaces.totalCount || originPlaces.places.length;
+        discoveryRoute.origin.places = originPlaces.places.map((place) => ({
+          id: place.placeId,
+          name: place.name,
+          type: place.types[0] || 'attraction',
+          rating: place.rating,
+          reviewCount: place.reviewCount,
+          isHiddenGem: place.isHiddenGem,
+        }));
+      } catch (err) {
+        console.warn('Could not fetch origin places:', err);
+        discoveryRoute.origin.placeCount = 42;
+      }
+
+      try {
+        const destPlaces = await searchHiddenGemsInCity(
+          data.destination.name,
+          { lat: data.destination.coordinates[0], lng: data.destination.coordinates[1] },
+          { limit: 5 }
+        );
+        discoveryRoute.destination.placeCount = destPlaces.totalCount || destPlaces.places.length;
+        discoveryRoute.destination.places = destPlaces.places.map((place) => ({
+          id: place.placeId,
+          name: place.name,
+          type: place.types[0] || 'attraction',
+          rating: place.rating,
+          reviewCount: place.reviewCount,
+          isHiddenGem: place.isHiddenGem,
+        }));
+      } catch (err) {
+        console.warn('Could not fetch destination places:', err);
+        discoveryRoute.destination.placeCount = 67;
+      }
+
+      setRoute(discoveryRoute);
 
       // Add welcome message from companion
       addCompanionMessage({
         type: 'assistant',
-        content: `I've found ${mockRoute.suggestedCities.length} amazing stops along your route from ${data.origin.name} to ${data.destination.name}. Each one has been chosen for its unique character and hidden gems. Tap any city to explore!`,
+        content: `I've found ${discoveryRoute.suggestedCities.length} amazing stops along your route from ${data.origin.name} to ${data.destination.name}. Each one has been chosen for its unique character and hidden gems. Tap any city to explore!`,
       });
 
       setPhase('exploring');
     } catch (err) {
       console.error('Failed to fetch suggested cities:', err);
-      setPhase('exploring'); // Continue with empty suggestions
+      // Fallback to mock data if API fails
+      await fetchSuggestedCitiesFallback(data);
     }
+  };
+
+  // Fallback function using mock data if API fails
+  const fetchSuggestedCitiesFallback = async (data: any) => {
+    console.warn('⚠️ Using fallback mock data for city suggestions');
+
+    const mockRoute: DiscoveryRoute = {
+      origin: {
+        id: 'origin',
+        name: data.origin.name,
+        country: data.origin.country,
+        coordinates: {
+          lat: data.origin.coordinates[0],
+          lng: data.origin.coordinates[1],
+        },
+        isSelected: true,
+        isFixed: true,
+        suggestedNights: 1,
+        placeCount: 42,
+        description: 'Your starting point',
+      },
+      destination: {
+        id: 'destination',
+        name: data.destination.name,
+        country: data.destination.country,
+        coordinates: {
+          lat: data.destination.coordinates[0],
+          lng: data.destination.coordinates[1],
+        },
+        isSelected: true,
+        isFixed: true,
+        suggestedNights: 2,
+        placeCount: 67,
+        description: 'Your final destination',
+      },
+      suggestedCities: generateMockCities(
+        { coordinates: { lat: data.origin.coordinates[0], lng: data.origin.coordinates[1] } },
+        { coordinates: { lat: data.destination.coordinates[0], lng: data.destination.coordinates[1] } },
+        data.totalNights
+      ),
+      totalDistanceKm: 0,
+      totalDrivingMinutes: 0,
+    };
+
+    setRoute(mockRoute);
+    addCompanionMessage({
+      type: 'assistant',
+      content: `I've found ${mockRoute.suggestedCities.length} amazing stops along your route from ${data.origin.name} to ${data.destination.name}. Each one has been chosen for its unique character and hidden gems. Tap any city to explore!`,
+    });
+    setPhase('exploring');
   };
 
   // Handle city selection on map

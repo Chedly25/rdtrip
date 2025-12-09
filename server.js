@@ -3093,6 +3093,127 @@ Return ONLY valid JSON with no markdown:
 });
 
 /**
+ * POST /api/discover-cities
+ * Get AI-powered city suggestions for the Discovery phase
+ * Simplified endpoint that just needs origin, destination, and nights
+ */
+app.post('/api/discover-cities', async (req, res) => {
+  try {
+    const {
+      origin,          // { name, country, coordinates: [lat, lng] }
+      destination,     // { name, country, coordinates: [lat, lng] }
+      totalNights,     // number
+      travellerType    // 'solo' | 'couple' | 'family' | 'friends' | 'group'
+    } = req.body;
+
+    console.log('🔍 Discovery phase - city suggestions:', {
+      from: origin?.name,
+      to: destination?.name,
+      nights: totalNights,
+      traveller: travellerType
+    });
+
+    if (!origin?.name || !destination?.name || !totalNights) {
+      return res.status(400).json({
+        error: 'Origin, destination, and totalNights are required'
+      });
+    }
+
+    // Calculate how many cities to suggest based on trip length
+    const suggestedCityCount = Math.min(Math.max(2, Math.floor(totalNights / 2)), 5);
+
+    const travellerContext = {
+      solo: 'a solo traveler interested in culture and local experiences',
+      couple: 'a couple looking for romantic and memorable spots',
+      family: 'a family with children seeking family-friendly activities',
+      friends: 'a group of friends looking for fun and adventure',
+      group: 'a larger group seeking diverse experiences'
+    };
+
+    const prompt = `You are a travel expert helping plan a road trip from ${origin.name}, ${origin.country} to ${destination.name}, ${destination.country}.
+
+TRIP DETAILS:
+- Total nights: ${totalNights}
+- Traveler type: ${travellerContext[travellerType] || 'travelers'}
+- Distance is a road trip (driving)
+
+Suggest ${suggestedCityCount} cities to stop at along the route. These should be:
+1. Geographically logical stops between origin and destination
+2. Interesting places worth visiting (not just highway stops)
+3. Mix of well-known and hidden gem cities
+4. Appropriate for ${travellerType} travelers
+
+Return ONLY valid JSON with no markdown:
+{
+  "cities": [
+    {
+      "name": "City Name",
+      "country": "Country",
+      "coordinates": { "lat": 0.0, "lng": 0.0 },
+      "description": "One compelling sentence about why this city is worth visiting",
+      "suggestedNights": 1,
+      "highlights": ["3-4 key attractions or experiences"],
+      "hiddenGemCount": 15,
+      "distanceFromRouteKm": 0
+    }
+  ]
+}`;
+
+    const response = await fetch('https://api.perplexity.ai/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${PERPLEXITY_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'sonar',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a travel expert. Return ONLY valid JSON with no markdown formatting, no code blocks. Ensure all coordinates are accurate.'
+          },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.7,
+        max_tokens: 2000
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Perplexity API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const content = data.choices[0].message.content;
+
+    // Clean markdown if present
+    const jsonContent = content
+      .replace(/```json\n?/g, '')
+      .replace(/```\n?/g, '')
+      .trim();
+
+    const result = JSON.parse(jsonContent);
+
+    console.log(`✅ Generated ${result.cities?.length || 0} city suggestions`);
+
+    res.json({
+      origin: origin.name,
+      destination: destination.name,
+      cities: result.cities || [],
+      totalNights,
+      travellerType
+    });
+
+  } catch (error) {
+    console.error('❌ City discovery failed:', error);
+    res.status(500).json({
+      error: 'Failed to discover cities',
+      message: error.message
+    });
+  }
+});
+
+/**
  * POST /api/route/parse-command
  * Parse natural language commands for route modification
  */
