@@ -32,14 +32,10 @@ import { ErrorBoundary } from './components/ErrorBoundary'
 
 // Landing page components
 import { Navigation } from './components/landing/Navigation'
-import { Hero } from './components/landing/Hero'
-import { WorkflowShowcase } from './components/landing/WorkflowShowcase'
-import { BeforeAfterComparison } from './components/landing/BeforeAfterComparison'
-import { DestinationShowcase } from './components/landing/DestinationShowcase'
-import { Features } from './components/landing/Features'
-import { RouteForm } from './components/landing/RouteForm'
-import { About } from './components/landing/About'
 import { Footer } from './components/landing/Footer'
+
+// Entry form - Simplified 4-input form (WI-0.1)
+import { NewTripPage } from './components/entry/NewTripPage'
 
 // Lazy-loaded pages for better performance
 const MyRoutes = lazy(() => import('./pages/MyRoutes'))
@@ -59,20 +55,15 @@ const queryClient = new QueryClient({
 })
 
 /**
- * Landing Page - Main marketing/entry point
+ * Landing Page - Simplified entry form (WI-0.1)
+ * Just 4 inputs: origin, destination, dates, traveller type
+ * Everything else is gathered later through the companion
  */
 function LandingPage() {
   return (
     <>
       <Navigation />
-      <Hero />
-      <WorkflowShowcase />
-      <BeforeAfterComparison />
-      <DestinationShowcase />
-      <RouteForm />
-      <Features />
-      <About />
-      <Footer />
+      <NewTripPage />
     </>
   )
 }
