@@ -274,7 +274,7 @@ export function DiscoveryMap({
   }, [route, selectedCityId, isMapLoaded, updateMarkers, drawRouteLine]);
 
   return (
-    <div className="relative w-full h-full">
+    <div className="absolute inset-0">
       {/* Map container */}
       <div ref={mapContainer} className="absolute inset-0" />
 
