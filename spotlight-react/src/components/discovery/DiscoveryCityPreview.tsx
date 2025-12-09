@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, MapPin, Gem, Moon, Plus, ChevronRight, ChevronDown, Sparkles } from 'lucide-react';
 import type { DiscoveryCity } from '../../stores/discoveryStore';
 import { useDiscoveryStore } from '../../stores/discoveryStore';
 import { PlaceCard } from './PlaceCard';
 import { HotelBookingCard } from '../booking';
+import { fetchCityImage } from '../../services/cityImages';
 
 interface DiscoveryCityPreviewProps {
   city: DiscoveryCity | null;
@@ -34,9 +35,34 @@ export function DiscoveryCityPreview({
   onToggleSelection,
 }: DiscoveryCityPreviewProps) {
   const [showAllPlaces, setShowAllPlaces] = useState(false);
+  const [cityImage, setCityImage] = useState<string | null>(null);
+  const [imageLoading, setImageLoading] = useState(false);
 
   // Get favourites state from store
   const { isPlaceFavourited, togglePlaceFavourite } = useDiscoveryStore();
+
+  // Fetch city image when city changes
+  useEffect(() => {
+    if (!city) return;
+
+    // Reset image state for new city
+    setCityImage(null);
+    setImageLoading(true);
+
+    // Fetch the image
+    const loadImage = async () => {
+      try {
+        const imageUrl = await fetchCityImage(city.name, city.country);
+        setCityImage(imageUrl);
+      } catch (error) {
+        console.error('Failed to fetch city image:', error);
+      } finally {
+        setImageLoading(false);
+      }
+    };
+
+    loadImage();
+  }, [city?.name, city?.country]);
 
   if (!city) return null;
 
@@ -93,25 +119,54 @@ export function DiscoveryCityPreview({
           <div
             className="
               relative h-40 md:h-48
-              bg-gradient-to-br from-rui-sage/30 to-rui-golden/30
               flex-shrink-0
+              overflow-hidden
             "
           >
-            {/* Background image or placeholder pattern */}
-            {city.imageUrl ? (
-              <img
-                src={city.imageUrl}
+            {/* Background - beautiful gradient fallback */}
+            <div
+              className="absolute inset-0"
+              style={{
+                background: 'linear-gradient(135deg, #8BA38B 0%, #A67C52 50%, #C45830 100%)',
+              }}
+            />
+
+            {/* Loading shimmer */}
+            {imageLoading && (
+              <div className="absolute inset-0 overflow-hidden">
+                <div
+                  className="absolute inset-0 animate-pulse"
+                  style={{
+                    background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)',
+                    animation: 'shimmer 1.5s infinite',
+                  }}
+                />
+              </div>
+            )}
+
+            {/* Actual city image */}
+            {(cityImage || city.imageUrl) && (
+              <motion.img
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
+                src={cityImage || city.imageUrl}
                 alt={city.name}
                 className="absolute inset-0 w-full h-full object-cover"
-              />
-            ) : (
-              <div
-                className="absolute inset-0 opacity-10"
-                style={{
-                  backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+                onError={(e) => {
+                  // Hide broken image
+                  (e.target as HTMLImageElement).style.display = 'none';
                 }}
               />
             )}
+
+            {/* Subtle texture overlay for visual interest */}
+            <div
+              className="absolute inset-0 opacity-20"
+              style={{
+                backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='0.15'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+              }}
+            />
 
             {/* City type badge */}
             <div
