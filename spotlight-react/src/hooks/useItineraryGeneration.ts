@@ -5,6 +5,7 @@ import type { PartialItinerary } from '../components/itinerary/ProgressiveItiner
 
 interface Itinerary {
   id: string;
+  routeId?: string;
   dayStructure: any[];
   activities: any[];
   restaurants: any[];
