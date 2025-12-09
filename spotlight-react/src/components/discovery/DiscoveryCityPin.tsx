@@ -46,10 +46,12 @@ export function DiscoveryCityPin({
   const [isHovered, setIsHovered] = useState(false);
 
   // Determine visual state
+  // Priority: fixed > added > selected > hovered > default
+  // This ensures cities in the trip always show terracotta, even when selected for preview
   const getState = (): PinState => {
     if (city.isFixed) return 'fixed';
+    if (city.isSelected) return 'added'; // Added cities always show terracotta
     if (isSelected) return 'selected';
-    if (city.isSelected) return 'added';
     if (isHovered) return 'hovered';
     return 'default';
   };
