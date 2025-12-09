@@ -2,6 +2,7 @@
  * UpgradePrompt
  *
  * WI-10.6: Premium upgrade prompt component
+ * WI-11.1: Updated to use RUI design system tokens
  *
  * Design Philosophy:
  * - INVITING, not pushy - "join us" rather than "you're missing out"
@@ -134,12 +135,12 @@ function FeatureHighlight({ feature }: { feature: SubscriptionFeature }) {
       animate={{ opacity: 1, x: 0 }}
       className="flex items-center gap-3"
     >
-      <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center">
-        <Icon className="w-4 h-4 text-amber-700" />
+      <div className="w-8 h-8 rounded-rui-8 bg-warning/15 flex items-center justify-center">
+        <Icon className="w-4 h-4 text-warning" />
       </div>
       <div>
-        <p className="text-sm font-medium text-stone-800">{config.label}</p>
-        <p className="text-xs text-stone-500">{config.description}</p>
+        <p className="text-body-2 font-medium text-rui-black">{config.label}</p>
+        <p className="text-body-3 text-rui-grey-50">{config.description}</p>
       </div>
     </motion.div>
   );
@@ -158,25 +159,25 @@ function PricingToggle({
     <div className="flex items-center justify-center gap-2">
       <button
         onClick={() => onToggle('monthly')}
-        className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all ${
+        className={`px-3 py-1.5 text-body-2 font-medium rounded-rui-8 transition-all duration-rui-sm ${
           period === 'monthly'
-            ? 'bg-white text-stone-800 shadow-sm'
-            : 'text-stone-500 hover:text-stone-700'
+            ? 'bg-rui-white text-rui-black shadow-rui-1'
+            : 'text-rui-grey-50 hover:text-rui-black'
         }`}
       >
         Monthly
       </button>
       <button
         onClick={() => onToggle('yearly')}
-        className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all flex items-center gap-1.5 ${
+        className={`px-3 py-1.5 text-body-2 font-medium rounded-rui-8 transition-all duration-rui-sm flex items-center gap-1.5 ${
           period === 'yearly'
-            ? 'bg-white text-stone-800 shadow-sm'
-            : 'text-stone-500 hover:text-stone-700'
+            ? 'bg-rui-white text-rui-black shadow-rui-1'
+            : 'text-rui-grey-50 hover:text-rui-black'
         }`}
       >
         Yearly
         {savings > 0 && (
-          <span className="text-[10px] font-bold text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded-full">
+          <span className="text-[10px] font-bold text-warning bg-warning/15 px-1.5 py-0.5 rounded-full">
             -{savings}%
           </span>
         )}
@@ -222,7 +223,7 @@ export function UpgradePrompt({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={handleDismiss}
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50"
+            className="fixed inset-0 bg-rui-black/40 backdrop-blur-sm z-50"
           />
 
           {/* Modal */}
@@ -239,12 +240,12 @@ export function UpgradePrompt({
               ${className}
             `}
           >
-            <div className="relative overflow-hidden rounded-3xl bg-white shadow-2xl">
-              {/* Premium gradient header */}
+            <div className="relative overflow-hidden rounded-rui-24 bg-rui-white shadow-rui-4">
+              {/* Premium gradient header - using warning (gold) color */}
               <div
                 className="relative h-32 overflow-hidden"
                 style={{
-                  background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 50%, #B45309 100%)',
+                  background: 'linear-gradient(135deg, #D4A853 0%, #C45830 100%)',
                 }}
               >
                 {/* Decorative pattern */}
@@ -263,8 +264,8 @@ export function UpgradePrompt({
                   transition={{ delay: 0.2 }}
                   className="absolute top-6 left-1/2 -translate-x-1/2"
                 >
-                  <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                    <Crown className="w-8 h-8 text-white" />
+                  <div className="w-16 h-16 rounded-rui-16 bg-rui-white/20 backdrop-blur-sm flex items-center justify-center">
+                    <Crown className="w-8 h-8 text-rui-white" />
                   </div>
                 </motion.div>
 
@@ -272,7 +273,7 @@ export function UpgradePrompt({
                 {prompt?.dismissible !== false && (
                   <button
                     onClick={handleDismiss}
-                    className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white transition-colors"
+                    className="absolute top-4 right-4 w-8 h-8 rounded-full bg-rui-white/20 hover:bg-rui-white/30 flex items-center justify-center text-rui-white transition-colors duration-rui-sm"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -280,16 +281,13 @@ export function UpgradePrompt({
               </div>
 
               {/* Content */}
-              <div className="p-6">
+              <div className="p-rui-24">
                 {/* Title */}
                 <div className="text-center mb-6">
-                  <h2
-                    className="text-2xl font-bold text-stone-900 mb-2"
-                    style={{ fontFamily: "'Fraunces', Georgia, serif" }}
-                  >
+                  <h2 className="font-display text-heading-2 text-rui-black mb-2">
                     {prompt?.title || 'Upgrade to Premium'}
                   </h2>
-                  <p className="text-stone-600 text-sm">
+                  <p className="text-body-2 text-rui-grey-50">
                     {prompt?.description || 'Unlock the full Waycraft experience'}
                   </p>
                 </div>
@@ -309,24 +307,24 @@ export function UpgradePrompt({
                 </div>
 
                 {/* Pricing section */}
-                <div className="bg-stone-50 rounded-2xl p-4 mb-6">
+                <div className="bg-rui-grey-5 rounded-rui-16 p-rui-16 mb-6">
                   <PricingToggle period={billingPeriod} onToggle={setBillingPeriod} />
 
                   <div className="text-center mt-4">
                     {billingPeriod === 'monthly' ? (
                       <>
                         <div className="flex items-baseline justify-center gap-1">
-                          <span className="text-3xl font-bold text-stone-900">{monthlyPrice}</span>
-                          <span className="text-stone-500">/month</span>
+                          <span className="text-display-3 text-rui-black">{monthlyPrice}</span>
+                          <span className="text-body-2 text-rui-grey-50">/month</span>
                         </div>
                       </>
                     ) : (
                       <>
                         <div className="flex items-baseline justify-center gap-1">
-                          <span className="text-3xl font-bold text-stone-900">{yearlyPrice}</span>
-                          <span className="text-stone-500">/year</span>
+                          <span className="text-display-3 text-rui-black">{yearlyPrice}</span>
+                          <span className="text-body-2 text-rui-grey-50">/year</span>
                         </div>
-                        <p className="text-xs text-stone-500 mt-1">
+                        <p className="text-body-3 text-rui-grey-50 mt-1">
                           Just {monthlyEquivalent}/month, billed annually
                         </p>
                       </>
@@ -339,11 +337,7 @@ export function UpgradePrompt({
                   onClick={handleUpgrade}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className="w-full py-4 rounded-2xl font-semibold text-white shadow-lg transition-all"
-                  style={{
-                    background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
-                    boxShadow: '0 8px 24px -4px rgba(245, 158, 11, 0.4)',
-                  }}
+                  className="w-full py-4 rounded-rui-16 text-emphasis-1 text-rui-white shadow-accent transition-all duration-rui-sm accent-gradient"
                 >
                   {prompt?.ctaText || 'Upgrade to Premium'}
                 </motion.button>
@@ -352,17 +346,17 @@ export function UpgradePrompt({
                 {prompt?.dismissible !== false && (
                   <button
                     onClick={handleDismiss}
-                    className="w-full mt-3 py-2 text-sm text-stone-500 hover:text-stone-700 transition-colors"
+                    className="w-full mt-3 py-2 text-body-2 text-rui-grey-50 hover:text-rui-black transition-colors duration-rui-sm"
                   >
                     Maybe later
                   </button>
                 )}
 
                 {/* Trust badge */}
-                <div className="flex items-center justify-center gap-2 mt-4 text-xs text-stone-400">
+                <div className="flex items-center justify-center gap-2 mt-4 text-body-3 text-rui-grey-20">
                   <Check className="w-3 h-3" />
                   <span>Cancel anytime</span>
-                  <span className="w-1 h-1 rounded-full bg-stone-300" />
+                  <span className="w-1 h-1 rounded-full bg-rui-grey-20" />
                   <span>Instant access</span>
                 </div>
               </div>
@@ -402,21 +396,21 @@ export function UpgradePromptInline({
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       className={`
-        flex items-center justify-between gap-4 p-4
-        bg-gradient-to-r from-amber-50 to-amber-100/50
-        border border-amber-200/50 rounded-2xl
+        flex items-center justify-between gap-4 p-rui-16
+        bg-gradient-to-r from-warning/10 to-rui-accent-light
+        border border-warning/20 rounded-rui-16
         ${className}
       `}
     >
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-amber-200/50 flex items-center justify-center">
-          <Crown className="w-5 h-5 text-amber-700" />
+        <div className="w-10 h-10 rounded-rui-12 bg-warning/15 flex items-center justify-center">
+          <Crown className="w-5 h-5 text-warning" />
         </div>
         <div>
-          <p className="text-sm font-medium text-stone-800">
+          <p className="text-body-2 font-medium text-rui-black">
             {message || 'Unlock more with Premium'}
           </p>
-          <p className="text-xs text-stone-500">
+          <p className="text-body-3 text-rui-grey-50">
             Unlimited AI, offline mode & more
           </p>
         </div>
@@ -426,10 +420,7 @@ export function UpgradePromptInline({
         onClick={handleUpgrade}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
-        className="px-4 py-2 rounded-xl font-medium text-white text-sm"
-        style={{
-          background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
-        }}
+        className="px-rui-16 py-rui-8 rounded-rui-12 font-medium text-rui-white text-body-2 accent-gradient"
       >
         Upgrade
       </motion.button>
@@ -468,39 +459,39 @@ export function UsageLimitBanner({
       initial={{ opacity: 0, height: 0 }}
       animate={{ opacity: 1, height: 'auto' }}
       className={`
-        p-3 rounded-xl border
+        p-3 rounded-rui-12 border
         ${isExhausted
-          ? 'bg-rose-50 border-rose-200'
-          : 'bg-amber-50 border-amber-200'
+          ? 'bg-danger/10 border-danger/20'
+          : 'bg-warning/10 border-warning/20'
         }
         ${className}
       `}
     >
       <div className="flex items-center justify-between mb-2">
-        <span className={`text-sm font-medium ${isExhausted ? 'text-rose-700' : 'text-amber-700'}`}>
+        <span className={`text-body-2 font-medium ${isExhausted ? 'text-danger' : 'text-warning'}`}>
           {isExhausted
             ? `${resourceLabel} limit reached`
             : `${remaining} ${resourceLabel} remaining`
           }
         </span>
-        <span className="text-xs text-stone-500">
+        <span className="text-body-3 text-rui-grey-50">
           {used}/{limit}
         </span>
       </div>
 
       {/* Progress bar */}
-      <div className="h-1.5 bg-white rounded-full overflow-hidden">
+      <div className="h-1.5 bg-rui-white rounded-full overflow-hidden">
         <motion.div
           initial={{ width: 0 }}
           animate={{ width: `${percentage}%` }}
           className={`h-full rounded-full ${
-            isExhausted ? 'bg-rose-400' : 'bg-amber-400'
+            isExhausted ? 'bg-danger' : 'bg-warning'
           }`}
         />
       </div>
 
       {isExhausted && (
-        <p className="mt-2 text-xs text-rose-600">
+        <p className="mt-2 text-body-3 text-danger">
           Upgrade to Premium for unlimited {resourceLabel.toLowerCase()}
         </p>
       )}

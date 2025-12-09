@@ -2,6 +2,7 @@
  * MonetisationDashboard
  *
  * WI-10.7: Analytics dashboard for monetisation metrics
+ * WI-11.1: Updated to use RUI design system tokens
  *
  * Displays:
  * - Subscription metrics (trials, conversions, churn)
@@ -83,16 +84,16 @@ function PeriodSelector({
   ];
 
   return (
-    <div className="flex items-center gap-1 bg-stone-100 rounded-lg p-1">
+    <div className="flex items-center gap-1 bg-rui-grey-8 rounded-rui-12 p-1">
       {periods.map((period) => (
         <button
           key={period.value}
           onClick={() => onChange(period.value)}
           className={`
-            px-3 py-1.5 text-sm font-medium rounded-md transition-all
+            px-3 py-1.5 text-body-2 font-medium rounded-rui-8 transition-all duration-rui-sm
             ${value === period.value
-              ? 'bg-white text-stone-800 shadow-sm'
-              : 'text-stone-500 hover:text-stone-700'
+              ? 'bg-rui-white text-rui-black shadow-rui-1'
+              : 'text-rui-grey-50 hover:text-rui-black'
             }
           `}
         >
@@ -109,40 +110,40 @@ function MetricCard({
   subtitle,
   icon: Icon,
   trend,
-  color = 'stone',
+  color = 'neutral',
 }: {
   title: string;
   value: string | number;
   subtitle?: string;
   icon: typeof TrendingUp;
   trend?: 'up' | 'down' | 'neutral';
-  color?: 'stone' | 'amber' | 'green' | 'rose';
+  color?: 'neutral' | 'warning' | 'success' | 'danger';
 }) {
   const colorClasses = {
-    stone: 'bg-stone-50 text-stone-600',
-    amber: 'bg-amber-50 text-amber-600',
-    green: 'bg-emerald-50 text-emerald-600',
-    rose: 'bg-rose-50 text-rose-600',
+    neutral: 'bg-rui-grey-5 text-rui-grey-50',
+    warning: 'bg-warning/10 text-warning',
+    success: 'bg-success/10 text-success',
+    danger: 'bg-danger/10 text-danger',
   };
 
   const trendIcon = trend === 'up'
-    ? <ArrowUpRight className="w-4 h-4 text-emerald-500" />
+    ? <ArrowUpRight className="w-4 h-4 text-success" />
     : trend === 'down'
-    ? <ArrowDownRight className="w-4 h-4 text-rose-500" />
+    ? <ArrowDownRight className="w-4 h-4 text-danger" />
     : null;
 
   return (
-    <div className="bg-white rounded-xl border border-stone-200 p-4">
+    <div className="bg-rui-white rounded-rui-16 border border-rui-grey-10 p-rui-16 shadow-rui-1 hover:shadow-rui-2 transition-shadow duration-rui-sm">
       <div className="flex items-center justify-between mb-3">
-        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${colorClasses[color]}`}>
+        <div className={`w-10 h-10 rounded-rui-12 flex items-center justify-center ${colorClasses[color]}`}>
           <Icon className="w-5 h-5" />
         </div>
         {trendIcon}
       </div>
-      <p className="text-2xl font-bold text-stone-900">{value}</p>
-      <p className="text-sm text-stone-500">{title}</p>
+      <p className="text-heading-2 text-rui-black">{value}</p>
+      <p className="text-body-2 text-rui-grey-50">{title}</p>
       {subtitle && (
-        <p className="text-xs text-stone-400 mt-1">{subtitle}</p>
+        <p className="text-body-3 text-rui-grey-20 mt-1">{subtitle}</p>
       )}
     </div>
   );
@@ -157,7 +158,7 @@ function BarChart({
 }) {
   if (data.length === 0) {
     return (
-      <div className="flex items-center justify-center text-stone-400 text-sm" style={{ height }}>
+      <div className="flex items-center justify-center text-rui-grey-20 text-body-2" style={{ height }}>
         No data
       </div>
     );
@@ -174,10 +175,10 @@ function BarChart({
             <motion.div
               initial={{ height: 0 }}
               animate={{ height: barHeight }}
-              transition={{ delay: i * 0.05, duration: 0.3 }}
-              className="w-full bg-amber-400 rounded-t-sm"
+              transition={{ delay: i * 0.05, duration: 0.3, ease: [0.15, 0.5, 0.5, 1] }}
+              className="w-full bg-warning rounded-t-sm"
             />
-            <span className="text-[10px] text-stone-500 truncate w-full text-center">
+            <span className="text-[10px] text-rui-grey-50 truncate w-full text-center">
               {item.label}
             </span>
           </div>
@@ -190,7 +191,7 @@ function BarChart({
 function MiniLineChart({
   data,
   height = 60,
-  color = '#F59E0B',
+  color = '#D4A853', // warning color
 }: {
   data: number[];
   height?: number;
@@ -198,7 +199,7 @@ function MiniLineChart({
 }) {
   if (data.length < 2) {
     return (
-      <div className="flex items-center justify-center text-stone-400 text-xs" style={{ height }}>
+      <div className="flex items-center justify-center text-rui-grey-20 text-body-3" style={{ height }}>
         Not enough data
       </div>
     );
@@ -253,21 +254,21 @@ function DataTable({
 
   if (entries.length === 0) {
     return (
-      <div className="bg-white rounded-xl border border-stone-200 p-4">
-        <h3 className="text-sm font-semibold text-stone-700 mb-3">{title}</h3>
-        <p className="text-sm text-stone-400">No data yet</p>
+      <div className="bg-rui-white rounded-rui-16 border border-rui-grey-10 p-rui-16 shadow-rui-1">
+        <h3 className="text-emphasis-2 text-rui-black mb-3">{title}</h3>
+        <p className="text-body-2 text-rui-grey-20">No data yet</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-xl border border-stone-200 p-4">
-      <h3 className="text-sm font-semibold text-stone-700 mb-3">{title}</h3>
+    <div className="bg-rui-white rounded-rui-16 border border-rui-grey-10 p-rui-16 shadow-rui-1">
+      <h3 className="text-emphasis-2 text-rui-black mb-3">{title}</h3>
       <div className="space-y-2">
         {entries.slice(0, 5).map(([key, value]) => (
           <div key={key} className="flex items-center justify-between">
-            <span className="text-sm text-stone-600 capitalize">{key.replace(/_/g, ' ')}</span>
-            <span className="text-sm font-medium text-stone-800">{formatNumber(value)}</span>
+            <span className="text-body-2 text-rui-grey-50 capitalize">{key.replace(/_/g, ' ')}</span>
+            <span className="text-body-2 font-medium text-rui-black">{formatNumber(value)}</span>
           </div>
         ))}
       </div>
@@ -307,28 +308,25 @@ export function MonetisationDashboard({ className = '' }: MonetisationDashboardP
     .slice(0, 6);
 
   return (
-    <div className={`min-h-screen bg-stone-50 ${className}`}>
+    <div className={`min-h-screen bg-rui-grey-2 ${className}`}>
       {/* Header */}
-      <div className="bg-white border-b border-stone-200 px-4 py-4 sticky top-0 z-10">
+      <div className="bg-rui-white border-b border-rui-grey-10 px-4 py-4 sticky top-0 z-10">
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center justify-between mb-4">
-            <h1
-              className="text-xl font-bold text-stone-900"
-              style={{ fontFamily: "'Fraunces', Georgia, serif" }}
-            >
+            <h1 className="font-display text-heading-2 text-rui-black">
               Monetisation Analytics
             </h1>
             <div className="flex items-center gap-2">
               <button
                 onClick={handleRefresh}
-                className="p-2 rounded-lg hover:bg-stone-100 text-stone-500 transition-colors"
+                className="p-2 rounded-rui-8 hover:bg-rui-grey-5 text-rui-grey-50 transition-colors duration-rui-sm"
                 title="Refresh"
               >
                 <RefreshCw className="w-4 h-4" />
               </button>
               <button
                 onClick={handleExport}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-700 text-sm font-medium transition-colors"
+                className="flex items-center gap-2 px-3 py-2 rounded-rui-12 bg-rui-grey-5 hover:bg-rui-grey-8 text-rui-black text-body-2 font-medium transition-colors duration-rui-sm"
               >
                 <Download className="w-4 h-4" />
                 Export
@@ -342,7 +340,7 @@ export function MonetisationDashboard({ className = '' }: MonetisationDashboardP
       <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
         {/* Key Metrics */}
         <section>
-          <h2 className="text-sm font-semibold text-stone-500 uppercase tracking-wide mb-3">
+          <h2 className="text-emphasis-3 text-rui-grey-50 uppercase tracking-wide mb-3">
             Key Metrics
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -350,34 +348,34 @@ export function MonetisationDashboard({ className = '' }: MonetisationDashboardP
               title="Total Revenue"
               value={formatCurrency(data.subscription.totalRevenueCents)}
               icon={CreditCard}
-              color="green"
+              color="success"
             />
             <MetricCard
               title="Premium Subscribers"
               value={data.subscription.currentPremium}
               subtitle={`MRR: ${formatCurrency(data.subscription.mrrCents)}`}
               icon={Crown}
-              color="amber"
+              color="warning"
             />
             <MetricCard
               title="Affiliate Clicks"
               value={formatNumber(data.booking.totalClicks)}
               icon={MousePointerClick}
-              color="stone"
+              color="neutral"
             />
             <MetricCard
               title="Trial Conversion"
               value={formatPercent(data.subscription.trialConversionRate)}
               subtitle={`${data.subscription.trialsConverted}/${data.subscription.trialsStarted}`}
               icon={TrendingUp}
-              color={data.subscription.trialConversionRate > 0.3 ? 'green' : 'rose'}
+              color={data.subscription.trialConversionRate > 0.3 ? 'success' : 'danger'}
             />
           </div>
         </section>
 
         {/* Subscription Metrics */}
         <section>
-          <h2 className="text-sm font-semibold text-stone-500 uppercase tracking-wide mb-3">
+          <h2 className="text-emphasis-3 text-rui-grey-50 uppercase tracking-wide mb-3">
             Subscription
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -385,25 +383,25 @@ export function MonetisationDashboard({ className = '' }: MonetisationDashboardP
               title="Trials Started"
               value={data.subscription.trialsStarted}
               icon={Users}
-              color="stone"
+              color="neutral"
             />
             <MetricCard
               title="Trials Converted"
               value={data.subscription.trialsConverted}
               icon={TrendingUp}
-              color="green"
+              color="success"
             />
             <MetricCard
               title="Canceled"
               value={data.subscription.canceled}
               icon={TrendingDown}
-              color="rose"
+              color="danger"
             />
             <MetricCard
               title="Churn Rate"
               value={formatPercent(data.subscription.churnRate)}
               icon={BarChart3}
-              color={data.subscription.churnRate < 0.1 ? 'green' : 'rose'}
+              color={data.subscription.churnRate < 0.1 ? 'success' : 'danger'}
             />
           </div>
         </section>
@@ -411,20 +409,20 @@ export function MonetisationDashboard({ className = '' }: MonetisationDashboardP
         {/* Charts Row */}
         <section className="grid md:grid-cols-2 gap-4">
           {/* Revenue Trend */}
-          <div className="bg-white rounded-xl border border-stone-200 p-4">
-            <h3 className="text-sm font-semibold text-stone-700 mb-4">Revenue Trend</h3>
-            <MiniLineChart data={revenueData} height={80} color="#10B981" />
-            <div className="flex items-center justify-between mt-2 text-xs text-stone-500">
+          <div className="bg-rui-white rounded-rui-16 border border-rui-grey-10 p-rui-16 shadow-rui-1">
+            <h3 className="text-emphasis-2 text-rui-black mb-4">Revenue Trend</h3>
+            <MiniLineChart data={revenueData} height={80} color="#4A7C59" />
+            <div className="flex items-center justify-between mt-2 text-body-3 text-rui-grey-50">
               <span>{data.timeSeries[0]?.date || '-'}</span>
               <span>{data.timeSeries[data.timeSeries.length - 1]?.date || '-'}</span>
             </div>
           </div>
 
           {/* Clicks Trend */}
-          <div className="bg-white rounded-xl border border-stone-200 p-4">
-            <h3 className="text-sm font-semibold text-stone-700 mb-4">Affiliate Clicks</h3>
-            <MiniLineChart data={clicksData} height={80} color="#F59E0B" />
-            <div className="flex items-center justify-between mt-2 text-xs text-stone-500">
+          <div className="bg-rui-white rounded-rui-16 border border-rui-grey-10 p-rui-16 shadow-rui-1">
+            <h3 className="text-emphasis-2 text-rui-black mb-4">Affiliate Clicks</h3>
+            <MiniLineChart data={clicksData} height={80} color="#D4A853" />
+            <div className="flex items-center justify-between mt-2 text-body-3 text-rui-grey-50">
               <span>{data.timeSeries[0]?.date || '-'}</span>
               <span>{data.timeSeries[data.timeSeries.length - 1]?.date || '-'}</span>
             </div>
@@ -433,14 +431,14 @@ export function MonetisationDashboard({ className = '' }: MonetisationDashboardP
 
         {/* Partner Breakdown */}
         <section>
-          <h2 className="text-sm font-semibold text-stone-500 uppercase tracking-wide mb-3">
+          <h2 className="text-emphasis-3 text-rui-grey-50 uppercase tracking-wide mb-3">
             Clicks by Partner
           </h2>
-          <div className="bg-white rounded-xl border border-stone-200 p-4">
+          <div className="bg-rui-white rounded-rui-16 border border-rui-grey-10 p-rui-16 shadow-rui-1">
             {partnerData.length > 0 ? (
               <BarChart data={partnerData} height={120} />
             ) : (
-              <p className="text-sm text-stone-400 text-center py-8">No click data yet</p>
+              <p className="text-body-2 text-rui-grey-20 text-center py-8">No click data yet</p>
             )}
           </div>
         </section>
@@ -459,7 +457,7 @@ export function MonetisationDashboard({ className = '' }: MonetisationDashboardP
 
         {/* Upgrade Prompt Metrics */}
         <section>
-          <h2 className="text-sm font-semibold text-stone-500 uppercase tracking-wide mb-3">
+          <h2 className="text-emphasis-3 text-rui-grey-50 uppercase tracking-wide mb-3">
             Upgrade Prompts
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -467,32 +465,32 @@ export function MonetisationDashboard({ className = '' }: MonetisationDashboardP
               title="Prompts Shown"
               value={data.upgradePrompts.shown}
               icon={Users}
-              color="stone"
+              color="neutral"
             />
             <MetricCard
               title="CTA Clicked"
               value={data.upgradePrompts.clicked}
               icon={MousePointerClick}
-              color="green"
+              color="success"
             />
             <MetricCard
               title="Dismissed"
               value={data.upgradePrompts.dismissed}
               icon={TrendingDown}
-              color="rose"
+              color="danger"
             />
             <MetricCard
               title="Click-through Rate"
               value={formatPercent(data.upgradePrompts.ctr)}
               icon={TrendingUp}
-              color={data.upgradePrompts.ctr > 0.1 ? 'green' : 'stone'}
+              color={data.upgradePrompts.ctr > 0.1 ? 'success' : 'neutral'}
             />
           </div>
         </section>
 
         {/* Footer */}
-        <section className="text-center py-4 border-t border-stone-200">
-          <p className="text-xs text-stone-400">
+        <section className="text-center py-4 border-t border-rui-grey-10">
+          <p className="text-body-3 text-rui-grey-20">
             Data stored locally. Export for detailed analysis.
           </p>
         </section>

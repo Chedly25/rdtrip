@@ -1,5 +1,12 @@
+/**
+ * App.tsx
+ *
+ * Main application component with routing and providers.
+ * WI-11.2: Added page transitions between major phases.
+ */
+
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { BrowserRouter as Router, Routes, Route, Navigate, useSearchParams } from 'react-router-dom'
+import { BrowserRouter as Router, Route, Navigate, useSearchParams } from 'react-router-dom'
 import SpotlightV2 from './components/spotlight/v2/SpotlightV2'
 import { ItineraryGenerationPage } from './components/itinerary/ItineraryGenerationPage'
 import { TodayView } from './components/today/TodayView'
@@ -9,6 +16,7 @@ import { AgentProvider } from './contexts/AgentProvider'
 import { CompanionProvider } from './contexts/CompanionProvider'
 import { AuthProvider } from './contexts/AuthContext'
 import { AgentModal } from './components/agent/AgentModal'
+import { AnimatedRoutes, PageTransition } from './components/transitions'
 
 // Create a client
 const queryClient = new QueryClient({
@@ -31,7 +39,11 @@ function SmartRouteHandler() {
 
   // If there's a routeId or itinerary param, show SpotlightV2
   if (routeId || itineraryId) {
-    return <SpotlightV2 />;
+    return (
+      <PageTransition variant="scale">
+        <SpotlightV2 />
+      </PageTransition>
+    );
   }
 
   // Otherwise redirect to the new trip entry form
@@ -45,26 +57,61 @@ function App() {
         <Router basename="/spotlight-new">
           <AgentProvider>
             <CompanionProvider>
-              <Routes>
-                {/* New simplified entry flow - default for new trips */}
-                <Route path="/new" element={<NewTripPage />} />
+              <AnimatedRoutes>
+                {/* Entry Phase - New trip creation form */}
+                <Route
+                  path="/new"
+                  element={
+                    <PageTransition variant="fade">
+                      <NewTripPage />
+                    </PageTransition>
+                  }
+                />
 
-                {/* Discovery phase - explore suggested cities before itinerary */}
-                <Route path="/discover" element={<DiscoveryPhaseContainer />} />
+                {/* Discovery Phase - Explore suggested cities */}
+                <Route
+                  path="/discover"
+                  element={
+                    <PageTransition variant="slideRight">
+                      <DiscoveryPhaseContainer />
+                    </PageTransition>
+                  }
+                />
 
-                {/* Route generation progress */}
-                <Route path="/generate" element={<ItineraryGenerationPage />} />
+                {/* Generation Phase - AI itinerary creation */}
+                <Route
+                  path="/generate"
+                  element={
+                    <PageTransition variant="slideRight">
+                      <ItineraryGenerationPage />
+                    </PageTransition>
+                  }
+                />
 
-                {/* Today view for active trips */}
-                <Route path="/today" element={<TodayView />} />
+                {/* Today View - Active trip GPS-aware view */}
+                <Route
+                  path="/today"
+                  element={
+                    <PageTransition variant="slideUp">
+                      <TodayView />
+                    </PageTransition>
+                  }
+                />
 
-                {/* Spotlight view for existing routes (requires ?routeId=xxx) */}
-                <Route path="/spotlight" element={<SpotlightV2 />} />
+                {/* Spotlight View - Route planning & editing */}
+                <Route
+                  path="/spotlight"
+                  element={
+                    <PageTransition variant="scale">
+                      <SpotlightV2 />
+                    </PageTransition>
+                  }
+                />
 
                 {/* Smart handler: shows route if param exists, else redirects to /new */}
                 <Route path="/" element={<SmartRouteHandler />} />
                 <Route path="*" element={<SmartRouteHandler />} />
-              </Routes>
+              </AnimatedRoutes>
 
               {/* AI Agent Modal - Available for full-screen agent interactions */}
               <AgentModal />

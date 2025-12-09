@@ -55,7 +55,7 @@ export function AuthButton({ variant = 'full', className }: AuthButtonProps) {
               {user.avatarUrl ? (
                 <img
                   src={user.avatarUrl}
-                  alt={user.name || user.email}
+                  alt={user.displayName || user.email || 'User'}
                   className="h-full w-full rounded-lg object-cover"
                 />
               ) : (
@@ -68,7 +68,7 @@ export function AuthButton({ variant = 'full', className }: AuthButtonProps) {
                   className="hidden sm:inline text-sm font-medium max-w-[120px] truncate"
                   style={{ color: '#2C2417' }}
                 >
-                  {user.name || user.email.split('@')[0]}
+                  {user.displayName || user.email?.split('@')[0] || 'Traveler'}
                 </span>
                 <ChevronDown
                   className={cn(
@@ -109,7 +109,7 @@ export function AuthButton({ variant = 'full', className }: AuthButtonProps) {
                       className="text-sm font-semibold truncate"
                       style={{ color: '#2C2417' }}
                     >
-                      {user.name || 'Traveler'}
+                      {user.displayName || 'Traveler'}
                     </p>
                     <p
                       className="text-xs truncate"

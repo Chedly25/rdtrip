@@ -1,24 +1,30 @@
 /**
- * Login Modal - Editorial Design
+ * Guest Upgrade Prompt
  *
  * WI-12.3: Supabase Auth integration
  *
- * A warm, inviting authentication modal that matches the
- * "Wanderlust Editorial" design system - cream backgrounds,
- * Fraunces display type, terracotta accents.
- *
- * Features:
- * - Email/password sign in
- * - Google OAuth
- * - Guest mode
- * - Forgot password link
+ * Prompts guest users to create an account to:
+ * - Save their trips permanently
+ * - Sync across devices
+ * - Access premium features
  */
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
-import { X, Mail, Lock, AlertCircle, Compass, Eye, EyeOff } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
+import {
+  X,
+  Mail,
+  Lock,
+  User,
+  AlertCircle,
+  Sparkles,
+  Cloud,
+  Share2,
+  Eye,
+  EyeOff,
+} from 'lucide-react';
+import { useAuth, useGuestUpgradePrompt } from '../../contexts/AuthContext';
 import { cn } from '../../lib/utils';
 
 // Google icon as SVG
@@ -45,26 +51,50 @@ function GoogleIcon({ className }: { className?: string }) {
   );
 }
 
-interface LoginModalProps {
+interface GuestUpgradePromptProps {
   isOpen: boolean;
   onClose: () => void;
-  onSwitchToRegister: () => void;
-  onForgotPassword?: () => void;
+  trigger?: 'save' | 'sync' | 'share' | 'premium' | 'general';
 }
 
-export function LoginModal({
+const TRIGGER_MESSAGES: Record<string, { title: string; subtitle: string }> = {
+  save: {
+    title: 'Save Your Trip',
+    subtitle: 'Create an account to keep your trips forever',
+  },
+  sync: {
+    title: 'Sync Across Devices',
+    subtitle: 'Access your trips from any device',
+  },
+  share: {
+    title: 'Share Your Journey',
+    subtitle: 'Create an account to share trips with others',
+  },
+  premium: {
+    title: 'Unlock Premium Features',
+    subtitle: 'Create an account to access all features',
+  },
+  general: {
+    title: 'Upgrade Your Account',
+    subtitle: 'Keep your trips and unlock more features',
+  },
+};
+
+export function GuestUpgradePrompt({
   isOpen,
   onClose,
-  onSwitchToRegister,
-  onForgotPassword,
-}: LoginModalProps) {
-  const { login, loginWithGoogle, loginAsGuest } = useAuth();
+  trigger = 'general',
+}: GuestUpgradePromptProps) {
+  const { upgradeGuestAccount, loginWithGoogle } = useAuth();
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [loadingType, setLoadingType] = useState<'email' | 'google' | 'guest' | null>(null);
+  const [loadingType, setLoadingType] = useState<'email' | 'google' | null>(null);
+
+  const { title, subtitle } = TRIGGER_MESSAGES[trigger];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,44 +103,26 @@ export function LoginModal({
     setLoadingType('email');
 
     try {
-      await login(email, password);
+      await upgradeGuestAccount(email, password, name || undefined);
       onClose();
-      setEmail('');
-      setPassword('');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed');
+      setError(err instanceof Error ? err.message : 'Failed to upgrade account');
     } finally {
       setIsLoading(false);
       setLoadingType(null);
     }
   };
 
-  const handleGoogleLogin = async () => {
+  const handleGoogleUpgrade = async () => {
     setError('');
     setIsLoading(true);
     setLoadingType('google');
 
     try {
       await loginWithGoogle();
-      // OAuth redirects, so modal closes automatically on return
+      // OAuth redirects
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Google sign in failed');
-      setIsLoading(false);
-      setLoadingType(null);
-    }
-  };
-
-  const handleGuestLogin = async () => {
-    setError('');
-    setIsLoading(true);
-    setLoadingType('guest');
-
-    try {
-      await loginAsGuest();
-      onClose();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Guest login failed');
-    } finally {
+      setError(err instanceof Error ? err.message : 'Google sign up failed');
       setIsLoading(false);
       setLoadingType(null);
     }
@@ -119,6 +131,7 @@ export function LoginModal({
   const handleClose = () => {
     if (!isLoading) {
       onClose();
+      setName('');
       setEmail('');
       setPassword('');
       setError('');
@@ -131,7 +144,7 @@ export function LoginModal({
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop with warm blur */}
+          {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -163,7 +176,7 @@ export function LoginModal({
               <div
                 className="absolute top-0 left-0 right-0 h-1"
                 style={{
-                  background: 'linear-gradient(90deg, #C45830 0%, #D4A853 50%, #C45830 100%)',
+                  background: 'linear-gradient(90deg, #D4A853 0%, #C45830 50%, #D4A853 100%)',
                 }}
               />
 
@@ -180,13 +193,13 @@ export function LoginModal({
               <div className="px-8 pt-8 pb-6">
                 <div className="flex items-center gap-3 mb-4">
                   <div
-                    className="w-12 h-12 rounded-2xl flex items-center justify-center"
+                    className="w-12 h-12 rounded-2xl flex items-center justify-center relative"
                     style={{
                       background:
-                        'linear-gradient(135deg, rgba(196, 88, 48, 0.12) 0%, rgba(212, 168, 83, 0.12) 100%)',
+                        'linear-gradient(135deg, rgba(212, 168, 83, 0.15) 0%, rgba(196, 88, 48, 0.15) 100%)',
                     }}
                   >
-                    <Compass className="w-6 h-6" style={{ color: '#C45830' }} />
+                    <Sparkles className="w-6 h-6" style={{ color: '#D4A853' }} />
                   </div>
                   <div>
                     <h2
@@ -197,12 +210,33 @@ export function LoginModal({
                         letterSpacing: '-0.02em',
                       }}
                     >
-                      Welcome Back
+                      {title}
                     </h2>
                     <p className="text-sm" style={{ color: '#8B7355' }}>
-                      Sign in to access your journeys
+                      {subtitle}
                     </p>
                   </div>
+                </div>
+
+                {/* Benefits */}
+                <div className="space-y-2 mt-4">
+                  {[
+                    { icon: Cloud, text: 'Save trips permanently' },
+                    { icon: Share2, text: 'Share with friends & family' },
+                    { icon: Sparkles, text: 'Access premium features' },
+                  ].map(({ icon: Icon, text }) => (
+                    <div key={text} className="flex items-center gap-3">
+                      <div
+                        className="w-8 h-8 rounded-lg flex items-center justify-center"
+                        style={{ background: 'rgba(61, 122, 61, 0.1)' }}
+                      >
+                        <Icon className="w-4 h-4" style={{ color: '#3D7A3D' }} />
+                      </div>
+                      <span className="text-sm" style={{ color: '#2C2417' }}>
+                        {text}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
 
@@ -213,7 +247,7 @@ export function LoginModal({
               />
 
               {/* Form */}
-              <form onSubmit={handleSubmit} className="p-8 pt-6 space-y-5">
+              <form onSubmit={handleSubmit} className="p-8 pt-6 space-y-4">
                 {/* Error message */}
                 <AnimatePresence>
                   {error && (
@@ -238,70 +272,37 @@ export function LoginModal({
                   )}
                 </AnimatePresence>
 
-                {/* OAuth Buttons */}
-                <div className="space-y-3">
-                  {/* Google Sign In */}
-                  <motion.button
-                    type="button"
-                    onClick={handleGoogleLogin}
-                    disabled={isLoading}
-                    whileHover={{ scale: isLoading ? 1 : 1.01 }}
-                    whileTap={{ scale: isLoading ? 1 : 0.98 }}
-                    className={cn(
-                      'w-full flex items-center justify-center gap-3 rounded-xl py-3 font-medium',
-                      'transition-all duration-200',
-                      'disabled:opacity-50 disabled:cursor-not-allowed'
-                    )}
-                    style={{
-                      background: '#FFFFFF',
-                      border: '1px solid #E5DDD0',
-                      color: '#2C2417',
-                    }}
-                  >
-                    {loadingType === 'google' ? (
-                      <motion.div
-                        className="w-5 h-5 border-2 border-[#C45830]/30 border-t-[#C45830] rounded-full"
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                      />
-                    ) : (
-                      <GoogleIcon className="w-5 h-5" />
-                    )}
-                    Continue with Google
-                  </motion.button>
+                {/* Google Sign Up */}
+                <motion.button
+                  type="button"
+                  onClick={handleGoogleUpgrade}
+                  disabled={isLoading}
+                  whileHover={{ scale: isLoading ? 1 : 1.01 }}
+                  whileTap={{ scale: isLoading ? 1 : 0.98 }}
+                  className={cn(
+                    'w-full flex items-center justify-center gap-3 rounded-xl py-3 font-medium',
+                    'transition-all duration-200',
+                    'disabled:opacity-50 disabled:cursor-not-allowed'
+                  )}
+                  style={{
+                    background: '#FFFFFF',
+                    border: '1px solid #E5DDD0',
+                    color: '#2C2417',
+                  }}
+                >
+                  {loadingType === 'google' ? (
+                    <motion.div
+                      className="w-5 h-5 border-2 border-[#C45830]/30 border-t-[#C45830] rounded-full"
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                    />
+                  ) : (
+                    <GoogleIcon className="w-5 h-5" />
+                  )}
+                  Continue with Google
+                </motion.button>
 
-                  {/* Guest Mode */}
-                  <motion.button
-                    type="button"
-                    onClick={handleGuestLogin}
-                    disabled={isLoading}
-                    whileHover={{ scale: isLoading ? 1 : 1.01 }}
-                    whileTap={{ scale: isLoading ? 1 : 0.98 }}
-                    className={cn(
-                      'w-full flex items-center justify-center gap-2 rounded-xl py-3 font-medium',
-                      'transition-all duration-200',
-                      'disabled:opacity-50 disabled:cursor-not-allowed'
-                    )}
-                    style={{
-                      background: 'rgba(139, 115, 85, 0.08)',
-                      border: '1px solid transparent',
-                      color: '#8B7355',
-                    }}
-                  >
-                    {loadingType === 'guest' ? (
-                      <motion.div
-                        className="w-5 h-5 border-2 border-[#8B7355]/30 border-t-[#8B7355] rounded-full"
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                      />
-                    ) : (
-                      <Compass className="w-5 h-5" />
-                    )}
-                    Continue as Guest
-                  </motion.button>
-                </div>
-
-                {/* Divider with text */}
+                {/* Divider */}
                 <div className="relative py-2">
                   <div className="absolute inset-0 flex items-center">
                     <div className="w-full border-t" style={{ borderColor: '#E5DDD0' }} />
@@ -311,15 +312,49 @@ export function LoginModal({
                       className="px-4 text-sm"
                       style={{ background: '#FAF7F2', color: '#8B7355' }}
                     >
-                      or sign in with email
+                      or with email
                     </span>
+                  </div>
+                </div>
+
+                {/* Name */}
+                <div className="space-y-2">
+                  <label
+                    htmlFor="upgrade-name"
+                    className="block text-sm font-medium"
+                    style={{ color: '#2C2417' }}
+                  >
+                    Name <span style={{ color: '#8B7355' }}>(optional)</span>
+                  </label>
+                  <div className="relative">
+                    <User
+                      className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 pointer-events-none"
+                      style={{ color: '#8B7355' }}
+                    />
+                    <input
+                      id="upgrade-name"
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Your name"
+                      className={cn(
+                        'w-full rounded-xl py-3 pl-12 pr-4 text-[#2C2417] placeholder-[#C4B8A5]',
+                        'transition-all duration-200',
+                        'focus:outline-none focus:ring-2 focus:ring-[#C45830]'
+                      )}
+                      style={{
+                        background: '#F5F0E8',
+                        border: '1px solid #E5DDD0',
+                      }}
+                      disabled={isLoading}
+                    />
                   </div>
                 </div>
 
                 {/* Email */}
                 <div className="space-y-2">
                   <label
-                    htmlFor="login-email"
+                    htmlFor="upgrade-email"
                     className="block text-sm font-medium"
                     style={{ color: '#2C2417' }}
                   >
@@ -331,7 +366,7 @@ export function LoginModal({
                       style={{ color: '#8B7355' }}
                     />
                     <input
-                      id="login-email"
+                      id="upgrade-email"
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
@@ -353,36 +388,24 @@ export function LoginModal({
 
                 {/* Password */}
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label
-                      htmlFor="login-password"
-                      className="block text-sm font-medium"
-                      style={{ color: '#2C2417' }}
-                    >
-                      Password
-                    </label>
-                    {onForgotPassword && (
-                      <button
-                        type="button"
-                        onClick={onForgotPassword}
-                        className="text-sm font-medium transition-colors hover:opacity-80"
-                        style={{ color: '#C45830' }}
-                      >
-                        Forgot password?
-                      </button>
-                    )}
-                  </div>
+                  <label
+                    htmlFor="upgrade-password"
+                    className="block text-sm font-medium"
+                    style={{ color: '#2C2417' }}
+                  >
+                    Password
+                  </label>
                   <div className="relative">
                     <Lock
                       className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 pointer-events-none"
                       style={{ color: '#8B7355' }}
                     />
                     <input
-                      id="login-password"
+                      id="upgrade-password"
                       type={showPassword ? 'text' : 'password'}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Enter your password"
+                      placeholder="Choose a password"
                       className={cn(
                         'w-full rounded-xl py-3 pl-12 pr-12 text-[#2C2417] placeholder-[#C4B8A5]',
                         'transition-all duration-200',
@@ -393,6 +416,7 @@ export function LoginModal({
                         border: '1px solid #E5DDD0',
                       }}
                       required
+                      minLength={6}
                       disabled={isLoading}
                     />
                     <button
@@ -400,19 +424,18 @@ export function LoginModal({
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-4 top-1/2 -translate-y-1/2 text-[#8B7355] hover:text-[#2C2417] transition-colors"
                     >
-                      {showPassword ? (
-                        <EyeOff className="h-5 w-5" />
-                      ) : (
-                        <Eye className="h-5 w-5" />
-                      )}
+                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                     </button>
                   </div>
+                  <p className="text-xs" style={{ color: '#8B7355' }}>
+                    At least 6 characters
+                  </p>
                 </div>
 
                 {/* Submit button */}
                 <motion.button
                   type="submit"
-                  disabled={isLoading}
+                  disabled={isLoading || password.length < 6}
                   whileHover={{ scale: isLoading ? 1 : 1.01 }}
                   whileTap={{ scale: isLoading ? 1 : 0.98 }}
                   className={cn(
@@ -424,7 +447,7 @@ export function LoginModal({
                     background:
                       loadingType === 'email'
                         ? '#8B7355'
-                        : 'linear-gradient(135deg, #C45830 0%, #B54A2A 100%)',
+                        : 'linear-gradient(135deg, #C45830 0%, #D4A853 100%)',
                     boxShadow:
                       loadingType === 'email' ? 'none' : '0 4px 14px rgba(196, 88, 48, 0.35)',
                   }}
@@ -436,44 +459,22 @@ export function LoginModal({
                         animate={{ rotate: 360 }}
                         transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
                       />
-                      Signing in...
+                      Creating account...
                     </span>
                   ) : (
-                    'Sign In'
+                    'Create Account'
                   )}
                 </motion.button>
 
-                {/* Divider with text */}
-                <div className="relative py-2">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t" style={{ borderColor: '#E5DDD0' }} />
-                  </div>
-                  <div className="relative flex justify-center">
-                    <span
-                      className="px-4 text-sm"
-                      style={{ background: '#FAF7F2', color: '#8B7355' }}
-                    >
-                      New to Waycraft?
-                    </span>
-                  </div>
-                </div>
-
-                {/* Switch to register */}
+                {/* Keep as guest */}
                 <button
                   type="button"
-                  onClick={onSwitchToRegister}
+                  onClick={handleClose}
                   disabled={isLoading}
-                  className={cn(
-                    'w-full rounded-xl py-3 font-medium',
-                    'transition-all duration-200 hover:bg-[#F5F0E8]',
-                    'disabled:opacity-50 disabled:cursor-not-allowed'
-                  )}
-                  style={{
-                    color: '#C45830',
-                    border: '1px solid #E5DDD0',
-                  }}
+                  className="w-full text-center text-sm font-medium py-2 transition-colors hover:opacity-80 disabled:opacity-50"
+                  style={{ color: '#8B7355' }}
                 >
-                  Create an account
+                  Continue as guest
                 </button>
               </form>
 
@@ -491,5 +492,86 @@ export function LoginModal({
       )}
     </AnimatePresence>,
     document.body
+  );
+}
+
+/**
+ * Banner version of upgrade prompt (non-modal)
+ */
+export function GuestUpgradeBanner({ onUpgrade }: { onUpgrade: () => void }) {
+  const showPrompt = useGuestUpgradePrompt();
+
+  if (!showPrompt) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="rounded-xl p-4 flex items-center gap-4"
+      style={{
+        background: 'linear-gradient(135deg, rgba(212, 168, 83, 0.1) 0%, rgba(196, 88, 48, 0.1) 100%)',
+        border: '1px solid rgba(212, 168, 83, 0.2)',
+      }}
+    >
+      <div
+        className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+        style={{ background: 'rgba(212, 168, 83, 0.15)' }}
+      >
+        <Sparkles className="w-5 h-5" style={{ color: '#D4A853' }} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="font-medium" style={{ color: '#2C2417' }}>
+          You're in guest mode
+        </p>
+        <p className="text-sm" style={{ color: '#8B7355' }}>
+          Create an account to save your trips
+        </p>
+      </div>
+      <button
+        onClick={onUpgrade}
+        className="flex-shrink-0 px-4 py-2 rounded-xl font-medium text-white transition-transform hover:scale-105"
+        style={{
+          background: 'linear-gradient(135deg, #C45830 0%, #D4A853 100%)',
+        }}
+      >
+        Upgrade
+      </button>
+    </motion.div>
+  );
+}
+
+/**
+ * Inline upgrade CTA for specific features
+ */
+export function GuestFeatureGate({
+  feature,
+  children,
+  onUpgrade,
+}: {
+  feature: string;
+  children: React.ReactNode;
+  onUpgrade: () => void;
+}) {
+  const showPrompt = useGuestUpgradePrompt();
+
+  if (!showPrompt) return <>{children}</>;
+
+  return (
+    <div className="relative">
+      <div className="opacity-50 pointer-events-none">{children}</div>
+      <div className="absolute inset-0 flex items-center justify-center">
+        <button
+          onClick={onUpgrade}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-white transition-transform hover:scale-105"
+          style={{
+            background: 'linear-gradient(135deg, #C45830 0%, #D4A853 100%)',
+            boxShadow: '0 4px 14px rgba(196, 88, 48, 0.35)',
+          }}
+        >
+          <Lock className="w-4 h-4" />
+          Create account to {feature}
+        </button>
+      </div>
+    </div>
   );
 }

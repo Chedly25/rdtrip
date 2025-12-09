@@ -3326,6 +3326,91 @@ Higher score = better hidden gem
 
 ---
 
+### Infrastructure Setup (Configured)
+
+> **Status:** Configured on 2025-12-09
+
+#### Supabase Configuration
+
+| Setting | Value |
+|---------|-------|
+| **Project URL** | `https://jnkeqsavgpgsugepvuiw.supabase.co` |
+| **Region** | Default (check dashboard) |
+| **Auth Providers** | Email/Password, Google OAuth |
+| **Database** | PostgreSQL 15+ |
+
+**Dashboard Access:** https://supabase.com/dashboard/project/jnkeqsavgpgsugepvuiw
+
+#### Environment Variables
+
+**Frontend (`spotlight-react/.env`):**
+```bash
+# Supabase
+VITE_SUPABASE_URL=https://jnkeqsavgpgsugepvuiw.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJhbGci...  # (see actual .env file)
+
+# API
+VITE_API_URL=https://rdtrip-4d4035861576.herokuapp.com
+
+# AI & Services
+VITE_ANTHROPIC_API_KEY=sk-ant-api03-...
+VITE_GOOGLE_PLACES_API_KEY=AIzaSyD_...
+VITE_MAPBOX_TOKEN=pk.eyJ1...
+VITE_OPENWEATHER_API_KEY=6d73f2e0...
+VITE_PEXELS_API_KEY=eIo5J1b36q...
+```
+
+**Backend (Heroku `rdtrip` app):**
+```bash
+# Supabase (added 2025-12-09)
+SUPABASE_URL=https://jnkeqsavgpgsugepvuiw.supabase.co
+SUPABASE_ANON_KEY=eyJhbGci...
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGci...
+
+# Existing keys
+ANTHROPIC_API_KEY=sk-ant-api03-...
+GOOGLE_PLACES_API_KEY=AIzaSyD_...
+DATABASE_URL=postgres://... (Heroku Postgres)
+JWT_SECRET=qu7hr3N9p4gF...
+# ... and more (see `heroku config --app rdtrip`)
+```
+
+#### Authentication Providers
+
+| Provider | Status | Notes |
+|----------|--------|-------|
+| **Email/Password** | Enabled | Built-in Supabase Auth |
+| **Google OAuth** | Enabled | OAuth credentials configured |
+| **Apple** | Disabled | Can enable later for iOS |
+
+#### Dependencies Installed
+
+```bash
+# Frontend (spotlight-react)
+npm install @supabase/supabase-js --legacy-peer-deps
+```
+
+#### Architecture Decision: Supabase-Only Backend
+
+For Epic 12, we're using **Option A: Supabase-only** approach:
+- Direct Supabase client calls from React for auth and data
+- Existing Heroku backend for AI agents and complex business logic
+- Supabase Edge Functions for future serverless needs
+
+**Rationale:**
+- Faster to implement than building separate API layer
+- Built-in RLS (Row Level Security) for data protection
+- Real-time subscriptions available if needed
+- Reduces complexity vs. maintaining two backends
+
+#### Next Steps
+
+1. **WI-12.1:** Create database schema in Supabase (tables, RLS policies)
+2. **WI-12.3:** Implement auth flow in React (sign up, sign in, Google OAuth)
+3. **WI-12.2:** Connect existing API to Supabase for persistence
+
+---
+
 ## 15. IMPLEMENTATION PHASES
 
 ### Phase 1: Foundation (Weeks 1-3)

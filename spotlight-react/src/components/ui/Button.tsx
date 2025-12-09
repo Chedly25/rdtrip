@@ -1,15 +1,38 @@
-import { forwardRef, type ButtonHTMLAttributes } from 'react'
+/**
+ * Button
+ *
+ * WI-11.5: Added haptic feedback support
+ *
+ * Primary button component with variants, sizes, and loading state.
+ */
+
+import { forwardRef, type ButtonHTMLAttributes, type MouseEvent } from 'react'
 import { cn } from '../../lib/utils'
 import { Loader2 } from 'lucide-react'
+import { hapticTap, hapticImpact, type HapticIntensity } from '../../utils/haptics'
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger'
   size?: 'sm' | 'md' | 'lg' | 'icon'
   loading?: boolean
+  /** Enable haptic feedback on click */
+  haptic?: boolean | HapticIntensity
 }
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant = 'primary', size = 'md', loading, children, disabled, ...props }, ref) => {
+  ({ className, variant = 'primary', size = 'md', loading, haptic = true, children, disabled, onClick, ...props }, ref) => {
+    // Handle click with haptic feedback
+    const handleClick = (e: MouseEvent<HTMLButtonElement>) => {
+      if (haptic && !disabled && !loading) {
+        const intensity = typeof haptic === 'string' ? haptic : (variant === 'danger' ? 'heavy' : 'light');
+        if (variant === 'danger') {
+          hapticImpact(intensity);
+        } else {
+          hapticTap(intensity);
+        }
+      }
+      onClick?.(e);
+    };
     const baseStyles = `
       inline-flex items-center justify-center gap-2 whitespace-nowrap font-semibold
       rounded-rui-12 transition-all duration-rui-sm ease-rui-default
@@ -37,6 +60,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         className={cn(baseStyles, variants[variant], sizes[size], className)}
         disabled={disabled || loading}
+        onClick={handleClick}
         {...props}
       >
         {loading ? (

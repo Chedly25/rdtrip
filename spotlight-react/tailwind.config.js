@@ -1,4 +1,6 @@
 /** @type {import('tailwindcss').Config} */
+import plugin from 'tailwindcss/plugin';
+
 export default {
   content: [
     "./index.html",
@@ -151,5 +153,147 @@ export default {
   },
   plugins: [
     require('@tailwindcss/typography'),
+    // WI-11.7: Mobile responsive utilities
+    plugin(function({ addUtilities, addComponents, theme }) {
+      // Safe Area Utilities
+      // Use env() for safe areas on notched devices (iPhone X+, Android with notches)
+      addUtilities({
+        // Padding safe area
+        '.p-safe': {
+          paddingTop: 'env(safe-area-inset-top, 0px)',
+          paddingRight: 'env(safe-area-inset-right, 0px)',
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+          paddingLeft: 'env(safe-area-inset-left, 0px)',
+        },
+        '.pt-safe': { paddingTop: 'env(safe-area-inset-top, 0px)' },
+        '.pr-safe': { paddingRight: 'env(safe-area-inset-right, 0px)' },
+        '.pb-safe': { paddingBottom: 'env(safe-area-inset-bottom, 0px)' },
+        '.pl-safe': { paddingLeft: 'env(safe-area-inset-left, 0px)' },
+        '.px-safe': {
+          paddingLeft: 'env(safe-area-inset-left, 0px)',
+          paddingRight: 'env(safe-area-inset-right, 0px)',
+        },
+        '.py-safe': {
+          paddingTop: 'env(safe-area-inset-top, 0px)',
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        },
+        // Margin safe area
+        '.m-safe': {
+          marginTop: 'env(safe-area-inset-top, 0px)',
+          marginRight: 'env(safe-area-inset-right, 0px)',
+          marginBottom: 'env(safe-area-inset-bottom, 0px)',
+          marginLeft: 'env(safe-area-inset-left, 0px)',
+        },
+        '.mt-safe': { marginTop: 'env(safe-area-inset-top, 0px)' },
+        '.mr-safe': { marginRight: 'env(safe-area-inset-right, 0px)' },
+        '.mb-safe': { marginBottom: 'env(safe-area-inset-bottom, 0px)' },
+        '.ml-safe': { marginLeft: 'env(safe-area-inset-left, 0px)' },
+        '.mx-safe': {
+          marginLeft: 'env(safe-area-inset-left, 0px)',
+          marginRight: 'env(safe-area-inset-right, 0px)',
+        },
+        '.my-safe': {
+          marginTop: 'env(safe-area-inset-top, 0px)',
+          marginBottom: 'env(safe-area-inset-bottom, 0px)',
+        },
+        // Bottom safe area with minimum (for buttons at bottom of screen)
+        '.pb-safe-bottom': {
+          paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 1rem)',
+        },
+        // Top safe area with minimum (for headers)
+        '.pt-safe-top': {
+          paddingTop: 'max(env(safe-area-inset-top, 0px), 0.75rem)',
+        },
+        // Min-height for full screen with safe areas
+        '.min-h-screen-safe': {
+          minHeight: 'calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))',
+        },
+        '.h-screen-safe': {
+          height: 'calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))',
+        },
+      });
+
+      // Touch Target Utilities
+      // Minimum touch target sizes per Apple HIG (44pt) and Material Design (48dp)
+      addUtilities({
+        // Minimum touch target (44px - Apple HIG)
+        '.touch-target': {
+          minWidth: '44px',
+          minHeight: '44px',
+        },
+        '.touch-target-sm': {
+          minWidth: '36px',
+          minHeight: '36px',
+        },
+        // Recommended touch target (48px - Material Design)
+        '.touch-target-lg': {
+          minWidth: '48px',
+          minHeight: '48px',
+        },
+        // Square touch targets
+        '.touch-44': {
+          width: '44px',
+          height: '44px',
+          minWidth: '44px',
+          minHeight: '44px',
+        },
+        '.touch-48': {
+          width: '48px',
+          height: '48px',
+          minWidth: '48px',
+          minHeight: '48px',
+        },
+      });
+
+      // Mobile-first Component Utilities
+      addComponents({
+        // Bottom fixed bar (common pattern for mobile CTAs)
+        '.fixed-bottom-bar': {
+          position: 'fixed',
+          bottom: '0',
+          left: '0',
+          right: '0',
+          backgroundColor: theme('colors.rui.white'),
+          borderTopWidth: '1px',
+          borderColor: theme('colors.rui.grey-10'),
+          paddingLeft: theme('spacing.rui-20'),
+          paddingRight: theme('spacing.rui-20'),
+          paddingTop: theme('spacing.rui-16'),
+          paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 1rem)',
+          boxShadow: '0 -4px 16px rgba(44, 36, 23, 0.08)',
+        },
+        // Full-bleed container (goes edge-to-edge on mobile)
+        '.full-bleed': {
+          width: '100vw',
+          marginLeft: 'calc(-50vw + 50%)',
+        },
+        // Horizontal scroll container for cards
+        '.scroll-x-container': {
+          display: 'flex',
+          overflowX: 'auto',
+          overflowY: 'hidden',
+          scrollSnapType: 'x mandatory',
+          scrollbarWidth: 'none',
+          '-webkit-overflow-scrolling': 'touch',
+          '&::-webkit-scrollbar': {
+            display: 'none',
+          },
+          '& > *': {
+            scrollSnapAlign: 'start',
+            flexShrink: '0',
+          },
+        },
+        // Prevent pull-to-refresh interference
+        '.no-overscroll': {
+          overscrollBehavior: 'none',
+        },
+        // Prevent text selection on touch
+        '.no-select': {
+          userSelect: 'none',
+          '-webkit-user-select': 'none',
+          '-webkit-touch-callout': 'none',
+        },
+      });
+    }),
   ],
 }

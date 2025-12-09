@@ -1,3 +1,12 @@
+/**
+ * TimelineItemCard
+ *
+ * WI-11.3: Enhanced with card animation system
+ *
+ * Expandable timeline entry for itineraries.
+ * Premium editorial feel with smooth animations.
+ */
+
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -13,6 +22,7 @@ import {
   Image as ImageIcon
 } from 'lucide-react';
 import { PhotoLightbox } from './PhotoLightbox';
+import { EASING, DURATION } from '../transitions';
 
 interface TimelineItemCardProps {
   type: 'activity' | 'restaurant' | 'accommodation' | 'drive';
@@ -20,9 +30,18 @@ interface TimelineItemCardProps {
   item: any;
   color?: string;
   density?: 'compact' | 'comfortable' | 'spacious';
+  /** Animation stagger index */
+  index?: number;
 }
 
-export function TimelineItemCard({ type, time, item, color = '#3B82F6', density = 'compact' }: TimelineItemCardProps) {
+export function TimelineItemCard({
+  type,
+  time,
+  item,
+  color = '#C45830', // RUI accent
+  density = 'compact',
+  index = 0
+}: TimelineItemCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
@@ -133,12 +152,23 @@ export function TimelineItemCard({ type, time, item, color = '#3B82F6', density 
   return (
     <motion.div
       layout
-      className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{
+        duration: DURATION.normal,
+        ease: EASING.smooth,
+        delay: index * 0.05,
+      }}
+      whileHover={{
+        y: -2,
+        boxShadow: '0 8px 24px -8px rgba(0, 0, 0, 0.1)',
+      }}
+      className="bg-rui-white rounded-rui-16 border border-rui-grey-10 overflow-hidden shadow-rui-1 transition-colors duration-rui-sm"
     >
       {/* Collapsed State */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className={`w-full ${styles.padding} flex items-center ${styles.gap} text-left hover:bg-gray-50 transition-colors`}
+        className={`w-full ${styles.padding} flex items-center ${styles.gap} text-left hover:bg-rui-grey-5 transition-colors duration-rui-sm`}
       >
         {/* Time Marker */}
         {time && (
@@ -202,11 +232,12 @@ export function TimelineItemCard({ type, time, item, color = '#3B82F6', density 
               {price && (
                 <span className="font-medium text-gray-700">{price}</span>
               )}
-              <ChevronDown
-                className={`h-5 w-5 text-gray-400 transition-transform ${
-                  isExpanded ? 'transform rotate-180' : ''
-                }`}
-              />
+              <motion.div
+                animate={{ rotate: isExpanded ? 180 : 0 }}
+                transition={{ duration: DURATION.fast, ease: EASING.quick }}
+              >
+                <ChevronDown className="h-5 w-5 text-rui-grey-40" />
+              </motion.div>
             </div>
           </div>
         </div>
@@ -219,8 +250,8 @@ export function TimelineItemCard({ type, time, item, color = '#3B82F6', density 
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="border-t border-gray-100"
+            transition={{ duration: DURATION.slow, ease: EASING.smooth }}
+            className="border-t border-rui-grey-10"
           >
             <div className="p-4 space-y-4">
               {/* Photo Gallery - Clickable to open lightbox */}
@@ -342,24 +373,28 @@ export function TimelineItemCard({ type, time, item, color = '#3B82F6', density 
               {/* Action Buttons */}
               <div className="flex gap-2 pt-2">
                 {item.website && (
-                  <a
+                  <motion.a
                     href={item.website}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors text-center"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="flex-1 px-4 py-2 bg-rui-accent text-white text-body-2 font-medium rounded-rui-12 hover:bg-rui-accent/90 transition-colors duration-rui-sm text-center"
                   >
                     Visit Website
-                  </a>
+                  </motion.a>
                 )}
                 {item.place_id && (
-                  <a
+                  <motion.a
                     href={`https://www.google.com/maps/place/?q=place_id:${item.place_id}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors text-center"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="flex-1 px-4 py-2 border border-rui-grey-20 text-rui-grey-70 text-body-2 font-medium rounded-rui-12 hover:bg-rui-grey-5 transition-colors duration-rui-sm text-center"
                   >
                     View on Map
-                  </a>
+                  </motion.a>
                 )}
               </div>
             </div>

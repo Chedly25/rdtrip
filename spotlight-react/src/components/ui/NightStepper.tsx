@@ -1,5 +1,14 @@
+/**
+ * NightStepper
+ *
+ * WI-11.5: Added haptic feedback
+ *
+ * Numeric stepper for selecting number of nights.
+ */
+
 import { Minus, Plus, Moon } from 'lucide-react'
 import { cn } from '../../lib/utils'
+import { hapticTap, hapticBoundary } from '../../utils/haptics'
 
 interface NightStepperProps {
   value: number
@@ -9,6 +18,8 @@ interface NightStepperProps {
   disabled?: boolean
   className?: string
   showIcon?: boolean
+  /** Enable haptic feedback */
+  haptic?: boolean
 }
 
 const NightStepper = ({
@@ -19,16 +30,29 @@ const NightStepper = ({
   disabled = false,
   className,
   showIcon = true,
+  haptic = true,
 }: NightStepperProps) => {
   const handleDecrement = () => {
-    if (value > min && !disabled) {
-      onChange(value - 1)
+    if (disabled) return;
+
+    if (value > min) {
+      if (haptic) hapticTap('light');
+      onChange(value - 1);
+    } else {
+      // At boundary
+      if (haptic) hapticBoundary();
     }
   }
 
   const handleIncrement = () => {
-    if (value < max && !disabled) {
-      onChange(value + 1)
+    if (disabled) return;
+
+    if (value < max) {
+      if (haptic) hapticTap('light');
+      onChange(value + 1);
+    } else {
+      // At boundary
+      if (haptic) hapticBoundary();
     }
   }
 
