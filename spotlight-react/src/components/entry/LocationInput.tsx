@@ -324,7 +324,10 @@ export function LocationInput({
   const showCurrentLocationOption = isOpen && !input;
 
   return (
-    <div ref={containerRef} className="relative">
+    <div
+      ref={containerRef}
+      className={`relative ${isOpen ? 'z-[100]' : 'z-auto'}`}
+    >
       {/* Label */}
       <label className="block text-body-3 font-medium text-rui-grey-50 mb-2 uppercase tracking-wide">
         {label}

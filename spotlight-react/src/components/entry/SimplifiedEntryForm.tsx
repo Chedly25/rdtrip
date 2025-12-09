@@ -180,8 +180,8 @@ export function SimplifiedEntryForm({ onSubmit, isLoading = false }: SimplifiedE
           {/* Visual journey line */}
           <div className="absolute left-7 top-16 bottom-0 w-0.5 bg-gradient-to-b from-rui-accent via-rui-grey-10 to-rui-accent z-0" style={{ height: 'calc(100% - 4rem)' }} />
 
-          {/* Origin - higher z-index so dropdown appears above destination */}
-          <div className="relative z-20 mb-6">
+          {/* Origin */}
+          <div className="relative mb-6">
             <LocationInput
               value={origin}
               onChange={setOrigin}
@@ -194,7 +194,7 @@ export function SimplifiedEntryForm({ onSubmit, isLoading = false }: SimplifiedE
           </div>
 
           {/* Destination */}
-          <div className="relative z-10 mb-8">
+          <div className="relative mb-8">
             <LocationInput
               value={destination}
               onChange={setDestination}
