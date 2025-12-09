@@ -274,9 +274,9 @@ export function DiscoveryMap({
   }, [route, selectedCityId, isMapLoaded, updateMarkers, drawRouteLine]);
 
   return (
-    <div className="absolute inset-0">
+    <div className="w-full h-full" style={{ minHeight: '100vh' }}>
       {/* Map container */}
-      <div ref={mapContainer} className="absolute inset-0" />
+      <div ref={mapContainer} className="w-full h-full" style={{ minHeight: '100vh' }} />
 
       {/* Subtle grain overlay for editorial texture */}
       <div
