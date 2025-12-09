@@ -22,6 +22,7 @@ export default {
           'grey-40': '#9D8A70',
           'grey-60': '#6B5A45',
           'grey-70': '#4A3F30',
+          'grey-30': '#B0A18B',
           'grey-20': '#C4B8A5',
           'grey-10': '#E5DDD0',
           'grey-8': '#EDE6DB',

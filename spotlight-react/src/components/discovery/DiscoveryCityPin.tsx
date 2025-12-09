@@ -56,25 +56,25 @@ export function DiscoveryCityPin({
 
   const state = getState();
 
-  // State-based styling
+  // State-based styling - using warm cream tones for better contrast on light map
   const stateStyles: Record<PinState, { bg: string; text: string; ring: string; shadow: string }> = {
     default: {
-      bg: 'bg-white',
+      bg: 'bg-rui-cream',
       text: 'text-rui-grey-60',
       ring: '',
-      shadow: 'shadow-lg shadow-black/10',
+      shadow: 'shadow-lg shadow-rui-black/15',
     },
     hovered: {
-      bg: 'bg-white',
+      bg: 'bg-rui-cream',
       text: 'text-rui-accent',
-      ring: 'ring-2 ring-rui-accent/20',
-      shadow: 'shadow-xl shadow-rui-accent/15',
+      ring: 'ring-2 ring-rui-accent/30',
+      shadow: 'shadow-xl shadow-rui-accent/20',
     },
     selected: {
-      bg: 'bg-white',
+      bg: 'bg-rui-cream',
       text: 'text-rui-accent',
-      ring: 'ring-4 ring-rui-accent/30',
-      shadow: 'shadow-xl shadow-rui-accent/20',
+      ring: 'ring-4 ring-rui-accent/40',
+      shadow: 'shadow-xl shadow-rui-accent/25',
     },
     added: {
       bg: 'bg-rui-sage',
@@ -154,7 +154,7 @@ export function DiscoveryCityPin({
           w-12 h-12 rounded-full
           border-2 transition-colors duration-200
           ${styles.bg} ${styles.text} ${styles.ring} ${styles.shadow}
-          ${state === 'default' ? 'border-rui-grey-15' : 'border-transparent'}
+          ${state === 'default' ? 'border-rui-grey-20' : 'border-transparent'}
         `}
       >
         <PinIcon />
@@ -225,8 +225,8 @@ export function DiscoveryCityPin({
           ${isSelected || isHovered
             ? 'bg-rui-black text-white shadow-lg scale-105'
             : state === 'added' || state === 'fixed'
-            ? 'bg-white/95 text-rui-black shadow-md backdrop-blur-sm'
-            : 'bg-white/90 text-rui-grey-70 shadow-sm'
+            ? 'bg-rui-cream text-rui-black shadow-md border border-rui-grey-20'
+            : 'bg-rui-cream text-rui-grey-70 shadow-md border border-rui-grey-20'
           }
         `}
       >

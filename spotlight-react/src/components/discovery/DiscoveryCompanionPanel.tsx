@@ -190,8 +190,8 @@ function DesktopSidebar({
               <div
                 key={msg.id}
                 className="
-                  bg-white rounded-2xl p-4
-                  shadow-sm border border-rui-grey-5
+                  bg-rui-cream rounded-2xl p-4
+                  shadow-md border border-rui-grey-20
                 "
               >
                 <p className="text-body-2 text-rui-black leading-relaxed">
@@ -302,8 +302,9 @@ function MobileBottomSheet({
       style={{ height }}
       className="
         fixed bottom-0 left-0 right-0
-        bg-white rounded-t-3xl
-        shadow-2xl shadow-black/10
+        bg-rui-cream rounded-t-3xl
+        shadow-2xl shadow-rui-black/15
+        border-t border-rui-grey-20
         z-30
         flex flex-col
       "
@@ -430,8 +431,8 @@ function SuggestedCityCard({ city, onAdd }: SuggestedCityCardProps) {
       whileTap={{ scale: 0.99 }}
       className="
         w-full flex items-center gap-3 p-3
-        bg-white/50 rounded-xl
-        border border-dashed border-rui-grey-20
+        bg-rui-cream rounded-xl
+        border border-dashed border-rui-grey-30
         hover:border-rui-accent hover:bg-rui-accent/5
         transition-all duration-200
         text-left

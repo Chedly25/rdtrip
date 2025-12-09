@@ -66,13 +66,13 @@ export function DiscoveryHeader({
     >
       <div className="p-4 md:p-6">
         <div className="max-w-4xl mx-auto">
-          {/* Glass card */}
+          {/* Glass card - warm cream with visible border for contrast */}
           <div
             className="
-              bg-white/90 backdrop-blur-xl
+              bg-rui-cream/95 backdrop-blur-xl
               rounded-2xl md:rounded-3xl
-              shadow-lg shadow-black/5
-              border border-white/50
+              shadow-lg shadow-rui-black/10
+              border border-rui-grey-20
               overflow-hidden
             "
           >

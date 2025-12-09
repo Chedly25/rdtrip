@@ -79,8 +79,9 @@ export function DiscoveryCityPreview({
       >
         <div
           className="
-            bg-white rounded-t-3xl md:rounded-3xl
-            shadow-2xl shadow-black/20
+            bg-rui-cream rounded-t-3xl md:rounded-3xl
+            shadow-2xl shadow-rui-black/20
+            border border-rui-grey-20
             overflow-hidden
             flex flex-col
             max-h-[90vh] md:max-h-[85vh]
@@ -311,7 +312,7 @@ export function DiscoveryCityPreview({
           </div>
 
           {/* Action buttons - sticky at bottom */}
-          <div className="flex-shrink-0 p-5 pt-3 border-t border-rui-grey-10 bg-white">
+          <div className="flex-shrink-0 p-5 pt-3 border-t border-rui-grey-20 bg-rui-cream">
             <div className="flex gap-3">
               {/* Add/Remove button */}
               {!isFixed && (

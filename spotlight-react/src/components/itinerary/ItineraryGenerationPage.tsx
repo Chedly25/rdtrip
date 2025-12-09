@@ -45,11 +45,18 @@ export function ItineraryGenerationPage() {
       console.log('✅ Generation complete! Auto-navigating to itinerary view:', itinerary.id);
       // Small delay to show success state briefly
       const timer = setTimeout(() => {
-        navigate(`/?itinerary=${itinerary.id}`);
+        // Navigate to proper route view with itinerary
+        const targetRouteId = itinerary.routeId || routeId || route?.id;
+        if (targetRouteId) {
+          navigate(`/route/${targetRouteId}?itinerary=${itinerary.id}`);
+        } else {
+          // Fallback: navigate to route view with just the itinerary
+          navigate(`/route/${itinerary.id}?itinerary=${itinerary.id}`);
+        }
       }, 2000); // 2 second delay to show celebration
       return () => clearTimeout(timer);
     }
-  }, [itinerary, isGenerating, error, navigate]);
+  }, [itinerary, isGenerating, error, navigate, routeId, route?.id]);
 
   // Calculate progress
   const totalAgents = agentNodes.length;
