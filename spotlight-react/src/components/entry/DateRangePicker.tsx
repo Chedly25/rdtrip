@@ -265,7 +265,8 @@ export function DateRangePicker({
       tabIndex={0}
       role="application"
       aria-label="Date picker calendar"
-      className="outline-none"
+      className="outline-none bg-white"
+      style={{ backgroundColor: '#FFFFFF' }}
     >
       {/* Selection indicator */}
       <div className="px-5 py-4 border-b border-rui-grey-10 bg-rui-grey-2">
@@ -394,7 +395,7 @@ export function DateRangePicker({
   );
 
   return (
-    <div ref={containerRef} className="relative">
+    <div ref={containerRef} className={`relative ${isOpen ? 'z-[100]' : 'z-auto'}`}>
       {/* Label */}
       <label className="block text-body-3 font-medium text-rui-grey-50 mb-2 uppercase tracking-wide">
         When are you traveling?
@@ -491,7 +492,11 @@ export function DateRangePicker({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.98 }}
             transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
-            className="absolute z-50 mt-2 w-full rounded-rui-24 bg-rui-white border border-rui-grey-10 shadow-rui-4 overflow-hidden"
+            className="absolute z-50 mt-2 w-full rounded-rui-24 overflow-hidden"
+            style={{
+              backgroundColor: '#FFFFFF',
+              boxShadow: '0 10px 40px -5px rgba(0, 0, 0, 0.15), 0 4px 16px -2px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.05)',
+            }}
           >
             <CalendarContent />
           </motion.div>
