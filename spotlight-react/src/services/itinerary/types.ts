@@ -282,6 +282,8 @@ export interface Itinerary {
   id: string;
   /** Associated trip ID */
   tripId: string;
+  /** Associated route ID (for navigation) */
+  routeId?: string;
   /** When this itinerary was generated */
   generatedAt: Date;
   /** Version number (for regeneration tracking) */
