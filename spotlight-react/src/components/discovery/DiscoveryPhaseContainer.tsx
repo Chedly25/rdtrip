@@ -11,7 +11,7 @@ import { DiscoveryLoadingState } from './DiscoveryLoadingState';
 import { AddCityModal } from './AddCityModal';
 import { ProceedConfirmationModal } from './ProceedConfirmationModal';
 import { searchHiddenGemsInCity } from '../../services/hiddenGems';
-import type { DiscoveryRoute, DiscoveryCity, DiscoveryPlace } from '../../stores/discoveryStore';
+import type { DiscoveryRoute, DiscoveryCity, DiscoveryPlace, PlaceType } from '../../stores/discoveryStore';
 
 // API base URL
 const API_BASE_URL = import.meta.env.VITE_API_URL || (
@@ -184,7 +184,7 @@ export function DiscoveryPhaseContainer() {
             places = hiddenGems.places.map((place) => ({
               id: place.placeId,
               name: place.name,
-              type: place.types[0] || 'attraction',
+              type: mapToPlaceType(place.types[0]),
               rating: place.rating,
               reviewCount: place.reviewCount,
               isHiddenGem: place.isHiddenGem,
@@ -230,7 +230,7 @@ export function DiscoveryPhaseContainer() {
         discoveryRoute.origin.places = originPlaces.places.map((place) => ({
           id: place.placeId,
           name: place.name,
-          type: place.types[0] || 'attraction',
+          type: mapToPlaceType(place.types[0]),
           rating: place.rating,
           reviewCount: place.reviewCount,
           isHiddenGem: place.isHiddenGem,
@@ -250,7 +250,7 @@ export function DiscoveryPhaseContainer() {
         discoveryRoute.destination.places = destPlaces.places.map((place) => ({
           id: place.placeId,
           name: place.name,
-          type: place.types[0] || 'attraction',
+          type: mapToPlaceType(place.types[0]),
           rating: place.rating,
           reviewCount: place.reviewCount,
           isHiddenGem: place.isHiddenGem,
@@ -616,6 +616,40 @@ function findCityById(route: DiscoveryRoute, cityId: string) {
   if (route.origin.id === cityId) return route.origin;
   if (route.destination.id === cityId) return route.destination;
   return route.suggestedCities.find((c) => c.id === cityId) || null;
+}
+
+// Helper to map Google Places types to our PlaceType enum
+const PLACE_TYPE_MAP: Record<string, PlaceType> = {
+  restaurant: 'restaurant',
+  food: 'restaurant',
+  cafe: 'cafe',
+  coffee_shop: 'cafe',
+  bar: 'bar',
+  night_club: 'bar',
+  museum: 'museum',
+  art_gallery: 'gallery',
+  gallery: 'gallery',
+  park: 'park',
+  natural_feature: 'park',
+  tourist_attraction: 'landmark',
+  point_of_interest: 'landmark',
+  landmark: 'landmark',
+  church: 'landmark',
+  place_of_worship: 'landmark',
+  store: 'shop',
+  shopping_mall: 'shop',
+  shop: 'shop',
+  market: 'market',
+  supermarket: 'market',
+  viewpoint: 'viewpoint',
+  experience: 'experience',
+  spa: 'experience',
+  gym: 'experience',
+};
+
+function mapToPlaceType(type: string | undefined): PlaceType {
+  if (!type) return 'other';
+  return PLACE_TYPE_MAP[type.toLowerCase()] || 'other';
 }
 
 // Generate mock places for a custom city added by the user
