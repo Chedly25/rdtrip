@@ -9,7 +9,7 @@
     "dev": "node server.js",
     "dev:new": "node src/server.js",
     "db:migrate": "node db/migrate.js",
-    "heroku-postbuild": "cd spotlight-react && npm install --include=dev && VITE_MAPBOX_TOKEN=$VITE_MAPBOX_TOKEN VITE_SUPABASE_URL=$VITE_SUPABASE_URL VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY npm run build && cd .. && cp -r spotlight-react/dist/* public/"
+    "heroku-postbuild": "cd spotlight-react && npm install --include=dev && VITE_MAPBOX_TOKEN=$VITE_MAPBOX_TOKEN VITE_SUPABASE_URL=$VITE_SUPABASE_URL VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY npm run build && cd .. && rm -rf public/assets public/index.html public/vite.svg public/site.webmanifest && cp -r spotlight-react/dist/* public/"
   },
   "engines": {
     "node": "18.x"
