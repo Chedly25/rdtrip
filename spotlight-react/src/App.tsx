@@ -21,6 +21,7 @@ import { Suspense, lazy } from 'react'
 // Core components (eagerly loaded)
 import SpotlightV2 from './components/spotlight/v2/SpotlightV2'
 import { ItineraryGenerationPage } from './components/itinerary/ItineraryGenerationPage'
+import { ItineraryPage } from './components/itinerary/ItineraryPage'
 import { TodayView } from './components/today/TodayView'
 import { DiscoveryPhaseContainer } from './components/discovery'
 import { AgentProvider } from './contexts/AgentProvider'
@@ -207,12 +208,22 @@ function App() {
                         }
                       />
 
-                      {/* Generation Phase - AI itinerary creation */}
+                      {/* Generation Phase - AI itinerary creation (Legacy) */}
                       <Route
                         path="/generate"
                         element={
                           <PageTransition variant="slideRight">
                             <ItineraryGenerationPage />
+                          </PageTransition>
+                        }
+                      />
+
+                      {/* NEW Itinerary Page - Beautiful editorial experience */}
+                      <Route
+                        path="/itinerary"
+                        element={
+                          <PageTransition variant="scale">
+                            <ItineraryPage />
                           </PageTransition>
                         }
                       />

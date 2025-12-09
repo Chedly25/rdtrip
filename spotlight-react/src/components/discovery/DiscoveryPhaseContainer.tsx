@@ -452,8 +452,8 @@ export function DiscoveryPhaseContainer() {
       // Update phase
       setPhase('generating');
 
-      // Navigate to generation page
-      navigate('/generate');
+      // Navigate to NEW editorial itinerary page
+      navigate('/itinerary');
     } catch (err) {
       console.error('Failed to prepare itinerary generation:', err);
       setGenerationError(
