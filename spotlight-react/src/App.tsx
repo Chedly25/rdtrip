@@ -32,6 +32,10 @@ import { ErrorBoundary } from './components/ErrorBoundary'
 
 // Landing page components
 import { Navigation } from './components/landing/Navigation'
+import { Hero } from './components/landing/Hero'
+import { DestinationShowcase } from './components/landing/DestinationShowcase'
+import { Features } from './components/landing/Features'
+import { About } from './components/landing/About'
 import { Footer } from './components/landing/Footer'
 
 // Entry form - Simplified 4-input form (WI-0.1)
@@ -55,15 +59,24 @@ const queryClient = new QueryClient({
 })
 
 /**
- * Landing Page - Simplified entry form (WI-0.1)
- * Just 4 inputs: origin, destination, dates, traveller type
- * Everything else is gathered later through the companion
+ * Landing Page - Full marketing experience with SimplifiedEntryForm
+ * Includes: Hero, Simplified Form (4 inputs), DestinationShowcase, Features, About, Footer
+ * The simplified form replaces the old complex RouteForm (WI-0.1)
  */
 function LandingPage() {
   return (
     <>
       <Navigation />
-      <NewTripPage />
+      <Hero />
+      <section id="route-form" className="py-16 bg-rui-grey-2">
+        <div className="max-w-lg mx-auto px-6">
+          <NewTripPage />
+        </div>
+      </section>
+      <DestinationShowcase />
+      <Features />
+      <About />
+      <Footer />
     </>
   )
 }
