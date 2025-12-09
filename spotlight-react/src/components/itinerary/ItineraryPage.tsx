@@ -492,7 +492,7 @@ export function ItineraryPage() {
                 <div className="flex items-center gap-2">
                   <Gem className="w-4 h-4 text-[#D4A853]" />
                   <span className="text-sm text-[#2C2417] font-medium">
-                    {itinerary.activities?.length || 0} Activities
+                    {itinerary.activities?.reduce((sum: number, day: any) => sum + (day.activities?.length || 0), 0) || 0} Activities
                   </span>
                 </div>
               </motion.div>
@@ -525,10 +525,10 @@ export function ItineraryPage() {
                       themeIcon: day.themeIcon,
                     }}
                     dayNumber={day.dayNumber || index + 1}
-                    activities={day.activities || itinerary.activities?.filter((a: any) => a.dayNumber === (index + 1)) || []}
-                    restaurants={day.restaurants || itinerary.restaurants?.filter((r: any) => r.dayNumber === (index + 1)) || []}
-                    accommodation={day.accommodation || itinerary.accommodations?.[index]}
-                    scenicStops={day.scenicStops || itinerary.scenicStops?.filter((s: any) => s.dayNumber === (index + 1)) || []}
+                    activities={day.activities || itinerary.activities?.find((a: any) => a.day === (index + 1))?.activities || []}
+                    restaurants={day.restaurants || itinerary.restaurants?.find((r: any) => r.day === (index + 1))?.restaurants || []}
+                    accommodation={day.accommodation || itinerary.accommodations?.find((a: any) => a.day === (index + 1)) || itinerary.accommodations?.[index]}
+                    scenicStops={day.scenicStops || itinerary.scenicStops?.find((s: any) => s.day === (index + 1))?.scenicStops || []}
                   />
                 ))}
               </div>
