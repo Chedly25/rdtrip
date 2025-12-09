@@ -499,7 +499,11 @@ export function ItineraryPage() {
 
               {/* Day Cards */}
               <div className="space-y-6">
-                {itinerary.dayStructure?.map((day: any, index: number) => (
+                {(() => {
+                  const ds = itinerary.dayStructure as any;
+                  const days = Array.isArray(ds) ? ds : (ds?.days || []);
+                  return days;
+                })().map((day: any, index: number) => (
                   <EditorialDayCard
                     key={day.dayNumber || index}
                     day={{
