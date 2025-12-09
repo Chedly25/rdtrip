@@ -8247,28 +8247,19 @@ const weatherRoutes = require('./server/routes/weather');
 app.use('/api/weather', weatherRoutes);
 
 // =====================================================
-// CATCH-ALL ROUTE - Serve React app for client-side routing
+// CATCH-ALL ROUTE - Serve unified React app for client-side routing
 // =====================================================
 // This must be AFTER all API routes but BEFORE server startup
-// Handles React Router routes like /shared/:token, /my-routes, etc.
+// Handles all React Router routes (/, /route/:id, /my-routes, /discover, etc.)
 app.get('*', (req, res) => {
   // Don't intercept API routes or static files
   if (req.path.startsWith('/api/') || req.path.includes('.')) {
     return res.status(404).send('Not found');
   }
 
-  // Serve the landing page for root route
-  if (req.path === '/') {
-    return res.sendFile(path.join(__dirname, 'public', 'landing-react', 'index.html'));
-  }
-
-  // Serve the spotlight app for spotlight routes
-  if (req.path.startsWith('/spotlight-new')) {
-    return res.sendFile(path.join(__dirname, 'public', 'spotlight-new', 'index.html'));
-  }
-
-  // Serve the React app's index.html for all other routes (fallback)
-  res.sendFile(path.join(__dirname, 'public', 'landing-react', 'index.html'));
+  // Serve the unified React app for all routes
+  // The app handles routing internally via React Router
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // =====================================================

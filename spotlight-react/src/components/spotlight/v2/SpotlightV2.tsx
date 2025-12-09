@@ -22,11 +22,16 @@ import { getStoredItineraryId } from '../../../hooks/useItineraryGeneration';
 import { PersonalizedIntroBanner } from './PersonalizedIntroBanner';
 import { FeatureTour, MarketplacePrompt } from '../../onboarding';
 
-const SpotlightV2 = () => {
-  // Get routeId from query params (?routeId=123) not path params
+interface SpotlightV2Props {
+  routeId?: string;
+  itineraryId?: string;
+}
+
+const SpotlightV2 = ({ routeId: propRouteId, itineraryId: propItineraryId }: SpotlightV2Props = {}) => {
+  // Get routeId from props (clean URLs) or query params (legacy URLs)
   const [searchParams] = useSearchParams();
-  const routeId = searchParams.get('routeId');
-  const itineraryId = searchParams.get('itinerary');
+  const routeId = propRouteId || searchParams.get('routeId');
+  const itineraryId = propItineraryId || searchParams.get('itinerary');
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

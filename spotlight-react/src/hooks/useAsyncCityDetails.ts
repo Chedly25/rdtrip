@@ -115,8 +115,8 @@ export function useAsyncCityDetails(cityName: string, country?: string, isOpen?:
     phase: null
   })
 
-  const pollingIntervalRef = useRef<number | null>(null)
-  const messageRotationRef = useRef<number | null>(null)
+  const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const messageRotationRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const currentJobIdRef = useRef<string | null>(null)
   const pollingFailuresRef = useRef<number>(0)
   const MAX_POLLING_FAILURES = 3
@@ -192,6 +192,7 @@ export function useAsyncCityDetails(cityName: string, country?: string, isOpen?:
         setState(prev => ({
           ...prev,
           quickData: result.data,
+          loading: false, // CRITICAL: Exit loading state so content shows!
           phase: 'quick',
           progress,
           message: '✨ Loading detailed information...'
@@ -318,7 +319,7 @@ export function useAsyncCityDetails(cityName: string, country?: string, isOpen?:
           console.log(`🔄 [useAsyncCityDetails] Polling job status...`)
           pollJobStatus(jobId)
         }
-      }, 2000) as unknown as number
+      }, 2000)
 
       // Immediately poll once
       console.log(`🔄 [useAsyncCityDetails] Immediate first poll...`)

@@ -9,7 +9,7 @@
  * This minimizes API calls and provides fast, cost-effective image loading.
  */
 
-import { fetchCityImageCached as fetchWikipediaImage } from './wikipedia';
+import { getWikipediaImage } from '../utils/wikipedia';
 
 // Cache interface for localStorage
 interface CityImageCache {
@@ -149,7 +149,7 @@ export async function fetchCityImage(cityName: string, country?: string): Promis
 
     // Step 2: Try Wikipedia (free, high-quality images)
     console.log(`📚 Trying Wikipedia for ${cityName}...`);
-    const wikipediaUrl = await fetchWikipediaImage(cityName);
+    const wikipediaUrl = await getWikipediaImage(cityName, 800);
 
     if (wikipediaUrl) {
       console.log(`✅ Found Wikipedia image for ${cityName}`);

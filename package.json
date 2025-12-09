@@ -9,7 +9,7 @@
     "dev": "node server.js",
     "dev:new": "node src/server.js",
     "db:migrate": "node db/migrate.js",
-    "heroku-postbuild": "cd landing-react && npm install --include=dev && VITE_MAPBOX_TOKEN=$VITE_MAPBOX_TOKEN npm run build && cd .. && rm -rf public/landing-react && cp -r landing-react/dist public/landing-react && cd spotlight-react && npm install --include=dev && VITE_MAPBOX_TOKEN=$VITE_MAPBOX_TOKEN npm run build && cd .. && rm -rf public/spotlight-new && cp -r spotlight-react/dist public/spotlight-new"
+    "heroku-postbuild": "cd spotlight-react && npm install --include=dev && VITE_MAPBOX_TOKEN=$VITE_MAPBOX_TOKEN VITE_SUPABASE_URL=$VITE_SUPABASE_URL VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY npm run build && cd .. && cp -r spotlight-react/dist/* public/"
   },
   "engines": {
     "node": "18.x"

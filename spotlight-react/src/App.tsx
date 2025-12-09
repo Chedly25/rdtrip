@@ -1,125 +1,255 @@
 /**
  * App.tsx
  *
- * Main application component with routing and providers.
- * WI-11.2: Added page transitions between major phases.
+ * Unified application combining landing page and trip planning features.
+ * Clean URL structure:
+ *   /                    Landing page
+ *   /discover            Discovery phase
+ *   /generate            Generation phase
+ *   /route/:id           Route view (SpotlightV2)
+ *   /today               Active trip view
+ *   /my-routes           User's saved routes
+ *   /shared/:token       Shared route view
+ *   /marketplace         Route marketplace
+ *   /marketplace/:slug   Individual marketplace route
  */
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { BrowserRouter as Router, Route, Navigate, useSearchParams } from 'react-router-dom'
+import { BrowserRouter as Router, Route, Routes, Navigate, useParams, useSearchParams } from 'react-router-dom'
+import { Suspense, lazy } from 'react'
+
+// Core components (eagerly loaded)
 import SpotlightV2 from './components/spotlight/v2/SpotlightV2'
 import { ItineraryGenerationPage } from './components/itinerary/ItineraryGenerationPage'
 import { TodayView } from './components/today/TodayView'
-import { NewTripPage } from './components/entry/NewTripPage'
 import { DiscoveryPhaseContainer } from './components/discovery'
 import { AgentProvider } from './contexts/AgentProvider'
 import { CompanionProvider } from './contexts/CompanionProvider'
 import { AuthProvider } from './contexts/AuthContext'
 import { AgentModal } from './components/agent/AgentModal'
-import { AnimatedRoutes, PageTransition } from './components/transitions'
+import { PageTransition } from './components/transitions'
+import { ErrorBoundary } from './components/ErrorBoundary'
+
+// Landing page components
+import { Navigation } from './components/landing/Navigation'
+import { Hero } from './components/landing/Hero'
+import { WorkflowShowcase } from './components/landing/WorkflowShowcase'
+import { BeforeAfterComparison } from './components/landing/BeforeAfterComparison'
+import { DestinationShowcase } from './components/landing/DestinationShowcase'
+import { Features } from './components/landing/Features'
+import { RouteForm } from './components/landing/RouteForm'
+import { About } from './components/landing/About'
+import { Footer } from './components/landing/Footer'
+
+// Lazy-loaded pages for better performance
+const MyRoutes = lazy(() => import('./pages/MyRoutes'))
+const SharedRoute = lazy(() => import('./pages/SharedRoute'))
+const MarketplacePage = lazy(() => import('./pages/MarketplacePage'))
+const RouteDetailPage = lazy(() => import('./pages/RouteDetailPage'))
 
 // Create a client
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
-      retry: 1,
+      retry: 2,
+      staleTime: 5 * 60 * 1000, // 5 minutes
     },
   },
 })
 
 /**
- * Smart Route Handler
- * Shows SpotlightV2 if there's a routeId param, otherwise redirects to new trip form
+ * Landing Page - Main marketing/entry point
  */
-function SmartRouteHandler() {
-  const [searchParams] = useSearchParams();
-  const routeId = searchParams.get('routeId');
-  const itineraryId = searchParams.get('itinerary');
+function LandingPage() {
+  return (
+    <>
+      <Navigation />
+      <Hero />
+      <WorkflowShowcase />
+      <BeforeAfterComparison />
+      <DestinationShowcase />
+      <RouteForm />
+      <Features />
+      <About />
+      <Footer />
+    </>
+  )
+}
 
-  // If there's a routeId or itinerary param, show SpotlightV2
-  if (routeId || itineraryId) {
+/**
+ * Route View Handler
+ * Handles /route/:id URLs for viewing routes
+ */
+function RouteViewHandler() {
+  const { id } = useParams<{ id: string }>()
+  const [searchParams] = useSearchParams()
+  const itineraryId = searchParams.get('itinerary')
+
+  // Pass route ID via URL search params for SpotlightV2 compatibility
+  if (id) {
     return (
       <PageTransition variant="scale">
-        <SpotlightV2 />
+        <SpotlightV2 routeId={id} itineraryId={itineraryId || undefined} />
       </PageTransition>
-    );
+    )
   }
 
-  // Otherwise redirect to the new trip entry form
-  return <Navigate to="/new" replace />;
+  return <Navigate to="/" replace />
+}
+
+/**
+ * Legacy Route Handler
+ * Handles old /spotlight-new URLs with query params and redirects to clean URLs
+ */
+function LegacyRouteHandler() {
+  const [searchParams] = useSearchParams()
+  const routeId = searchParams.get('routeId')
+  const itineraryId = searchParams.get('itinerary')
+
+  if (routeId) {
+    const newUrl = `/route/${routeId}${itineraryId ? `?itinerary=${itineraryId}` : ''}`
+    return <Navigate to={newUrl} replace />
+  }
+
+  return <Navigate to="/" replace />
+}
+
+/**
+ * Loading fallback for lazy-loaded components
+ */
+function PageLoadingFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-rui-grey-2">
+      <div className="flex flex-col items-center gap-4">
+        <div className="w-10 h-10 border-3 border-rui-accent border-t-transparent rounded-full animate-spin" />
+        <p className="text-rui-grey-50 text-sm">Loading...</p>
+      </div>
+    </div>
+  )
 }
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <Router basename="/spotlight-new">
-          <AgentProvider>
-            <CompanionProvider>
-              <AnimatedRoutes>
-                {/* Entry Phase - New trip creation form */}
-                <Route
-                  path="/new"
-                  element={
-                    <PageTransition variant="fade">
-                      <NewTripPage />
-                    </PageTransition>
-                  }
-                />
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <Router>
+            <AgentProvider>
+              <CompanionProvider>
+                <div className="min-h-screen">
+                  <Suspense fallback={<PageLoadingFallback />}>
+                    <Routes>
+                      {/* Landing Page - Root */}
+                      <Route path="/" element={<LandingPage />} />
 
-                {/* Discovery Phase - Explore suggested cities */}
-                <Route
-                  path="/discover"
-                  element={
-                    <PageTransition variant="slideRight">
-                      <DiscoveryPhaseContainer />
-                    </PageTransition>
-                  }
-                />
+                      {/* User's Saved Routes */}
+                      <Route
+                        path="/my-routes"
+                        element={
+                          <>
+                            <Navigation />
+                            <MyRoutes />
+                            <Footer />
+                          </>
+                        }
+                      />
 
-                {/* Generation Phase - AI itinerary creation */}
-                <Route
-                  path="/generate"
-                  element={
-                    <PageTransition variant="slideRight">
-                      <ItineraryGenerationPage />
-                    </PageTransition>
-                  }
-                />
+                      {/* Shared Route View */}
+                      <Route
+                        path="/shared/:token"
+                        element={
+                          <>
+                            <Navigation />
+                            <SharedRoute />
+                            <Footer />
+                          </>
+                        }
+                      />
 
-                {/* Today View - Active trip GPS-aware view */}
-                <Route
-                  path="/today"
-                  element={
-                    <PageTransition variant="slideUp">
-                      <TodayView />
-                    </PageTransition>
-                  }
-                />
+                      {/* Marketplace */}
+                      <Route
+                        path="/marketplace"
+                        element={
+                          <>
+                            <Navigation />
+                            <MarketplacePage />
+                            <Footer />
+                          </>
+                        }
+                      />
 
-                {/* Spotlight View - Route planning & editing */}
-                <Route
-                  path="/spotlight"
-                  element={
-                    <PageTransition variant="scale">
-                      <SpotlightV2 />
-                    </PageTransition>
-                  }
-                />
+                      {/* Marketplace Route Detail */}
+                      <Route
+                        path="/marketplace/:slug"
+                        element={
+                          <>
+                            <Navigation />
+                            <RouteDetailPage />
+                            <Footer />
+                          </>
+                        }
+                      />
 
-                {/* Smart handler: shows route if param exists, else redirects to /new */}
-                <Route path="/" element={<SmartRouteHandler />} />
-                <Route path="*" element={<SmartRouteHandler />} />
-              </AnimatedRoutes>
+                      {/* === App Phase Routes (no Navigation/Footer) === */}
 
-              {/* AI Agent Modal - Available for full-screen agent interactions */}
-              <AgentModal />
-            </CompanionProvider>
-          </AgentProvider>
-        </Router>
-      </AuthProvider>
-    </QueryClientProvider>
+                      {/* Discovery Phase - Explore suggested cities */}
+                      <Route
+                        path="/discover"
+                        element={
+                          <PageTransition variant="slideRight">
+                            <DiscoveryPhaseContainer />
+                          </PageTransition>
+                        }
+                      />
+
+                      {/* Generation Phase - AI itinerary creation */}
+                      <Route
+                        path="/generate"
+                        element={
+                          <PageTransition variant="slideRight">
+                            <ItineraryGenerationPage />
+                          </PageTransition>
+                        }
+                      />
+
+                      {/* Route View - Clean URL with route ID */}
+                      <Route
+                        path="/route/:id"
+                        element={<RouteViewHandler />}
+                      />
+
+                      {/* Today View - Active trip GPS-aware view */}
+                      <Route
+                        path="/today"
+                        element={
+                          <PageTransition variant="slideUp">
+                            <TodayView />
+                          </PageTransition>
+                        }
+                      />
+
+                      {/* Legacy: Handle old /spotlight-new URLs */}
+                      <Route path="/spotlight-new" element={<LegacyRouteHandler />} />
+                      <Route path="/spotlight-new/*" element={<LegacyRouteHandler />} />
+
+                      {/* Legacy: Handle old /spotlight URLs */}
+                      <Route path="/spotlight" element={<LegacyRouteHandler />} />
+
+                      {/* Catch-all: Redirect to landing page */}
+                      <Route path="*" element={<Navigate to="/" replace />} />
+                    </Routes>
+                  </Suspense>
+                </div>
+
+                {/* AI Agent Modal - Available for full-screen agent interactions */}
+                <AgentModal />
+              </CompanionProvider>
+            </AgentProvider>
+          </Router>
+        </AuthProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   )
 }
 
