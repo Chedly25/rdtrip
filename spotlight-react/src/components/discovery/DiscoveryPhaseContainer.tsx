@@ -74,6 +74,8 @@ export function DiscoveryPhaseContainer() {
       if (storedData) {
         try {
           const data = JSON.parse(storedData);
+
+          // Set trip summary
           setTripSummary({
             startDate: new Date(data.startDate),
             endDate: new Date(data.endDate),
@@ -81,7 +83,23 @@ export function DiscoveryPhaseContainer() {
             travellerType: data.travellerType,
           });
 
-          // Fetch suggested cities for the route
+          // Check if we already have route data in the store that matches
+          const existingRoute = useDiscoveryStore.getState().route;
+          const existingPhase = useDiscoveryStore.getState().phase;
+
+          // If we have existing route data and it matches the current trip
+          if (existingRoute && existingPhase === 'exploring') {
+            const sameOrigin = existingRoute.origin.name === data.origin.name;
+            const sameDestination = existingRoute.destination.name === data.destination.name;
+
+            if (sameOrigin && sameDestination) {
+              console.log('✅ Using cached route data');
+              // Route already exists and matches - no need to re-fetch
+              return;
+            }
+          }
+
+          // Fetch suggested cities for the route (only if not already fetched)
           await fetchSuggestedCities(data);
         } catch (err) {
           console.error('Failed to parse discovery data:', err);

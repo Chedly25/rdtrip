@@ -5,8 +5,8 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import { DiscoveryCityPin } from './DiscoveryCityPin';
 import type { DiscoveryRoute } from '../../stores/discoveryStore';
 
-// Mapbox access token
-const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || '';
+// Mapbox access token - use env var or fallback to hardcoded token
+const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || 'pk.eyJ1IjoiY2hlZGx5MjUiLCJhIjoiY21lbW1qeHRoMHB5azJsc2VuMWJld2tlYSJ9.0jfOiOXCh0VN5ZjJ5ab7MQ';
 
 interface DiscoveryMapProps {
   route: DiscoveryRoute | null;
@@ -105,54 +105,114 @@ export function DiscoveryMap({
     updateMarkers(route);
   }, [route, isMapLoaded]);
 
-  // Draw route line between cities
-  const drawRouteLine = useCallback((route: DiscoveryRoute) => {
+  // Draw route line between cities using Mapbox Directions API
+  const drawRouteLine = useCallback(async (route: DiscoveryRoute) => {
     if (!map.current) return;
 
     const sourceId = 'discovery-route';
     const layerId = 'discovery-route-line';
+    const straightLineSourceId = 'discovery-route-straight';
+    const straightLineLayerId = 'discovery-route-line-straight';
 
-    // Remove existing if present
-    if (map.current.getLayer(layerId)) {
-      map.current.removeLayer(layerId);
-    }
-    if (map.current.getSource(sourceId)) {
-      map.current.removeSource(sourceId);
-    }
+    // Remove existing layers if present
+    [layerId, straightLineLayerId].forEach((id) => {
+      if (map.current?.getLayer(id)) {
+        map.current.removeLayer(id);
+      }
+    });
+    [sourceId, straightLineSourceId].forEach((id) => {
+      if (map.current?.getSource(id)) {
+        map.current.removeSource(id);
+      }
+    });
 
-    // Create line coordinates
-    const coordinates = [
-      [route.origin.coordinates.lng, route.origin.coordinates.lat],
+    // Build coordinates for selected cities only
+    const waypoints = [
+      route.origin.coordinates,
       ...route.suggestedCities
         .filter((c) => c.isSelected)
-        .map((c) => [c.coordinates.lng, c.coordinates.lat]),
-      [route.destination.coordinates.lng, route.destination.coordinates.lat],
+        .map((c) => c.coordinates),
+      route.destination.coordinates,
     ];
 
-    // Add source
-    map.current.addSource(sourceId, {
+    // Format coordinates for Mapbox Directions API: lng,lat pairs separated by ;
+    const coordsString = waypoints
+      .map((c) => `${c.lng},${c.lat}`)
+      .join(';');
+
+    try {
+      // Fetch actual driving route from Mapbox Directions API
+      const response = await fetch(
+        `https://api.mapbox.com/directions/v5/mapbox/driving/${coordsString}?geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch driving route');
+      }
+
+      const data = await response.json();
+
+      if (data.routes && data.routes.length > 0) {
+        const routeGeometry = data.routes[0].geometry;
+
+        // Add the actual driving route
+        map.current.addSource(sourceId, {
+          type: 'geojson',
+          data: {
+            type: 'Feature',
+            properties: {},
+            geometry: routeGeometry,
+          },
+        });
+
+        // Add solid route line layer
+        map.current.addLayer({
+          id: layerId,
+          type: 'line',
+          source: sourceId,
+          layout: {
+            'line-join': 'round',
+            'line-cap': 'round',
+          },
+          paint: {
+            'line-color': '#C45830', // Terracotta
+            'line-width': 4,
+            'line-opacity': 0.8,
+          },
+        });
+
+        console.log('✅ Driving route drawn successfully');
+        return;
+      }
+    } catch (err) {
+      console.warn('⚠️ Could not fetch driving route, falling back to straight lines:', err);
+    }
+
+    // Fallback: Draw straight lines if Directions API fails
+    const straightCoordinates = waypoints.map((c) => [c.lng, c.lat]);
+
+    map.current.addSource(straightLineSourceId, {
       type: 'geojson',
       data: {
         type: 'Feature',
         properties: {},
         geometry: {
           type: 'LineString',
-          coordinates,
+          coordinates: straightCoordinates,
         },
       },
     });
 
-    // Add dashed line layer
     map.current.addLayer({
-      id: layerId,
+      id: straightLineLayerId,
       type: 'line',
-      source: sourceId,
+      source: straightLineSourceId,
       layout: {
         'line-join': 'round',
         'line-cap': 'round',
       },
       paint: {
-        'line-color': '#C45830', // Terracotta
+        'line-color': '#C45830',
         'line-width': 3,
         'line-dasharray': [2, 2],
         'line-opacity': 0.7,
