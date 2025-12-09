@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { useDiscoveryStore } from '../../stores/discoveryStore';
+import { useSpotlightStoreV2 } from '../../stores/spotlightStoreV2';
 import { DiscoveryHeader } from './DiscoveryHeader';
 import { DiscoveryMap } from './DiscoveryMap';
 import { DiscoveryCompanionPanel } from './DiscoveryCompanionPanel';
@@ -236,6 +237,33 @@ export function DiscoveryPhaseContainer() {
       sessionStorage.setItem('discoveryPreferences', JSON.stringify(preferences));
       sessionStorage.setItem('selectedCities', JSON.stringify(selectedCities));
       sessionStorage.setItem('favouritedPlaces', JSON.stringify(favouritedPlaces));
+
+      // CRITICAL: Also set route in spotlightStoreV2 for ItineraryGenerationPage
+      // Transform discovery data to SpotlightRoute format
+      const spotlightRoute = {
+        id: `discovery-${Date.now()}`,
+        origin: route?.origin.name || '',
+        destination: route?.destination.name || '',
+        agent: tripSummary?.travellerType || 'couple',
+        budget: 'mid',
+        cities: selectedCities.map((city, index) => ({
+          city: city.name,
+          name: city.name,
+          country: city.country,
+          coordinates: city.coordinates,
+          nights: city.nights ?? city.suggestedNights ?? 1,
+          isSelected: city.isSelected,
+          position: index,
+        })),
+        landmarks: [],
+        nightAllocations: selectedCities.reduce((acc, city) => {
+          acc[city.name] = city.nights ?? city.suggestedNights ?? 1;
+          return acc;
+        }, {} as Record<string, number>),
+      };
+
+      useSpotlightStoreV2.getState().setRoute(spotlightRoute);
+      console.log('📦 Set route in spotlightStoreV2:', spotlightRoute);
 
       // Update phase
       setPhase('generating');
