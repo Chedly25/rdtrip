@@ -111,20 +111,14 @@ export function DiscoveryMap({
 
     const sourceId = 'discovery-route';
     const layerId = 'discovery-route-line';
-    const straightLineSourceId = 'discovery-route-straight';
-    const straightLineLayerId = 'discovery-route-line-straight';
 
-    // Remove existing layers if present
-    [layerId, straightLineLayerId].forEach((id) => {
-      if (map.current?.getLayer(id)) {
-        map.current.removeLayer(id);
-      }
-    });
-    [sourceId, straightLineSourceId].forEach((id) => {
-      if (map.current?.getSource(id)) {
-        map.current.removeSource(id);
-      }
-    });
+    // Remove existing layer if present
+    if (map.current?.getLayer(layerId)) {
+      map.current.removeLayer(layerId);
+    }
+    if (map.current?.getSource(sourceId)) {
+      map.current.removeSource(sourceId);
+    }
 
     // Build coordinates for selected cities only
     const waypoints = [
@@ -182,42 +176,11 @@ export function DiscoveryMap({
         });
 
         console.log('✅ Driving route drawn successfully');
-        return;
       }
     } catch (err) {
-      console.warn('⚠️ Could not fetch driving route, falling back to straight lines:', err);
+      console.warn('⚠️ Could not fetch driving route:', err);
+      // No fallback - just don't show a line if API fails
     }
-
-    // Fallback: Draw straight lines if Directions API fails
-    const straightCoordinates = waypoints.map((c) => [c.lng, c.lat]);
-
-    map.current.addSource(straightLineSourceId, {
-      type: 'geojson',
-      data: {
-        type: 'Feature',
-        properties: {},
-        geometry: {
-          type: 'LineString',
-          coordinates: straightCoordinates,
-        },
-      },
-    });
-
-    map.current.addLayer({
-      id: straightLineLayerId,
-      type: 'line',
-      source: straightLineSourceId,
-      layout: {
-        'line-join': 'round',
-        'line-cap': 'round',
-      },
-      paint: {
-        'line-color': '#C45830',
-        'line-width': 3,
-        'line-dasharray': [2, 2],
-        'line-opacity': 0.7,
-      },
-    });
   }, []);
 
   // Update markers for cities

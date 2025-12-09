@@ -77,10 +77,10 @@ export function DiscoveryCityPin({
       shadow: 'shadow-xl shadow-rui-accent/25',
     },
     added: {
-      bg: 'bg-rui-sage',
+      bg: 'bg-rui-accent',
       text: 'text-white',
-      ring: '',
-      shadow: 'shadow-lg shadow-rui-sage/30',
+      ring: 'ring-2 ring-white/50',
+      shadow: 'shadow-lg shadow-rui-accent/40',
     },
     fixed: {
       bg: 'bg-rui-accent',
@@ -238,10 +238,8 @@ export function DiscoveryCityPin({
         className={`
           w-0.5 h-2
           transition-colors duration-200
-          ${state === 'fixed'
+          ${state === 'fixed' || state === 'added'
             ? 'bg-rui-accent'
-            : state === 'added'
-            ? 'bg-rui-sage'
             : 'bg-rui-grey-20'
           }
         `}
