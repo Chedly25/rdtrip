@@ -687,6 +687,15 @@ function generateMockPlacesForCity(_cityName: string): DiscoveryPlace[] {
 function generateMockPlaces(cityName: string, cityIndex: number): DiscoveryPlace[] {
   // Sample places data organized by city for realistic mock data
   const placesData: Record<string, DiscoveryPlace[]> = {
+    Barcelona: [
+      { id: `barcelona-1`, name: 'La Sagrada Família', type: 'landmark', rating: 4.8, reviewCount: 185000, isHiddenGem: false, description: 'Gaudí\'s unfinished masterpiece basilica' },
+      { id: `barcelona-2`, name: 'Park Güell', type: 'park', rating: 4.6, reviewCount: 98000, isHiddenGem: false, description: 'Whimsical park with Gaudí\'s mosaic works' },
+      { id: `barcelona-3`, name: 'Can Culleretes', type: 'restaurant', rating: 4.4, reviewCount: 4200, isHiddenGem: true, description: 'Barcelona\'s oldest restaurant since 1786', priceLevel: 2 },
+      { id: `barcelona-4`, name: 'El Born CCM', type: 'museum', rating: 4.5, reviewCount: 8900, isHiddenGem: true, description: 'Archaeological ruins under a stunning iron market hall' },
+      { id: `barcelona-5`, name: 'La Boqueria', type: 'market', rating: 4.5, reviewCount: 72000, isHiddenGem: false, description: 'Iconic food market on La Rambla', priceLevel: 2 },
+      { id: `barcelona-6`, name: 'Bunkers del Carmel', type: 'viewpoint', rating: 4.7, reviewCount: 15000, isHiddenGem: true, description: 'Secret panoramic views from Civil War bunkers' },
+      { id: `barcelona-7`, name: 'Bar Marsella', type: 'bar', rating: 4.3, reviewCount: 2100, isHiddenGem: true, description: 'Legendary absinthe bar since 1820', priceLevel: 1 },
+    ],
     Lyon: [
       { id: `lyon-1`, name: 'Les Halles de Lyon Paul Bocuse', type: 'market', rating: 4.7, reviewCount: 12400, isHiddenGem: false, description: 'Legendary covered market with gourmet delicacies', priceLevel: 3 },
       { id: `lyon-2`, name: 'Bouchon Chez Hugon', type: 'restaurant', rating: 4.5, reviewCount: 890, isHiddenGem: true, description: 'Authentic Lyonnaise cuisine in a historic setting', priceLevel: 2 },
@@ -725,6 +734,41 @@ function generateMockPlaces(cityName: string, cityIndex: number): DiscoveryPlace
       { id: `montpellier-3`, name: 'Le Terminal #1', type: 'bar', rating: 4.3, reviewCount: 420, isHiddenGem: true, description: 'Craft cocktails in a converted warehouse', priceLevel: 2 },
       { id: `montpellier-4`, name: 'Musée Fabre', type: 'museum', rating: 4.7, reviewCount: 4100, isHiddenGem: false, description: 'World-class collection from Rubens to Soulages' },
       { id: `montpellier-5`, name: 'La Diligence', type: 'restaurant', rating: 4.5, reviewCount: 280, isHiddenGem: true, description: 'Slow-food Languedoc cuisine', priceLevel: 3 },
+    ],
+    Milan: [
+      { id: `milan-1`, name: 'Duomo di Milano', type: 'landmark', rating: 4.8, reviewCount: 156000, isHiddenGem: false, description: 'Gothic cathedral with rooftop terraces' },
+      { id: `milan-2`, name: 'Navigli District', type: 'landmark', rating: 4.5, reviewCount: 24000, isHiddenGem: false, description: 'Historic canal district with cafes and nightlife' },
+      { id: `milan-3`, name: 'Luini Panzerotti', type: 'restaurant', rating: 4.6, reviewCount: 8900, isHiddenGem: true, description: 'Legendary fried panzerotti since 1888', priceLevel: 1 },
+      { id: `milan-4`, name: 'Pinacoteca di Brera', type: 'gallery', rating: 4.7, reviewCount: 12400, isHiddenGem: false, description: 'World-class art collection in a historic palazzo' },
+      { id: `milan-5`, name: 'Bar Basso', type: 'bar', rating: 4.4, reviewCount: 2800, isHiddenGem: true, description: 'Birthplace of the Negroni Sbagliato', priceLevel: 2 },
+    ],
+    Geneva: [
+      { id: `geneva-1`, name: 'Jet d\'Eau', type: 'landmark', rating: 4.5, reviewCount: 18000, isHiddenGem: false, description: 'Iconic 140m fountain on Lake Geneva' },
+      { id: `geneva-2`, name: 'Old Town', type: 'landmark', rating: 4.6, reviewCount: 12000, isHiddenGem: false, description: 'Medieval streets and St. Pierre Cathedral' },
+      { id: `geneva-3`, name: 'Café du Soleil', type: 'restaurant', rating: 4.5, reviewCount: 890, isHiddenGem: true, description: 'Traditional fondue in a charming village setting', priceLevel: 3 },
+      { id: `geneva-4`, name: 'Patek Philippe Museum', type: 'museum', rating: 4.8, reviewCount: 3200, isHiddenGem: true, description: '500 years of watchmaking history' },
+      { id: `geneva-5`, name: 'Bains des Pâquis', type: 'experience', rating: 4.4, reviewCount: 4500, isHiddenGem: true, description: 'Historic lakeside baths and fondue spot' },
+    ],
+    Munich: [
+      { id: `munich-1`, name: 'Marienplatz', type: 'landmark', rating: 4.7, reviewCount: 89000, isHiddenGem: false, description: 'Historic square with famous Glockenspiel' },
+      { id: `munich-2`, name: 'English Garden', type: 'park', rating: 4.8, reviewCount: 42000, isHiddenGem: false, description: 'One of the world\'s largest urban parks' },
+      { id: `munich-3`, name: 'Augustiner-Keller', type: 'restaurant', rating: 4.6, reviewCount: 15000, isHiddenGem: false, description: 'Traditional beer hall with century-old trees', priceLevel: 2 },
+      { id: `munich-4`, name: 'Schumann\'s Bar', type: 'bar', rating: 4.5, reviewCount: 1800, isHiddenGem: true, description: 'Legendary cocktail bar since 1982', priceLevel: 3 },
+      { id: `munich-5`, name: 'Viktualienmarkt', type: 'market', rating: 4.6, reviewCount: 28000, isHiddenGem: false, description: 'Daily food market since 1807', priceLevel: 2 },
+    ],
+    Amsterdam: [
+      { id: `amsterdam-1`, name: 'Rijksmuseum', type: 'museum', rating: 4.8, reviewCount: 95000, isHiddenGem: false, description: 'Dutch masterpieces including Rembrandt\'s Night Watch' },
+      { id: `amsterdam-2`, name: 'Jordaan District', type: 'landmark', rating: 4.6, reviewCount: 18000, isHiddenGem: false, description: 'Charming canals, galleries, and brown cafés' },
+      { id: `amsterdam-3`, name: "Café 't Smalle", type: 'bar', rating: 4.5, reviewCount: 2400, isHiddenGem: true, description: 'Historic brown café from 1786', priceLevel: 2 },
+      { id: `amsterdam-4`, name: 'Albert Cuypmarkt', type: 'market', rating: 4.4, reviewCount: 8900, isHiddenGem: false, description: 'Amsterdam\'s largest daily street market', priceLevel: 1 },
+      { id: `amsterdam-5`, name: 'Vondelpark', type: 'park', rating: 4.7, reviewCount: 38000, isHiddenGem: false, description: 'City\'s beloved green oasis' },
+    ],
+    Nice: [
+      { id: `nice-1`, name: 'Promenade des Anglais', type: 'landmark', rating: 4.6, reviewCount: 45000, isHiddenGem: false, description: 'Iconic seafront boulevard' },
+      { id: `nice-2`, name: 'Vieux Nice', type: 'landmark', rating: 4.7, reviewCount: 32000, isHiddenGem: false, description: 'Baroque old town with vibrant markets' },
+      { id: `nice-3`, name: 'Chez Palmyre', type: 'restaurant', rating: 4.6, reviewCount: 680, isHiddenGem: true, description: 'No-menu Niçoise cooking since 1928', priceLevel: 2 },
+      { id: `nice-4`, name: 'Castle Hill', type: 'viewpoint', rating: 4.7, reviewCount: 24000, isHiddenGem: false, description: 'Panoramic views of the Baie des Anges' },
+      { id: `nice-5`, name: 'Cours Saleya', type: 'market', rating: 4.5, reviewCount: 12000, isHiddenGem: false, description: 'Famous flower and food market', priceLevel: 2 },
     ],
   };
 

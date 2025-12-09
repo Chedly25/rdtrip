@@ -79,13 +79,15 @@ export function DiscoveryCityPreview({
       >
         <div
           className="
-            bg-rui-cream rounded-t-3xl md:rounded-3xl
-            shadow-2xl shadow-rui-black/20
-            border border-rui-grey-20
+            rounded-t-3xl md:rounded-3xl
             overflow-hidden
             flex flex-col
             max-h-[90vh] md:max-h-[85vh]
           "
+          style={{
+            backgroundColor: '#FFFFFF',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05)',
+          }}
         >
           {/* Header image */}
           <div
@@ -312,7 +314,7 @@ export function DiscoveryCityPreview({
           </div>
 
           {/* Action buttons - sticky at bottom */}
-          <div className="flex-shrink-0 p-5 pt-3 border-t border-rui-grey-20 bg-rui-cream">
+          <div className="flex-shrink-0 p-5 pt-3 border-t border-rui-grey-10" style={{ backgroundColor: '#FAFAFA' }}>
             <div className="flex gap-3">
               {/* Add/Remove button */}
               {!isFixed && (

@@ -174,19 +174,23 @@ export function PlaceCard({
         transition={{ duration: 0.2 }}
         className="
           flex items-start gap-3 p-3
-          bg-white rounded-xl
+          rounded-xl
           border border-rui-grey-10
           cursor-pointer
         "
+        style={{ backgroundColor: '#FFFFFF' }}
       >
         {/* Photo */}
         <div className="relative flex-shrink-0">
           <div
             className="
               w-16 h-16 md:w-20 md:h-20
-              rounded-lg overflow-hidden
-              bg-gradient-to-br from-rui-cream to-rui-grey-5
+              rounded-xl overflow-hidden
             "
+            style={{
+              backgroundColor: '#F8F6F3',
+              boxShadow: 'inset 0 2px 4px rgba(0, 0, 0, 0.06)',
+            }}
           >
             {place.photoUrl ? (
               <img
@@ -195,9 +199,16 @@ export function PlaceCard({
                 className="w-full h-full object-cover"
               />
             ) : (
-              // Placeholder pattern
-              <div className="w-full h-full flex items-center justify-center">
-                <TypeIcon className={`w-6 h-6 ${config.color} opacity-40`} />
+              // Stylish placeholder with category icon
+              <div
+                className="w-full h-full flex items-center justify-center"
+                style={{
+                  background: `linear-gradient(135deg, ${config.bg.includes('rui-accent') ? 'rgba(196, 88, 48, 0.08)' : 'rgba(139, 163, 139, 0.08)'} 0%, rgba(248, 246, 243, 1) 100%)`,
+                }}
+              >
+                <div className={`w-10 h-10 rounded-full ${config.bg} flex items-center justify-center`}>
+                  <TypeIcon className={`w-5 h-5 ${config.color}`} />
+                </div>
               </div>
             )}
           </div>
