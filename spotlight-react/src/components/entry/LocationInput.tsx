@@ -434,17 +434,22 @@ export function LocationInput({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.98 }}
             transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
-            className="absolute z-50 mt-2 w-full rounded-rui-16 bg-rui-white border border-rui-grey-10 shadow-rui-3 overflow-hidden"
+            className="absolute z-50 mt-2 w-full rounded-2xl overflow-hidden"
+            style={{
+              backgroundColor: '#FFFFFF',
+              boxShadow: '0 10px 40px -5px rgba(0, 0, 0, 0.15), 0 4px 16px -2px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.05)',
+            }}
           >
             <div
               ref={listRef}
               id="location-listbox"
               role="listbox"
-              className="max-h-72 overflow-y-auto"
+              className="max-h-80 overflow-y-auto"
+              style={{ backgroundColor: '#FFFFFF' }}
             >
               {/* Current location option - only when input is empty */}
               {showCurrentLocationOption && (
-                <div className="p-2 border-b border-rui-grey-5">
+                <div className="p-2 border-b border-rui-grey-10 bg-white">
                   <button
                     type="button"
                     data-option
@@ -486,7 +491,7 @@ export function LocationInput({
 
               {/* Recent searches */}
               {showRecentSearches && (
-                <div className="p-2">
+                <div className="p-2 bg-white">
                   <p className="px-4 py-2 text-body-3 font-medium text-rui-grey-50 uppercase tracking-wide flex items-center gap-2">
                     <Clock className="w-3.5 h-3.5" />
                     Recent
@@ -532,7 +537,7 @@ export function LocationInput({
 
               {/* Search suggestions */}
               {showSuggestions && (
-                <div className="p-2">
+                <div className="p-2 bg-white">
                   {suggestions.map((city, index) => (
                     <motion.button
                       type="button"
