@@ -1,15 +1,12 @@
 /**
  * Unified City Image Service
  *
- * Provides a smart multi-layer caching system for city images:
+ * Uses Google Places API for high-quality city images:
  * 1. localStorage cache (7-day TTL) - instant load
- * 2. Wikipedia API - free, high-quality images
- * 3. Backend API (checks DB → Google Places) - reliable fallback
+ * 2. Backend API (checks DB → Google Places) - high-quality photos
  *
- * This minimizes API calls and provides fast, cost-effective image loading.
+ * Google Places provides better, more consistent city photography.
  */
-
-import { getWikipediaImage } from '../utils/wikipedia';
 
 // Cache interface for localStorage
 interface CityImageCache {
@@ -125,13 +122,12 @@ async function fetchFromBackend(cityName: string, country?: string): Promise<str
 }
 
 /**
- * Main function: Fetch city image with smart fallback chain
+ * Main function: Fetch city image using Google Places API
  *
  * Fallback chain:
  * 1. LocalStorage cache (instant)
- * 2. Wikipedia API (free, high-quality)
- * 3. Backend API → DB cache → Google Places API (reliable)
- * 4. null (caller should show placeholder gradient)
+ * 2. Backend API → DB cache → Google Places API (high-quality)
+ * 3. null (caller should show placeholder gradient)
  *
  * @param cityName - Name of the city (e.g., "Paris")
  * @param country - Optional country name for better search accuracy (e.g., "France")
@@ -147,26 +143,15 @@ export async function fetchCityImage(cityName: string, country?: string): Promis
       return cachedUrl;
     }
 
-    // Step 2: Try Wikipedia (free, high-quality images)
-    console.log(`📚 Trying Wikipedia for ${cityName}...`);
-    const wikipediaUrl = await getWikipediaImage(cityName, 800);
-
-    if (wikipediaUrl) {
-      console.log(`✅ Found Wikipedia image for ${cityName}`);
-      // Cache the Wikipedia result
-      setCachedImage(cityName, wikipediaUrl, 'wikipedia', country);
-      return wikipediaUrl;
-    }
-
-    // Step 3: Try backend API (checks DB cache + Google Places)
-    console.log(`🌐 Trying backend API for ${cityName}...`);
+    // Step 2: Try backend API (checks DB cache + Google Places)
+    console.log(`🌐 Fetching from Google Places for ${cityName}...`);
     const backendUrl = await fetchFromBackend(cityName, country);
 
     if (backendUrl) {
       return backendUrl;
     }
 
-    // Step 4: No image found
+    // Step 3: No image found
     console.log(`❌ No image found for ${cityName}`);
     return null;
 

@@ -31,6 +31,11 @@ export function DiscoveryMap({
   const map = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<Map<string, mapboxgl.Marker>>(new Map());
   const [isMapLoaded, setIsMapLoaded] = useState(false);
+  // Track route drawing state to prevent race conditions
+  const routeDrawingRef = useRef<{ abortController: AbortController | null; isDrawing: boolean }>({
+    abortController: null,
+    isDrawing: false,
+  });
 
   // Initialize map
   useEffect(() => {
@@ -76,33 +81,38 @@ export function DiscoveryMap({
     };
   }, []);
 
+  // Track previous route reference for bounds fitting
+  const prevRouteRef = useRef<DiscoveryRoute | null>(null);
+
   // Update map when route changes
   useEffect(() => {
     if (!map.current || !isMapLoaded || !route) return;
 
-    // Fit bounds to show full route
-    const allCoords = [
-      route.origin.coordinates,
-      ...route.suggestedCities.map((c) => c.coordinates),
-      route.destination.coordinates,
-    ];
+    // Only fit bounds when route first loads or cities are added (not just selection changes)
+    const routeChanged = !prevRouteRef.current ||
+      prevRouteRef.current.suggestedCities.length !== route.suggestedCities.length;
 
-    const bounds = new mapboxgl.LngLatBounds();
-    allCoords.forEach((coord) => {
-      bounds.extend([coord.lng, coord.lat]);
-    });
+    if (routeChanged) {
+      // Fit bounds to show full route
+      const allCoords = [
+        route.origin.coordinates,
+        ...route.suggestedCities.map((c) => c.coordinates),
+        route.destination.coordinates,
+      ];
 
-    map.current.fitBounds(bounds, {
-      padding: { top: 180, bottom: 200, left: 60, right: 60 },
-      duration: 1500,
-      easing: (t) => 1 - Math.pow(1 - t, 3), // Ease out cubic
-    });
+      const bounds = new mapboxgl.LngLatBounds();
+      allCoords.forEach((coord) => {
+        bounds.extend([coord.lng, coord.lat]);
+      });
 
-    // Draw route line
-    drawRouteLine(route);
+      map.current.fitBounds(bounds, {
+        padding: { top: 180, bottom: 200, left: 60, right: 60 },
+        duration: 1500,
+        easing: (t) => 1 - Math.pow(1 - t, 3), // Ease out cubic
+      });
+    }
 
-    // Add city markers
-    updateMarkers(route);
+    prevRouteRef.current = route;
   }, [route, isMapLoaded]);
 
   // Draw route line between cities using Mapbox Directions API
@@ -112,13 +122,33 @@ export function DiscoveryMap({
     const sourceId = 'discovery-route';
     const layerId = 'discovery-route-line';
 
-    // Remove existing layer if present
-    if (map.current?.getLayer(layerId)) {
-      map.current.removeLayer(layerId);
+    // Cancel any previous route drawing request
+    if (routeDrawingRef.current.abortController) {
+      routeDrawingRef.current.abortController.abort();
     }
-    if (map.current?.getSource(sourceId)) {
-      map.current.removeSource(sourceId);
-    }
+
+    // Create new abort controller for this request
+    const abortController = new AbortController();
+    routeDrawingRef.current.abortController = abortController;
+    routeDrawingRef.current.isDrawing = true;
+
+    // Helper to safely remove existing source/layer
+    const cleanupExistingRoute = () => {
+      try {
+        if (map.current?.getLayer(layerId)) {
+          map.current.removeLayer(layerId);
+        }
+        if (map.current?.getSource(sourceId)) {
+          map.current.removeSource(sourceId);
+        }
+      } catch (e) {
+        // Ignore cleanup errors
+        console.log('Route cleanup:', e);
+      }
+    };
+
+    // Remove existing layer/source first
+    cleanupExistingRoute();
 
     // Build coordinates for selected cities only
     const waypoints = [
@@ -137,8 +167,14 @@ export function DiscoveryMap({
     try {
       // Fetch actual driving route from Mapbox Directions API
       const response = await fetch(
-        `https://api.mapbox.com/directions/v5/mapbox/driving/${coordsString}?geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`
+        `https://api.mapbox.com/directions/v5/mapbox/driving/${coordsString}?geometries=geojson&overview=full&access_token=${MAPBOX_TOKEN}`,
+        { signal: abortController.signal }
       );
+
+      // Check if this request was aborted
+      if (abortController.signal.aborted) {
+        return;
+      }
 
       if (!response.ok) {
         throw new Error('Failed to fetch driving route');
@@ -146,8 +182,24 @@ export function DiscoveryMap({
 
       const data = await response.json();
 
-      if (data.routes && data.routes.length > 0) {
+      // Check again after JSON parsing
+      if (abortController.signal.aborted) {
+        return;
+      }
+
+      if (data.routes && data.routes.length > 0 && map.current) {
         const routeGeometry = data.routes[0].geometry;
+
+        // Clean up again before adding (in case another call started)
+        cleanupExistingRoute();
+
+        // Small delay to ensure cleanup is complete
+        await new Promise(resolve => setTimeout(resolve, 10));
+
+        // Final check before adding
+        if (abortController.signal.aborted || !map.current) {
+          return;
+        }
 
         // Add the actual driving route
         map.current.addSource(sourceId, {
@@ -178,8 +230,15 @@ export function DiscoveryMap({
         console.log('✅ Driving route drawn successfully');
       }
     } catch (err) {
+      // Ignore abort errors
+      if (err instanceof Error && err.name === 'AbortError') {
+        console.log('Route fetch aborted (new request started)');
+        return;
+      }
       console.warn('⚠️ Could not fetch driving route:', err);
       // No fallback - just don't show a line if API fails
+    } finally {
+      routeDrawingRef.current.isDrawing = false;
     }
   }, []);
 
