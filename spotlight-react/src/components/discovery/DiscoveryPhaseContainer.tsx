@@ -208,6 +208,7 @@ export function DiscoveryPhaseContainer() {
               isHiddenGem: place.isHiddenGem,
               description: place.editorialSummary,
               priceLevel: place.priceLevel || undefined,
+              photoUrl: place.photos[0]?.url,
             }));
             placeCount = hiddenGems.totalCount || places.length;
           } catch (err) {
@@ -252,6 +253,7 @@ export function DiscoveryPhaseContainer() {
           rating: place.rating,
           reviewCount: place.reviewCount,
           isHiddenGem: place.isHiddenGem,
+          photoUrl: place.photos[0]?.url,
         }));
       } catch (err) {
         console.warn('Could not fetch origin places:', err);
@@ -272,6 +274,7 @@ export function DiscoveryPhaseContainer() {
           rating: place.rating,
           reviewCount: place.reviewCount,
           isHiddenGem: place.isHiddenGem,
+          photoUrl: place.photos[0]?.url,
         }));
       } catch (err) {
         console.warn('Could not fetch destination places:', err);

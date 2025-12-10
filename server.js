@@ -2044,6 +2044,129 @@ app.post('/api/places/search', async (req, res) => {
   }
 });
 
+// GET /api/hidden-gems - Find top places near a location using Google Places API
+// Returns real restaurants, cafes, museums, landmarks etc with ratings and photos
+app.get('/api/hidden-gems', async (req, res) => {
+  try {
+    const {
+      lat,
+      lng,
+      radius = 5000,
+      limit = 20,
+      minRating = 4.0,
+      types
+    } = req.query;
+
+    if (!lat || !lng) {
+      return res.status(400).json({ error: 'lat and lng are required' });
+    }
+
+    const googleApiKey = process.env.GOOGLE_PLACES_API_KEY;
+    if (!googleApiKey) {
+      console.error('❌ GOOGLE_PLACES_API_KEY not configured');
+      return res.status(500).json({ error: 'API key not configured' });
+    }
+
+    console.log(`🔍 Hidden gems search at: ${lat},${lng} radius: ${radius}m`);
+
+    // Place types to search for - mix of food, culture, and attractions
+    const placeTypes = types
+      ? types.split(',')
+      : ['restaurant', 'cafe', 'museum', 'tourist_attraction', 'art_gallery', 'park', 'bar', 'bakery'];
+
+    // Search for each type and combine results
+    const allPlaces = [];
+
+    // Limit API calls - search top 3 types
+    const searchTypes = placeTypes.slice(0, 4);
+
+    for (const type of searchTypes) {
+      try {
+        // Use Google Places Nearby Search API
+        const nearbyUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=${radius}&type=${type}&key=${googleApiKey}`;
+
+        const response = await axios.get(nearbyUrl);
+
+        if (response.data && response.data.results) {
+          // Filter by rating and transform results
+          const filtered = response.data.results
+            .filter(place => place.rating >= parseFloat(minRating))
+            .map(place => {
+              // Get photo URL if available
+              let photoUrl = null;
+              if (place.photos && place.photos.length > 0) {
+                const photoRef = place.photos[0].photo_reference;
+                photoUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${photoRef}&key=${googleApiKey}`;
+              }
+
+              // Calculate hidden gem score
+              const reviewCount = place.user_ratings_total || 0;
+              const isHiddenGem = place.rating >= 4.3 && reviewCount >= 10 && reviewCount <= 500;
+              const hiddenGemScore = isHiddenGem
+                ? (place.rating - 4.0) * (1 - Math.min(reviewCount / 500, 1))
+                : 0;
+
+              return {
+                placeId: place.place_id,
+                name: place.name,
+                coordinates: {
+                  lat: place.geometry.location.lat,
+                  lng: place.geometry.location.lng
+                },
+                rating: place.rating,
+                reviewCount: reviewCount,
+                types: place.types || [type],
+                priceLevel: place.price_level || null,
+                photos: photoUrl ? [{ url: photoUrl }] : [],
+                address: place.vicinity,
+                isHiddenGem: isHiddenGem,
+                hiddenGemScore: hiddenGemScore,
+                openNow: place.opening_hours?.open_now ?? null
+              };
+            });
+
+          allPlaces.push(...filtered);
+        }
+      } catch (typeError) {
+        console.warn(`Failed to search type ${type}:`, typeError.message);
+      }
+    }
+
+    // Remove duplicates by placeId
+    const uniquePlaces = Array.from(
+      new Map(allPlaces.map(p => [p.placeId, p])).values()
+    );
+
+    // Sort by hidden gem score (hidden gems first), then by rating
+    uniquePlaces.sort((a, b) => {
+      if (b.hiddenGemScore !== a.hiddenGemScore) {
+        return b.hiddenGemScore - a.hiddenGemScore;
+      }
+      return b.rating - a.rating;
+    });
+
+    // Limit results
+    const limitedResults = uniquePlaces.slice(0, parseInt(limit));
+
+    console.log(`✅ Found ${limitedResults.length} places (${limitedResults.filter(p => p.isHiddenGem).length} hidden gems)`);
+
+    res.json({
+      places: limitedResults,
+      totalCount: uniquePlaces.length,
+      meta: {
+        location: { lat: parseFloat(lat), lng: parseFloat(lng) },
+        radius: parseInt(radius),
+        types: searchTypes,
+        fromCache: false
+      }
+    });
+
+  } catch (error) {
+    console.error('Hidden gems error:', error);
+    res.status(500).json({ error: 'Failed to fetch hidden gems' });
+  }
+});
+
 // Get job status and results
 app.get('/api/route-status/:jobId', (req, res) => {
   const { jobId } = req.params;
