@@ -17,6 +17,7 @@ import { useAgent } from '../../contexts/AgentProvider';
 import { ToolExecutionStatus } from './ToolExecutionStatus';
 import { InlinePlaceCard } from './InlinePlaceCard';
 import { QuickActionChips } from './QuickActionChips';
+import { ToolSourceIndicator, extractToolNames } from './ToolSourceIndicator';
 import { parseMessageForPlaces, hasPlaceMarkers } from '../../utils/messagePlaceParser';
 import type { ChipsSegment } from '../../utils/messagePlaceParser';
 
@@ -204,9 +205,17 @@ export function ChatHistoryPanel() {
                   </div>
                 )}
 
-                <p className="text-xs text-gray-500 mt-2">
-                  {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </p>
+                {/* Timestamp and tool source indicator */}
+                <div className="flex items-center justify-between mt-2 gap-3 flex-wrap">
+                  <p className="text-xs text-gray-500">
+                    {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+
+                  {/* Show live data sources if tools were used */}
+                  {message.toolCalls && message.toolCalls.length > 0 && (
+                    <ToolSourceIndicator toolsUsed={extractToolNames(message.toolCalls)} />
+                  )}
+                </div>
               </div>
             )}
           </motion.div>

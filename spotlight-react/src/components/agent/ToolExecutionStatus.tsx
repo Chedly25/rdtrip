@@ -125,6 +125,38 @@ function formatToolStatus(tool: ActiveTool): string {
     searchHotels: {
       running: 'Searching accommodations',
       complete: 'Hotels found'
+    },
+    mentionPlace: {
+      running: 'Looking up place details',
+      complete: 'Place found'
+    },
+    suggestActions: {
+      running: 'Preparing options',
+      complete: 'Options ready'
+    },
+    addCityToRoute: {
+      running: 'Adding city to route',
+      complete: 'City added'
+    },
+    replaceActivity: {
+      running: 'Updating itinerary',
+      complete: 'Activity replaced'
+    },
+    moveActivity: {
+      running: 'Moving activity',
+      complete: 'Activity moved'
+    },
+    searchItinerary: {
+      running: 'Searching itinerary',
+      complete: 'Found in itinerary'
+    },
+    analyzeDayFeasibility: {
+      running: 'Analyzing day schedule',
+      complete: 'Analysis complete'
+    },
+    optimizeRoute: {
+      running: 'Optimizing route order',
+      complete: 'Route optimized'
     }
   };
 
