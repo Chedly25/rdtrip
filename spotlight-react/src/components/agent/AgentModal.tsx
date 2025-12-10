@@ -10,15 +10,18 @@
 
 import { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Minimize2 } from 'lucide-react';
+import { X, Minimize2, Compass } from 'lucide-react';
 import { useAgent } from '../../contexts/AgentProvider';
+import { useIdeasBoard } from '../../contexts/IdeasBoardContext';
 import { ChatHistoryPanel } from './ChatHistoryPanel';
 import { ArtifactsPanel } from './ArtifactsPanel';
 import { ModalInput } from './ModalInput';
 
 export function AgentModal() {
   const { isOpen, closeAgent, currentArtifact, isMinimized, toggleMinimize, isLoading, activeTools } = useAgent();
+  const { openPanel: openIdeasBoard, pendingCount, savedCount } = useIdeasBoard();
   const modalRef = useRef<HTMLDivElement>(null);
+  const ideasCount = pendingCount + savedCount;
 
   // Show results panel when there's an artifact or when generating one
   const showResultsPanel = currentArtifact || (isLoading && activeTools.length > 0);
@@ -108,6 +111,24 @@ export function AgentModal() {
             </div>
 
             <div className="flex items-center gap-2">
+              {/* Ideas Board Button */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openIdeasBoard();
+                }}
+                className="relative flex items-center gap-2 px-3 py-2 bg-amber-100/90 hover:bg-amber-100 rounded-lg transition-colors"
+                title="Ideas Board"
+              >
+                <Compass className="w-4 h-4 text-amber-700" />
+                <span className="text-sm font-medium text-amber-800">Ideas</span>
+                {ideasCount > 0 && (
+                  <span className="absolute -top-1 -right-1 px-1.5 py-0.5 bg-rose-500 text-white text-xs font-bold rounded-full min-w-[1.25rem] text-center">
+                    {ideasCount > 99 ? '99+' : ideasCount}
+                  </span>
+                )}
+              </button>
+
               {/* Minimize Button */}
               <button
                 onClick={(e) => {

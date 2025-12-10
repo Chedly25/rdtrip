@@ -680,6 +680,11 @@ export function AgentProvider({ children }: AgentProviderProps) {
                 // Tool execution results - store them for rich rendering
                 console.log('🔧 Tool execution:', event.tools);
 
+                // 📋 Dispatch event for Ideas Board to capture recommendations
+                window.dispatchEvent(new CustomEvent('ideas_board_tool_result', {
+                  detail: { tools: event.tools }
+                }));
+
                 // Check if any tool modifies the itinerary
                 const itineraryModifyingTools = ['replaceActivity', 'addActivity', 'moveActivity', 'reorderActivities'];
                 const modifiedItinerary = event.tools.some((tool: any) =>

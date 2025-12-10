@@ -27,7 +27,9 @@ import { DiscoveryPhaseContainer } from './components/discovery'
 import { AgentProvider } from './contexts/AgentProvider'
 import { CompanionProvider } from './contexts/CompanionProvider'
 import { AuthProvider } from './contexts/AuthContext'
+import { IdeasBoardProvider } from './contexts/IdeasBoardContext'
 import { AgentModal } from './components/agent/AgentModal'
+import { IdeasBoardPanel } from './components/agent/IdeasBoard'
 import { PageTransition } from './components/transitions'
 import { ErrorBoundary } from './components/ErrorBoundary'
 
@@ -141,8 +143,9 @@ function App() {
         <AuthProvider>
           <Router>
             <AgentProvider>
-              <CompanionProvider>
-                <div className="min-h-screen">
+              <IdeasBoardProvider>
+                <CompanionProvider>
+                  <div className="min-h-screen">
                   <Suspense fallback={<PageLoadingFallback />}>
                     <Routes>
                       {/* Landing Page - Root */}
@@ -257,9 +260,13 @@ function App() {
                   </Suspense>
                 </div>
 
-                {/* AI Agent Modal - Available for full-screen agent interactions */}
-                <AgentModal />
-              </CompanionProvider>
+                  {/* AI Agent Modal - Available for full-screen agent interactions */}
+                  <AgentModal />
+
+                  {/* Ideas Board - Vintage scrapbook for agent recommendations */}
+                  <IdeasBoardPanel />
+                </CompanionProvider>
+              </IdeasBoardProvider>
             </AgentProvider>
           </Router>
         </AuthProvider>
