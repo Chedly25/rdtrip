@@ -537,7 +537,7 @@ class ToolRegistry {
     // 23. Add City to Route
     this.register({
       name: 'addCityToRoute',
-      description: 'Add a city as a waypoint to the user\'s trip route. Use when the user wants to add a new stop/city to their road trip. The city will be added to the map and city list. Use this during the discovery/planning phase.',
+      description: 'Add a city as a waypoint to the user\'s trip route. Use when the user wants to add a new stop/city to their road trip. The city will be added to the map and city list. Use this during the discovery/planning phase. IMPORTANT: When adding cities, use insertAfterIndex to place them in geographic order along the route. Look at the coordinates in context.routeData.cities.selected to determine where the new city fits geographically between existing stops.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -555,7 +555,7 @@ class ToolRegistry {
           },
           insertAfterIndex: {
             type: 'number',
-            description: 'Insert after this city index in the route (0-indexed). If not specified, adds to end.'
+            description: 'REQUIRED for geographic ordering. Insert after this city index in the route (0-indexed). Check context.routeData.cities.selected for each city\'s index and coordinates. Place the new city between existing cities based on geography (e.g., if adding a city between index 1 and 2 geographically, use insertAfterIndex: 1).'
           },
           reason: {
             type: 'string',

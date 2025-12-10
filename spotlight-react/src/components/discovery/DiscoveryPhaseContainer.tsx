@@ -80,10 +80,10 @@ export function DiscoveryPhaseContainer() {
       insertAfterIndex?: number;
       reason?: string;
     }>) => {
-      const { city, reason } = event.detail;
-      console.log('🏙️ [Discovery] Agent adding city:', city.name, city.country);
+      const { city, insertAfterIndex, reason } = event.detail;
+      console.log('🏙️ [Discovery] Agent adding city:', city.name, city.country, 'at index:', insertAfterIndex);
 
-      // Add the city to the route using the store action
+      // Add the city to the route using the store action with geographic positioning
       const cityId = addCity({
         name: city.name,
         country: city.country,
@@ -96,9 +96,9 @@ export function DiscoveryPhaseContainer() {
         placeCount: undefined,
         distanceFromRoute: undefined,
         drivingMinutes: undefined,
-      });
+      }, insertAfterIndex);
 
-      console.log('✅ [Discovery] City added with ID:', cityId);
+      console.log('✅ [Discovery] City added with ID:', cityId, 'at position after index:', insertAfterIndex);
 
       // Show a companion message about the addition
       addCompanionMessage({

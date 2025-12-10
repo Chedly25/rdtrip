@@ -54,9 +54,13 @@ export interface TripContext {
  * City summary for AI context (simplified from DiscoveryCity)
  */
 export interface CityContextSummary {
+  /** Index in route order (0-indexed) - use for insertAfterIndex */
+  index: number;
   id: string;
   name: string;
   country: string;
+  /** Coordinates for geographic ordering */
+  coordinates: { lat: number; lng: number };
   isSelected: boolean;
   isFixed: boolean;
   nights: number;
@@ -271,11 +275,13 @@ export function buildPlanningContext(
     totalDrivingMinutes: route?.totalDrivingMinutes ?? null,
   };
 
-  // Build city summaries
-  const buildCitySummary = (city: DiscoveryCity): CityContextSummary => ({
+  // Build city summaries with index for geographic ordering
+  const buildCitySummary = (city: DiscoveryCity, index: number): CityContextSummary => ({
+    index,
     id: city.id,
     name: city.name,
     country: city.country,
+    coordinates: city.coordinates ?? { lat: 0, lng: 0 },
     isSelected: city.isSelected,
     isFixed: city.isFixed,
     nights: city.nights ?? city.suggestedNights ?? 1,
@@ -294,8 +300,14 @@ export function buildPlanningContext(
     ? [route.origin, ...route.suggestedCities, route.destination]
     : [];
 
-  const selectedCities = allCities.filter((c) => c.isSelected || c.isFixed);
-  const availableCities = allCities.filter((c) => !c.isSelected && !c.isFixed);
+  // Build indexed summaries for selected and available cities
+  const indexedAllCities = allCities.map((c, i) => ({ city: c, index: i }));
+  const selectedCities = indexedAllCities
+    .filter(({ city }) => city.isSelected || city.isFixed)
+    .map(({ city, index }) => buildCitySummary(city, index));
+  const availableCities = indexedAllCities
+    .filter(({ city }) => !city.isSelected && !city.isFixed)
+    .map(({ city, index }) => buildCitySummary(city, index));
 
   // Build favourites context
   const favourites: PlanningContext['favourites'] = [];
@@ -353,8 +365,8 @@ export function buildPlanningContext(
     phase,
     trip,
     cities: {
-      selected: selectedCities.map(buildCitySummary),
-      available: availableCities.map(buildCitySummary),
+      selected: selectedCities,
+      available: availableCities,
     },
     favourites,
     behaviour,

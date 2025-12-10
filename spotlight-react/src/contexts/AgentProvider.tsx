@@ -722,16 +722,16 @@ export function AgentProvider({ children }: AgentProviderProps) {
                   }
                 }
 
-                // Check if addCityToRoute tool was used successfully
-                const addCityTool = event.tools.find((tool: any) => tool.name === 'addCityToRoute');
-                if (addCityTool) {
+                // Check if addCityToRoute tools were used successfully (handle MULTIPLE cities)
+                const addCityTools = event.tools.filter((tool: any) => tool.name === 'addCityToRoute');
+                for (const addCityTool of addCityTools) {
                   try {
                     const content = typeof addCityTool.content === 'string'
                       ? JSON.parse(addCityTool.content)
                       : addCityTool.content;
 
                     if (content.success && content.city) {
-                      console.log('🏙️ [AGENT] City added to route:', content.city.name);
+                      console.log('🏙️ [AGENT] City added to route:', content.city.name, 'at index:', content.insertAfterIndex);
                       // Dispatch custom event with city data for discovery store to handle
                       window.dispatchEvent(new CustomEvent('agent_add_city', {
                         detail: {

@@ -197,7 +197,7 @@ interface DiscoveryState {
   updateCityNights: (cityId: string, nights: number) => void;
 
   // Add/remove custom cities
-  addCity: (city: Omit<DiscoveryCity, 'id' | 'isFixed'>) => string;
+  addCity: (city: Omit<DiscoveryCity, 'id' | 'isFixed'>, insertAfterIndex?: number) => string;
   removeCity: (cityId: string) => void;
   reorderCities: (orderedCityIds: string[]) => void;
 
@@ -371,12 +371,13 @@ export const useDiscoveryStore = create<DiscoveryState>()(
       },
 
       // Add/remove custom cities
-      addCity: (cityData) => {
+      // insertAfterIndex: if provided, insert after that index (for geographic ordering)
+      addCity: (cityData, insertAfterIndex?: number) => {
         const { route } = get();
         if (!route) return '';
 
         // Generate unique ID for the new city
-        const id = `custom-${Date.now()}`;
+        const id = `custom-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
 
         const newCity: DiscoveryCity = {
           ...cityData,
@@ -385,10 +386,26 @@ export const useDiscoveryStore = create<DiscoveryState>()(
           isSelected: true, // Auto-select newly added cities
         };
 
+        // Build new cities array with proper insertion
+        let newCities: DiscoveryCity[];
+        if (typeof insertAfterIndex === 'number' && insertAfterIndex >= 0 && insertAfterIndex < route.suggestedCities.length) {
+          // Insert after the specified index for geographic ordering
+          newCities = [
+            ...route.suggestedCities.slice(0, insertAfterIndex + 1),
+            newCity,
+            ...route.suggestedCities.slice(insertAfterIndex + 1),
+          ];
+          console.log(`📍 [Store] Inserted ${cityData.name} after index ${insertAfterIndex}`);
+        } else {
+          // Default: append to end
+          newCities = [...route.suggestedCities, newCity];
+          console.log(`📍 [Store] Appended ${cityData.name} to end`);
+        }
+
         set({
           route: {
             ...route,
-            suggestedCities: [...route.suggestedCities, newCity],
+            suggestedCities: newCities,
           },
           selectedCityId: id, // Select the newly added city
         });
