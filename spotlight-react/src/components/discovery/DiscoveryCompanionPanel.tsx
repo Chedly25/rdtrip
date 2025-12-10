@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, useMotionValue, useTransform, animate, AnimatePresence } from 'framer-motion';
 import {
   MessageCircle,
@@ -9,10 +9,14 @@ import {
   ArrowRight,
   X,
   GripVertical,
+  Send,
+  Loader2,
 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 import { useDiscoveryStore } from '../../stores/discoveryStore';
 import type { DiscoveryRoute, TripSummary, DiscoveryCity } from '../../stores/discoveryStore';
 import { SortableCityList } from './SortableCityList';
+import { usePlanningCompanion } from '../../hooks/usePlanningCompanion';
 
 interface DiscoveryCompanionPanelProps {
   route: DiscoveryRoute | null;
@@ -152,6 +156,42 @@ function DesktopSidebar({
 }: DesktopSidebarProps) {
   void _tripSummary; // Will use for night allocation display later
   const scrollRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Use planning companion for chat functionality
+  const {
+    conversation,
+    isLoading,
+    sendMessage,
+    suggestions,
+    dismissSuggestion,
+  } = usePlanningCompanion();
+
+  const [inputValue, setInputValue] = useState('');
+  const [showChat, setShowChat] = useState(false);
+
+  // Auto-scroll to latest message
+  useEffect(() => {
+    if (messagesEndRef.current && conversation.messages.length > 0) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [conversation.messages]);
+
+  // Handle send message
+  const handleSend = useCallback(() => {
+    if (!inputValue.trim() || isLoading) return;
+    sendMessage(inputValue.trim());
+    setInputValue('');
+    setShowChat(true);
+  }, [inputValue, isLoading, sendMessage]);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
 
   return (
     <motion.aside
@@ -183,21 +223,139 @@ function DesktopSidebar({
 
       {/* Content - scrollable */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto">
-        {/* Companion message - show only the latest */}
-        {companionMessages.length > 0 && (
-          <div className="p-4 border-b border-rui-grey-10">
+        {/* Companion chat section */}
+        <div className="p-4 border-b border-rui-grey-10">
+          {/* Show chat messages if we have any, otherwise show static message */}
+          {showChat && conversation.messages.length > 0 ? (
+            <div className="space-y-3 max-h-[200px] overflow-y-auto mb-3">
+              {conversation.messages.map((msg) => (
+                <div
+                  key={msg.id}
+                  className={`
+                    ${msg.role === 'user'
+                      ? 'ml-8 bg-rui-accent text-white'
+                      : 'mr-8 bg-white border border-rui-grey-10'
+                    }
+                    rounded-2xl p-3 text-body-2
+                  `}
+                >
+                  {msg.role === 'assistant' ? (
+                    <div className="prose prose-sm max-w-none text-rui-black">
+                      <ReactMarkdown
+                        components={{
+                          p: ({ children }) => <p className="mb-1 last:mb-0 leading-relaxed">{children}</p>,
+                          strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+                          ul: ({ children }) => <ul className="list-disc pl-4 my-1">{children}</ul>,
+                          li: ({ children }) => <li className="text-body-3">{children}</li>,
+                        }}
+                      >
+                        {msg.content}
+                      </ReactMarkdown>
+                    </div>
+                  ) : (
+                    <p className="leading-relaxed">{msg.content}</p>
+                  )}
+                </div>
+              ))}
+              {isLoading && (
+                <div className="mr-8 bg-white border border-rui-grey-10 rounded-2xl p-3 flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin text-rui-accent" />
+                  <span className="text-body-3 text-rui-grey-50">Thinking...</span>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+          ) : companionMessages.length > 0 ? (
             <div
               className="
-                bg-rui-cream rounded-2xl p-4
-                shadow-md border border-rui-grey-20
+                bg-white rounded-2xl p-4
+                shadow-sm border border-rui-grey-10
+                mb-3
               "
             >
-              <p className="text-body-2 text-rui-black leading-relaxed">
-                {companionMessages[companionMessages.length - 1]?.content}
-              </p>
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-full bg-rui-sage/10 flex items-center justify-center flex-shrink-0">
+                  <Sparkles className="w-4 h-4 text-rui-sage" />
+                </div>
+                <p className="text-body-2 text-rui-black leading-relaxed flex-1">
+                  {companionMessages[companionMessages.length - 1]?.content}
+                </p>
+              </div>
             </div>
+          ) : null}
+
+          {/* Chat input */}
+          <div className="flex items-center gap-2">
+            <input
+              ref={inputRef}
+              type="text"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Ask about your trip..."
+              disabled={isLoading}
+              className="
+                flex-1 px-4 py-2.5
+                bg-white rounded-xl
+                text-body-2 text-rui-black
+                placeholder:text-rui-grey-40
+                border border-rui-grey-10
+                focus:border-rui-accent focus:ring-1 focus:ring-rui-accent/20
+                focus:outline-none
+                disabled:opacity-50 disabled:cursor-not-allowed
+                transition-all duration-200
+              "
+            />
+            <motion.button
+              onClick={handleSend}
+              disabled={!inputValue.trim() || isLoading}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="
+                w-10 h-10 rounded-xl
+                bg-rui-accent text-white
+                flex items-center justify-center
+                shadow-sm
+                disabled:bg-rui-grey-20 disabled:text-rui-grey-40
+                disabled:shadow-none disabled:cursor-not-allowed
+                transition-colors duration-200
+              "
+            >
+              {isLoading ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <Send className="w-5 h-5" />
+              )}
+            </motion.button>
           </div>
-        )}
+
+          {/* Quick suggestions */}
+          {suggestions.length > 0 && !showChat && (
+            <div className="flex flex-wrap gap-2 mt-3">
+              {suggestions.slice(0, 2).map((suggestion, index) => (
+                <button
+                  key={`${suggestion.type}-${index}`}
+                  onClick={() => {
+                    sendMessage(suggestion.message);
+                    setShowChat(true);
+                    dismissSuggestion(index);
+                  }}
+                  className="
+                    px-3 py-1.5 rounded-full
+                    bg-rui-golden/10 border border-rui-golden/30
+                    text-body-3 text-rui-black
+                    hover:bg-rui-golden/20
+                    transition-colors duration-200
+                  "
+                >
+                  {suggestion.message.length > 30
+                    ? suggestion.message.slice(0, 30) + '...'
+                    : suggestion.message}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* Selected cities list - now sortable */}
         <div className="p-4">
@@ -294,6 +452,41 @@ function MobileBottomSheet({
   onDragEnd,
   onToggleExpand,
 }: MobileBottomSheetProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Use planning companion for chat functionality
+  const {
+    conversation,
+    isLoading,
+    sendMessage,
+  } = usePlanningCompanion();
+
+  const [inputValue, setInputValue] = useState('');
+  const [showChat, setShowChat] = useState(false);
+
+  // Auto-scroll to latest message
+  useEffect(() => {
+    if (messagesEndRef.current && conversation.messages.length > 0) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [conversation.messages]);
+
+  // Handle send message
+  const handleSend = useCallback(() => {
+    if (!inputValue.trim() || isLoading) return;
+    sendMessage(inputValue.trim());
+    setInputValue('');
+    setShowChat(true);
+  }, [inputValue, isLoading, sendMessage]);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
   return (
     <motion.div
       style={{ height }}
@@ -343,14 +536,80 @@ function MobileBottomSheet({
 
       {/* Content - scrollable */}
       <div className="flex-1 overflow-y-auto px-4 pb-4">
-        {/* Companion message */}
-        {companionMessages.length > 0 && (
+        {/* Chat section */}
+        {showChat && conversation.messages.length > 0 ? (
+          <div className="space-y-2 mb-4 max-h-[150px] overflow-y-auto">
+            {conversation.messages.map((msg) => (
+              <div
+                key={msg.id}
+                className={`
+                  ${msg.role === 'user'
+                    ? 'ml-6 bg-rui-accent text-white'
+                    : 'mr-6 bg-white border border-rui-grey-10'
+                  }
+                  rounded-xl p-2.5 text-body-3
+                `}
+              >
+                <p className="leading-relaxed">{msg.content}</p>
+              </div>
+            ))}
+            {isLoading && (
+              <div className="mr-6 bg-white border border-rui-grey-10 rounded-xl p-2.5 flex items-center gap-2">
+                <Loader2 className="w-3 h-3 animate-spin text-rui-accent" />
+                <span className="text-body-3 text-rui-grey-50">Thinking...</span>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+        ) : companionMessages.length > 0 ? (
           <div className="mb-4">
-            <div className="bg-rui-accent/5 rounded-2xl p-4">
-              <p className="text-body-2 text-rui-black leading-relaxed">
+            <div className="bg-rui-accent/5 rounded-2xl p-3">
+              <p className="text-body-3 text-rui-black leading-relaxed">
                 {companionMessages[companionMessages.length - 1]?.content}
               </p>
             </div>
+          </div>
+        ) : null}
+
+        {/* Chat input - only show when expanded */}
+        {isExpanded && (
+          <div className="flex items-center gap-2 mb-4">
+            <input
+              ref={inputRef}
+              type="text"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Ask about your trip..."
+              disabled={isLoading}
+              className="
+                flex-1 px-3 py-2
+                bg-white rounded-xl
+                text-body-3 text-rui-black
+                placeholder:text-rui-grey-40
+                border border-rui-grey-10
+                focus:border-rui-accent focus:ring-1 focus:ring-rui-accent/20
+                focus:outline-none
+                disabled:opacity-50
+              "
+            />
+            <motion.button
+              onClick={handleSend}
+              disabled={!inputValue.trim() || isLoading}
+              whileTap={{ scale: 0.95 }}
+              className="
+                w-9 h-9 rounded-xl
+                bg-rui-accent text-white
+                flex items-center justify-center
+                disabled:bg-rui-grey-20 disabled:text-rui-grey-40
+              "
+            >
+              {isLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
+            </motion.button>
           </div>
         )}
 
