@@ -152,17 +152,85 @@ interface AgentProviderProps {
   children: React.ReactNode;
 }
 
+// ==================== STORAGE HELPERS ====================
+
+const CHAT_STORAGE_KEY = 'agent_chat_history';
+const SESSION_STORAGE_KEY = 'agent_session_id';
+
+/**
+ * Load messages from sessionStorage
+ */
+function loadStoredMessages(): AgentMessage[] {
+  try {
+    const stored = sessionStorage.getItem(CHAT_STORAGE_KEY);
+    if (!stored) return [];
+
+    const parsed = JSON.parse(stored);
+    // Convert timestamp strings back to Date objects
+    return parsed.map((msg: any) => ({
+      ...msg,
+      timestamp: new Date(msg.timestamp),
+      isStreaming: false, // Never restore streaming state
+    }));
+  } catch (error) {
+    console.warn('⚠️ [AGENT] Failed to load stored messages:', error);
+    return [];
+  }
+}
+
+/**
+ * Save messages to sessionStorage
+ */
+function saveMessages(messages: AgentMessage[]): void {
+  try {
+    // Only save non-streaming messages
+    const toSave = messages.filter(m => !m.isStreaming);
+    sessionStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(toSave));
+  } catch (error) {
+    console.warn('⚠️ [AGENT] Failed to save messages:', error);
+  }
+}
+
+/**
+ * Load or create session ID (persists across refresh)
+ */
+function getOrCreateSessionId(): string {
+  try {
+    const stored = sessionStorage.getItem(SESSION_STORAGE_KEY);
+    if (stored) {
+      console.log('🔄 [AGENT] Restored session ID:', stored.slice(0, 8) + '...');
+      return stored;
+    }
+    const newId = uuidv4();
+    sessionStorage.setItem(SESSION_STORAGE_KEY, newId);
+    console.log('🆕 [AGENT] Created new session ID:', newId.slice(0, 8) + '...');
+    return newId;
+  } catch {
+    return uuidv4();
+  }
+}
+
 export function AgentProvider({ children }: AgentProviderProps) {
   // Hooks
   const location = useLocation();
   const [searchParams] = useSearchParams();
 
-  // State
+  // State - initialize from storage for persistence
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<AgentMessage[]>([]);
+  const [messages, setMessages] = useState<AgentMessage[]>(() => loadStoredMessages());
   const [isLoading, setIsLoading] = useState(false);
-  const [sessionId] = useState(() => uuidv4()); // Persistent session ID
+  const [sessionId] = useState(() => getOrCreateSessionId()); // Persistent session ID
   const [activeTools, setActiveTools] = useState<ActiveTool[]>([]);
+
+  // Persist messages to sessionStorage whenever they change
+  useEffect(() => {
+    // Only save completed (non-streaming) messages
+    const completedMessages = messages.filter(m => !m.isStreaming);
+    if (completedMessages.length > 0) {
+      saveMessages(completedMessages);
+      console.log('💾 [AGENT] Saved', completedMessages.length, 'messages to storage');
+    }
+  }, [messages]);
 
   // Artifact State
   const [currentArtifact, setCurrentArtifact] = useState<Artifact | null>(null);
@@ -296,6 +364,14 @@ export function AgentProvider({ children }: AgentProviderProps) {
 
   const clearHistory = useCallback(() => {
     setMessages([]);
+    // Also clear from storage
+    try {
+      sessionStorage.removeItem(CHAT_STORAGE_KEY);
+      sessionStorage.removeItem(SESSION_STORAGE_KEY);
+      console.log('🗑️ [AGENT] Cleared chat history and session from storage');
+    } catch (error) {
+      console.warn('⚠️ [AGENT] Failed to clear storage:', error);
+    }
   }, []);
 
   // Artifact Actions
