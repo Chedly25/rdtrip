@@ -199,7 +199,7 @@ function TextChip({ option, onSelect, index, isSelected }: ChipProps) {
 }
 
 /**
- * Category Chip (with icon)
+ * Category Chip (with icon) - Compact design
  */
 function CategoryChip({ option, onSelect, index, isSelected }: ChipProps & { option: CategoryChipOption }) {
   const config = CATEGORY_CONFIG[option.category];
@@ -215,7 +215,7 @@ function CategoryChip({ option, onSelect, index, isSelected }: ChipProps & { opt
       }}
       exit={{ opacity: 0, scale: 0.8, y: 5 }}
       transition={{
-        delay: index * 0.04,
+        delay: index * 0.03,
         type: 'spring',
         stiffness: 400,
         damping: 25,
@@ -224,19 +224,19 @@ function CategoryChip({ option, onSelect, index, isSelected }: ChipProps & { opt
       whileTap={{ scale: 0.97 }}
       onClick={onSelect}
       className={`
-        relative flex items-center gap-2
-        px-4 py-2 rounded-full
-        text-body-2 font-medium
-        border-2 transition-all duration-150
+        relative flex items-center gap-1.5
+        px-2.5 py-1.5 rounded-full
+        text-xs font-medium
+        border transition-all duration-150
         flex-shrink-0
         ${isSelected
           ? `${config.bg} ${config.color} border-current`
-          : `bg-white text-rui-black border-rui-grey-15 hover:${config.bg} hover:border-transparent`
+          : `bg-white text-stone-700 border-stone-200 hover:border-stone-300 hover:bg-stone-50`
         }
       `}
     >
-      <Icon className={`w-4 h-4 ${isSelected ? config.color : 'text-rui-grey-40'}`} />
-      {option.label}
+      <Icon className={`w-3.5 h-3.5 ${isSelected ? config.color : 'text-stone-400'}`} />
+      <span className="whitespace-nowrap">{option.label}</span>
 
       {/* Selection indicator */}
       <AnimatePresence>
@@ -245,9 +245,9 @@ function CategoryChip({ option, onSelect, index, isSelected }: ChipProps & { opt
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             exit={{ scale: 0 }}
-            className={`absolute -right-1 -top-1 w-5 h-5 rounded-full ${config.bg} flex items-center justify-center ring-2 ring-white`}
+            className={`absolute -right-0.5 -top-0.5 w-4 h-4 rounded-full ${config.bg} flex items-center justify-center ring-1 ring-white`}
           >
-            <Check className={`w-3 h-3 ${config.color}`} />
+            <Check className={`w-2.5 h-2.5 ${config.color}`} />
           </motion.span>
         )}
       </AnimatePresence>
@@ -529,15 +529,15 @@ export function QuickActionChips({
 // ============================================================================
 
 /**
- * Create vibe/interest chips
+ * Create vibe/interest chips - compact labels for mobile
  */
 export function createVibeChips(): ChipOption[] {
   return [
-    { id: 'food', type: 'category', category: 'food', label: 'Food & Wine' },
-    { id: 'culture', type: 'category', category: 'culture', label: 'Culture & History' },
-    { id: 'nature', type: 'category', category: 'nature', label: 'Nature & Adventure' },
+    { id: 'food', type: 'category', category: 'food', label: 'Food' },
+    { id: 'culture', type: 'category', category: 'culture', label: 'Culture' },
+    { id: 'nature', type: 'category', category: 'nature', label: 'Nature' },
     { id: 'nightlife', type: 'category', category: 'nightlife', label: 'Nightlife' },
-    { id: 'mix', type: 'category', category: 'mix', label: 'Mix of everything' },
+    { id: 'mix', type: 'category', category: 'mix', label: 'Mix it up' },
   ];
 }
 
