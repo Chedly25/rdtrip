@@ -707,12 +707,25 @@ ${trip?.totalDistanceKm ? `- Distance: ~${Math.round(trip.totalDistanceKm)}km` :
 - Give weather info, activity recommendations, food tips
 - Help them understand if their nights allocation makes sense
 - Be a knowledgeable friend helping them plan an amazing trip
+- **ADD CITIES TO THEIR ROUTE** when they ask - use addCityToRoute tool!
 
 **IMPORTANT RULES:**
 - You KNOW their route - don't ask "where are you going?"
 - You KNOW their selected cities - don't ask "which cities?"
 - Use searchActivities, checkWeather, getCityInfo tools to provide helpful info
-- Be proactive: "Since you're spending 2 nights in Lyon, you should definitely visit..."`;
+- Be proactive: "Since you're spending 2 nights in Lyon, you should definitely visit..."
+
+**🏙️ ADDING CITIES - CRITICAL RESPONSE RULES:**
+When user asks to add cities to their trip (e.g., "add Lyon", "I want to stop in Berlin"):
+1. Use the addCityToRoute tool for EACH city
+2. After adding, respond with ONLY the new cities you added - example:
+   "I've added **3 new stops** to your trip:
+   • **Lyon, France** (1 night) - Great gastronomy scene
+   • **Berlin, Germany** (1 night) - Vibrant nightlife
+   • **Copenhagen, Denmark** (1 night) - Before heading to Norway"
+3. **DO NOT** list the entire route or repeat cities that were already there
+4. Mention the new total nights count at the end
+5. Keep it brief and clear - the map will update automatically!`;
 
       // Add personalization context if available
       if (pageContext?.personalization) {
@@ -844,7 +857,19 @@ STEP 4: User picks → Call replaceActivity
     → Use findNearby tool - activity-specific search (not city-wide)
     → Example: "Find cafe near Louvre on Day 2" → findNearby(activityName: "Louvre", dayNumber: 2, type: "cafe")
 
-15. **Search Itinerary** (MOST IMPORTANT - use this to find activities in itinerary):
+**DISCOVERY PHASE TOOLS** (Use during route planning, before itinerary generation):
+
+15. **Add City to Route** ("add Lyon", "I want to stop in Berlin", "add a night in Paris"):
+    → Use addCityToRoute tool - adds a city as a waypoint to the user's trip
+    → Example: "Add Lyon to my trip" → addCityToRoute(cityName: "Lyon", country: "France", nights: 1)
+    → Example: "Add Berlin for 2 nights" → addCityToRoute(cityName: "Berlin", country: "Germany", nights: 2)
+    → **RESPONSE RULES after adding cities:**
+      • List ONLY the NEW cities you added (not the entire route!)
+      • Format: "I've added X new stops: • City 1 (nights) - why • City 2 (nights) - why"
+      • Mention new total nights at the end
+      • Keep it brief - the map updates automatically!
+
+16. **Search Itinerary** (MOST IMPORTANT - use this to find activities in itinerary):
     → Use searchItinerary tool - find which day an activity is on
     → Example: "replace chaine d'eguilles" → FIRST call searchItinerary(query: "chaine d'eguilles") to find which day it's on
     → This is THE tool to use when user mentions an activity name
