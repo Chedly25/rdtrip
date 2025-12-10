@@ -17,6 +17,11 @@ import { useDiscoveryStore } from '../../stores/discoveryStore';
 import type { DiscoveryRoute, TripSummary, DiscoveryCity } from '../../stores/discoveryStore';
 import { SortableCityList } from './SortableCityList';
 import { usePlanningCompanion } from '../../hooks/usePlanningCompanion';
+import {
+  QuickActionChips,
+  createVibeChips,
+  createTextChips,
+} from '../planning';
 
 interface DiscoveryCompanionPanelProps {
   route: DiscoveryRoute | null;
@@ -164,8 +169,6 @@ function DesktopSidebar({
     conversation,
     isLoading,
     sendMessage,
-    suggestions,
-    dismissSuggestion,
   } = usePlanningCompanion();
 
   const [inputValue, setInputValue] = useState('');
@@ -332,30 +335,38 @@ function DesktopSidebar({
             </motion.button>
           </div>
 
-          {/* Quick suggestions */}
-          {suggestions.length > 0 && !showChat && (
-            <div className="flex flex-wrap gap-2 mt-3">
-              {suggestions.slice(0, 2).map((suggestion, index) => (
-                <button
-                  key={`${suggestion.type}-${index}`}
-                  onClick={() => {
-                    sendMessage(suggestion.message);
-                    setShowChat(true);
-                    dismissSuggestion(index);
-                  }}
-                  className="
-                    px-3 py-1.5 rounded-full
-                    bg-rui-golden/10 border border-rui-golden/30
-                    text-body-3 text-rui-black
-                    hover:bg-rui-golden/20
-                    transition-colors duration-200
-                  "
-                >
-                  {suggestion.message.length > 30
-                    ? suggestion.message.slice(0, 30) + '...'
-                    : suggestion.message}
-                </button>
-              ))}
+          {/* Quick action chips - vibe selection when no chat yet */}
+          {!showChat && (
+            <div className="mt-3">
+              <p className="text-body-3 text-rui-grey-50 mb-2">What vibe are you after?</p>
+              <QuickActionChips
+                options={createVibeChips()}
+                onSelect={(chip) => {
+                  const message = `I'm interested in ${chip.label.toLowerCase()} experiences`;
+                  sendMessage(message);
+                  setShowChat(true);
+                }}
+                visible={true}
+                dismissDelay={0}
+              />
+            </div>
+          )}
+
+          {/* Quick follow-up suggestions after chat */}
+          {showChat && conversation.messages.length > 0 && !isLoading && (
+            <div className="mt-3">
+              <QuickActionChips
+                options={createTextChips([
+                  'Tell me more',
+                  'What else is nearby?',
+                  'Show hidden gems',
+                ])}
+                onSelect={(chip) => {
+                  sendMessage(chip.label);
+                }}
+                visible={true}
+                dismissDelay={300}
+              />
             </div>
           )}
         </div>
@@ -579,44 +590,62 @@ function MobileBottomSheet({
 
         {/* Chat input - only show when expanded */}
         {isExpanded && (
-          <div className="flex items-center gap-2 mb-4">
-            <input
-              ref={inputRef}
-              type="text"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Ask about your trip..."
-              disabled={isLoading}
-              className="
-                flex-1 px-3 py-2
-                bg-white rounded-xl
-                text-body-3 text-rui-black
-                placeholder:text-rui-grey-40
-                border border-rui-grey-10
-                focus:border-rui-accent focus:ring-1 focus:ring-rui-accent/20
-                focus:outline-none
-                disabled:opacity-50
-              "
-            />
-            <motion.button
-              onClick={handleSend}
-              disabled={!inputValue.trim() || isLoading}
-              whileTap={{ scale: 0.95 }}
-              className="
-                w-9 h-9 rounded-xl
-                bg-rui-accent text-white
-                flex items-center justify-center
-                disabled:bg-rui-grey-20 disabled:text-rui-grey-40
-              "
-            >
-              {isLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Send className="w-4 h-4" />
-              )}
-            </motion.button>
-          </div>
+          <>
+            <div className="flex items-center gap-2 mb-2">
+              <input
+                ref={inputRef}
+                type="text"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Ask about your trip..."
+                disabled={isLoading}
+                className="
+                  flex-1 px-3 py-2
+                  bg-white rounded-xl
+                  text-body-3 text-rui-black
+                  placeholder:text-rui-grey-40
+                  border border-rui-grey-10
+                  focus:border-rui-accent focus:ring-1 focus:ring-rui-accent/20
+                  focus:outline-none
+                  disabled:opacity-50
+                "
+              />
+              <motion.button
+                onClick={handleSend}
+                disabled={!inputValue.trim() || isLoading}
+                whileTap={{ scale: 0.95 }}
+                className="
+                  w-9 h-9 rounded-xl
+                  bg-rui-accent text-white
+                  flex items-center justify-center
+                  disabled:bg-rui-grey-20 disabled:text-rui-grey-40
+                "
+              >
+                {isLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
+              </motion.button>
+            </div>
+
+            {/* Quick action chips for mobile */}
+            {!showChat && (
+              <div className="mb-3">
+                <QuickActionChips
+                  options={createVibeChips()}
+                  onSelect={(chip) => {
+                    const message = `I'm interested in ${chip.label.toLowerCase()} experiences`;
+                    sendMessage(message);
+                    setShowChat(true);
+                  }}
+                  visible={true}
+                  dismissDelay={0}
+                />
+              </div>
+            )}
+          </>
         )}
 
         {/* Horizontal scroll of city cards */}
