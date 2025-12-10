@@ -693,6 +693,30 @@ export function AgentProvider({ children }: AgentProviderProps) {
                   window.dispatchEvent(new CustomEvent('itinerary_updated'));
                 }
 
+                // Check if addCityToRoute tool was used successfully
+                const addCityTool = event.tools.find((tool: any) => tool.name === 'addCityToRoute');
+                if (addCityTool) {
+                  try {
+                    const content = typeof addCityTool.content === 'string'
+                      ? JSON.parse(addCityTool.content)
+                      : addCityTool.content;
+
+                    if (content.success && content.city) {
+                      console.log('🏙️ [AGENT] City added to route:', content.city.name);
+                      // Dispatch custom event with city data for discovery store to handle
+                      window.dispatchEvent(new CustomEvent('agent_add_city', {
+                        detail: {
+                          city: content.city,
+                          insertAfterIndex: content.insertAfterIndex,
+                          reason: content.reason
+                        }
+                      }));
+                    }
+                  } catch (e) {
+                    console.warn('⚠️ [AGENT] Failed to parse addCityToRoute result:', e);
+                  }
+                }
+
                 // Detect and set artifact
                 const artifact = detectArtifact(event.tools);
                 if (artifact) {

@@ -534,6 +534,39 @@ class ToolRegistry {
       execute: require('../tools/searchItinerary')
     });
 
+    // 23. Add City to Route
+    this.register({
+      name: 'addCityToRoute',
+      description: 'Add a city as a waypoint to the user\'s trip route. Use when the user wants to add a new stop/city to their road trip. The city will be added to the map and city list. Use this during the discovery/planning phase.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          cityName: {
+            type: 'string',
+            description: 'City name (e.g., "Lyon" or "Berlin")'
+          },
+          country: {
+            type: 'string',
+            description: 'Country name for disambiguation (e.g., "France", "Germany")'
+          },
+          nights: {
+            type: 'number',
+            description: 'Number of nights to stay in this city (default: 1)'
+          },
+          insertAfterIndex: {
+            type: 'number',
+            description: 'Insert after this city index in the route (0-indexed). If not specified, adds to end.'
+          },
+          reason: {
+            type: 'string',
+            description: 'Why this city is being recommended (e.g., "Great nightlife scene", "Breaks up the long drive")'
+          }
+        },
+        required: ['cityName']
+      },
+      execute: require('../tools/addCityToRoute')
+    });
+
     console.log(`✅ Registered ${this.tools.size} tools`);
   }
 

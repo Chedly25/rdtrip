@@ -65,6 +65,52 @@ export function DiscoveryPhaseContainer() {
     return () => window.removeEventListener('resize', checkDesktop);
   }, []);
 
+  // Listen for agent-added cities (from AI companion tool)
+  useEffect(() => {
+    const handleAgentAddCity = (event: CustomEvent<{
+      city: {
+        name: string;
+        country: string;
+        coordinates: { lat: number; lng: number };
+        suggestedNights?: number;
+        nights?: number;
+        imageUrl?: string;
+        description?: string;
+      };
+      insertAfterIndex?: number;
+      reason?: string;
+    }>) => {
+      const { city, reason } = event.detail;
+      console.log('🏙️ [Discovery] Agent adding city:', city.name, city.country);
+
+      // Add the city to the route using the store action
+      const cityId = addCity({
+        name: city.name,
+        country: city.country,
+        coordinates: city.coordinates,
+        suggestedNights: city.suggestedNights || city.nights || 1,
+        nights: city.nights || city.suggestedNights || 1,
+        imageUrl: city.imageUrl || undefined,
+        description: city.description || reason || `Added by your travel companion`,
+        isSelected: true,
+        placeCount: undefined,
+        distanceFromRoute: undefined,
+        drivingMinutes: undefined,
+      });
+
+      console.log('✅ [Discovery] City added with ID:', cityId);
+
+      // Show a companion message about the addition
+      addCompanionMessage({
+        type: 'assistant',
+        content: `I've added **${city.name}, ${city.country}** to your trip! You can see it on the map and adjust the number of nights if needed.`,
+      });
+    };
+
+    window.addEventListener('agent_add_city', handleAgentAddCity as EventListener);
+    return () => window.removeEventListener('agent_add_city', handleAgentAddCity as EventListener);
+  }, [addCity, addCompanionMessage]);
+
   // Load route data from URL params or localStorage
   useEffect(() => {
     const loadDiscoveryData = async () => {
