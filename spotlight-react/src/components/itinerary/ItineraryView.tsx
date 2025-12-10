@@ -195,12 +195,13 @@ export function ItineraryView({ itineraryId, routeData }: ItineraryViewProps) {
     const dayActivities = dayActivitiesObj?.activities && Array.isArray(dayActivitiesObj.activities) ? dayActivitiesObj.activities : [];
 
     // Restaurants are nested: [{day: 1, meals: {breakfast: {}, lunch: {}, dinner: {}}}, ...]
+    // Each restaurant needs a 'meal' property so DayCardV2 can filter by meal type
     const dayRestaurantsObj = Array.isArray(restaurants) ? restaurants.find((r: any) => r.day === dayNumber) : null;
-    const dayRestaurants = [];
+    const dayRestaurants: any[] = [];
     if (dayRestaurantsObj?.meals) {
-      if (dayRestaurantsObj.meals.breakfast) dayRestaurants.push(dayRestaurantsObj.meals.breakfast);
-      if (dayRestaurantsObj.meals.lunch) dayRestaurants.push(dayRestaurantsObj.meals.lunch);
-      if (dayRestaurantsObj.meals.dinner) dayRestaurants.push(dayRestaurantsObj.meals.dinner);
+      if (dayRestaurantsObj.meals.breakfast) dayRestaurants.push({ ...dayRestaurantsObj.meals.breakfast, meal: 'breakfast' });
+      if (dayRestaurantsObj.meals.lunch) dayRestaurants.push({ ...dayRestaurantsObj.meals.lunch, meal: 'lunch' });
+      if (dayRestaurantsObj.meals.dinner) dayRestaurants.push({ ...dayRestaurantsObj.meals.dinner, meal: 'dinner' });
     }
 
     const dayAccommodation = Array.isArray(accommodations) ? accommodations.find((a: any) => a.day === dayNumber) : undefined;
