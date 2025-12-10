@@ -607,18 +607,23 @@ export async function searchHiddenGems(
 
   const data = await response.json();
 
-  // Transform and filter places
+  // Transform and filter places - keep all well-rated places, not just hidden gems
+  // The isHiddenGem flag marks special finds, but we show popular places too
   const places: HiddenGemPlace[] = (data.places || data.results || [])
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     .map((place: any) => transformPlace(place, location, maxReviewCount))
     .filter((place: HiddenGemPlace) =>
-      isHiddenGem(place.rating, place.reviewCount, {
-        minRating,
-        minReviewCount,
-        maxReviewCount,
-      })
+      // Only filter by minimum rating and review count - don't exclude popular places
+      place.rating >= minRating && place.reviewCount >= minReviewCount
     )
-    .sort((a: HiddenGemPlace, b: HiddenGemPlace) => b.hiddenGemScore - a.hiddenGemScore)
+    // Sort: hidden gems first, then by rating
+    .sort((a: HiddenGemPlace, b: HiddenGemPlace) => {
+      // Prioritize hidden gems
+      if (a.isHiddenGem && !b.isHiddenGem) return -1;
+      if (!a.isHiddenGem && b.isHiddenGem) return 1;
+      // Then by rating
+      return b.rating - a.rating;
+    })
     .slice(0, limit);
 
   const result: HiddenGemSearchResponse = {
