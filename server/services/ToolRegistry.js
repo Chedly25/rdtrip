@@ -567,6 +567,31 @@ class ToolRegistry {
       execute: require('../tools/addCityToRoute')
     });
 
+    // 24. Mention Place (Inline Place Cards)
+    this.register({
+      name: 'mentionPlace',
+      description: 'Create an interactive place card to embed in your response. Use this when recommending a specific restaurant, attraction, or any place the user might want to add to their trip. Returns a marker string that you MUST include in your response text - it will render as a beautiful card with Add to Trip and Directions buttons.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          name: {
+            type: 'string',
+            description: 'Place name (e.g., "Le Comptoir du Panthéon", "Louvre Museum")'
+          },
+          city: {
+            type: 'string',
+            description: 'City for context (e.g., "Paris", "Amsterdam")'
+          },
+          type: {
+            type: 'string',
+            description: 'Place type hint (restaurant, museum, park, cafe, bar, etc.)'
+          }
+        },
+        required: ['name']
+      },
+      execute: require('../tools/mentionPlace')
+    });
+
     console.log(`✅ Registered ${this.tools.size} tools`);
   }
 

@@ -875,6 +875,30 @@ STEP 4: User picks → Call replaceActivity
     → This is THE tool to use when user mentions an activity name
     → More efficient than showing all activities in context!
 
+17. **Mention Place (Interactive Cards)** - USE THIS TO MAKE RECOMMENDATIONS ACTIONABLE:
+    → Use mentionPlace tool when recommending ANY specific place (restaurant, museum, cafe, attraction)
+    → Returns a marker you MUST include in your response - renders as an interactive card!
+    → The card has "Add to Trip" and "Directions" buttons that users can click
+    → Example: "Try this cafe" → mentionPlace(name: "Café de Flore", city: "Paris")
+    → Then include the returned marker in your text where you want the card to appear
+
+    **WHEN TO USE mentionPlace:**
+    • Recommending a specific restaurant/cafe/bar
+    • Suggesting an attraction or museum
+    • Pointing out a hidden gem or local spot
+    • Any time you mention a specific place the user might want to visit
+
+    **HOW TO USE:**
+    1. Call mentionPlace(name: "Place Name", city: "City Name")
+    2. Tool returns: { marker: "[[place:BASE64...]]", place: {...} }
+    3. Include the marker string EXACTLY in your response text
+    4. The frontend will render it as a beautiful card!
+
+    **EXAMPLE RESPONSE WITH CARD:**
+    "For the best croissants in Paris, you should try:
+    [[place:BASE64_DATA_HERE]]
+    It's a local favorite with amazing pastries!"
+
 **CRITICAL: When user wants to REPLACE/CHANGE an activity:**
 
 Use the searchItinerary tool to find activities! Here's the exact workflow:

@@ -4,6 +4,7 @@
  * Displays all messages in the current session with:
  * - User messages (right-aligned, teal)
  * - Assistant messages (left-aligned, white)
+ * - Inline place cards for mentioned places
  * - Typing indicators
  * - Auto-scroll to latest
  */
@@ -14,6 +15,8 @@ import { Bot, User, Loader, Sparkles } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { useAgent } from '../../contexts/AgentProvider';
 import { ToolExecutionStatus } from './ToolExecutionStatus';
+import { InlinePlaceCard } from './InlinePlaceCard';
+import { parseMessageForPlaces, hasPlaceMarkers } from '../../utils/messagePlaceParser';
 
 export function ChatHistoryPanel() {
   const { messages, isLoading, activeTools, pageContext } = useAgent();
@@ -120,31 +123,58 @@ export function ChatHistoryPanel() {
                   <span className="text-xs font-semibold text-teal-700">Assistant</span>
                 </div>
 
-                <div className="text-sm text-gray-900 prose prose-sm prose-teal max-w-none">
-                  <ReactMarkdown
-                    components={{
-                      // Style headings
-                      h1: ({node, ...props}) => <h1 className="text-lg font-bold mb-2 text-gray-900" {...props} />,
-                      h2: ({node, ...props}) => <h2 className="text-base font-bold mb-2 text-gray-900" {...props} />,
-                      h3: ({node, ...props}) => <h3 className="text-sm font-semibold mb-1.5 text-gray-800" {...props} />,
-                      // Style paragraphs
-                      p: ({node, ...props}) => <p className="mb-2 leading-relaxed last:mb-0" {...props} />,
-                      // Style lists
-                      ul: ({node, ...props}) => <ul className="list-disc list-inside mb-2 space-y-1" {...props} />,
-                      ol: ({node, ...props}) => <ol className="list-decimal list-inside mb-2 space-y-1" {...props} />,
-                      li: ({node, ...props}) => <li className="leading-relaxed" {...props} />,
-                      // Style bold/italic
-                      strong: ({node, ...props}) => <strong className="font-semibold text-gray-900" {...props} />,
-                      em: ({node, ...props}) => <em className="italic" {...props} />,
-                      // Style links
-                      a: ({node, ...props}) => <a className="text-teal-600 hover:text-teal-700 underline" {...props} />,
-                      // Style code
-                      code: ({node, ...props}) => <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs font-mono" {...props} />,
-                    }}
-                  >
-                    {message.content}
-                  </ReactMarkdown>
-                </div>
+                {/* Check if message contains place markers */}
+                {hasPlaceMarkers(message.content) ? (
+                  // Render with inline place cards
+                  <div className="text-sm text-gray-900">
+                    {parseMessageForPlaces(message.content).map((segment, idx) =>
+                      segment.type === 'text' ? (
+                        <div key={idx} className="prose prose-sm prose-teal max-w-none">
+                          <ReactMarkdown
+                            components={{
+                              h1: ({node, ...props}) => <h1 className="text-lg font-bold mb-2 text-gray-900" {...props} />,
+                              h2: ({node, ...props}) => <h2 className="text-base font-bold mb-2 text-gray-900" {...props} />,
+                              h3: ({node, ...props}) => <h3 className="text-sm font-semibold mb-1.5 text-gray-800" {...props} />,
+                              p: ({node, ...props}) => <p className="mb-2 leading-relaxed last:mb-0" {...props} />,
+                              ul: ({node, ...props}) => <ul className="list-disc list-inside mb-2 space-y-1" {...props} />,
+                              ol: ({node, ...props}) => <ol className="list-decimal list-inside mb-2 space-y-1" {...props} />,
+                              li: ({node, ...props}) => <li className="leading-relaxed" {...props} />,
+                              strong: ({node, ...props}) => <strong className="font-semibold text-gray-900" {...props} />,
+                              em: ({node, ...props}) => <em className="italic" {...props} />,
+                              a: ({node, ...props}) => <a className="text-teal-600 hover:text-teal-700 underline" {...props} />,
+                              code: ({node, ...props}) => <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs font-mono" {...props} />,
+                            }}
+                          >
+                            {segment.content}
+                          </ReactMarkdown>
+                        </div>
+                      ) : (
+                        <InlinePlaceCard key={idx} place={segment.place} />
+                      )
+                    )}
+                  </div>
+                ) : (
+                  // Regular markdown rendering
+                  <div className="text-sm text-gray-900 prose prose-sm prose-teal max-w-none">
+                    <ReactMarkdown
+                      components={{
+                        h1: ({node, ...props}) => <h1 className="text-lg font-bold mb-2 text-gray-900" {...props} />,
+                        h2: ({node, ...props}) => <h2 className="text-base font-bold mb-2 text-gray-900" {...props} />,
+                        h3: ({node, ...props}) => <h3 className="text-sm font-semibold mb-1.5 text-gray-800" {...props} />,
+                        p: ({node, ...props}) => <p className="mb-2 leading-relaxed last:mb-0" {...props} />,
+                        ul: ({node, ...props}) => <ul className="list-disc list-inside mb-2 space-y-1" {...props} />,
+                        ol: ({node, ...props}) => <ol className="list-decimal list-inside mb-2 space-y-1" {...props} />,
+                        li: ({node, ...props}) => <li className="leading-relaxed" {...props} />,
+                        strong: ({node, ...props}) => <strong className="font-semibold text-gray-900" {...props} />,
+                        em: ({node, ...props}) => <em className="italic" {...props} />,
+                        a: ({node, ...props}) => <a className="text-teal-600 hover:text-teal-700 underline" {...props} />,
+                        code: ({node, ...props}) => <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs font-mono" {...props} />,
+                      }}
+                    >
+                      {message.content}
+                    </ReactMarkdown>
+                  </div>
+                )}
 
                 {/* Streaming indicator */}
                 {message.isStreaming && (
