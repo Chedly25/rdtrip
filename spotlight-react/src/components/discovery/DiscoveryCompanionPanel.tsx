@@ -183,22 +183,19 @@ function DesktopSidebar({
 
       {/* Content - scrollable */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto">
-        {/* Companion messages */}
+        {/* Companion message - show only the latest */}
         {companionMessages.length > 0 && (
           <div className="p-4 border-b border-rui-grey-10">
-            {companionMessages.map((msg) => (
-              <div
-                key={msg.id}
-                className="
-                  bg-rui-cream rounded-2xl p-4
-                  shadow-md border border-rui-grey-20
-                "
-              >
-                <p className="text-body-2 text-rui-black leading-relaxed">
-                  {msg.content}
-                </p>
-              </div>
-            ))}
+            <div
+              className="
+                bg-rui-cream rounded-2xl p-4
+                shadow-md border border-rui-grey-20
+              "
+            >
+              <p className="text-body-2 text-rui-black leading-relaxed">
+                {companionMessages[companionMessages.length - 1]?.content}
+              </p>
+            </div>
           </div>
         )}
 

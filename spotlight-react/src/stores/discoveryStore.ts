@@ -288,6 +288,8 @@ export const useDiscoveryStore = create<DiscoveryState>()(
           route,
           mapCenter: route.origin.coordinates,
           phase: 'exploring',
+          // Clear old companion messages when setting a new route
+          companionMessages: [],
         });
       },
 
