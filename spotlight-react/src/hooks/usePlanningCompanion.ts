@@ -120,6 +120,8 @@ export function usePlanningCompanion(): UsePlanningCompanionReturn {
 
   // Track last sync time for actions
   const lastActionSyncRef = useRef<Date>(new Date());
+  // Track synced agent message IDs to prevent duplicates
+  const syncedAgentMessageIdsRef = useRef<Set<string>>(new Set());
 
   // ==================== Build Planning Context ====================
   const planningContext = useMemo((): PlanningContext => {
@@ -184,6 +186,7 @@ export function usePlanningCompanion(): UsePlanningCompanionReturn {
       setConversation(createPlanningConversation(sessionId));
       setDismissedSuggestions(new Set());
       setError(null);
+      syncedAgentMessageIdsRef.current.clear();
     }
   }, [sessionId, conversation.sessionId]);
 
@@ -248,9 +251,12 @@ export function usePlanningCompanion(): UsePlanningCompanionReturn {
     const latestMessage = agentMessages[agentMessages.length - 1];
     if (latestMessage.role !== 'assistant' || latestMessage.isStreaming) return;
 
-    // Check if we already have this message
-    const existingIds = new Set(conversation.messages.map((m) => m.id));
-    if (existingIds.has(latestMessage.id)) return;
+    // Check if we already synced this agent message using ref
+    // This prevents duplicates since conversation generates its own IDs
+    if (syncedAgentMessageIdsRef.current.has(latestMessage.id)) return;
+
+    // Mark this agent message as synced BEFORE updating state
+    syncedAgentMessageIdsRef.current.add(latestMessage.id);
 
     // Add assistant message to planning conversation
     const assistantMessage: Omit<PlanningMessage, 'id' | 'timestamp' | 'extractedPreferences'> = {
@@ -278,13 +284,14 @@ export function usePlanningCompanion(): UsePlanningCompanionReturn {
 
       return updated;
     });
-  }, [agent.messages, conversation.messages]);
+  }, [agent.messages]);
 
   // ==================== Clear Conversation ====================
   const clearConversation = useCallback(() => {
     setConversation(createPlanningConversation(sessionId));
     setDismissedSuggestions(new Set());
     setError(null);
+    syncedAgentMessageIdsRef.current.clear();
     agent.clearHistory();
   }, [sessionId, agent]);
 

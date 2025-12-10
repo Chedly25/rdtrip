@@ -228,7 +228,10 @@ function DesktopSidebar({
           {/* Show chat messages if we have any, otherwise show static message */}
           {showChat && conversation.messages.length > 0 ? (
             <div className="space-y-3 max-h-[200px] overflow-y-auto mb-3">
-              {conversation.messages.map((msg) => (
+              {/* De-duplicate messages by id to prevent rendering duplicates */}
+              {Array.from(
+                new Map(conversation.messages.map(m => [m.id, m])).values()
+              ).map((msg) => (
                 <div
                   key={msg.id}
                   className={`
@@ -539,7 +542,10 @@ function MobileBottomSheet({
         {/* Chat section */}
         {showChat && conversation.messages.length > 0 ? (
           <div className="space-y-2 mb-4 max-h-[150px] overflow-y-auto">
-            {conversation.messages.map((msg) => (
+            {/* De-duplicate messages by id */}
+            {Array.from(
+              new Map(conversation.messages.map(m => [m.id, m])).values()
+            ).map((msg) => (
               <div
                 key={msg.id}
                 className={`
