@@ -219,7 +219,7 @@ IMPORTANT: Return ONLY the JSON object, no other text.`;
               content: prompt
             }
           ],
-          max_tokens: 4096,  // Increased to prevent truncation on longer itineraries
+          max_tokens: 8192,  // Large value for multi-city itineraries (7+ cities, 15+ days)
           temperature: 0.3
         },
         {

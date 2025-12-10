@@ -146,20 +146,22 @@ class ProactiveAgentService {
   /**
    * Get active itineraries that need monitoring
    * Returns itineraries for trips starting within 30 days (before/after today)
+   * Note: trip_start_date and trip_end_date are stored in the preferences JSONB column
    */
   async getActiveItineraries() {
     const query = `
       SELECT
         i.id,
         i.route_id,
-        i.trip_start_date,
-        i.trip_end_date,
-        i.days,
-        i.route_data
+        (i.preferences->>'startDate')::date as trip_start_date,
+        (i.preferences->>'endDate')::date as trip_end_date,
+        i.day_structure as days,
+        i.route_data,
+        i.preferences
       FROM itineraries i
-      WHERE i.trip_start_date IS NOT NULL
-        AND i.trip_start_date BETWEEN CURRENT_DATE - INTERVAL '30 days' AND CURRENT_DATE + INTERVAL '30 days'
-      ORDER BY i.trip_start_date ASC
+      WHERE i.preferences->>'startDate' IS NOT NULL
+        AND (i.preferences->>'startDate')::date BETWEEN CURRENT_DATE - INTERVAL '30 days' AND CURRENT_DATE + INTERVAL '30 days'
+      ORDER BY (i.preferences->>'startDate')::date ASC
     `;
 
     const result = await pool.query(query);
