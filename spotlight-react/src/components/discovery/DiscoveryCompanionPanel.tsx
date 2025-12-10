@@ -1,9 +1,28 @@
+/**
+ * DiscoveryCompanionPanel
+ *
+ * The companion interface for the discovery phase.
+ *
+ * Mobile: Draggable bottom sheet with SWIPEABLE TABS
+ *   - Route Tab: Full-height city management with drag-to-reorder
+ *   - Chat Tab: Full-height conversation with the planning companion
+ *   - Smooth horizontal swipe between tabs
+ *   - Unread indicator badge
+ *
+ * Desktop: Fixed sidebar on the right (380px)
+ *
+ * Design: Editorial Travel Journal aesthetic
+ *   - Sophisticated typography
+ *   - Generous whitespace
+ *   - Premium interactions
+ */
+
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, useMotionValue, useTransform, animate, AnimatePresence } from 'framer-motion';
+import type { PanInfo } from 'framer-motion';
 import {
   MessageCircle,
   ChevronUp,
-  ChevronDown,
   Sparkles,
   MapPin,
   ArrowRight,
@@ -11,6 +30,8 @@ import {
   GripVertical,
   Send,
   Loader2,
+  Route,
+  Map,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { useDiscoveryStore } from '../../stores/discoveryStore';
@@ -31,32 +52,33 @@ interface DiscoveryCompanionPanelProps {
   onProceed: () => void;
 }
 
-// Mobile bottom sheet heights
-const COLLAPSED_HEIGHT = 160;
-const EXPANDED_HEIGHT = 480;
+// Mobile bottom sheet heights - taller for better usability
+const COLLAPSED_HEIGHT = 140;
+const EXPANDED_HEIGHT = 520;
+
+// Tab configuration
+type TabId = 'route' | 'chat';
+const TABS: { id: TabId; label: string; icon: typeof Route }[] = [
+  { id: 'route', label: 'Your Route', icon: Map },
+  { id: 'chat', label: 'Assistant', icon: MessageCircle },
+];
 
 /**
  * DiscoveryCompanionPanel
- *
- * The companion interface for the discovery phase.
- * Desktop: Fixed sidebar on the right (380px)
- * Mobile: Draggable bottom sheet
- *
- * Shows suggested cities as cards and companion messages.
  */
 export function DiscoveryCompanionPanel({
   route,
   tripSummary,
   isDesktop,
-  isExpanded: _isExpanded, // Used for desktop sidebar, mobileExpanded for mobile
+  isExpanded: _isExpanded,
   onProceed,
 }: DiscoveryCompanionPanelProps) {
-  void _isExpanded; // Silence unused warning - will use for desktop state later
+  void _isExpanded;
   const { companionMessages, toggleCitySelection } = useDiscoveryStore();
-
-  // Get additional store actions
   const reorderCities = useDiscoveryStore((state) => state.reorderCities);
   const selectCity = useDiscoveryStore((state) => state.selectCity);
+  const getSelectedCities = useDiscoveryStore((state) => state.getSelectedCities);
+  const selectedCities = getSelectedCities();
 
   // Mobile drag state
   const [mobileExpanded, setMobileExpanded] = useState(false);
@@ -69,7 +91,6 @@ export function DiscoveryCompanionPanel({
     [EXPANDED_HEIGHT, COLLAPSED_HEIGHT]
   );
 
-  // Handle mobile drag end
   const handleDragEnd = (_: any, info: { velocity: { y: number }; offset: { y: number } }) => {
     const shouldExpand = info.velocity.y < -500 || info.offset.y < -dragAmount / 2;
     const shouldCollapse = info.velocity.y > 500 || info.offset.y > dragAmount / 2;
@@ -81,7 +102,6 @@ export function DiscoveryCompanionPanel({
       animate(y, 0, { type: 'spring', stiffness: 300, damping: 30 });
       setMobileExpanded(false);
     } else {
-      // Snap back to current state
       animate(y, mobileExpanded ? -dragAmount : 0, {
         type: 'spring',
         stiffness: 300,
@@ -89,10 +109,6 @@ export function DiscoveryCompanionPanel({
       });
     }
   };
-
-  // Get selected cities
-  const getSelectedCities = useDiscoveryStore((state) => state.getSelectedCities);
-  const selectedCities = getSelectedCities();
 
   if (isDesktop) {
     return (
@@ -117,6 +133,8 @@ export function DiscoveryCompanionPanel({
       selectedCities={selectedCities}
       companionMessages={companionMessages}
       onToggleCity={toggleCitySelection}
+      onReorderCities={reorderCities}
+      onSelectCity={selectCity}
       onProceed={onProceed}
       y={y}
       height={height}
@@ -135,7 +153,10 @@ export function DiscoveryCompanionPanel({
   );
 }
 
-// Desktop sidebar component
+// ============================================================================
+// Desktop Sidebar (kept similar, with minor refinements)
+// ============================================================================
+
 interface DesktopSidebarProps {
   route: DiscoveryRoute | null;
   tripSummary: TripSummary | null;
@@ -159,29 +180,22 @@ function DesktopSidebar({
   onSelectCity,
   onProceed,
 }: DesktopSidebarProps) {
-  void _tripSummary; // Will use for night allocation display later
+  void _tripSummary;
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Use planning companion for chat functionality
-  const {
-    conversation,
-    isLoading,
-    sendMessage,
-  } = usePlanningCompanion();
+  const { conversation, isLoading, sendMessage } = usePlanningCompanion();
 
   const [inputValue, setInputValue] = useState('');
   const [showChat, setShowChat] = useState(false);
 
-  // Auto-scroll to latest message
   useEffect(() => {
     if (messagesEndRef.current && conversation.messages.length > 0) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [conversation.messages]);
 
-  // Handle send message
   const handleSend = useCallback(() => {
     if (!inputValue.trim() || isLoading) return;
     sendMessage(inputValue.trim());
@@ -203,56 +217,56 @@ function DesktopSidebar({
       transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1], delay: 0.2 }}
       className="
         fixed top-0 right-0 bottom-0
-        w-[380px] bg-rui-cream
-        border-l border-rui-grey-10
+        w-[380px] bg-white
+        border-l border-stone-200
         flex flex-col
         z-20
       "
     >
       {/* Header */}
-      <div className="flex-shrink-0 p-6 border-b border-rui-grey-10">
+      <div className="flex-shrink-0 p-6 border-b border-stone-100">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-rui-accent/10 flex items-center justify-center">
-            <MessageCircle className="w-5 h-5 text-rui-accent" />
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-teal-500/20">
+            <Sparkles className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h2 className="font-display font-semibold text-rui-black">Your Journey</h2>
-            <p className="text-body-3 text-rui-grey-50">
+            <h2 className="font-semibold text-stone-900 tracking-tight">Your Journey</h2>
+            <p className="text-sm text-stone-500">
               {selectedCities.length} stops selected
             </p>
           </div>
         </div>
       </div>
 
-      {/* Content - scrollable */}
+      {/* Content */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto">
-        {/* Companion chat section */}
-        <div className="p-4 border-b border-rui-grey-10">
-          {/* Show chat messages if we have any, otherwise show static message */}
+        {/* Chat section */}
+        <div className="p-4 border-b border-stone-100">
           {showChat && conversation.messages.length > 0 ? (
             <div className="space-y-3 max-h-[200px] overflow-y-auto mb-3">
-              {/* De-duplicate messages by id to prevent rendering duplicates */}
-              {Array.from(
-                new Map(conversation.messages.map(m => [m.id, m])).values()
-              ).map((msg) => (
+              {conversation.messages
+                .filter((msg: any, idx: number, arr: any[]) =>
+                  arr.findIndex((m: any) => m.id === msg.id) === idx
+                )
+                .map((msg: any) => (
                 <div
                   key={msg.id}
                   className={`
                     ${msg.role === 'user'
-                      ? 'ml-8 bg-rui-accent text-white'
-                      : 'mr-8 bg-white border border-rui-grey-10'
+                      ? 'ml-8 bg-gradient-to-br from-teal-500 to-emerald-600 text-white'
+                      : 'mr-8 bg-stone-50 border border-stone-200'
                     }
-                    rounded-2xl p-3 text-body-2
+                    rounded-2xl p-3 text-sm
                   `}
                 >
                   {msg.role === 'assistant' ? (
-                    <div className="prose prose-sm max-w-none text-rui-black">
+                    <div className="prose prose-sm max-w-none text-stone-700">
                       <ReactMarkdown
                         components={{
                           p: ({ children }) => <p className="mb-1 last:mb-0 leading-relaxed">{children}</p>,
-                          strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+                          strong: ({ children }) => <strong className="font-semibold text-stone-900">{children}</strong>,
                           ul: ({ children }) => <ul className="list-disc pl-4 my-1">{children}</ul>,
-                          li: ({ children }) => <li className="text-body-3">{children}</li>,
+                          li: ({ children }) => <li className="text-sm">{children}</li>,
                         }}
                       >
                         {msg.content}
@@ -264,26 +278,20 @@ function DesktopSidebar({
                 </div>
               ))}
               {isLoading && (
-                <div className="mr-8 bg-white border border-rui-grey-10 rounded-2xl p-3 flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin text-rui-accent" />
-                  <span className="text-body-3 text-rui-grey-50">Thinking...</span>
+                <div className="mr-8 bg-stone-50 border border-stone-200 rounded-2xl p-3 flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin text-teal-600" />
+                  <span className="text-sm text-stone-500">Thinking...</span>
                 </div>
               )}
               <div ref={messagesEndRef} />
             </div>
           ) : companionMessages.length > 0 ? (
-            <div
-              className="
-                bg-white rounded-2xl p-4
-                shadow-sm border border-rui-grey-10
-                mb-3
-              "
-            >
+            <div className="bg-gradient-to-br from-stone-50 to-stone-100 rounded-2xl p-4 mb-3 border border-stone-200">
               <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-rui-sage/10 flex items-center justify-center flex-shrink-0">
-                  <Sparkles className="w-4 h-4 text-rui-sage" />
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center flex-shrink-0 shadow-sm">
+                  <Sparkles className="w-4 h-4 text-white" />
                 </div>
-                <p className="text-body-2 text-rui-black leading-relaxed flex-1">
+                <p className="text-sm text-stone-700 leading-relaxed flex-1">
                   {companionMessages[companionMessages.length - 1]?.content}
                 </p>
               </div>
@@ -302,13 +310,13 @@ function DesktopSidebar({
               disabled={isLoading}
               className="
                 flex-1 px-4 py-2.5
-                bg-white rounded-xl
-                text-body-2 text-rui-black
-                placeholder:text-rui-grey-40
-                border border-rui-grey-10
-                focus:border-rui-accent focus:ring-1 focus:ring-rui-accent/20
-                focus:outline-none
-                disabled:opacity-50 disabled:cursor-not-allowed
+                bg-stone-50 rounded-xl
+                text-sm text-stone-900
+                placeholder:text-stone-400
+                border border-stone-200
+                focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20
+                focus:outline-none focus:bg-white
+                disabled:opacity-50
                 transition-all duration-200
               "
             />
@@ -319,12 +327,11 @@ function DesktopSidebar({
               whileTap={{ scale: 0.95 }}
               className="
                 w-10 h-10 rounded-xl
-                bg-rui-accent text-white
+                bg-gradient-to-br from-teal-500 to-emerald-600 text-white
                 flex items-center justify-center
-                shadow-sm
-                disabled:bg-rui-grey-20 disabled:text-rui-grey-40
-                disabled:shadow-none disabled:cursor-not-allowed
-                transition-colors duration-200
+                shadow-lg shadow-teal-500/25
+                disabled:from-stone-300 disabled:to-stone-400 disabled:shadow-none
+                transition-all duration-200
               "
             >
               {isLoading ? (
@@ -335,15 +342,14 @@ function DesktopSidebar({
             </motion.button>
           </div>
 
-          {/* Quick action chips - vibe selection when no chat yet */}
+          {/* Vibe chips */}
           {!showChat && (
             <div className="mt-3">
-              <p className="text-body-3 text-rui-grey-50 mb-2">What vibe are you after?</p>
+              <p className="text-xs text-stone-500 mb-2 uppercase tracking-wide font-medium">What vibe are you after?</p>
               <QuickActionChips
                 options={createVibeChips()}
                 onSelect={(chip) => {
-                  const message = `I'm interested in ${chip.label.toLowerCase()} experiences`;
-                  sendMessage(message);
+                  sendMessage(`I'm interested in ${chip.label.toLowerCase()} experiences`);
                   setShowChat(true);
                 }}
                 visible={true}
@@ -352,18 +358,11 @@ function DesktopSidebar({
             </div>
           )}
 
-          {/* Quick follow-up suggestions after chat */}
           {showChat && conversation.messages.length > 0 && !isLoading && (
             <div className="mt-3">
               <QuickActionChips
-                options={createTextChips([
-                  'Tell me more',
-                  'What else is nearby?',
-                  'Show hidden gems',
-                ])}
-                onSelect={(chip) => {
-                  sendMessage(chip.label);
-                }}
+                options={createTextChips(['Tell me more', 'What else is nearby?', 'Show hidden gems'])}
+                onSelect={(chip) => sendMessage(chip.label)}
                 visible={true}
                 dismissDelay={300}
               />
@@ -371,13 +370,11 @@ function DesktopSidebar({
           )}
         </div>
 
-        {/* Selected cities list - now sortable */}
+        {/* Route list */}
         <div className="p-4">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-body-3 font-medium text-rui-grey-50 uppercase tracking-wide">
-              Your Route
-            </h3>
-            <p className="text-body-3 text-rui-grey-40 flex items-center gap-1">
+            <h3 className="text-xs font-medium text-stone-500 uppercase tracking-wide">Your Route</h3>
+            <p className="text-xs text-stone-400 flex items-center gap-1">
               <GripVertical className="w-3 h-3" />
               Drag to reorder
             </p>
@@ -392,42 +389,35 @@ function DesktopSidebar({
           />
         </div>
 
-        {/* Suggested cities to add */}
+        {/* Suggested cities */}
         {route && route.suggestedCities.filter((c) => !c.isSelected).length > 0 && (
-          <div className="p-4 border-t border-rui-grey-10">
-            <h3 className="text-body-3 font-medium text-rui-grey-50 uppercase tracking-wide mb-3">
-              Add More Stops
-            </h3>
-
+          <div className="p-4 border-t border-stone-100">
+            <h3 className="text-xs font-medium text-stone-500 uppercase tracking-wide mb-3">Add More Stops</h3>
             <div className="space-y-2">
               {route.suggestedCities
                 .filter((c) => !c.isSelected)
                 .map((city) => (
-                  <SuggestedCityCard
-                    key={city.id}
-                    city={city}
-                    onAdd={() => onToggleCity(city.id)}
-                  />
+                  <SuggestedCityCard key={city.id} city={city} onAdd={() => onToggleCity(city.id)} />
                 ))}
             </div>
           </div>
         )}
       </div>
 
-      {/* Footer with proceed button */}
-      <div className="flex-shrink-0 p-4 border-t border-rui-grey-10 bg-white">
+      {/* Footer */}
+      <div className="flex-shrink-0 p-4 border-t border-stone-100 bg-white">
         <motion.button
           onClick={onProceed}
-          whileHover={{ scale: 1.02 }}
+          whileHover={{ scale: 1.02, y: -1 }}
           whileTap={{ scale: 0.98 }}
           className="
             w-full flex items-center justify-center gap-2
             py-4 rounded-2xl
-            bg-rui-accent text-white
-            font-display font-semibold
-            shadow-lg shadow-rui-accent/25
-            hover:shadow-xl hover:shadow-rui-accent/30
-            transition-shadow duration-200
+            bg-gradient-to-r from-teal-500 to-emerald-600 text-white
+            font-semibold tracking-tight
+            shadow-xl shadow-teal-500/30
+            hover:shadow-2xl hover:shadow-teal-500/40
+            transition-shadow duration-300
           "
         >
           <Sparkles className="w-5 h-5" />
@@ -439,13 +429,18 @@ function DesktopSidebar({
   );
 }
 
-// Mobile bottom sheet component
+// ============================================================================
+// Mobile Bottom Sheet with Swipeable Tabs
+// ============================================================================
+
 interface MobileBottomSheetProps {
   route: DiscoveryRoute | null;
   tripSummary: TripSummary | null;
   selectedCities: DiscoveryCity[];
   companionMessages: any[];
   onToggleCity: (cityId: string) => void;
+  onReorderCities: (orderedCityIds: string[]) => void;
+  onSelectCity: (cityId: string | null) => void;
   onProceed: () => void;
   y: any;
   height: any;
@@ -459,6 +454,8 @@ function MobileBottomSheet({
   selectedCities,
   companionMessages,
   onToggleCity,
+  onReorderCities,
+  onSelectCity,
   onProceed,
   y,
   height,
@@ -466,32 +463,65 @@ function MobileBottomSheet({
   onDragEnd,
   onToggleExpand,
 }: MobileBottomSheetProps) {
-  const inputRef = useRef<HTMLInputElement>(null);
+  // Tab state
+  const [activeTab, setActiveTab] = useState<TabId>('route');
+  const [hasUnreadChat, setHasUnreadChat] = useState(false);
+
+  // Swipe tracking
+  const tabContentRef = useRef<HTMLDivElement>(null);
+  const swipeX = useMotionValue(0);
+
+  // Chat state
+  const { conversation, isLoading, sendMessage } = usePlanningCompanion();
+  const [inputValue, setInputValue] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Use planning companion for chat functionality
-  const {
-    conversation,
-    isLoading,
-    sendMessage,
-  } = usePlanningCompanion();
-
-  const [inputValue, setInputValue] = useState('');
-  const [showChat, setShowChat] = useState(false);
-
-  // Auto-scroll to latest message
+  // Track unread messages when on route tab
   useEffect(() => {
-    if (messagesEndRef.current && conversation.messages.length > 0) {
+    if (activeTab === 'route' && conversation.messages.length > 0) {
+      const lastMsg = conversation.messages[conversation.messages.length - 1];
+      if (lastMsg.role === 'assistant') {
+        setHasUnreadChat(true);
+      }
+    }
+  }, [conversation.messages, activeTab]);
+
+  // Clear unread when switching to chat tab
+  useEffect(() => {
+    if (activeTab === 'chat') {
+      setHasUnreadChat(false);
+    }
+  }, [activeTab]);
+
+  // Auto-scroll chat
+  useEffect(() => {
+    if (messagesEndRef.current && activeTab === 'chat') {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [conversation.messages]);
+  }, [conversation.messages, activeTab]);
 
-  // Handle send message
+  // Handle tab swipe
+  const handleSwipeEnd = (_: any, info: PanInfo) => {
+    const threshold = 50;
+    const velocity = info.velocity.x;
+    const offset = info.offset.x;
+
+    if (velocity < -500 || offset < -threshold) {
+      // Swipe left → go to chat
+      if (activeTab === 'route') setActiveTab('chat');
+    } else if (velocity > 500 || offset > threshold) {
+      // Swipe right → go to route
+      if (activeTab === 'chat') setActiveTab('route');
+    }
+
+    animate(swipeX, 0, { type: 'spring', stiffness: 500, damping: 50 });
+  };
+
+  // Handle send
   const handleSend = useCallback(() => {
     if (!inputValue.trim() || isLoading) return;
     sendMessage(inputValue.trim());
     setInputValue('');
-    setShowChat(true);
   }, [inputValue, isLoading, sendMessage]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -506,14 +536,14 @@ function MobileBottomSheet({
       style={{ height }}
       className="
         fixed bottom-0 left-0 right-0
-        bg-rui-cream rounded-t-3xl
-        shadow-2xl shadow-rui-black/15
-        border-t border-rui-grey-20
+        bg-white rounded-t-[28px]
+        shadow-[0_-8px_40px_rgba(0,0,0,0.12)]
         z-30
         flex flex-col
+        overflow-hidden
       "
     >
-      {/* Drag handle */}
+      {/* Drag handle + Header */}
       <motion.div
         drag="y"
         dragConstraints={{ top: -(EXPANDED_HEIGHT - COLLAPSED_HEIGHT), bottom: 0 }}
@@ -522,182 +552,164 @@ function MobileBottomSheet({
         style={{ y }}
         className="flex-shrink-0 cursor-grab active:cursor-grabbing"
       >
+        {/* Drag pill */}
         <div className="flex flex-col items-center pt-3 pb-2">
-          <div className="w-10 h-1 rounded-full bg-rui-grey-20" />
+          <div className="w-12 h-1.5 rounded-full bg-stone-300" />
         </div>
 
-        {/* Header */}
+        {/* Collapse/expand header */}
         <button
           onClick={onToggleExpand}
           className="w-full flex items-center justify-between px-5 pb-3"
         >
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-rui-accent/10 flex items-center justify-center">
-              <MapPin className="w-4 h-4 text-rui-accent" />
+            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-teal-500/20">
+              <MapPin className="w-4 h-4 text-white" />
             </div>
-            <span className="font-display font-semibold text-rui-black">
-              {selectedCities.length} stops selected
-            </span>
+            <div className="text-left">
+              <span className="font-semibold text-stone-900 block text-[15px]">
+                {selectedCities.length} stops
+              </span>
+              <span className="text-xs text-stone-500">
+                {isExpanded ? 'Tap to collapse' : 'Tap to expand'}
+              </span>
+            </div>
           </div>
 
-          {isExpanded ? (
-            <ChevronDown className="w-5 h-5 text-rui-grey-50" />
-          ) : (
-            <ChevronUp className="w-5 h-5 text-rui-grey-50" />
-          )}
+          <motion.div
+            animate={{ rotate: isExpanded ? 180 : 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <ChevronUp className="w-5 h-5 text-stone-400" />
+          </motion.div>
         </button>
       </motion.div>
 
-      {/* Content - scrollable */}
-      <div className="flex-1 overflow-y-auto px-4 pb-4">
-        {/* Chat section */}
-        {showChat && conversation.messages.length > 0 ? (
-          <div className="space-y-2 mb-4 max-h-[150px] overflow-y-auto">
-            {/* De-duplicate messages by id */}
-            {Array.from(
-              new Map(conversation.messages.map(m => [m.id, m])).values()
-            ).map((msg) => (
-              <div
-                key={msg.id}
-                className={`
-                  ${msg.role === 'user'
-                    ? 'ml-6 bg-rui-accent text-white'
-                    : 'mr-6 bg-white border border-rui-grey-10'
-                  }
-                  rounded-xl p-2.5 text-body-3
-                `}
-              >
-                <p className="leading-relaxed">{msg.content}</p>
-              </div>
-            ))}
-            {isLoading && (
-              <div className="mr-6 bg-white border border-rui-grey-10 rounded-xl p-2.5 flex items-center gap-2">
-                <Loader2 className="w-3 h-3 animate-spin text-rui-accent" />
-                <span className="text-body-3 text-rui-grey-50">Thinking...</span>
-              </div>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-        ) : companionMessages.length > 0 ? (
-          <div className="mb-4">
-            <div className="bg-rui-accent/5 rounded-2xl p-3">
-              <p className="text-body-3 text-rui-black leading-relaxed">
-                {companionMessages[companionMessages.length - 1]?.content}
-              </p>
-            </div>
-          </div>
-        ) : null}
-
-        {/* Chat input - only show when expanded */}
+      {/* Tab Bar - only visible when expanded */}
+      <AnimatePresence>
         {isExpanded && (
-          <>
-            <div className="flex items-center gap-2 mb-2">
-              <input
-                ref={inputRef}
-                type="text"
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Ask about your trip..."
-                disabled={isLoading}
-                className="
-                  flex-1 px-3 py-2
-                  bg-white rounded-xl
-                  text-body-3 text-rui-black
-                  placeholder:text-rui-grey-40
-                  border border-rui-grey-10
-                  focus:border-rui-accent focus:ring-1 focus:ring-rui-accent/20
-                  focus:outline-none
-                  disabled:opacity-50
-                "
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="flex-shrink-0 px-4 pb-2"
+          >
+            <div className="relative flex bg-stone-100 rounded-2xl p-1">
+              {/* Animated background pill */}
+              <motion.div
+                className="absolute top-1 bottom-1 bg-white rounded-xl shadow-sm"
+                initial={false}
+                animate={{
+                  x: activeTab === 'route' ? 0 : '100%',
+                  width: '50%',
+                }}
+                transition={{ type: 'spring', stiffness: 500, damping: 35 }}
               />
-              <motion.button
-                onClick={handleSend}
-                disabled={!inputValue.trim() || isLoading}
-                whileTap={{ scale: 0.95 }}
-                className="
-                  w-9 h-9 rounded-xl
-                  bg-rui-accent text-white
-                  flex items-center justify-center
-                  disabled:bg-rui-grey-20 disabled:text-rui-grey-40
-                "
-              >
-                {isLoading ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Send className="w-4 h-4" />
-                )}
-              </motion.button>
+
+              {/* Tab buttons */}
+              {TABS.map((tab) => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
+                const showBadge = tab.id === 'chat' && hasUnreadChat && !isActive;
+
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`
+                      relative flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl
+                      text-sm font-medium transition-colors duration-200 z-10
+                      ${isActive ? 'text-stone-900' : 'text-stone-500'}
+                    `}
+                  >
+                    <Icon className="w-4 h-4" />
+                    <span>{tab.label}</span>
+
+                    {/* Unread badge */}
+                    {showBadge && (
+                      <motion.span
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        className="absolute -top-0.5 right-3 w-2.5 h-2.5 bg-teal-500 rounded-full border-2 border-stone-100"
+                      />
+                    )}
+                  </button>
+                );
+              })}
             </div>
-
-            {/* Quick action chips for mobile */}
-            {!showChat && (
-              <div className="mb-3">
-                <QuickActionChips
-                  options={createVibeChips()}
-                  onSelect={(chip) => {
-                    const message = `I'm interested in ${chip.label.toLowerCase()} experiences`;
-                    sendMessage(message);
-                    setShowChat(true);
-                  }}
-                  visible={true}
-                  dismissDelay={0}
-                />
-              </div>
-            )}
-          </>
+          </motion.div>
         )}
+      </AnimatePresence>
 
-        {/* Horizontal scroll of city cards */}
-        <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
-          {selectedCities.map((city, index) => (
-            <CompactCityChip
-              key={city.id}
-              city={city}
-              index={index}
-              onRemove={city.isFixed ? undefined : () => onToggleCity(city.id)}
-            />
-          ))}
-        </div>
-
-        {/* Add more section when expanded */}
-        <AnimatePresence>
-          {isExpanded && route && route.suggestedCities.filter((c) => !c.isSelected).length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-              className="mt-4 pt-4 border-t border-rui-grey-10"
-            >
-              <h3 className="text-body-3 font-medium text-rui-grey-50 mb-3">
-                Add more stops
-              </h3>
-              <div className="space-y-2">
-                {route.suggestedCities
-                  .filter((c) => !c.isSelected)
-                  .map((city) => (
-                    <SuggestedCityCard
-                      key={city.id}
-                      city={city}
-                      onAdd={() => onToggleCity(city.id)}
-                    />
-                  ))}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+      {/* Tab Content - Swipeable */}
+      <div className="flex-1 min-h-0 overflow-hidden">
+        <motion.div
+          ref={tabContentRef}
+          drag={isExpanded ? 'x' : false}
+          dragConstraints={{ left: 0, right: 0 }}
+          dragElastic={0.2}
+          onDragEnd={handleSwipeEnd}
+          style={{ x: swipeX }}
+          className="h-full"
+        >
+          <AnimatePresence mode="wait">
+            {activeTab === 'route' ? (
+              <motion.div
+                key="route"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.2 }}
+                className="h-full overflow-y-auto"
+              >
+                <RouteTabContent
+                  route={route}
+                  selectedCities={selectedCities}
+                  selectedCityId={useDiscoveryStore.getState().selectedCityId}
+                  onToggleCity={onToggleCity}
+                  onReorderCities={onReorderCities}
+                  onSelectCity={onSelectCity}
+                  isExpanded={isExpanded}
+                />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="chat"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                transition={{ duration: 0.2 }}
+                className="h-full flex flex-col"
+              >
+                <ChatTabContent
+                  companionMessages={companionMessages}
+                  conversation={conversation}
+                  isLoading={isLoading}
+                  inputValue={inputValue}
+                  setInputValue={setInputValue}
+                  onSend={handleSend}
+                  onKeyDown={handleKeyDown}
+                  messagesEndRef={messagesEndRef}
+                  sendMessage={sendMessage}
+                  isExpanded={isExpanded}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
       </div>
 
-      {/* Proceed button */}
-      <div className="flex-shrink-0 p-4 border-t border-rui-grey-10">
+      {/* Footer with proceed button */}
+      <div className="flex-shrink-0 p-4 border-t border-stone-100 bg-white">
         <motion.button
           onClick={onProceed}
           whileTap={{ scale: 0.98 }}
           className="
             w-full flex items-center justify-center gap-2
             py-4 rounded-2xl
-            bg-rui-accent text-white
-            font-display font-semibold
+            bg-gradient-to-r from-teal-500 to-emerald-600 text-white
+            font-semibold
+            shadow-lg shadow-teal-500/30
           "
         >
           <Sparkles className="w-5 h-5" />
@@ -708,7 +720,330 @@ function MobileBottomSheet({
   );
 }
 
-// Suggested city card
+// ============================================================================
+// Route Tab Content
+// ============================================================================
+
+interface RouteTabContentProps {
+  route: DiscoveryRoute | null;
+  selectedCities: DiscoveryCity[];
+  selectedCityId: string | null;
+  onToggleCity: (cityId: string) => void;
+  onReorderCities: (orderedCityIds: string[]) => void;
+  onSelectCity: (cityId: string | null) => void;
+  isExpanded: boolean;
+}
+
+function RouteTabContent({
+  route,
+  selectedCities,
+  selectedCityId,
+  onToggleCity,
+  onReorderCities,
+  onSelectCity,
+  isExpanded,
+}: RouteTabContentProps) {
+  if (!isExpanded) {
+    // Collapsed: show horizontal scroll of city chips
+    return (
+      <div className="px-4 py-2">
+        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+          {selectedCities.map((city, index) => (
+            <CompactCityChip
+              key={city.id}
+              city={city}
+              index={index}
+              onRemove={city.isFixed ? undefined : () => onToggleCity(city.id)}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Expanded: full route management
+  return (
+    <div className="px-4 py-3">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-xs text-stone-500 uppercase tracking-wide font-medium">
+          Your stops
+        </p>
+        <p className="text-xs text-stone-400 flex items-center gap-1">
+          <GripVertical className="w-3 h-3" />
+          Drag to reorder
+        </p>
+      </div>
+
+      {/* Sortable city list */}
+      <SortableCityList
+        cities={selectedCities}
+        selectedCityId={selectedCityId}
+        onReorder={onReorderCities}
+        onRemoveCity={onToggleCity}
+        onSelectCity={onSelectCity}
+      />
+
+      {/* Add more stops */}
+      {route && route.suggestedCities.filter((c) => !c.isSelected).length > 0 && (
+        <div className="mt-4 pt-4 border-t border-stone-100">
+          <p className="text-xs text-stone-500 uppercase tracking-wide font-medium mb-3">
+            Add more stops
+          </p>
+          <div className="space-y-2">
+            {route.suggestedCities
+              .filter((c) => !c.isSelected)
+              .map((city) => (
+                <SuggestedCityCard
+                  key={city.id}
+                  city={city}
+                  onAdd={() => onToggleCity(city.id)}
+                />
+              ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
+// Chat Tab Content
+// ============================================================================
+
+interface ChatTabContentProps {
+  companionMessages: any[];
+  conversation: any;
+  isLoading: boolean;
+  inputValue: string;
+  setInputValue: (v: string) => void;
+  onSend: () => void;
+  onKeyDown: (e: React.KeyboardEvent) => void;
+  messagesEndRef: React.RefObject<HTMLDivElement | null>;
+  sendMessage: (msg: string) => void;
+  isExpanded: boolean;
+}
+
+function ChatTabContent({
+  companionMessages,
+  conversation,
+  isLoading,
+  inputValue,
+  setInputValue,
+  onSend,
+  onKeyDown,
+  messagesEndRef,
+  sendMessage,
+  isExpanded,
+}: ChatTabContentProps) {
+  const hasConversation = conversation.messages.length > 0;
+
+  if (!isExpanded) {
+    // Collapsed: show latest message preview
+    const latestMessage = hasConversation
+      ? conversation.messages[conversation.messages.length - 1]
+      : companionMessages[companionMessages.length - 1];
+
+    return (
+      <div className="px-4 py-2">
+        <div className="bg-stone-50 rounded-xl p-3 border border-stone-100">
+          <div className="flex items-start gap-2">
+            <Sparkles className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-stone-600 line-clamp-2 leading-relaxed">
+              {latestMessage?.content || 'Ask me anything about your trip...'}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Expanded: full chat interface
+  return (
+    <>
+      {/* Messages area */}
+      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+        {!hasConversation ? (
+          // Welcome state
+          <div className="text-center py-6">
+            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-amber-500/20">
+              <Sparkles className="w-7 h-7 text-white" />
+            </div>
+            <h3 className="font-semibold text-stone-900 text-lg mb-1">
+              Your Travel Assistant
+            </h3>
+            <p className="text-sm text-stone-500 leading-relaxed max-w-[260px] mx-auto">
+              Ask me anything about your journey, local tips, or hidden gems along the way.
+            </p>
+
+            {/* Static companion message if exists */}
+            {companionMessages.length > 0 && (
+              <div className="mt-4 bg-stone-50 rounded-2xl p-4 text-left border border-stone-100">
+                <p className="text-sm text-stone-700 leading-relaxed">
+                  {companionMessages[companionMessages.length - 1]?.content}
+                </p>
+              </div>
+            )}
+
+            {/* Vibe chips */}
+            <div className="mt-4">
+              <p className="text-xs text-stone-500 uppercase tracking-wide mb-2">What vibe are you after?</p>
+              <QuickActionChips
+                options={createVibeChips()}
+                onSelect={(chip) => {
+                  sendMessage(`I'm interested in ${chip.label.toLowerCase()} experiences`);
+                }}
+                visible={true}
+                dismissDelay={0}
+              />
+            </div>
+          </div>
+        ) : (
+          // Conversation messages
+          <>
+            {conversation.messages
+              .filter((msg: any, idx: number, arr: any[]) =>
+                arr.findIndex((m: any) => m.id === msg.id) === idx
+              )
+              .map((msg: any) => (
+              <motion.div
+                key={msg.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`
+                  ${msg.role === 'user'
+                    ? 'ml-10'
+                    : 'mr-6'
+                  }
+                `}
+              >
+                <div
+                  className={`
+                    rounded-2xl p-3.5
+                    ${msg.role === 'user'
+                      ? 'bg-gradient-to-br from-teal-500 to-emerald-600 text-white'
+                      : 'bg-stone-100 border border-stone-200'
+                    }
+                  `}
+                >
+                  {msg.role === 'assistant' ? (
+                    <div className="prose prose-sm max-w-none text-stone-700">
+                      <ReactMarkdown
+                        components={{
+                          p: ({ children }) => <p className="mb-1.5 last:mb-0 leading-relaxed text-[15px]">{children}</p>,
+                          strong: ({ children }) => <strong className="font-semibold text-stone-900">{children}</strong>,
+                          ul: ({ children }) => <ul className="list-disc pl-4 my-1.5">{children}</ul>,
+                          li: ({ children }) => <li className="text-[15px] leading-relaxed">{children}</li>,
+                        }}
+                      >
+                        {msg.content}
+                      </ReactMarkdown>
+                    </div>
+                  ) : (
+                    <p className="text-[15px] leading-relaxed">{msg.content}</p>
+                  )}
+                </div>
+              </motion.div>
+            ))}
+
+            {/* Loading indicator */}
+            {isLoading && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mr-6"
+              >
+                <div className="bg-stone-100 border border-stone-200 rounded-2xl p-3.5 flex items-center gap-2.5">
+                  <div className="flex gap-1">
+                    <motion.span
+                      animate={{ opacity: [0.4, 1, 0.4] }}
+                      transition={{ duration: 1, repeat: Infinity, delay: 0 }}
+                      className="w-2 h-2 rounded-full bg-teal-500"
+                    />
+                    <motion.span
+                      animate={{ opacity: [0.4, 1, 0.4] }}
+                      transition={{ duration: 1, repeat: Infinity, delay: 0.2 }}
+                      className="w-2 h-2 rounded-full bg-teal-500"
+                    />
+                    <motion.span
+                      animate={{ opacity: [0.4, 1, 0.4] }}
+                      transition={{ duration: 1, repeat: Infinity, delay: 0.4 }}
+                      className="w-2 h-2 rounded-full bg-teal-500"
+                    />
+                  </div>
+                  <span className="text-sm text-stone-500">Thinking...</span>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Quick follow-ups */}
+            {!isLoading && (
+              <div className="pt-2">
+                <QuickActionChips
+                  options={createTextChips(['Tell me more', 'Hidden gems?', 'Best food?'])}
+                  onSelect={(chip) => sendMessage(chip.label)}
+                  visible={true}
+                  dismissDelay={0}
+                />
+              </div>
+            )}
+
+            <div ref={messagesEndRef} />
+          </>
+        )}
+      </div>
+
+      {/* Input area */}
+      <div className="flex-shrink-0 px-4 pb-3 pt-2 border-t border-stone-100 bg-white">
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={onKeyDown}
+            placeholder="Ask about your trip..."
+            disabled={isLoading}
+            className="
+              flex-1 px-4 py-3
+              bg-stone-50 rounded-xl
+              text-[15px] text-stone-900
+              placeholder:text-stone-400
+              border border-stone-200
+              focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20
+              focus:outline-none focus:bg-white
+              disabled:opacity-50
+              transition-all duration-200
+            "
+          />
+          <motion.button
+            onClick={onSend}
+            disabled={!inputValue.trim() || isLoading}
+            whileTap={{ scale: 0.95 }}
+            className="
+              w-11 h-11 rounded-xl
+              bg-gradient-to-br from-teal-500 to-emerald-600 text-white
+              flex items-center justify-center
+              shadow-lg shadow-teal-500/25
+              disabled:from-stone-300 disabled:to-stone-400 disabled:shadow-none
+              transition-all duration-200
+            "
+          >
+            {isLoading ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <Send className="w-5 h-5" />
+            )}
+          </motion.button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ============================================================================
+// Supporting Components
+// ============================================================================
+
 interface SuggestedCityCardProps {
   city: DiscoveryCity;
   onAdd: () => void;
@@ -722,37 +1057,33 @@ function SuggestedCityCard({ city, onAdd }: SuggestedCityCardProps) {
       whileTap={{ scale: 0.99 }}
       className="
         w-full flex items-center gap-3 p-3
-        bg-rui-cream rounded-xl
-        border border-dashed border-rui-grey-30
-        hover:border-rui-accent hover:bg-rui-accent/5
+        bg-stone-50 rounded-xl
+        border border-dashed border-stone-300
+        hover:border-teal-400 hover:bg-teal-50/50
         transition-all duration-200
         text-left
       "
     >
-      {/* Add icon */}
-      <div className="w-8 h-8 rounded-full bg-rui-grey-5 flex items-center justify-center">
-        <MapPin className="w-4 h-4 text-rui-grey-50" />
+      <div className="w-8 h-8 rounded-full bg-stone-200 flex items-center justify-center">
+        <MapPin className="w-4 h-4 text-stone-500" />
       </div>
 
-      {/* City info */}
       <div className="flex-1 min-w-0">
-        <p className="font-display font-semibold text-rui-black truncate">
+        <p className="font-semibold text-stone-900 truncate text-sm">
           {city.name}
         </p>
-        <p className="text-body-3 text-rui-grey-50 truncate">
+        <p className="text-xs text-stone-500 truncate">
           {city.placeCount} places to discover
         </p>
       </div>
 
-      {/* Add indicator */}
-      <div className="text-rui-accent text-body-3 font-medium">
+      <div className="text-teal-600 text-sm font-medium">
         + Add
       </div>
     </motion.button>
   );
 }
 
-// Compact city chip for mobile horizontal scroll
 interface CompactCityChipProps {
   city: DiscoveryCity;
   index: number;
@@ -766,36 +1097,36 @@ function CompactCityChip({ city, index, onRemove }: CompactCityChipProps) {
         flex-shrink-0 flex items-center gap-2
         pl-2 pr-3 py-2 rounded-full
         ${city.isFixed
-          ? 'bg-rui-accent/10 border border-rui-accent/20'
-          : 'bg-rui-sage/10 border border-rui-sage/20'
+          ? 'bg-teal-50 border border-teal-200'
+          : 'bg-stone-100 border border-stone-200'
         }
       `}
     >
-      {/* Index */}
       <div
         className={`
           w-6 h-6 rounded-full flex items-center justify-center
-          text-xs font-semibold
-          ${city.isFixed ? 'bg-rui-accent text-white' : 'bg-rui-sage text-white'}
+          text-xs font-bold
+          ${city.isFixed
+            ? 'bg-gradient-to-br from-teal-500 to-emerald-600 text-white'
+            : 'bg-stone-300 text-stone-700'
+          }
         `}
       >
         {index + 1}
       </div>
 
-      {/* Name */}
-      <span className="text-body-3 font-medium text-rui-black whitespace-nowrap">
+      <span className="text-sm font-medium text-stone-800 whitespace-nowrap">
         {city.name}
       </span>
 
-      {/* Remove button */}
       {onRemove && (
         <button
           onClick={onRemove}
           className="
             w-5 h-5 rounded-full
-            bg-rui-grey-10 hover:bg-danger/20
+            bg-stone-200 hover:bg-red-100
             flex items-center justify-center
-            text-rui-grey-50 hover:text-danger
+            text-stone-500 hover:text-red-600
             transition-colors duration-200
           "
         >
