@@ -18,8 +18,60 @@ import { ToolExecutionStatus } from './ToolExecutionStatus';
 import { InlinePlaceCard } from './InlinePlaceCard';
 import { QuickActionChips } from './QuickActionChips';
 import { ToolSourceIndicator, extractToolNames } from './ToolSourceIndicator';
+import { SmartPlaceLink, isProbablyPlaceName } from './SmartPlaceLink';
 import { parseMessageForPlaces, hasPlaceMarkers } from '../../utils/messagePlaceParser';
 import type { ChipsSegment } from '../../utils/messagePlaceParser';
+
+// ============================================================================
+// Smart Markdown Components
+// ============================================================================
+
+/**
+ * Creates markdown components with smart place detection for bold text.
+ * Bold text that looks like a place name becomes a tappable SmartPlaceLink.
+ */
+function createSmartMarkdownComponents() {
+  return {
+    h1: ({ node, ...props }: any) => <h1 className="text-lg font-bold mb-2 text-gray-900" {...props} />,
+    h2: ({ node, ...props }: any) => <h2 className="text-base font-bold mb-2 text-gray-900" {...props} />,
+    h3: ({ node, ...props }: any) => <h3 className="text-sm font-semibold mb-1.5 text-gray-800" {...props} />,
+    p: ({ node, ...props }: any) => <p className="mb-2 leading-relaxed last:mb-0" {...props} />,
+    ul: ({ node, ...props }: any) => <ul className="list-disc list-inside mb-2 space-y-1" {...props} />,
+    ol: ({ node, ...props }: any) => <ol className="list-decimal list-inside mb-2 space-y-1" {...props} />,
+    li: ({ node, ...props }: any) => <li className="leading-relaxed" {...props} />,
+    em: ({ node, ...props }: any) => <em className="italic" {...props} />,
+    a: ({ node, ...props }: any) => <a className="text-teal-600 hover:text-teal-700 underline" {...props} />,
+    code: ({ node, ...props }: any) => <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs font-mono" {...props} />,
+    // Smart strong component - detects place names and makes them interactive
+    strong: ({ node, children, ...props }: any) => {
+      // Extract text content from children
+      const textContent = typeof children === 'string'
+        ? children
+        : Array.isArray(children)
+          ? children.filter(c => typeof c === 'string').join('')
+          : '';
+
+      // Check if this looks like a place name
+      if (textContent && isProbablyPlaceName(textContent)) {
+        return (
+          <SmartPlaceLink placeName={textContent}>
+            {children}
+          </SmartPlaceLink>
+        );
+      }
+
+      // Default bold rendering
+      return <strong className="font-semibold text-gray-900" {...props}>{children}</strong>;
+    },
+  };
+}
+
+// Pre-create the components (memoized)
+const smartMarkdownComponents = createSmartMarkdownComponents();
+
+// ============================================================================
+// ChatHistoryPanel Component
+// ============================================================================
 
 export function ChatHistoryPanel() {
   const { messages, isLoading, activeTools, pageContext, sendMessage } = useAgent();
@@ -139,21 +191,7 @@ export function ChatHistoryPanel() {
                       if (segment.type === 'text') {
                         return (
                           <div key={idx} className="prose prose-sm prose-teal max-w-none">
-                            <ReactMarkdown
-                              components={{
-                                h1: ({node, ...props}) => <h1 className="text-lg font-bold mb-2 text-gray-900" {...props} />,
-                                h2: ({node, ...props}) => <h2 className="text-base font-bold mb-2 text-gray-900" {...props} />,
-                                h3: ({node, ...props}) => <h3 className="text-sm font-semibold mb-1.5 text-gray-800" {...props} />,
-                                p: ({node, ...props}) => <p className="mb-2 leading-relaxed last:mb-0" {...props} />,
-                                ul: ({node, ...props}) => <ul className="list-disc list-inside mb-2 space-y-1" {...props} />,
-                                ol: ({node, ...props}) => <ol className="list-decimal list-inside mb-2 space-y-1" {...props} />,
-                                li: ({node, ...props}) => <li className="leading-relaxed" {...props} />,
-                                strong: ({node, ...props}) => <strong className="font-semibold text-gray-900" {...props} />,
-                                em: ({node, ...props}) => <em className="italic" {...props} />,
-                                a: ({node, ...props}) => <a className="text-teal-600 hover:text-teal-700 underline" {...props} />,
-                                code: ({node, ...props}) => <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs font-mono" {...props} />,
-                              }}
-                            >
+                            <ReactMarkdown components={smartMarkdownComponents}>
                               {segment.content}
                             </ReactMarkdown>
                           </div>
@@ -174,23 +212,9 @@ export function ChatHistoryPanel() {
                     })}
                   </div>
                 ) : (
-                  // Regular markdown rendering
+                  // Regular markdown rendering with smart place links
                   <div className="text-sm text-gray-900 prose prose-sm prose-teal max-w-none">
-                    <ReactMarkdown
-                      components={{
-                        h1: ({node, ...props}) => <h1 className="text-lg font-bold mb-2 text-gray-900" {...props} />,
-                        h2: ({node, ...props}) => <h2 className="text-base font-bold mb-2 text-gray-900" {...props} />,
-                        h3: ({node, ...props}) => <h3 className="text-sm font-semibold mb-1.5 text-gray-800" {...props} />,
-                        p: ({node, ...props}) => <p className="mb-2 leading-relaxed last:mb-0" {...props} />,
-                        ul: ({node, ...props}) => <ul className="list-disc list-inside mb-2 space-y-1" {...props} />,
-                        ol: ({node, ...props}) => <ol className="list-decimal list-inside mb-2 space-y-1" {...props} />,
-                        li: ({node, ...props}) => <li className="leading-relaxed" {...props} />,
-                        strong: ({node, ...props}) => <strong className="font-semibold text-gray-900" {...props} />,
-                        em: ({node, ...props}) => <em className="italic" {...props} />,
-                        a: ({node, ...props}) => <a className="text-teal-600 hover:text-teal-700 underline" {...props} />,
-                        code: ({node, ...props}) => <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs font-mono" {...props} />,
-                      }}
-                    >
+                    <ReactMarkdown components={smartMarkdownComponents}>
                       {message.content}
                     </ReactMarkdown>
                   </div>
