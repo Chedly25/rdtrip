@@ -134,13 +134,18 @@ export function DiscoveryPhaseContainer() {
           const existingPhase = useDiscoveryStore.getState().phase;
 
           // If we have existing route data and it matches the current trip
-          if (existingRoute && existingPhase === 'exploring') {
+          // Don't require 'exploring' phase - user may be returning from itinerary
+          if (existingRoute && existingPhase !== 'loading') {
             const sameOrigin = existingRoute.origin.name === data.origin.name;
             const sameDestination = existingRoute.destination.name === data.destination.name;
 
             if (sameOrigin && sameDestination) {
-              console.log('✅ Using cached route data');
+              console.log('✅ Using cached route data (phase:', existingPhase, ')');
               // Route already exists and matches - no need to re-fetch
+              // Reset phase to exploring so UI works correctly
+              if (existingPhase !== 'exploring') {
+                setPhase('exploring');
+              }
               return;
             }
           }

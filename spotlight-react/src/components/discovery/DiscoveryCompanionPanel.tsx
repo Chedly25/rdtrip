@@ -18,6 +18,7 @@
  */
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, useMotionValue, useTransform, animate, AnimatePresence } from 'framer-motion';
 import type { PanInfo } from 'framer-motion';
 import {
@@ -32,9 +33,11 @@ import {
   Loader2,
   Route,
   Map,
+  Calendar,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { useDiscoveryStore } from '../../stores/discoveryStore';
+import { getStoredItineraryId } from '../../hooks/useItineraryGeneration';
 import type { DiscoveryRoute, TripSummary, DiscoveryCity } from '../../stores/discoveryStore';
 import { SortableCityList } from './SortableCityList';
 import { usePlanningCompanion } from '../../hooks/usePlanningCompanion';
@@ -181,6 +184,7 @@ function DesktopSidebar({
   onProceed,
 }: DesktopSidebarProps) {
   void _tripSummary;
+  const navigate = useNavigate();
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -189,6 +193,10 @@ function DesktopSidebar({
 
   const [inputValue, setInputValue] = useState('');
   const [showChat, setShowChat] = useState(false);
+
+  // Check if an itinerary was previously generated
+  const storedItineraryId = getStoredItineraryId();
+  const hasExistingItinerary = !!storedItineraryId;
 
   useEffect(() => {
     if (messagesEndRef.current && conversation.messages.length > 0) {
@@ -405,7 +413,32 @@ function DesktopSidebar({
       </div>
 
       {/* Footer */}
-      <div className="flex-shrink-0 p-4 border-t border-stone-100 bg-white">
+      <div className="flex-shrink-0 p-4 border-t border-stone-100 bg-white space-y-3">
+        {/* View Itinerary button - shown if one exists */}
+        {hasExistingItinerary && (
+          <motion.button
+            onClick={() => navigate('/itinerary')}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className="
+              w-full flex items-center justify-center gap-2
+              py-3 rounded-xl
+              bg-gradient-to-r from-amber-50 to-orange-50
+              border border-amber-200
+              text-amber-700
+              font-medium
+              hover:border-amber-300 hover:bg-amber-50
+              transition-all duration-200
+            "
+          >
+            <Calendar className="w-4 h-4" />
+            <span>View Your Itinerary</span>
+          </motion.button>
+        )}
+
+        {/* Generate button */}
         <motion.button
           onClick={onProceed}
           whileHover={{ scale: 1.02, y: -1 }}
@@ -421,7 +454,7 @@ function DesktopSidebar({
           "
         >
           <Sparkles className="w-5 h-5" />
-          <span>Generate Itinerary</span>
+          <span>{hasExistingItinerary ? 'Regenerate Itinerary' : 'Generate Itinerary'}</span>
           <ArrowRight className="w-5 h-5" />
         </motion.button>
       </div>
@@ -463,9 +496,15 @@ function MobileBottomSheet({
   onDragEnd,
   onToggleExpand,
 }: MobileBottomSheetProps) {
+  const navigate = useNavigate();
+
   // Tab state
   const [activeTab, setActiveTab] = useState<TabId>('route');
   const [hasUnreadChat, setHasUnreadChat] = useState(false);
+
+  // Check if an itinerary was previously generated
+  const storedItineraryId = getStoredItineraryId();
+  const hasExistingItinerary = !!storedItineraryId;
 
   // Swipe tracking
   const tabContentRef = useRef<HTMLDivElement>(null);
@@ -700,7 +739,29 @@ function MobileBottomSheet({
       </div>
 
       {/* Footer with proceed button */}
-      <div className="flex-shrink-0 p-4 border-t border-stone-100 bg-white">
+      <div className="flex-shrink-0 p-4 border-t border-stone-100 bg-white space-y-2">
+        {/* View Itinerary button - shown if one exists */}
+        {hasExistingItinerary && (
+          <motion.button
+            onClick={() => navigate('/itinerary')}
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            whileTap={{ scale: 0.98 }}
+            className="
+              w-full flex items-center justify-center gap-2
+              py-3 rounded-xl
+              bg-gradient-to-r from-amber-50 to-orange-50
+              border border-amber-200
+              text-amber-700
+              font-medium text-sm
+            "
+          >
+            <Calendar className="w-4 h-4" />
+            <span>View Your Itinerary</span>
+          </motion.button>
+        )}
+
+        {/* Generate button */}
         <motion.button
           onClick={onProceed}
           whileTap={{ scale: 0.98 }}
@@ -713,7 +774,7 @@ function MobileBottomSheet({
           "
         >
           <Sparkles className="w-5 h-5" />
-          <span>Generate Itinerary</span>
+          <span>{hasExistingItinerary ? 'Regenerate' : 'Generate Itinerary'}</span>
         </motion.button>
       </div>
     </motion.div>
