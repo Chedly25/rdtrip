@@ -89,6 +89,28 @@ export interface Artifact {
   };
 }
 
+// Discovery context type for planning phase
+export interface DiscoveryContext {
+  sessionId: string;
+  phase: 'loading' | 'exploring' | 'confirming' | 'generating';
+  trip: {
+    origin: { name: string; country: string };
+    destination: { name: string; country: string };
+    dates: { totalNights: number };
+    travellerType: string | null;
+    totalDistanceKm: number | null;
+  };
+  cities: {
+    selected: Array<{ id: string; name: string; country: string; nights: number }>;
+    available: Array<{ id: string; name: string; country: string; placeCount: number }>;
+  };
+  favourites: Array<{ name: string; type: string; cityName: string }>;
+  behaviour: {
+    favouritePlaceTypes: string[];
+    prefersHiddenGems: boolean;
+  };
+}
+
 export interface AgentContextValue {
   // State
   isOpen: boolean;
@@ -108,7 +130,7 @@ export interface AgentContextValue {
   openAgent: () => void;
   closeAgent: () => void;
   toggleAgent: () => void;
-  sendMessage: (message: string) => Promise<void>;
+  sendMessage: (message: string, discoveryContext?: DiscoveryContext) => Promise<void>;
   clearHistory: () => void;
 
   // Artifact Actions
@@ -465,11 +487,20 @@ export function AgentProvider({ children }: AgentProviderProps) {
 
   /**
    * Send message to agent with streaming response
+   * @param messageText - The user's message
+   * @param discoveryContext - Optional discovery context for planning phase
    */
-  const sendMessage = useCallback(async (messageText: string) => {
+  const sendMessage = useCallback(async (messageText: string, discoveryContext?: DiscoveryContext) => {
     if (!messageText.trim()) return;
 
     console.log('🚀 [AGENT] sendMessage called with:', messageText.trim());
+    if (discoveryContext) {
+      console.log('📍 [AGENT] Discovery context provided:', {
+        phase: discoveryContext.phase,
+        selectedCities: discoveryContext.cities.selected.length,
+        availableCities: discoveryContext.cities.available.length,
+      });
+    }
 
     // Add user message immediately
     const userMessage: AgentMessage = {
@@ -527,7 +558,9 @@ export function AgentProvider({ children }: AgentProviderProps) {
         routeId: pageContext.route?.routeId || null,
         itineraryId: itineraryId || null,  // ✅ ADD ITINERARY ID
         // Also send personalization at top level for easier backend access
-        personalization: pageContext.personalization || null
+        personalization: pageContext.personalization || null,
+        // ✅ Discovery context for planning phase - includes selected cities, suggested cities, etc.
+        discoveryContext: discoveryContext || null,
       };
 
       console.log('📤 [AGENT] Sending fetch to:', `${apiUrl}/api/agent/query`);

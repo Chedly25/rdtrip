@@ -221,10 +221,44 @@ export function usePlanningCompanion(): UsePlanningCompanionReturn {
         // These preferences are merged when the message is added above
         // and can be accessed via conversation.preferences
 
-        // Use the existing agent to send the message
+        // Use the existing agent to send the message with discovery context
         // The agent handles SSE streaming and response processing
-        // Planning context is available via usePlanningContext() for backend integration
-        await agent.sendMessage(message);
+        // Pass the planning context so backend knows about selected cities, route, etc.
+        const discoveryContext = {
+          sessionId: planningContext.sessionId,
+          phase: planningContext.phase,
+          trip: {
+            origin: planningContext.trip.origin,
+            destination: planningContext.trip.destination,
+            dates: { totalNights: planningContext.trip.dates.totalNights },
+            travellerType: planningContext.trip.travellerType,
+            totalDistanceKm: planningContext.trip.totalDistanceKm,
+          },
+          cities: {
+            selected: planningContext.cities.selected.map((c) => ({
+              id: c.id,
+              name: c.name,
+              country: c.country,
+              nights: c.nights,
+            })),
+            available: planningContext.cities.available.slice(0, 10).map((c) => ({
+              id: c.id,
+              name: c.name,
+              country: c.country,
+              placeCount: c.placeCount,
+            })),
+          },
+          favourites: planningContext.favourites.slice(0, 10).map((f) => ({
+            name: f.name,
+            type: f.type,
+            cityName: f.cityName,
+          })),
+          behaviour: {
+            favouritePlaceTypes: planningContext.behaviour.favouritePlaceTypes,
+            prefersHiddenGems: planningContext.behaviour.prefersHiddenGems,
+          },
+        };
+        await agent.sendMessage(message, discoveryContext);
 
         // After agent responds, extract preferences from response
         // We need to wait for the agent's response to be in messages
@@ -238,7 +272,7 @@ export function usePlanningCompanion(): UsePlanningCompanionReturn {
         setIsLoading(false);
       }
     },
-    [agent]
+    [agent, planningContext]
   );
 
   // ==================== Sync Agent Messages ====================

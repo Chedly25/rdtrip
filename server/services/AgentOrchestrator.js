@@ -131,6 +131,7 @@ class AgentOrchestrator {
    * @param {string} params.message - User's message
    * @param {string} params.sessionId - Conversation session ID
    * @param {Object} params.pageContext - Current page info
+   * @param {Object} params.discoveryContext - Discovery phase context (selected cities, etc.)
    * @param {Function} params.onStream - Callback for streaming chunks
    */
   async handleQuery({
@@ -140,6 +141,7 @@ class AgentOrchestrator {
     message,
     sessionId,
     pageContext,
+    discoveryContext,
     onStream
   }) {
     console.log('\n╔════════════════════════════════════════════╗');
@@ -171,16 +173,20 @@ class AgentOrchestrator {
         }
       }
 
-      // 3. Build context with itinerary data
+      // 3. Build context with itinerary data and discovery context
       const context = {
         userId,
         routeId,
         conversationId,
         pageContext: pageContext || {},
         sessionId,
-        itineraryData
+        itineraryData,
+        discoveryContext: discoveryContext || null  // ✅ Add discovery context
       };
       console.log('   ✅ Context built');
+      if (discoveryContext) {
+        console.log(`   📍 Discovery context: ${discoveryContext.cities?.selected?.length || 0} selected cities, phase: ${discoveryContext.phase}`);
+      }
 
       console.log('[Step 3/9] Getting conversation history...');
       // 3. Get conversation history (last 10 messages)
@@ -511,7 +517,7 @@ class AgentOrchestrator {
    * Build system prompt with context injection + memory
    */
   buildSystemPrompt(context, memories = [], preferences = {}) {
-    const { pageContext, itineraryData } = context;
+    const { pageContext, itineraryData, discoveryContext } = context;
 
     // Extract personalization from page context
     const personalization = pageContext?.personalization || {};
@@ -639,8 +645,81 @@ BEFORE responding to ANY message, ALWAYS check the conversation history:
 User: "Let's change chaine d'eguilles from the aix en provence activities"
 ✅ GOOD: Extract "Aix-en-Provence" → searchActivities(city: "Aix-en-Provence, France")
 ❌ BAD: Ask "Which city are you interested in?"`;
+    } else if (discoveryContext) {
+      // ✅ Discovery phase context - user is exploring/planning their route
+      // This provides rich context about selected cities, suggested cities, favourites, etc.
+      const { trip, cities, favourites, behaviour, phase } = discoveryContext;
+
+      prompt += `\n\n**🧭 DISCOVERY PHASE CONTEXT** (User is planning their trip - no itinerary generated yet):
+
+**The Route:**
+- Origin: ${trip?.origin?.name || 'Unknown'}, ${trip?.origin?.country || ''}
+- Destination: ${trip?.destination?.name || 'Unknown'}, ${trip?.destination?.country || ''}
+- Total Trip: ${trip?.dates?.totalNights || 0} nights
+- Traveller Type: ${trip?.travellerType || 'Not specified'}
+${trip?.totalDistanceKm ? `- Distance: ~${Math.round(trip.totalDistanceKm)}km` : ''}`;
+
+      // Selected cities
+      if (cities?.selected && cities.selected.length > 0) {
+        prompt += `\n\n**Cities They've Selected:**`;
+        cities.selected.forEach((city, i) => {
+          const nights = city.nights > 1 ? `${city.nights} nights` : '1 night';
+          prompt += `\n${i + 1}. ${city.name}, ${city.country} (${nights})`;
+        });
+      }
+
+      // Available cities they can add
+      if (cities?.available && cities.available.length > 0) {
+        prompt += `\n\n**Suggested Cities They Could Add:**`;
+        cities.available.slice(0, 5).forEach((city) => {
+          prompt += `\n- ${city.name}, ${city.country} (${city.placeCount} places to explore)`;
+        });
+        if (cities.available.length > 5) {
+          prompt += `\n- ...and ${cities.available.length - 5} more options`;
+        }
+      }
+
+      // Favourites
+      if (favourites && favourites.length > 0) {
+        prompt += `\n\n**Places They've Favourited:**`;
+        favourites.forEach((fav) => {
+          prompt += `\n- ${fav.name} (${fav.type}) in ${fav.cityName}`;
+        });
+      }
+
+      // Behaviour signals
+      if (behaviour) {
+        prompt += `\n\n**What You Know About Their Preferences:**`;
+        if (behaviour.favouritePlaceTypes?.length > 0) {
+          prompt += `\n- Interested in: ${behaviour.favouritePlaceTypes.join(', ')}`;
+        }
+        if (behaviour.prefersHiddenGems) {
+          prompt += `\n- Prefers hidden gems over tourist spots`;
+        }
+      }
+
+      prompt += `\n\n**Phase:** ${phase || 'exploring'}
+
+**HOW TO HELP IN DISCOVERY PHASE:**
+- Answer questions about any of the cities mentioned above
+- Help them decide which cities to add or skip
+- Suggest hidden gems and local experiences in their selected cities
+- Give weather info, activity recommendations, food tips
+- Help them understand if their nights allocation makes sense
+- Be a knowledgeable friend helping them plan an amazing trip
+
+**IMPORTANT RULES:**
+- You KNOW their route - don't ask "where are you going?"
+- You KNOW their selected cities - don't ask "which cities?"
+- Use searchActivities, checkWeather, getCityInfo tools to provide helpful info
+- Be proactive: "Since you're spending 2 nights in Lyon, you should definitely visit..."`;
+
+      // Add personalization context if available
+      if (pageContext?.personalization) {
+        prompt += this.buildPersonalizationPrompt(pageContext.personalization);
+      }
     } else if (pageContext?.route) {
-      // No itinerary but we have route context from pageContext
+      // No itinerary but we have route context from pageContext (fallback)
       const route = pageContext.route;
       prompt += `\n\n**Current Route Context** (no generated itinerary yet):
 - Origin: ${route.origin || 'Unknown'}

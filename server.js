@@ -5256,7 +5256,7 @@ const agentOrchestrator = new AgentOrchestrator();
  */
 app.post('/api/agent/query', optionalAuth, async (req, res) => {
   try {
-    const { message, sessionId, pageContext, routeId, itineraryId } = req.body;
+    const { message, sessionId, pageContext, routeId, itineraryId, discoveryContext } = req.body;
     const userId = req.user?.id || null;
 
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
@@ -5268,6 +5268,7 @@ app.post('/api/agent/query', optionalAuth, async (req, res) => {
     console.log('   Route ID:', routeId);
     console.log('   Itinerary ID:', itineraryId);
     console.log('   Page Context:', pageContext);
+    console.log('   Discovery Context:', discoveryContext ? `${discoveryContext.cities?.selected?.length || 0} selected, ${discoveryContext.cities?.available?.length || 0} available` : 'NOT PROVIDED');
     console.log('   Message:', message);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
@@ -5370,6 +5371,7 @@ app.post('/api/agent/query', optionalAuth, async (req, res) => {
       message: message.trim(),
       sessionId: sessionId,
       pageContext: pageContext || 'unknown',
+      discoveryContext: discoveryContext || null, // ✅ Pass discovery context
       onStream: streamHandler
     });
 
