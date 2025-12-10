@@ -686,16 +686,40 @@ export function AgentProvider({ children }: AgentProviderProps) {
                 }));
 
                 // Check if any tool modifies the itinerary
-                const itineraryModifyingTools = ['replaceActivity', 'addActivity', 'moveActivity', 'reorderActivities'];
-                const modifiedItinerary = event.tools.some((tool: any) =>
-                  itineraryModifyingTools.includes(tool.name) &&
-                  (typeof tool.content === 'string' ? JSON.parse(tool.content).success : tool.content?.success)
-                );
+                const itineraryModifyingTools = ['replaceActivity', 'addActivity', 'moveActivity', 'reorderActivities', 'modifyItinerary'];
 
-                if (modifiedItinerary) {
-                  console.log('🔄 [AGENT] Itinerary was modified, dispatching refresh event');
-                  // Dispatch custom event that spotlight page can listen to
-                  window.dispatchEvent(new CustomEvent('itinerary_updated'));
+                for (const tool of event.tools) {
+                  if (itineraryModifyingTools.includes(tool.name)) {
+                    try {
+                      const content = typeof tool.content === 'string' ? JSON.parse(tool.content) : tool.content;
+
+                      if (content.success) {
+                        console.log('🔄 [AGENT] Itinerary was modified, dispatching refresh event');
+                        window.dispatchEvent(new CustomEvent('itinerary_updated'));
+
+                        // 🎉 Dispatch visual confirmation for successful actions
+                        const confirmationData: any = {
+                          type: tool.name === 'replaceActivity' ? 'replace' :
+                                tool.name === 'moveActivity' ? 'move' : 'add',
+                          activityName: content.message?.match(/Added (.+?) to/)?.[1] ||
+                                       content.item?.name ||
+                                       content.newActivity?.name ||
+                                       'Activity',
+                          dayNumber: content.dayNumber || 1,
+                          timeSlot: content.item?.timeSlot || content.timeSlot || undefined,
+                          city: content.city || undefined,
+                          photo: content.item?.photo || content.newActivity?.photo || undefined,
+                        };
+
+                        console.log('✨ [AGENT] Dispatching action confirmation:', confirmationData);
+                        window.dispatchEvent(new CustomEvent('agent_action_confirmed', {
+                          detail: { ...confirmationData, id: `action_${Date.now()}` }
+                        }));
+                      }
+                    } catch (e) {
+                      console.warn('⚠️ [AGENT] Failed to parse tool result for confirmation:', e);
+                    }
+                  }
                 }
 
                 // Check if addCityToRoute tool was used successfully

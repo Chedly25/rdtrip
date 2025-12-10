@@ -30,6 +30,7 @@ import { AuthProvider } from './contexts/AuthContext'
 import { IdeasBoardProvider } from './contexts/IdeasBoardContext'
 import { AgentModal } from './components/agent/AgentModal'
 import { IdeasBoardPanel } from './components/agent/IdeasBoard'
+import { ActionConfirmation } from './components/agent/ActionConfirmation'
 import { PageTransition } from './components/transitions'
 import { ErrorBoundary } from './components/ErrorBoundary'
 
@@ -265,6 +266,9 @@ function App() {
 
                   {/* Ideas Board - Vintage scrapbook for agent recommendations */}
                   <IdeasBoardPanel />
+
+                  {/* Action Confirmation Toast - Shows when agent modifies itinerary */}
+                  <ActionConfirmation />
                 </CompanionProvider>
               </IdeasBoardProvider>
             </AgentProvider>

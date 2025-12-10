@@ -832,7 +832,70 @@ The user is exploring this route. They can ask about:
       prompt += `\nConsider these preferences when making recommendations.`;
     }
 
-    prompt += `\n\n**CRITICAL TOOL USAGE RULES**:
+    prompt += `\n\n**🗣️ NATURAL LANGUAGE ACTIONS - UNDERSTAND AND EXECUTE**:
+
+Users will give you casual commands referencing things you've mentioned. Parse and execute them automatically!
+
+**CONTEXTUAL REFERENCE PATTERNS:**
+When user says...                          | What they mean
+--------------------------------------------|--------------------------------------------------
+"add that bakery to day 2"                  | The bakery you JUST mentioned → add to Day 2
+"put the museum in my morning"              | The museum from your last search → add to morning
+"add it to tomorrow"                        | The last place mentioned → add to next day
+"that one sounds good, add it"              | The place you just recommended → add to trip
+"add Café de Flore to day 3 afternoon"      | Specific name given → add to Day 3 afternoon slot
+
+**TIME PARSING:**
+| Natural phrase        | Interpret as        |
+|-----------------------|---------------------|
+| "morning"             | timeSlot: "morning" |
+| "afternoon"           | timeSlot: "afternoon" |
+| "evening" / "night"   | timeSlot: "evening" |
+| "day 2"               | dayNumber: 2        |
+| "tomorrow"            | currentDay + 1      |
+| "the last day"        | totalDays           |
+| "first day"           | dayNumber: 1        |
+
+**HOW TO RESOLVE "THAT" / "THE" / "IT" REFERENCES:**
+1. Look at YOUR previous message in conversation history
+2. Find the LAST place/activity/restaurant you mentioned or searched for
+3. If you used mentionPlace → that's the reference
+4. If you used searchActivities → that's the reference (ask user to specify if multiple)
+5. If you recommended something by name → that's the reference
+
+**WORKFLOW - User says "Add that bakery to day 2 morning":**
+
+Step 1: Parse the request
+  - Reference: "that bakery" → Look at conversation history for last bakery mentioned
+  - Day: "day 2" → dayNumber = 2
+  - Time: "morning" → timeSlot = "morning"
+
+Step 2: Resolve the reference
+  - Found: You mentioned "Boulangerie Poilâne" in your last response
+  - Get full data: Use mentionPlace OR use data from your previous searchActivities result
+
+Step 3: Execute the action
+  - Call modifyItinerary(itineraryId, action: "add_activity", dayNumber: 2, item: {
+      name: "Boulangerie Poilâne",
+      address: "8 Rue du Cherche-Midi, Paris",
+      photo: "...",
+      timeSlot: "morning",
+      ...other fields
+    })
+
+Step 4: Confirm naturally
+  - "✅ Added **Boulangerie Poilâne** to Day 2 morning! Perfect for starting your day with fresh croissants."
+
+**CRITICAL: NEVER ask "which place?" if you just mentioned ONE place!**
+❌ BAD: User says "add that to day 2" → You: "Which place would you like to add?"
+✅ GOOD: User says "add that to day 2" → You: Look at history → Found "Café de Flore" → Add it!
+
+**WHEN REFERENCE IS AMBIGUOUS (you listed multiple places):**
+- Ask for clarification ONLY if you presented 3+ options
+- Provide numbered choices: "I found several options. Add which one? (1) Café X (2) Café Y"
+- Or use suggestActions to let them tap a choice
+
+**CRITICAL TOOL USAGE RULES**:
 
 You MUST use tools for these queries - DO NOT answer from general knowledge:
 
@@ -911,6 +974,20 @@ STEP 4: User picks → Call replaceActivity
 14. **Find Nearby** ("what's near X", "cafe near museum"):
     → Use findNearby tool - activity-specific search (not city-wide)
     → Example: "Find cafe near Louvre on Day 2" → findNearby(activityName: "Louvre", dayNumber: 2, type: "cafe")
+
+**🆕 ADD ACTIVITY TO DAY** ("add X to day Y", "put X in morning", "add that to my trip"):
+    → Use modifyItinerary with action: "add_activity"
+    → Include timeSlot: "morning" | "afternoon" | "evening"
+    → Example: "Add Café de Flore to Day 2 morning"
+      → modifyItinerary(itineraryId: "...", action: "add_activity", dayNumber: 2, item: {
+           name: "Café de Flore",
+           address: "172 Boulevard Saint-Germain",
+           photo: "https://...",
+           timeSlot: "morning",
+           ... (include ALL fields from mentionPlace or searchActivities!)
+         })
+    → **ALWAYS get full activity data FIRST** using mentionPlace or searchActivities
+    → **NEVER add an activity without photo, address, and coordinates!**
 
 **DISCOVERY PHASE TOOLS** (Use during route planning, before itinerary generation):
 
