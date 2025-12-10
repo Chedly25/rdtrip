@@ -1,12 +1,11 @@
 /**
- * Message Place Parser - Extract place cards from agent messages
+ * Message Parser - Extract place cards and quick action chips from agent messages
  *
- * Parses messages containing [[place:BASE64_JSON]] markers and returns
- * structured segments for rendering with InlinePlaceCard components.
+ * Parses messages containing:
+ * - [[place:BASE64_JSON]] markers for inline place cards
+ * - [[chips:BASE64_JSON]] markers for quick action chips
  *
- * Format: [[place:BASE64_ENCODED_JSON]]
- *
- * Example JSON:
+ * Place JSON:
  * {
  *   "name": "Le Comptoir du Panthéon",
  *   "rating": 4.6,
@@ -17,9 +16,17 @@
  *   "lat": 48.8566,
  *   "lng": 2.3522
  * }
+ *
+ * Chips JSON:
+ * {
+ *   "chips": [
+ *     { "id": "food", "label": "Food & Wine", "value": "I want food experiences", "icon": "food", "color": "amber" }
+ *   ]
+ * }
  */
 
 import type { PlaceData } from '../components/agent/InlinePlaceCard';
+import type { QuickActionChip } from '../components/agent/QuickActionChips';
 
 export interface TextSegment {
   type: 'text';
@@ -31,24 +38,35 @@ export interface PlaceSegment {
   place: PlaceData;
 }
 
-export type MessageSegment = TextSegment | PlaceSegment;
+export interface ChipsSegment {
+  type: 'chips';
+  chips: QuickActionChip[];
+}
+
+export type MessageSegment = TextSegment | PlaceSegment | ChipsSegment;
 
 // Regex to match [[place:BASE64_JSON]] markers
 const PLACE_MARKER_REGEX = /\[\[place:([A-Za-z0-9+/=]+)\]\]/g;
 
+// Regex to match [[chips:BASE64_JSON]] markers
+const CHIPS_MARKER_REGEX = /\[\[chips:([A-Za-z0-9+/=]+)\]\]/g;
+
+// Combined regex for any marker type
+const ANY_MARKER_REGEX = /\[\[(place|chips):([A-Za-z0-9+/=]+)\]\]/g;
+
 /**
- * Parse a message and extract place markers
- * Returns array of text and place segments for rendering
+ * Parse a message and extract place and chips markers
+ * Returns array of text, place, and chips segments for rendering
  */
 export function parseMessageForPlaces(content: string): MessageSegment[] {
   const segments: MessageSegment[] = [];
   let lastIndex = 0;
 
   // Reset regex state
-  PLACE_MARKER_REGEX.lastIndex = 0;
+  ANY_MARKER_REGEX.lastIndex = 0;
 
   let match;
-  while ((match = PLACE_MARKER_REGEX.exec(content)) !== null) {
+  while ((match = ANY_MARKER_REGEX.exec(content)) !== null) {
     // Add text before this match
     if (match.index > lastIndex) {
       const textBefore = content.slice(lastIndex, match.index);
@@ -57,22 +75,32 @@ export function parseMessageForPlaces(content: string): MessageSegment[] {
       }
     }
 
-    // Try to decode the place data
-    try {
-      const base64Data = match[1];
-      const jsonString = atob(base64Data);
-      const placeData = JSON.parse(jsonString) as PlaceData;
+    const markerType = match[1]; // 'place' or 'chips'
+    const base64Data = match[2];
 
-      // Validate required fields
-      if (placeData.name) {
-        segments.push({ type: 'place', place: placeData });
-      } else {
-        // Invalid place data - render as text
-        segments.push({ type: 'text', content: match[0] });
+    try {
+      const jsonString = atob(base64Data);
+      const parsedData = JSON.parse(jsonString);
+
+      if (markerType === 'place') {
+        // Validate place data
+        const placeData = parsedData as PlaceData;
+        if (placeData.name) {
+          segments.push({ type: 'place', place: placeData });
+        } else {
+          segments.push({ type: 'text', content: match[0] });
+        }
+      } else if (markerType === 'chips') {
+        // Validate chips data
+        const chipsData = parsedData as { chips: QuickActionChip[] };
+        if (chipsData.chips && Array.isArray(chipsData.chips) && chipsData.chips.length > 0) {
+          segments.push({ type: 'chips', chips: chipsData.chips });
+        } else {
+          segments.push({ type: 'text', content: match[0] });
+        }
       }
     } catch (error) {
-      console.warn('Failed to parse place marker:', match[0], error);
-      // Failed to decode - render as text
+      console.warn(`Failed to parse ${markerType} marker:`, match[0], error);
       segments.push({ type: 'text', content: match[0] });
     }
 
@@ -96,11 +124,19 @@ export function parseMessageForPlaces(content: string): MessageSegment[] {
 }
 
 /**
- * Check if a message contains any place markers
+ * Check if a message contains any markers (place or chips)
  */
 export function hasPlaceMarkers(content: string): boolean {
-  PLACE_MARKER_REGEX.lastIndex = 0;
-  return PLACE_MARKER_REGEX.test(content);
+  ANY_MARKER_REGEX.lastIndex = 0;
+  return ANY_MARKER_REGEX.test(content);
+}
+
+/**
+ * Check if a message contains chips markers specifically
+ */
+export function hasChipsMarkers(content: string): boolean {
+  CHIPS_MARKER_REGEX.lastIndex = 0;
+  return CHIPS_MARKER_REGEX.test(content);
 }
 
 /**
@@ -139,4 +175,23 @@ export function stripPlaceMarkers(content: string): string {
       return '';
     }
   });
+}
+
+/**
+ * Encode chips data for inclusion in agent response
+ * This is used by the backend suggestActions tool
+ */
+export function encodeChipsMarker(chips: QuickActionChip[]): string {
+  const jsonString = JSON.stringify({ chips });
+  const base64 = btoa(jsonString);
+  return `[[chips:${base64}]]`;
+}
+
+/**
+ * Extract all chips from a message
+ */
+export function extractChips(content: string): QuickActionChip[] {
+  const segments = parseMessageForPlaces(content);
+  const chipsSegment = segments.find((s): s is ChipsSegment => s.type === 'chips');
+  return chipsSegment?.chips || [];
 }

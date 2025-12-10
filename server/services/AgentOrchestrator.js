@@ -899,6 +899,44 @@ STEP 4: User picks → Call replaceActivity
     [[place:BASE64_DATA_HERE]]
     It's a local favorite with amazing pastries!"
 
+18. **Suggest Actions (Quick Reply Chips)** - USE THIS TO OFFER CHOICES:
+    → Use suggestActions tool when asking questions or offering options
+    → Returns a marker to include at the END of your response - renders as tappable chips!
+    → When user taps a chip, its value is sent as their next message
+
+    **PRESETS (use preset parameter):**
+    • travelInterests: Food & Wine, Culture, Nature, Nightlife, Mix
+    • yesNo: Yes!, No thanks
+    • pace: Relaxed, Balanced, Action-packed
+    • timeOfDay: Morning, Afternoon, Evening
+    • moreOptions: Show me more, Something different, This is perfect!
+    • budget: Budget-friendly, Moderate, Splurge!
+    • dining: Local cuisine, International, Vegetarian
+    • continueOrStop: Keep going!, That's enough
+    • accommodation: Hotels, Airbnb, Hostels
+
+    **CUSTOM CHIPS (use chips array):**
+    Create custom options with: id, label, value, icon, color
+    Icons: food, culture, nature, nightlife, sparkles, coffee, compass, heart, map, check, day, night (or emoji)
+    Colors: teal, amber, rose, violet, emerald, sky, orange
+
+    **WHEN TO USE suggestActions:**
+    • Asking about travel interests
+    • Offering yes/no confirmations
+    • Asking about pace or timing preferences
+    • Offering "show more" or "this is perfect" options
+    • Any time you present 2-5 choices
+
+    **HOW TO USE:**
+    1. Call suggestActions(preset: "travelInterests") or suggestActions(chips: [...])
+    2. Tool returns: { marker: "[[chips:BASE64...]]" }
+    3. Include the marker at the END of your response text
+    4. The frontend will render colorful tappable chips!
+
+    **EXAMPLE RESPONSE WITH CHIPS:**
+    "What kind of experiences are you most interested in for your Paris trip?
+    [[chips:BASE64_DATA_HERE]]"
+
 **CRITICAL: When user wants to REPLACE/CHANGE an activity:**
 
 Use the searchItinerary tool to find activities! Here's the exact workflow:

@@ -592,6 +592,38 @@ class ToolRegistry {
       execute: require('../tools/mentionPlace')
     });
 
+    // 25. Suggest Actions (Quick Action Chips)
+    this.register({
+      name: 'suggestActions',
+      description: 'Create quick-reply chips for the user to tap. Use this when offering choices or asking questions. Returns a marker string to include at the END of your response. When tapped, the chip value is sent as the user\'s next message. Available presets: travelInterests, yesNo, pace, timeOfDay, moreOptions, budget, dining, continueOrStop, accommodation.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          preset: {
+            type: 'string',
+            description: 'Use a preset chip set: travelInterests, yesNo, pace, timeOfDay, moreOptions, budget, dining, continueOrStop, accommodation',
+            enum: ['travelInterests', 'yesNo', 'pace', 'timeOfDay', 'moreOptions', 'budget', 'dining', 'continueOrStop', 'accommodation']
+          },
+          chips: {
+            type: 'array',
+            description: 'Custom chips array (use instead of preset). Max 5 chips.',
+            items: {
+              type: 'object',
+              properties: {
+                id: { type: 'string', description: 'Unique ID' },
+                label: { type: 'string', description: 'Display text (short)' },
+                value: { type: 'string', description: 'Message sent when tapped' },
+                icon: { type: 'string', description: 'Icon: food, culture, nature, nightlife, sparkles, coffee, compass, heart, map, check, day, night, or emoji' },
+                color: { type: 'string', enum: ['teal', 'amber', 'rose', 'violet', 'emerald', 'sky', 'orange'], description: 'Chip color' }
+              },
+              required: ['label', 'value']
+            }
+          }
+        }
+      },
+      execute: require('../tools/suggestActions')
+    });
+
     console.log(`✅ Registered ${this.tools.size} tools`);
   }
 
