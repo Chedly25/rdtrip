@@ -772,6 +772,13 @@ You MUST use tools for these queries - DO NOT answer from general knowledge:
    → ALWAYS use searchActivities tool with the city name
    → Example: "What can I do in Paris?" → searchActivities(city: "Paris, France")
 
+   **⚠️ HIDDEN GEMS DETECTION - CRITICAL:**
+   → If user asks for "hidden gems", "off the beaten path", "local favorites", "non-touristy", "where locals go", "lesser-known", or "not the usual tourist stuff"
+   → You MUST use searchActivities with **hiddenGems: true**
+   → Example: "Show me hidden gems in Barcelona" → searchActivities(city: "Barcelona, Spain", hiddenGems: true)
+   → Example: "What do locals do in Rome?" → searchActivities(city: "Rome, Italy", hiddenGems: true)
+   → **NEVER suggest Sagrada Familia, Eiffel Tower, Colosseum, etc. as hidden gems - those are the OPPOSITE of hidden gems!**
+
 2. **Weather** ("weather", "forecast", "temperature", "rain"):
    → ALWAYS use checkWeather tool
    → Example: "What's the weather in Berlin?" → checkWeather(location: "Berlin, Germany")

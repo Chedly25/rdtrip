@@ -13,11 +13,12 @@ const axios = require('axios');
  * @param {string} params.city - City name (e.g., "Paris, France")
  * @param {string} [params.category] - Activity category (museum, park, attraction, restaurant, outdoor, cultural)
  * @param {number} [params.limit=5] - Max results to return
+ * @param {boolean} [params.hiddenGems=false] - If true, filter out extremely popular tourist attractions
  * @param {Object} context - Agent context (userId, routeId, etc.)
  * @returns {Promise<Object>} Activity search results
  */
 async function searchActivities(params, context) {
-  const { city, category, limit = 5 } = params;
+  const { city, category, limit = 5, hiddenGems = false } = params;
 
   // Validate parameters
   if (!city) {
@@ -34,7 +35,7 @@ async function searchActivities(params, context) {
   }
 
   try {
-    console.log(`🎯 Searching activities in ${city}${category ? ` (${category})` : ''}`);
+    console.log(`🎯 Searching activities in ${city}${category ? ` (${category})` : ''}${hiddenGems ? ' [HIDDEN GEMS MODE]' : ''}`);
 
     // Step 1: Geocode city to get coordinates
     const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(city)}&key=${GOOGLE_PLACES_API_KEY}`;
@@ -143,9 +144,66 @@ async function searchActivities(params, context) {
       };
     }
 
-    const places = searchResponse.data.results || [];
+    let places = searchResponse.data.results || [];
 
-    // Step 4: Process and format results
+    // Step 4: Hidden Gems filtering
+    // If hiddenGems is true, filter out extremely popular tourist attractions
+    // Famous spots typically have 10,000+ reviews - filter those out
+    // Also exclude places with "museum" or "basilica" in name if looking for hidden gems (unless specifically searching museums)
+    if (hiddenGems && places.length > 0) {
+      const famousTouristKeywords = [
+        'sagrada familia', 'sagrada família',
+        'casa batlló', 'casa batllo',
+        'park güell', 'park guell',
+        'la rambla', 'las ramblas',
+        'camp nou',
+        'arc de triomf',
+        'palau de la música',
+        'picasso museum',
+        'gothic quarter', 'barri gotic',
+        // Add other famous landmarks that should be excluded
+        'eiffel tower', 'tour eiffel',
+        'louvre', 'notre dame',
+        'colosseum', 'coliseum',
+        'trevi fountain',
+        'vatican', 'sistine chapel',
+        'big ben', 'tower of london',
+        'buckingham palace',
+        'times square', 'statue of liberty',
+        'empire state', 'central park'
+      ];
+
+      const originalCount = places.length;
+      places = places.filter(place => {
+        const nameLower = place.name.toLowerCase();
+        const reviewCount = place.user_ratings_total || 0;
+
+        // Filter out places with more than 5000 reviews (very popular tourist spots)
+        if (reviewCount > 5000) {
+          console.log(`   🚫 Filtering out "${place.name}" (${reviewCount} reviews - too popular)`);
+          return false;
+        }
+
+        // Filter out famous landmark names
+        for (const keyword of famousTouristKeywords) {
+          if (nameLower.includes(keyword)) {
+            console.log(`   🚫 Filtering out "${place.name}" (famous landmark)`);
+            return false;
+          }
+        }
+
+        return true;
+      });
+
+      console.log(`   💎 Hidden gems filter: ${originalCount} → ${places.length} places`);
+
+      // If we filtered too aggressively and have fewer than limit results, that's ok - shows authenticity
+      if (places.length === 0) {
+        console.log(`   ⚠️ No hidden gems found - all results were popular tourist spots`);
+      }
+    }
+
+    // Step 5: Process and format results
     const activities = await Promise.all(
       places.slice(0, limit).map(async (place) => {
         // Get place details for more information
@@ -191,16 +249,17 @@ async function searchActivities(params, context) {
       })
     );
 
-    console.log(`✅ Found ${activities.length} activities in ${city}`);
+    console.log(`✅ Found ${activities.length} ${hiddenGems ? 'hidden gems' : 'activities'} in ${city}`);
 
     return {
       success: true,
       city: city,
       category: category,
+      hiddenGems: hiddenGems,
       coordinates: { lat, lng },
       activities: activities,
       count: activities.length,
-      summary: generateActivitiesSummary(city, category, activities)
+      summary: generateActivitiesSummary(city, category, activities, hiddenGems)
     };
 
   } catch (error) {
@@ -223,12 +282,16 @@ async function searchActivities(params, context) {
 /**
  * Generate natural language summary of activities
  */
-function generateActivitiesSummary(city, category, activities) {
+function generateActivitiesSummary(city, category, activities, hiddenGems = false) {
   if (activities.length === 0) {
+    if (hiddenGems) {
+      return `No hidden gems found in ${city} for this category - all results were popular tourist spots. Try searching without the hidden gems filter.`;
+    }
     return `No ${category || 'activities'} found in ${city}.`;
   }
 
-  let summary = `Found ${activities.length} ${category || 'activities'} in ${city}:\n\n`;
+  const typeLabel = hiddenGems ? 'hidden gems' : (category || 'activities');
+  let summary = `Found ${activities.length} ${typeLabel} in ${city}:\n\n`;
 
   activities.slice(0, 5).forEach((activity, index) => {
     summary += `${index + 1}. ${activity.name}`;

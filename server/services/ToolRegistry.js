@@ -58,7 +58,7 @@ class ToolRegistry {
     // 3. Search Activities
     this.register({
       name: 'searchActivities',
-      description: 'Search for tourist activities, attractions, museums, parks in a city. Returns top-rated activities with photos, ratings, and details.',
+      description: 'Search for tourist activities, attractions, museums, parks in a city. Returns top-rated activities with photos, ratings, and details. Use hiddenGems=true to filter out famous tourist spots and find lesser-known local favorites.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -74,6 +74,10 @@ class ToolRegistry {
           limit: {
             type: 'number',
             description: 'Max results to return (default: 5)'
+          },
+          hiddenGems: {
+            type: 'boolean',
+            description: 'Set to true to filter out famous tourist attractions and find lesser-known local favorites. Use when user asks for "hidden gems", "off the beaten path", "local favorites", "non-touristy", or "where locals go".'
           }
         },
         required: ['city']
