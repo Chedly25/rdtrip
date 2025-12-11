@@ -10,6 +10,7 @@ import {
   ChevronRight,
   Loader2,
   AlertCircle,
+  Plane,
 } from 'lucide-react';
 import type {
   DiscoveryRoute,
@@ -35,17 +36,8 @@ interface ProceedConfirmationModalProps {
 /**
  * ProceedConfirmationModal
  *
- * The commitment moment before itinerary generation.
- * Designed to feel exciting and momentous - like opening a travel journal.
- *
- * WI-1.7: Create "Proceed to Itinerary" Flow
- *
- * Design: Editorial/Magazine aesthetic with warm travel journal feel.
- * - Shows trip summary with visual route indicator
- * - Displays selected cities and nights allocation
- * - Highlights favourited places
- * - Confidence messaging from companion
- * - Clear CTA with loading state
+ * Premium travel document modal with solid, opaque styling.
+ * No transparency - fully solid backgrounds throughout.
  */
 export function ProceedConfirmationModal({
   isOpen,
@@ -113,230 +105,279 @@ export function ProceedConfirmationModal({
 
   return (
     <>
-      {/* Backdrop */}
+      {/* Backdrop - SOLID dark overlay */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={onClose}
-        className="fixed inset-0 bg-espresso/60 backdrop-blur-sm z-50"
+        className="!fixed !inset-0 !z-50 !bg-[#1a1510] !bg-opacity-90"
+        style={{ backdropFilter: 'blur(12px)' }}
       />
 
-      {/* Modal */}
+      {/* Modal Container */}
       <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        initial={{ opacity: 0, scale: 0.92, y: 40 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+        exit={{ opacity: 0, scale: 0.92, y: 40 }}
+        transition={{ type: 'spring', stiffness: 280, damping: 28 }}
         className="
           fixed inset-4 md:inset-auto
           md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2
           md:max-w-xl md:w-full
-          z-50
+          z-[51]
           flex flex-col
           max-h-[calc(100vh-2rem)] md:max-h-[85vh]
         "
       >
+        {/* Outer glow ring */}
         <div
-          className="
-            relative overflow-hidden
-            bg-rui-cream rounded-3xl
-            shadow-2xl
-            flex flex-col
-            h-full md:h-auto
-          "
+          className="absolute -inset-2 rounded-[32px] pointer-events-none"
+          style={{
+            background: 'linear-gradient(135deg, #C45830 0%, #D4A853 50%, #C45830 100%)',
+            opacity: 0.15,
+            filter: 'blur(24px)',
+          }}
+        />
+
+        {/* Paper edge layer - SOLID */}
+        <div
+          className="absolute -inset-1 rounded-[28px]"
+          style={{
+            background: 'linear-gradient(160deg, #D8CCBA 0%, #C4B49C 100%)',
+            boxShadow: '0 30px 80px rgba(30, 24, 16, 0.5), 0 15px 30px rgba(30, 24, 16, 0.3)',
+          }}
+        />
+
+        {/* Main modal body - COMPLETELY SOLID */}
+        <div
+          className="relative overflow-hidden rounded-3xl flex flex-col h-full md:h-auto"
+          style={{
+            background: '#FAF6F1',
+            boxShadow: 'inset 0 2px 0 #FFFFFF, inset 0 -2px 0 #E8DFD0, 0 0 0 1px rgba(44, 36, 23, 0.1)',
+          }}
         >
-          {/* Decorative header gradient */}
+          {/* Warm gradient overlay at top - subtle tint on solid bg */}
           <div
-            className="absolute top-0 left-0 right-0 h-48 pointer-events-none"
+            className="absolute top-0 left-0 right-0 h-40 pointer-events-none"
             style={{
-              background: `
-                radial-gradient(ellipse 80% 50% at 50% 0%, rgba(196, 88, 48, 0.12) 0%, transparent 70%),
-                radial-gradient(ellipse 60% 40% at 80% 10%, rgba(212, 168, 83, 0.08) 0%, transparent 60%)
-              `,
+              background: 'linear-gradient(180deg, #F5EBE0 0%, transparent 100%)',
             }}
           />
 
-          {/* Close button */}
+          {/* Decorative corner brackets */}
+          <div className="absolute top-4 left-4 w-6 h-6 border-l-2 border-t-2 border-[#C45830] rounded-tl pointer-events-none opacity-40" />
+          <div className="absolute top-4 right-4 w-6 h-6 border-r-2 border-t-2 border-[#C45830] rounded-tr pointer-events-none opacity-40" />
+          <div className="absolute bottom-4 left-4 w-6 h-6 border-l-2 border-b-2 border-[#C45830] rounded-bl pointer-events-none opacity-30" />
+          <div className="absolute bottom-4 right-4 w-6 h-6 border-r-2 border-b-2 border-[#C45830] rounded-br pointer-events-none opacity-30" />
+
+          {/* Close button - SOLID background */}
           <button
             onClick={onClose}
             disabled={isGenerating}
             className="
-              absolute top-4 right-4 z-10
+              absolute top-5 right-5 z-10
               w-10 h-10 rounded-full
-              bg-white/80 backdrop-blur-sm
               flex items-center justify-center
-              text-rui-grey-50 hover:text-rui-black
-              hover:bg-white
+              text-[#6B5A45] hover:text-[#2C2417]
               transition-all duration-200
               disabled:opacity-50 disabled:cursor-not-allowed
             "
+            style={{
+              background: '#FFFFFF',
+              border: '1px solid #D4C4AC',
+              boxShadow: '0 2px 8px rgba(44, 36, 23, 0.12)',
+            }}
           >
             <X className="w-5 h-5" />
           </button>
 
-          {/* Content */}
-          <div className="flex-1 overflow-y-auto p-6 pt-8">
-            {/* Header - Route visualization */}
+          {/* Content area */}
+          <div className="flex-1 overflow-y-auto p-6 pt-10">
+            {/* Header */}
             <div className="text-center mb-8">
-              {/* Journey line with cities */}
-              <div className="flex items-center justify-center gap-2 mb-4">
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ delay: 0.1 }}
-                  className="flex flex-col items-center"
+              {/* Plane icon badge */}
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="flex justify-center mb-4"
+              >
+                <div
+                  className="w-14 h-14 rounded-full flex items-center justify-center"
+                  style={{
+                    background: 'linear-gradient(135deg, #C45830 0%, #D4A853 100%)',
+                    boxShadow: '0 6px 20px rgba(196, 88, 48, 0.4), inset 0 1px 0 rgba(255,255,255,0.25)',
+                  }}
                 >
-                  <div className="w-3 h-3 rounded-full bg-rui-accent" />
-                  <span className="text-body-3 text-rui-grey-50 mt-1 max-w-[80px] truncate">
-                    {route.origin.name}
-                  </span>
-                </motion.div>
-
-                {/* Route dots */}
-                <motion.div
-                  initial={{ scaleX: 0 }}
-                  animate={{ scaleX: 1 }}
-                  transition={{ delay: 0.2, duration: 0.5 }}
-                  className="flex-1 flex items-center gap-1 px-2"
-                >
-                  {selectedCities.slice(1, -1).map((_, i) => (
-                    <motion.div
-                      key={i}
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      transition={{ delay: 0.3 + i * 0.1 }}
-                      className="w-2 h-2 rounded-full bg-rui-sage flex-shrink-0"
-                    />
-                  ))}
-                  <div className="flex-1 h-0.5 bg-gradient-to-r from-rui-accent via-rui-sage to-rui-accent opacity-30" />
-                </motion.div>
-
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ delay: 0.4 }}
-                  className="flex flex-col items-center"
-                >
-                  <div className="w-3 h-3 rounded-full bg-rui-accent" />
-                  <span className="text-body-3 text-rui-grey-50 mt-1 max-w-[80px] truncate">
-                    {route.destination.name}
-                  </span>
-                </motion.div>
-              </div>
+                  <Plane className="w-6 h-6 text-white transform rotate-45" />
+                </div>
+              </motion.div>
 
               {/* Title */}
               <motion.h2
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="font-display text-2xl md:text-3xl font-semibold text-rui-black mb-2"
+                transition={{ delay: 0.15 }}
+                className="font-display text-3xl font-bold mb-2"
+                style={{ color: '#2C2417', letterSpacing: '-0.02em' }}
               >
                 Your journey awaits
               </motion.h2>
 
-              <motion.p
+              <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ delay: 0.3 }}
-                className="text-body-2 text-rui-grey-60"
+                transition={{ delay: 0.2 }}
+                className="flex items-center justify-center gap-3 text-sm"
               >
-                {dateRange} • {tripSummary.travellerType}
-              </motion.p>
+                <span style={{ color: '#6B5A45' }}>{dateRange}</span>
+                <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#C45830' }} />
+                <span className="font-semibold" style={{ color: '#C45830' }}>{tripSummary.travellerType}</span>
+              </motion.div>
+
+              {/* Journey path visualization */}
+              <motion.div
+                initial={{ opacity: 0, scaleX: 0.8 }}
+                animate={{ opacity: 1, scaleX: 1 }}
+                transition={{ delay: 0.25, duration: 0.5 }}
+                className="mt-6 mx-auto max-w-xs"
+              >
+                <div
+                  className="flex items-center justify-between px-5 py-4 rounded-2xl"
+                  style={{
+                    background: '#F5EBE0',
+                    border: '1px solid #E0D4C4',
+                    boxShadow: 'inset 0 1px 0 #FFFFFF',
+                  }}
+                >
+                  <div className="flex flex-col items-center">
+                    <div className="w-3.5 h-3.5 rounded-full" style={{ background: '#C45830', boxShadow: '0 2px 4px rgba(196,88,48,0.3)' }} />
+                    <span className="text-xs mt-2 font-semibold max-w-[65px] truncate" style={{ color: '#4A3F30' }}>
+                      {route.origin.name}
+                    </span>
+                  </div>
+
+                  <div className="flex-1 flex items-center px-2 gap-1">
+                    <div className="flex-1 h-0.5 rounded-full" style={{ background: 'linear-gradient(90deg, #C45830, #D4A853)' }} />
+                    {selectedCities.slice(1, -1).map((_, i) => (
+                      <div
+                        key={i}
+                        className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                        style={{ background: '#4A7C59', boxShadow: '0 1px 3px rgba(74,124,89,0.4)' }}
+                      />
+                    ))}
+                    <div className="flex-1 h-0.5 rounded-full" style={{ background: 'linear-gradient(90deg, #D4A853, #C45830)' }} />
+                  </div>
+
+                  <div className="flex flex-col items-center">
+                    <div className="w-3.5 h-3.5 rounded-full" style={{ background: '#C45830', boxShadow: '0 2px 4px rgba(196,88,48,0.3)' }} />
+                    <span className="text-xs mt-2 font-semibold max-w-[65px] truncate" style={{ color: '#4A3F30' }}>
+                      {route.destination.name}
+                    </span>
+                  </div>
+                </div>
+              </motion.div>
             </div>
 
-            {/* Stats row */}
+            {/* Stats cards - SOLID white */}
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.35 }}
               className="grid grid-cols-3 gap-3 mb-6"
             >
-              <div className="bg-white rounded-2xl p-4 text-center shadow-sm">
-                <div className="flex items-center justify-center gap-1.5 text-rui-accent mb-1">
-                  <Moon className="w-4 h-4" />
-                  <span className="font-display text-2xl font-bold">
-                    {stats.totalNights}
-                  </span>
+              {[
+                { icon: Moon, value: stats.totalNights, label: 'nights', color: '#C45830' },
+                { icon: MapPin, value: stats.totalStops, label: 'stops', color: '#4A7C59' },
+                { icon: Sparkles, value: stats.hiddenGems, label: 'gems', color: '#D4A853' },
+              ].map((stat, idx) => (
+                <div
+                  key={idx}
+                  className="rounded-xl p-4 text-center"
+                  style={{
+                    background: '#FFFFFF',
+                    border: '1px solid #E0D4C4',
+                    boxShadow: '0 2px 8px rgba(44, 36, 23, 0.08), inset 0 1px 0 #FFFFFF',
+                  }}
+                >
+                  <div className="flex items-center justify-center gap-1.5 mb-1" style={{ color: stat.color }}>
+                    <stat.icon className="w-4 h-4" />
+                    <span className="font-display text-2xl font-bold">{stat.value}</span>
+                  </div>
+                  <span className="text-xs font-medium" style={{ color: '#8B7355' }}>{stat.label}</span>
                 </div>
-                <span className="text-body-3 text-rui-grey-50">nights</span>
-              </div>
-
-              <div className="bg-white rounded-2xl p-4 text-center shadow-sm">
-                <div className="flex items-center justify-center gap-1.5 text-rui-sage mb-1">
-                  <MapPin className="w-4 h-4" />
-                  <span className="font-display text-2xl font-bold">
-                    {stats.totalStops}
-                  </span>
-                </div>
-                <span className="text-body-3 text-rui-grey-50">stops</span>
-              </div>
-
-              <div className="bg-white rounded-2xl p-4 text-center shadow-sm">
-                <div className="flex items-center justify-center gap-1.5 text-rui-golden mb-1">
-                  <Sparkles className="w-4 h-4" />
-                  <span className="font-display text-2xl font-bold">
-                    {stats.hiddenGems}
-                  </span>
-                </div>
-                <span className="text-body-3 text-rui-grey-50">gems</span>
-              </div>
+              ))}
             </motion.div>
 
-            {/* Selected cities */}
+            {/* Route list - SOLID white card */}
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
               className="mb-6"
             >
-              <h3 className="text-body-3 font-medium text-rui-grey-50 uppercase tracking-wide mb-3">
+              <h3
+                className="text-xs font-bold uppercase tracking-wider mb-3 flex items-center gap-2"
+                style={{ color: '#6B5A45' }}
+              >
+                <div className="w-4 h-0.5 rounded-full" style={{ background: '#C45830' }} />
                 Your Route
               </h3>
 
-              <div className="space-y-2">
+              <div
+                className="rounded-xl overflow-hidden"
+                style={{
+                  background: '#FFFFFF',
+                  border: '1px solid #E0D4C4',
+                  boxShadow: '0 2px 12px rgba(44, 36, 23, 0.08)',
+                }}
+              >
                 {selectedCities.map((city, index) => (
                   <motion.div
                     key={city.id}
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.45 + index * 0.05 }}
-                    className="
-                      flex items-center gap-3 p-3
-                      bg-white rounded-xl
-                      border border-rui-grey-10
-                    "
+                    className="flex items-center gap-3 px-4 py-3"
+                    style={{
+                      borderBottom: index < selectedCities.length - 1 ? '1px solid #F0E8DC' : 'none',
+                    }}
                   >
-                    {/* Index */}
+                    {/* Number badge */}
                     <div
-                      className={`
-                        w-7 h-7 rounded-full flex items-center justify-center
-                        text-xs font-bold
-                        ${city.isFixed
-                          ? 'bg-rui-accent text-white'
-                          : 'bg-rui-sage/10 text-rui-sage'
-                        }
-                      `}
+                      className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0"
+                      style={city.isFixed ? {
+                        background: 'linear-gradient(135deg, #C45830 0%, #D4A853 100%)',
+                        color: '#FFFFFF',
+                        boxShadow: '0 2px 6px rgba(196, 88, 48, 0.35)',
+                      } : {
+                        background: '#EBF5ED',
+                        color: '#4A7C59',
+                        border: '1px solid #C8DCC8',
+                      }}
                     >
                       {index + 1}
                     </div>
 
-                    {/* City info */}
+                    {/* City name */}
                     <div className="flex-1 min-w-0">
-                      <p className="font-display font-semibold text-rui-black truncate">
+                      <p className="font-display font-semibold truncate" style={{ color: '#2C2417' }}>
                         {city.name}
                       </p>
                     </div>
 
-                    {/* Nights */}
-                    <div className="flex items-center gap-1 text-body-3 text-rui-grey-50">
+                    {/* Nights pill */}
+                    <div
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold"
+                      style={{ background: '#FEF3EE', color: '#C45830' }}
+                    >
                       <Moon className="w-3.5 h-3.5" />
                       <span>{city.nights ?? city.suggestedNights ?? 1}</span>
                     </div>
 
-                    {/* Arrow to next */}
                     {index < selectedCities.length - 1 && (
-                      <ChevronRight className="w-4 h-4 text-rui-grey-20" />
+                      <ChevronRight className="w-4 h-4" style={{ color: '#C4B8A5' }} />
                     )}
                   </motion.div>
                 ))}
@@ -351,8 +392,11 @@ export function ProceedConfirmationModal({
                 transition={{ delay: 0.5 }}
                 className="mb-6"
               >
-                <h3 className="text-body-3 font-medium text-rui-grey-50 uppercase tracking-wide mb-3 flex items-center gap-2">
-                  <Heart className="w-3.5 h-3.5 text-danger" />
+                <h3
+                  className="text-xs font-bold uppercase tracking-wider mb-3 flex items-center gap-2"
+                  style={{ color: '#6B5A45' }}
+                >
+                  <Heart className="w-3.5 h-3.5" style={{ color: '#B54A4A' }} />
                   Saved for your itinerary
                 </h3>
 
@@ -360,17 +404,18 @@ export function ProceedConfirmationModal({
                   {favouritedPlaces.slice(0, 5).map((place) => (
                     <span
                       key={place.id}
-                      className="
-                        px-3 py-1.5 rounded-full
-                        bg-danger/5 border border-danger/10
-                        text-body-3 text-rui-grey-70
-                      "
+                      className="px-3 py-1.5 rounded-lg text-xs font-semibold"
+                      style={{
+                        background: '#FDF0F0',
+                        border: '1px solid #EACACA',
+                        color: '#8B4A4A',
+                      }}
                     >
                       {place.name}
                     </span>
                   ))}
                   {favouritedPlaces.length > 5 && (
-                    <span className="px-3 py-1.5 text-body-3 text-rui-grey-50">
+                    <span className="px-3 py-1.5 text-xs font-medium" style={{ color: '#8B7355' }}>
                       +{favouritedPlaces.length - 5} more
                     </span>
                   )}
@@ -378,26 +423,32 @@ export function ProceedConfirmationModal({
               </motion.div>
             )}
 
-            {/* Companion message */}
+            {/* Companion message card */}
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.55 }}
-              className="
-                p-4 rounded-2xl
-                bg-gradient-to-br from-rui-accent/5 to-rui-golden/5
-                border border-rui-accent/10
-              "
+              className="p-4 rounded-xl"
+              style={{
+                background: '#F5EBE0',
+                border: '1px solid #E0D4C4',
+              }}
             >
               <div className="flex gap-3">
-                <div className="w-8 h-8 rounded-full bg-rui-accent/10 flex items-center justify-center flex-shrink-0">
-                  <Sparkles className="w-4 h-4 text-rui-accent" />
+                <div
+                  className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                  style={{
+                    background: 'linear-gradient(135deg, #FEF3EE 0%, #FDEEE6 100%)',
+                    border: '1px solid #E8D4C8',
+                  }}
+                >
+                  <Sparkles className="w-5 h-5" style={{ color: '#C45830' }} />
                 </div>
                 <div>
-                  <p className="text-body-2 text-rui-black leading-relaxed">
+                  <p className="text-sm font-medium leading-relaxed" style={{ color: '#2C2417' }}>
                     {personalizedMessage}
                   </p>
-                  <p className="text-body-3 text-rui-grey-50 mt-2">
+                  <p className="text-xs mt-1.5" style={{ color: '#8B7355' }}>
                     This usually takes about 30 seconds.
                   </p>
                 </div>
@@ -411,43 +462,50 @@ export function ProceedConfirmationModal({
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
-                  className="
-                    mt-4 p-4 rounded-xl
-                    bg-danger/5 border border-danger/20
-                    flex items-start gap-3
-                  "
+                  className="mt-4 p-4 rounded-xl flex items-start gap-3"
+                  style={{
+                    background: '#FDF0F0',
+                    border: '1px solid #EACACA',
+                  }}
                 >
-                  <AlertCircle className="w-5 h-5 text-danger flex-shrink-0 mt-0.5" />
+                  <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#B54A4A' }} />
                   <div>
-                    <p className="text-body-2 font-medium text-danger">
+                    <p className="text-sm font-semibold" style={{ color: '#B54A4A' }}>
                       Something went wrong
                     </p>
-                    <p className="text-body-3 text-rui-grey-60 mt-1">{error}</p>
+                    <p className="text-xs mt-1" style={{ color: '#6B5A45' }}>{error}</p>
                   </div>
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
 
-          {/* Footer with CTAs */}
-          <div className="flex-shrink-0 p-6 pt-4 border-t border-rui-grey-10 bg-white/50">
+          {/* Footer - SOLID background */}
+          <div
+            className="flex-shrink-0 p-6 pt-5"
+            style={{
+              background: '#F0E8DC',
+              borderTop: '1px solid #E0D4C4',
+            }}
+          >
             <div className="flex flex-col gap-3">
-              {/* Primary CTA */}
+              {/* PRIMARY CTA BUTTON - SOLID TERRACOTTA */}
               <motion.button
                 onClick={onConfirm}
                 disabled={isGenerating}
-                whileHover={isGenerating ? {} : { scale: 1.02 }}
+                whileHover={isGenerating ? {} : { scale: 1.02, y: -2 }}
                 whileTap={isGenerating ? {} : { scale: 0.98 }}
-                className={`
-                  relative w-full flex items-center justify-center gap-2
-                  py-4 rounded-2xl
-                  font-display font-semibold text-white
-                  transition-all duration-300
-                  ${isGenerating
-                    ? 'bg-rui-accent/70 cursor-wait'
-                    : 'bg-rui-accent hover:shadow-xl hover:shadow-rui-accent/25'
-                  }
-                `}
+                className="relative w-full flex items-center justify-center gap-2.5 py-4 rounded-xl font-display font-bold text-lg"
+                style={{
+                  background: isGenerating
+                    ? 'linear-gradient(135deg, #C45830 0%, #D4A853 100%)'
+                    : '#C45830',
+                  color: '#FFFFFF',
+                  boxShadow: isGenerating
+                    ? '0 4px 20px rgba(196, 88, 48, 0.3)'
+                    : '0 8px 30px rgba(196, 88, 48, 0.4), 0 4px 12px rgba(196, 88, 48, 0.25), inset 0 1px 0 rgba(255,255,255,0.2)',
+                  opacity: isGenerating ? 0.9 : 1,
+                }}
               >
                 {isGenerating ? (
                   <>
@@ -462,36 +520,27 @@ export function ProceedConfirmationModal({
                   </>
                 )}
 
-                {/* Shimmer effect when generating */}
+                {/* Shimmer effect */}
                 {isGenerating && (
-                  <motion.div
-                    className="absolute inset-0 rounded-2xl overflow-hidden"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                  >
+                  <motion.div className="absolute inset-0 rounded-xl overflow-hidden">
                     <motion.div
-                      className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent"
-                      animate={{ translateX: ['0%', '200%'] }}
-                      transition={{
-                        duration: 1.5,
-                        repeat: Infinity,
-                        ease: 'linear',
+                      className="absolute inset-0"
+                      style={{
+                        background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)',
                       }}
+                      animate={{ x: ['-100%', '200%'] }}
+                      transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
                     />
                   </motion.div>
                 )}
               </motion.button>
 
-              {/* Secondary action */}
+              {/* Secondary button */}
               <button
                 onClick={onClose}
                 disabled={isGenerating}
-                className="
-                  w-full py-3
-                  text-body-2 text-rui-grey-60 hover:text-rui-black
-                  transition-colors duration-200
-                  disabled:opacity-50 disabled:cursor-not-allowed
-                "
+                className="w-full py-3 text-sm font-semibold transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ color: '#6B5A45' }}
               >
                 Adjust my selections
               </button>
