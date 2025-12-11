@@ -1,13 +1,18 @@
 /**
  * AgentOrchestrator - The Brain
  *
+ * Phase 3: Specialized Agent Routing
+ *
  * Uses Claude Haiku 4.5 for fast, cost-efficient agent responses
  * Handles function calling, streaming, and conversation management
+ * Routes requests to specialized sub-agents based on intent
  */
 
 const Anthropic = require('@anthropic-ai/sdk');
 const ToolRegistry = require('./ToolRegistry');
 const MemoryService = require('./MemoryService');
+const AgentRouter = require('./AgentRouter');
+const GoalTracker = require('./GoalTracker');
 const { Pool } = require('pg');
 
 class AgentOrchestrator {
@@ -32,10 +37,16 @@ class AgentOrchestrator {
     // Memory service for conversation history and preferences
     this.memoryService = new MemoryService(this.db);
 
+    // Phase 3: Agent Router for specialized routing
+    this.agentRouter = new AgentRouter(this.client);
+
+    // Phase 4: Goal Tracker for multi-step goals
+    this.goalTracker = new GoalTracker(this.db);
+
     // Max iterations to prevent infinite loops
     this.maxIterations = 10;
 
-    console.log('🤖 AgentOrchestrator initialized with Claude Haiku 4.5 + Memory');
+    console.log('🤖 AgentOrchestrator initialized with Claude Haiku 4.5 + Memory + Router + Goals');
   }
 
   /**
@@ -188,6 +199,76 @@ class AgentOrchestrator {
         console.log(`   📍 Discovery context: ${discoveryContext.cities?.selected?.length || 0} selected cities, phase: ${discoveryContext.phase}`);
       }
 
+      // PHASE 3: Route request to specialized agent
+      console.log('[Step 2.5/9] Routing to specialized agent...');
+      const routingResult = await this.agentRouter.route(message, context, onStream);
+      console.log(`   ✅ Routed to: ${routingResult.primaryAgent} (${(routingResult.confidence * 100).toFixed(0)}% confidence)`);
+      context.routing = routingResult; // Store routing info in context
+
+      // PHASE 4: Goal Detection & Tracking
+      console.log('[Step 2.6/9] Checking for trackable goals...');
+      let activeGoal = null;
+      let goalContext = '';
+
+      try {
+        // Check for existing active goals first
+        const existingGoals = await this.goalTracker.getGoals(userId);
+        if (existingGoals.length > 0) {
+          activeGoal = existingGoals[0];
+          console.log(`   📋 Found active goal: "${activeGoal.description.slice(0, 50)}..." (${activeGoal.progress}%)`);
+
+          // Stream goal info to frontend
+          if (onStream) {
+            onStream({
+              type: 'goal_active',
+              goal: {
+                id: activeGoal.id,
+                description: activeGoal.description,
+                progress: activeGoal.progress,
+                subtasks: activeGoal.subtasks,
+                complexity: activeGoal.complexity
+              }
+            });
+          }
+
+          // Build goal context for prompt
+          goalContext = await this.goalTracker.buildGoalContext(userId);
+        } else {
+          // Detect if this message represents a new trackable goal
+          const goalDetection = await this.goalTracker.detectGoal(message, context);
+
+          if (goalDetection.isGoal && goalDetection.goalDescription) {
+            console.log(`   🎯 New goal detected: "${goalDetection.goalDescription}"`);
+
+            // Create the goal
+            activeGoal = await this.goalTracker.createGoal(userId, goalDetection.goalDescription, context);
+
+            // Stream goal creation to frontend
+            if (onStream) {
+              onStream({
+                type: 'goal_created',
+                goal: {
+                  id: activeGoal.id,
+                  description: activeGoal.description,
+                  progress: activeGoal.progress,
+                  subtasks: activeGoal.subtasks,
+                  complexity: activeGoal.complexity
+                }
+              });
+            }
+
+            // Build goal context for prompt
+            goalContext = await this.goalTracker.buildGoalContext(userId);
+          } else {
+            console.log('   ❌ No trackable goal detected');
+          }
+        }
+      } catch (goalError) {
+        console.error('   ⚠️ Goal tracking error (non-fatal):', goalError.message);
+      }
+
+      context.activeGoal = activeGoal; // Store goal in context
+
       console.log('[Step 3/9] Getting conversation history...');
       // 3. Get conversation history (last 10 messages)
       const conversationHistory = await this.getConversationHistory(sessionId);
@@ -204,9 +285,13 @@ class AgentOrchestrator {
       console.log('   ✅ Memories:', memories.length, '| Preferences:', Object.keys(preferences).length);
 
       console.log('[Step 5/9] Building system prompt...');
-      // 5. Build system prompt with memory context
-      const systemPrompt = this.buildSystemPrompt(context, memories, preferences);
+      // 5. Build system prompt with memory context + routing suffix + goal context
+      const systemPrompt = this.buildSystemPrompt(context, memories, preferences, routingResult.promptSuffix, goalContext);
       console.log('   ✅ System prompt length:', systemPrompt.length, 'chars');
+      console.log(`   🎯 Agent mode: ${routingResult.primaryAgent.toUpperCase()}`);
+      if (activeGoal) {
+        console.log(`   📋 Active goal: ${activeGoal.progress}% complete`);
+      }
 
       console.log('[Step 6/9] Preparing messages for Claude...');
       // 5. Prepare messages for Claude
@@ -229,17 +314,121 @@ class AgentOrchestrator {
       });
       console.log('   ✅ User message saved');
 
-      console.log('[Step 8/9] Running agent loop with Claude...');
-      // 7. Run agent loop with Claude
-      const response = await this.runAgentLoop({
-        systemPrompt,
-        messages,
-        context,
-        onStream
-      });
-      console.log('   ✅ Agent loop completed');
+      // ═══════════════════════════════════════════════════════════════
+      // AGENTIC LOOP WITH REPLANNING
+      // Plan → Execute → Reflect → (Replan if needed) → Retry
+      // ═══════════════════════════════════════════════════════════════
 
-      console.log('[Step 9/9] Saving assistant response to DB...');
+      const MAX_RETRIES = 2; // Maximum number of retry attempts
+      const QUALITY_THRESHOLD = 5; // Minimum acceptable quality score
+      let attempt = 0;
+      let response = null;
+      let plan = null;
+      let reflection = null;
+      let finalQuality = 0;
+
+      while (attempt < MAX_RETRIES + 1) {
+        attempt++;
+        const isRetry = attempt > 1;
+
+        console.log(`\n${'═'.repeat(60)}`);
+        console.log(`  ${isRetry ? '🔄 RETRY ATTEMPT' : '🎯 INITIAL ATTEMPT'} ${attempt}/${MAX_RETRIES + 1}`);
+        console.log(`${'═'.repeat(60)}`);
+
+        // STEP 1: PLANNING PHASE
+        if (!isRetry) {
+          console.log('[Step 8/12] Planning phase...');
+          plan = await this.createPlan(message, context, onStream);
+        } else {
+          console.log('[Step 8/12] Replanning phase (using adjusted plan)...');
+          // Plan was already adjusted after reflection
+        }
+
+        // STEP 2: EXECUTE AGENT LOOP
+        console.log('[Step 9/12] Running agent loop with Claude...');
+        response = await this.runAgentLoop({
+          systemPrompt: isRetry
+            ? systemPrompt + `\n\n[IMPORTANT: Previous attempt scored ${reflection?.qualityScore}/10. Feedback: "${reflection?.feedback}". Please address these issues specifically.]`
+            : systemPrompt,
+          messages: isRetry
+            ? [...messages, {
+                role: 'user',
+                content: `[System: The previous response was insufficient. Please try again with a better approach. Focus on: ${reflection?.feedback}]`
+              }]
+            : messages,
+          context,
+          plan,
+          onStream
+        });
+        console.log('   ✅ Agent loop completed');
+
+        // STEP 3: REFLECTION PHASE
+        console.log('[Step 10/12] Reflection phase...');
+        reflection = await this.reflectOnProgress(message, response, context);
+        finalQuality = reflection.qualityScore;
+
+        // Stream reflection to frontend
+        if (onStream) {
+          onStream({
+            type: 'reflection',
+            qualityScore: reflection.qualityScore,
+            goalAchieved: reflection.goalAchieved,
+            feedback: reflection.feedback,
+            attempt: attempt
+          });
+        }
+
+        console.log(`   📊 Quality Score: ${reflection.qualityScore}/10`);
+        console.log(`   🎯 Goal Achieved: ${reflection.goalAchieved}`);
+
+        // STEP 4: DECISION - Continue or break?
+        if (reflection.qualityScore >= QUALITY_THRESHOLD || reflection.goalAchieved) {
+          console.log(`   ✅ Quality acceptable (${reflection.qualityScore} >= ${QUALITY_THRESHOLD}). Proceeding to save.`);
+          break;
+        }
+
+        // Quality too low - should we retry?
+        if (attempt < MAX_RETRIES + 1) {
+          console.log(`   ⚠️  Quality below threshold (${reflection.qualityScore} < ${QUALITY_THRESHOLD}). Attempting replan...`);
+
+          // STEP 5: REPLAN
+          console.log('[Step 11/12] Replanning...');
+          const adjustedPlan = await this.adjustPlan(plan, reflection, message, response, context);
+
+          if (adjustedPlan) {
+            plan = adjustedPlan;
+
+            // Stream replan event to frontend
+            if (onStream) {
+              onStream({
+                type: 'replan',
+                reason: reflection.feedback,
+                whatChanged: adjustedPlan.whatChanged,
+                newPlan: {
+                  goal: adjustedPlan.goal,
+                  steps: adjustedPlan.steps.map(s => ({
+                    id: s.id,
+                    action: s.action,
+                    status: 'pending'
+                  }))
+                },
+                attempt: attempt + 1
+              });
+            }
+
+            console.log(`   🔄 Replan successful. Retrying with new strategy...`);
+          } else {
+            console.log(`   ❌ Replanning failed. Using best response so far.`);
+            break;
+          }
+        } else {
+          console.log(`   ⚠️  Max retries reached. Using best response (quality: ${reflection.qualityScore}/10).`);
+        }
+      }
+
+      console.log(`\n✅ Agentic loop complete. Final quality: ${finalQuality}/10 after ${attempt} attempt(s)`);
+
+      console.log('[Step 12/12] Saving assistant response to DB...');
       // 8. Save assistant response
       const messageId = await this.saveMessage({
         conversationId,
@@ -270,15 +459,19 @@ class AgentOrchestrator {
 
   /**
    * Agent loop with tool calling
-   * Implements: think → act → observe → repeat
+   * Implements: plan → act → observe → reflect cycle
    */
-  async runAgentLoop({ systemPrompt, messages, context, onStream }) {
+  async runAgentLoop({ systemPrompt, messages, context, plan, onStream }) {
     console.log('\n╔════════════════════════════════════════════╗');
     console.log('║  🔄 AGENT LOOP - Starting                 ║');
     console.log('╚════════════════════════════════════════════╝');
     console.log('   Max iterations:', this.maxIterations);
     console.log('   Initial messages count:', messages.length);
     console.log('   Available tools:', this.toolRegistry.getToolDefinitions().length);
+    console.log('   Plan active:', plan ? `Yes (${plan.steps.length} steps)` : 'No');
+
+    // Track current plan step
+    let currentPlanStep = 1;
 
     let currentMessages = [...messages];
     let iteration = 0;
@@ -388,8 +581,20 @@ class AgentOrchestrator {
 
       // Execute tool calls
       console.log(`\n🔨 [LOOP] Executing ${toolUses.length} tool(s)...`);
+
+      // Update plan step to in_progress if we have a plan
+      if (plan && currentPlanStep <= plan.steps.length) {
+        this.updatePlanStep(plan, currentPlanStep, 'in_progress', onStream);
+      }
+
       const toolResults = await this.executeTools(toolUses, context, onStream);
       console.log(`✅ [LOOP] All tools executed`);
+
+      // Update plan step to completed
+      if (plan && currentPlanStep <= plan.steps.length) {
+        this.updatePlanStep(plan, currentPlanStep, 'completed', onStream);
+        currentPlanStep++;
+      }
 
       allToolCalls.push(...toolUses);
       allToolResults.push(...toolResults);
@@ -514,9 +719,14 @@ class AgentOrchestrator {
   }
 
   /**
-   * Build system prompt with context injection + memory
+   * Build system prompt with context injection + memory + specialized agent mode + goal tracking
+   * @param {object} context - Current context
+   * @param {Array} memories - Relevant memories
+   * @param {object} preferences - User preferences
+   * @param {string} agentPromptSuffix - Specialized agent prompt suffix (Phase 3)
+   * @param {string} goalContext - Active goal context (Phase 4)
    */
-  buildSystemPrompt(context, memories = [], preferences = {}) {
+  buildSystemPrompt(context, memories = [], preferences = {}, agentPromptSuffix = '', goalContext = '') {
     const { pageContext, itineraryData, discoveryContext } = context;
 
     // Extract personalization from page context
@@ -813,23 +1023,86 @@ The user is exploring this route. They can ask about:
       prompt += `\n\nThe user is ${pageContext?.name === 'itinerary' ? 'building an itinerary' : pageContext?.name === 'spotlight' ? 'exploring routes' : 'browsing the site'}.`;
     }
 
-    // Inject relevant memories from past conversations
+    // PHASE 2: Enhanced Memory Context Injection
+    // Inject relevant memories from past conversations with type classification
     if (memories.length > 0) {
-      prompt += `\n\n**Past Conversations**:\n`;
-      memories.forEach((memory, index) => {
-        const date = new Date(memory.createdAt).toLocaleDateString();
-        prompt += `- [${date}] ${memory.content}\n`;
-      });
-      prompt += `\nUse this context to personalize your responses and remember the user's preferences.`;
+      prompt += `\n\n**PERSONALIZATION CONTEXT (from past sessions)**:\n`;
+
+      // Group memories by type
+      const prefMemories = memories.filter(m => m.metadata?.memoryType === 'preference');
+      const expMemories = memories.filter(m => m.metadata?.memoryType === 'experience');
+      const otherMemories = memories.filter(m =>
+        !m.metadata?.memoryType || !['preference', 'experience'].includes(m.metadata.memoryType)
+      );
+
+      if (prefMemories.length > 0) {
+        prompt += `\n📌 Known Preferences:\n`;
+        prefMemories.forEach(memory => {
+          prompt += `• ${memory.content}\n`;
+        });
+      }
+
+      if (expMemories.length > 0) {
+        prompt += `\n🗺️ Past Experiences:\n`;
+        expMemories.forEach(memory => {
+          prompt += `• ${memory.content}\n`;
+        });
+      }
+
+      if (otherMemories.length > 0) {
+        prompt += `\n💬 Previous Context:\n`;
+        otherMemories.slice(0, 3).forEach(memory => {
+          const date = new Date(memory.createdAt).toLocaleDateString();
+          prompt += `• [${date}] ${memory.content}\n`;
+        });
+      }
+
+      prompt += `\n⚡ USE THIS CONTEXT: Personalize all recommendations based on these memories!`;
     }
 
-    // Inject user preferences
+    // Inject structured user preferences (Phase 2)
     if (Object.keys(preferences).length > 0) {
-      prompt += `\n\n**User Preferences**:\n`;
-      for (const [category, pref] of Object.entries(preferences)) {
-        prompt += `- ${category}: ${JSON.stringify(pref)}\n`;
+      prompt += `\n\n**USER PROFILE (learned preferences)**:\n`;
+
+      // Extract key preferences in a natural format
+      const prefDisplay = [];
+
+      if (preferences.dietary?.value) {
+        prefDisplay.push(`🍽️ Dietary: ${preferences.dietary.value}${preferences.dietary.detail ? ` (${preferences.dietary.detail})` : ''}`);
       }
-      prompt += `\nConsider these preferences when making recommendations.`;
+      if (preferences.budget?.value) {
+        prefDisplay.push(`💰 Budget: ${preferences.budget.value}`);
+      }
+      if (preferences.pace?.value) {
+        prefDisplay.push(`⏱️ Travel Pace: ${preferences.pace.value}`);
+      }
+      if (preferences.accommodation?.value || preferences.accommodation?.type) {
+        const accValue = preferences.accommodation.value || preferences.accommodation.type;
+        prefDisplay.push(`🏨 Accommodation: ${accValue}`);
+      }
+      if (preferences.activities?.value || preferences.activities?.type) {
+        const actValue = preferences.activities.value || preferences.activities.type;
+        prefDisplay.push(`🎯 Activities: ${actValue}`);
+      }
+      if (preferences.cuisine?.preference) {
+        prefDisplay.push(`🍜 Cuisine: ${preferences.cuisine.preference}`);
+      }
+      if (preferences.transport?.value) {
+        prefDisplay.push(`🚗 Transport: ${preferences.transport.value}`);
+      }
+
+      if (prefDisplay.length > 0) {
+        prompt += prefDisplay.join('\n');
+        prompt += `\n\n⚠️ IMPORTANT: These preferences should influence ALL your recommendations!`;
+        prompt += `\n• If user prefers budget → suggest affordable options`;
+        prompt += `\n• If user is vegetarian → filter restaurant recommendations`;
+        prompt += `\n• If user likes relaxed pace → don't pack the itinerary`;
+      } else {
+        // Show raw preferences if no structured format
+        for (const [category, pref] of Object.entries(preferences)) {
+          prompt += `• ${category}: ${typeof pref === 'object' ? JSON.stringify(pref) : pref}\n`;
+        }
+      }
     }
 
     prompt += `\n\n**🗣️ NATURAL LANGUAGE ACTIONS - UNDERSTAND AND EXECUTE**:
@@ -1172,6 +1445,20 @@ When handling multi-step tasks, you MUST remember conversation context:
 
 **If the user asks about activities, attractions, or things to do - you MUST call searchActivities. No exceptions.**`;
 
+    // PHASE 4: Inject goal context if active
+    if (goalContext) {
+      prompt += `\n\n${'─'.repeat(60)}
+${goalContext}
+${'─'.repeat(60)}`;
+    }
+
+    // PHASE 3: Inject specialized agent prompt suffix
+    if (agentPromptSuffix) {
+      prompt += `\n\n${'═'.repeat(60)}
+${agentPromptSuffix}
+${'═'.repeat(60)}`;
+    }
+
     return prompt;
   }
 
@@ -1292,6 +1579,278 @@ You have insight into this user's preferences. Reference them naturally when mak
   }
 
   /**
+   * Create a plan for complex requests
+   * Decomposes the user's goal into actionable steps
+   */
+  async createPlan(userMessage, context, onStream) {
+    console.log('\n🎯 [PLANNING] Creating plan for request...');
+
+    // Quick check - simple queries don't need planning
+    const simplePatterns = [
+      /^(hi|hello|hey|thanks|thank you|ok|okay)\b/i,
+      /^what('?s| is) the weather/i,
+      /^(show|tell) me about/i,
+    ];
+
+    const isSimple = simplePatterns.some(p => p.test(userMessage.trim()));
+    if (isSimple || userMessage.length < 20) {
+      console.log('   ⚡ Simple request detected, skipping planning');
+      return null;
+    }
+
+    const planningPrompt = `You are a planning agent for a travel assistant. Analyze this user request and determine if it needs a multi-step plan.
+
+User Request: "${userMessage}"
+
+Context:
+- Page: ${context.pageContext?.page || 'unknown'}
+- Has Itinerary: ${!!context.itineraryData}
+- Has Discovery Context: ${!!context.discoveryContext}
+${context.itineraryData ? `- Cities in trip: ${context.itineraryData.cities?.join(', ')}` : ''}
+${context.discoveryContext ? `- Planning phase: ${context.discoveryContext.phase}` : ''}
+
+RULES:
+1. If this is a simple question (weather, info, single search), return: { "needsPlan": false }
+2. If this requires multiple steps (replace activity, plan complex trip, multi-city actions), create a plan
+3. Plans should have 2-5 concrete steps
+4. Each step should be actionable with available tools
+
+Return JSON (no markdown):
+{
+  "needsPlan": boolean,
+  "goal": "Brief summary of user's goal",
+  "complexity": "simple" | "medium" | "complex",
+  "steps": [
+    {
+      "id": 1,
+      "action": "What to do",
+      "tools": ["toolName1", "toolName2"],
+      "waitForUser": boolean
+    }
+  ]
+}`;
+
+    try {
+      const response = await this.client.messages.create({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 512,
+        messages: [{ role: 'user', content: planningPrompt }]
+      });
+
+      const text = response.content[0].text;
+      // Extract JSON from response (handle potential markdown wrapping)
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        console.log('   ⚠️  Could not parse plan response');
+        return null;
+      }
+
+      const plan = JSON.parse(jsonMatch[0]);
+
+      if (!plan.needsPlan) {
+        console.log('   ⚡ Planning agent determined: no plan needed');
+        return null;
+      }
+
+      console.log(`   ✅ Plan created: ${plan.steps.length} steps (${plan.complexity})`);
+      plan.steps.forEach((step, i) => {
+        console.log(`      ${i + 1}. ${step.action}`);
+      });
+
+      // Stream plan to frontend
+      if (onStream) {
+        onStream({
+          type: 'plan',
+          plan: {
+            goal: plan.goal,
+            complexity: plan.complexity,
+            steps: plan.steps.map(s => ({
+              id: s.id,
+              action: s.action,
+              status: 'pending'
+            }))
+          }
+        });
+      }
+
+      return plan;
+    } catch (error) {
+      console.error('   ❌ Planning failed:', error.message);
+      return null; // Graceful degradation - continue without plan
+    }
+  }
+
+  /**
+   * Reflect on the quality of the response
+   * Returns feedback on whether the response adequately addresses the user's goal
+   */
+  async reflectOnProgress(userMessage, response, context) {
+    console.log('\n🔍 [REFLECTION] Evaluating response quality...');
+
+    // Skip reflection for very short responses or tool-heavy responses
+    if (!response.content || response.content.length < 50) {
+      console.log('   ⚡ Short response, skipping reflection');
+      return { qualityScore: 8, goalAchieved: true, needsImprovement: false };
+    }
+
+    const reflectionPrompt = `You are a quality assurance agent. Evaluate if this response adequately addresses the user's goal.
+
+User's Original Request: "${userMessage}"
+
+Agent's Response: "${response.content.substring(0, 1000)}${response.content.length > 1000 ? '...' : ''}"
+
+Tool Calls Made: ${response.toolCalls?.length || 0}
+${response.toolCalls?.length > 0 ? `Tools used: ${response.toolCalls.map(t => t.name).join(', ')}` : ''}
+
+Evaluate:
+1. Does this fully answer the user's question?
+2. Were appropriate tools used?
+3. Is the response helpful and actionable?
+4. Are there obvious gaps?
+
+Return JSON only (no markdown):
+{
+  "qualityScore": 1-10,
+  "goalAchieved": boolean,
+  "needsImprovement": boolean,
+  "feedback": "Brief feedback if improvement needed"
+}`;
+
+    try {
+      const reflectionResponse = await this.client.messages.create({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 256,
+        messages: [{ role: 'user', content: reflectionPrompt }]
+      });
+
+      const text = reflectionResponse.content[0].text;
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        console.log('   ⚠️  Could not parse reflection response');
+        return { qualityScore: 7, goalAchieved: true, needsImprovement: false };
+      }
+
+      const reflection = JSON.parse(jsonMatch[0]);
+      console.log(`   ✅ Quality Score: ${reflection.qualityScore}/10 | Goal Achieved: ${reflection.goalAchieved}`);
+
+      if (reflection.needsImprovement) {
+        console.log(`   📝 Feedback: ${reflection.feedback}`);
+      }
+
+      return reflection;
+    } catch (error) {
+      console.error('   ❌ Reflection failed:', error.message);
+      return { qualityScore: 7, goalAchieved: true, needsImprovement: false };
+    }
+  }
+
+  /**
+   * Update plan step status and stream to frontend
+   */
+  updatePlanStep(plan, stepId, status, onStream) {
+    if (!plan) return;
+
+    const step = plan.steps.find(s => s.id === stepId);
+    if (step) {
+      step.status = status;
+
+      if (onStream) {
+        onStream({
+          type: 'plan_step',
+          stepId,
+          status,
+          action: step.action
+        });
+      }
+    }
+  }
+
+  /**
+   * Adjust plan based on reflection feedback
+   * Called when quality is too low and we need to retry with a different approach
+   */
+  async adjustPlan(originalPlan, reflection, userMessage, previousResponse, context) {
+    console.log('\n🔄 [REPLAN] Adjusting plan based on reflection feedback...');
+    console.log(`   Previous quality: ${reflection.qualityScore}/10`);
+    console.log(`   Feedback: ${reflection.feedback}`);
+
+    const replanPrompt = `You are a replanning agent. The previous response did not adequately address the user's goal.
+
+ORIGINAL USER REQUEST: "${userMessage}"
+
+ORIGINAL PLAN:
+${JSON.stringify(originalPlan, null, 2)}
+
+PREVIOUS RESPONSE SUMMARY: "${previousResponse.content?.substring(0, 500)}..."
+
+QUALITY ASSESSMENT:
+- Score: ${reflection.qualityScore}/10
+- Feedback: ${reflection.feedback}
+- Goal Achieved: ${reflection.goalAchieved}
+
+WHAT WENT WRONG:
+The previous attempt failed to fully satisfy the user's request. Analyze what was missing and create an IMPROVED plan.
+
+RULES:
+1. Focus on what the feedback says is missing
+2. Consider using different tools or approaches
+3. Be more specific in the steps
+4. Add steps to address the gaps identified
+
+Return JSON (no markdown):
+{
+  "adjustedGoal": "Refined goal based on feedback",
+  "whatChanged": "Brief explanation of strategy change",
+  "steps": [
+    {
+      "id": 1,
+      "action": "Specific action to take",
+      "tools": ["toolName"],
+      "addressesFeedback": "How this addresses the quality feedback"
+    }
+  ]
+}`;
+
+    try {
+      const response = await this.client.messages.create({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 768,
+        messages: [{ role: 'user', content: replanPrompt }]
+      });
+
+      const text = response.content[0].text;
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        console.log('   ⚠️  Could not parse adjusted plan');
+        return null;
+      }
+
+      const adjustedPlan = JSON.parse(jsonMatch[0]);
+
+      console.log(`   ✅ Plan adjusted: ${adjustedPlan.steps.length} new steps`);
+      console.log(`   📝 Strategy change: ${adjustedPlan.whatChanged}`);
+
+      // Convert to standard plan format
+      return {
+        goal: adjustedPlan.adjustedGoal,
+        complexity: originalPlan?.complexity || 'medium',
+        whatChanged: adjustedPlan.whatChanged,
+        steps: adjustedPlan.steps.map((s, i) => ({
+          id: i + 1,
+          action: s.action,
+          tools: s.tools,
+          status: 'pending'
+        })),
+        isReplan: true,
+        previousQuality: reflection.qualityScore
+      };
+    } catch (error) {
+      console.error('   ❌ Replanning failed:', error.message);
+      return null;
+    }
+  }
+
+  /**
    * Get or create conversation
    */
   async getOrCreateConversation(userId, routeId, sessionId) {
@@ -1391,9 +1950,12 @@ You have insight into this user's preferences. Reference them naturally when mak
   /**
    * Store conversation in memory for future retrieval
    * Creates a summary and stores it with semantic embeddings
+   * Phase 2: Enhanced with AI-powered preference extraction
    */
   async storeConversationMemory(userId, messageId, userMessage, assistantResponse, context) {
     try {
+      console.log(`\n🧠 [MEMORY] Processing conversation for user ${userId.slice(0, 8)}...`);
+
       // Create a concise summary of the exchange
       const summary = `User asked: "${userMessage.slice(0, 100)}${userMessage.length > 100 ? '...' : ''}". ` +
                      `Agent responded about: ${this.extractTopics(assistantResponse)}`;
@@ -1407,7 +1969,23 @@ You have insight into this user's preferences. Reference them naturally when mak
 
       await this.memoryService.storeConversation(userId, messageId, summary, metadata);
 
-      // Extract and store preferences if mentioned
+      // PHASE 2: AI-powered preference extraction
+      // Use Claude to intelligently extract preferences from the conversation
+      console.log(`🎯 [MEMORY] Extracting preferences with AI...`);
+
+      const conversation = [
+        { role: 'user', content: userMessage },
+        { role: 'assistant', content: assistantResponse }
+      ];
+
+      const extractedPrefs = await this.memoryService.extractPreferences(userId, conversation);
+
+      if (extractedPrefs.length > 0) {
+        console.log(`✅ [MEMORY] Stored ${extractedPrefs.length} preferences:`,
+          extractedPrefs.map(p => `${p.category}: ${p.preference}`).join(', '));
+      }
+
+      // Also run the simple keyword-based extraction as fallback
       await this.extractAndStorePreferences(userId, userMessage, assistantResponse);
 
     } catch (error) {

@@ -27,6 +27,92 @@ export interface ActiveTool {
   input?: any;
 }
 
+// Plan types for agentic workflow
+export interface PlanStep {
+  id: number;
+  action: string;
+  status: 'pending' | 'in_progress' | 'completed';
+  tools?: string[];
+}
+
+export interface AgentPlan {
+  goal: string;
+  complexity: 'simple' | 'medium' | 'complex';
+  steps: PlanStep[];
+}
+
+export interface ReflectionResult {
+  qualityScore: number;
+  feedback?: string;
+  goalAchieved?: boolean;
+  attempt?: number;
+}
+
+export interface ReplanEvent {
+  reason: string;
+  whatChanged: string;
+  newPlan: AgentPlan;
+  attempt: number;
+}
+
+// Phase 3: Specialized Agent Routing
+export type AgentType = 'discovery' | 'itinerary' | 'booking' | 'general';
+
+export interface RoutingInfo {
+  primaryAgent: AgentType;
+  confidence: number;
+  requiresMultiple: boolean;
+  agents: AgentType[];
+  reasoning: string;
+}
+
+// Phase 4: Goal Tracking & Progress
+export type GoalSubtaskStatus = 'todo' | 'in_progress' | 'done' | 'skipped';
+export type GoalComplexity = 'simple' | 'medium' | 'complex';
+
+export interface GoalSubtask {
+  id: string;
+  description: string;
+  status: GoalSubtaskStatus;
+  dependencies?: string[];
+  toolsNeeded?: string[];
+  successIndicator?: string;
+  result?: string;
+  completedAt?: string;
+}
+
+export interface GoalInfo {
+  id: string;
+  description: string;
+  progress: number; // 0-100
+  subtasks: GoalSubtask[];
+  complexity: GoalComplexity;
+  successCriteria?: string;
+  createdAt: string;
+}
+
+// Phase 5: Proactive Notifications
+export type NotificationPriority = 'low' | 'medium' | 'high' | 'urgent';
+export type NotificationStatus = 'pending' | 'sent' | 'read' | 'dismissed' | 'actioned';
+
+export interface NotificationAction {
+  label: string;
+  action: string;
+  data?: Record<string, any>;
+}
+
+export interface ProactiveNotification {
+  id: string;
+  trigger_type: string;
+  priority: NotificationPriority;
+  title: string;
+  body: string;
+  actions: NotificationAction[];
+  metadata: Record<string, any>;
+  status: NotificationStatus;
+  created_at: string;
+}
+
 export interface RouteContext {
   routeId: string | null;
   origin: string | null;
@@ -125,6 +211,26 @@ export interface AgentContextValue {
   currentArtifact: Artifact | null;     // Currently displayed artifact
   artifactHistory: Artifact[];          // All artifacts from this session
   isMinimized: boolean;                 // Whether modal is minimized to button
+
+  // Agentic Plan State
+  currentPlan: AgentPlan | null;        // Active plan being executed
+  lastReflection: ReflectionResult | null; // Last reflection result
+  isReplanning: boolean;                // Whether agent is replanning
+  replanInfo: ReplanEvent | null;       // Info about the current replan
+
+  // Phase 3: Routing State
+  routingInfo: RoutingInfo | null;      // Current routing decision
+
+  // Phase 4: Goal Tracking State
+  activeGoal: GoalInfo | null;          // Current active goal being tracked
+
+  // Phase 5: Proactive Notifications
+  notifications: ProactiveNotification[];  // Pending notifications
+  notificationCount: number;               // Unread notification count
+  fetchNotifications: () => Promise<void>; // Fetch notifications from API
+  dismissNotification: (id: string) => Promise<void>;
+  markNotificationRead: (id: string) => Promise<void>;
+  handleNotificationAction: (id: string, action: NotificationAction) => Promise<void>;
 
   // Actions
   openAgent: () => void;
@@ -236,6 +342,22 @@ export function AgentProvider({ children }: AgentProviderProps) {
   const [currentArtifact, setCurrentArtifact] = useState<Artifact | null>(null);
   const [artifactHistory, setArtifactHistory] = useState<Artifact[]>([]);
   const [isMinimized, setIsMinimized] = useState(false);
+
+  // Agentic Plan State
+  const [currentPlan, setCurrentPlan] = useState<AgentPlan | null>(null);
+  const [lastReflection, setLastReflection] = useState<ReflectionResult | null>(null);
+  const [isReplanning, setIsReplanning] = useState(false);
+  const [replanInfo, setReplanInfo] = useState<ReplanEvent | null>(null);
+
+  // Phase 3: Routing State
+  const [routingInfo, setRoutingInfo] = useState<RoutingInfo | null>(null);
+
+  // Phase 4: Goal Tracking State
+  const [activeGoal, setActiveGoal] = useState<GoalInfo | null>(null);
+
+  // Phase 5: Proactive Notifications State
+  const [notifications, setNotifications] = useState<ProactiveNotification[]>([]);
+  const [notificationCount, setNotificationCount] = useState(0);
 
   // Itinerary Context - get from URL params or fetch from route
   const [itineraryId, setItineraryId] = useState<string | null>(null);
@@ -383,6 +505,163 @@ export function AgentProvider({ children }: AgentProviderProps) {
   const toggleMinimize = useCallback(() => {
     setIsMinimized(prev => !prev);
   }, []);
+
+  // ==================== Phase 5: Proactive Notification Functions ====================
+
+  /**
+   * Fetch notifications from the API
+   */
+  const fetchNotifications = useCallback(async () => {
+    const token = localStorage.getItem('rdtrip_auth_token');
+    if (!token) return;
+
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL ||
+                     (import.meta.env.MODE === 'production' ? '' : 'http://localhost:5000');
+
+      const response = await fetch(`${apiUrl}/api/agent/notifications`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setNotifications(data.notifications);
+          setNotificationCount(data.count);
+          console.log(`🔔 [AGENT] Fetched ${data.count} notifications`);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch notifications:', error);
+    }
+  }, []);
+
+  /**
+   * Dismiss a notification
+   */
+  const dismissNotification = useCallback(async (id: string) => {
+    const token = localStorage.getItem('rdtrip_auth_token');
+    if (!token) return;
+
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL ||
+                     (import.meta.env.MODE === 'production' ? '' : 'http://localhost:5000');
+
+      await fetch(`${apiUrl}/api/agent/notifications/${id}/dismiss`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      // Remove from local state
+      setNotifications(prev => prev.filter(n => n.id !== id));
+      setNotificationCount(prev => Math.max(0, prev - 1));
+    } catch (error) {
+      console.error('Failed to dismiss notification:', error);
+    }
+  }, []);
+
+  /**
+   * Mark notification as read
+   */
+  const markNotificationRead = useCallback(async (id: string) => {
+    const token = localStorage.getItem('rdtrip_auth_token');
+    if (!token) return;
+
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL ||
+                     (import.meta.env.MODE === 'production' ? '' : 'http://localhost:5000');
+
+      await fetch(`${apiUrl}/api/agent/notifications/${id}/read`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      // Update local state
+      setNotifications(prev => prev.map(n =>
+        n.id === id ? { ...n, status: 'read' as NotificationStatus } : n
+      ));
+    } catch (error) {
+      console.error('Failed to mark notification read:', error);
+    }
+  }, []);
+
+  /**
+   * Handle notification action button click
+   * Note: Actions that require sendMessage dispatch a custom event
+   * which is handled after sendMessage is defined
+   */
+  const handleNotificationAction = useCallback(async (id: string, action: NotificationAction) => {
+    const token = localStorage.getItem('rdtrip_auth_token');
+    if (!token) return;
+
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL ||
+                     (import.meta.env.MODE === 'production' ? '' : 'http://localhost:5000');
+
+      // Mark as actioned
+      await fetch(`${apiUrl}/api/agent/notifications/${id}/action`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ action: action.action })
+      });
+
+      // Handle specific actions via custom events (to avoid circular dependency)
+      switch (action.action) {
+        case 'check_weather':
+          // Dispatch event for agent to handle
+          window.dispatchEvent(new CustomEvent('agent_notification_action', {
+            detail: {
+              type: 'send_message',
+              message: `What's the weather like in ${action.data?.destination || 'my destination'}?`
+            }
+          }));
+          break;
+        case 'view_itinerary':
+          // Could trigger navigation
+          console.log('View itinerary:', action.data?.itineraryId);
+          window.dispatchEvent(new CustomEvent('agent_notification_action', {
+            detail: { type: 'navigate', path: `/itinerary/${action.data?.itineraryId}` }
+          }));
+          break;
+        case 'resume_goal':
+          // Resume goal tracking
+          console.log('Resume goal:', action.data?.goalId);
+          window.dispatchEvent(new CustomEvent('agent_notification_action', {
+            detail: {
+              type: 'send_message',
+              message: `Help me continue working on my goal`
+            }
+          }));
+          break;
+        default:
+          console.log('Action triggered:', action.action, action.data);
+      }
+
+      // Remove from list
+      setNotifications(prev => prev.filter(n => n.id !== id));
+      setNotificationCount(prev => Math.max(0, prev - 1));
+    } catch (error) {
+      console.error('Failed to handle notification action:', error);
+    }
+  }, []);
+
+  // Fetch notifications on mount and periodically
+  useEffect(() => {
+    fetchNotifications();
+
+    // Poll every 5 minutes for new notifications
+    const interval = setInterval(fetchNotifications, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [fetchNotifications]);
 
   /**
    * Add activity to a specific day in the itinerary
@@ -589,6 +868,12 @@ export function AgentProvider({ children }: AgentProviderProps) {
     setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
     setActiveTools([]); // Clear active tools from previous request
+    setCurrentPlan(null); // Clear previous plan
+    setLastReflection(null); // Clear previous reflection
+    setIsReplanning(false); // Clear replanning state
+    setReplanInfo(null); // Clear replan info
+    setRoutingInfo(null); // Clear previous routing decision (Phase 3)
+    // Note: Don't clear activeGoal - it persists across messages for multi-turn tracking
 
     // Create assistant message placeholder for streaming
     const assistantMessageId = uuidv4();
@@ -707,6 +992,102 @@ export function AgentProvider({ children }: AgentProviderProps) {
 
               if (event.type === 'connected') {
                 console.log('🤖 [AGENT] Connected to agent stream');
+              } else if (event.type === 'routing') {
+                // Phase 3: Specialized agent routing decision
+                console.log('🔀 [AGENT] Routing:', event.primaryAgent, `(${(event.confidence * 100).toFixed(0)}% confidence)`);
+                console.log('   Reasoning:', event.reasoning);
+                setRoutingInfo({
+                  primaryAgent: event.primaryAgent,
+                  confidence: event.confidence,
+                  requiresMultiple: event.requiresMultiple,
+                  agents: event.agents,
+                  reasoning: event.reasoning
+                });
+              } else if (event.type === 'goal_active') {
+                // Phase 4: Existing goal is active and being tracked
+                console.log('🎯 [AGENT] Active goal:', event.goal?.description);
+                console.log('   Progress:', event.goal?.progress + '%');
+                setActiveGoal({
+                  id: event.goal.id,
+                  description: event.goal.description,
+                  progress: event.goal.progress,
+                  subtasks: event.goal.subtasks || [],
+                  complexity: event.goal.complexity || 'simple',
+                  successCriteria: event.goal.successCriteria,
+                  createdAt: event.goal.createdAt
+                });
+              } else if (event.type === 'goal_created') {
+                // Phase 4: New goal was detected and created
+                console.log('🆕 [AGENT] New goal created:', event.goal?.description);
+                console.log('   Subtasks:', event.goal?.subtasks?.length || 0);
+                setActiveGoal({
+                  id: event.goal.id,
+                  description: event.goal.description,
+                  progress: event.goal.progress || 0,
+                  subtasks: event.goal.subtasks || [],
+                  complexity: event.goal.complexity || 'simple',
+                  successCriteria: event.goal.successCriteria,
+                  createdAt: event.goal.createdAt
+                });
+              } else if (event.type === 'goal_progress') {
+                // Phase 4: Goal progress updated (subtask completed)
+                console.log('📈 [AGENT] Goal progress update:', event.progress + '%');
+                setActiveGoal(prev => {
+                  if (!prev || prev.id !== event.goalId) return prev;
+                  return {
+                    ...prev,
+                    progress: event.progress,
+                    subtasks: event.subtasks || prev.subtasks
+                  };
+                });
+              } else if (event.type === 'goal_completed') {
+                // Phase 4: Goal was completed
+                console.log('✅ [AGENT] Goal completed:', event.goal?.description);
+                setActiveGoal(prev => {
+                  if (!prev || prev.id !== event.goalId) return prev;
+                  return { ...prev, progress: 100 };
+                });
+                // Clear goal after a brief delay to show completion
+                setTimeout(() => setActiveGoal(null), 3000);
+              } else if (event.type === 'plan') {
+                // Agent created a plan for complex request
+                console.log('📋 [AGENT] Plan received:', event.plan);
+                setCurrentPlan(event.plan);
+              } else if (event.type === 'plan_step') {
+                // A plan step status changed
+                console.log('📍 [AGENT] Plan step update:', event.stepId, event.status);
+                setCurrentPlan(prev => {
+                  if (!prev) return prev;
+                  return {
+                    ...prev,
+                    steps: prev.steps.map(step =>
+                      step.id === event.stepId
+                        ? { ...step, status: event.status }
+                        : step
+                    )
+                  };
+                });
+              } else if (event.type === 'reflection') {
+                // Agent quality reflection
+                console.log('🔍 [AGENT] Reflection received:', event.qualityScore, event.feedback);
+                setLastReflection({
+                  qualityScore: event.qualityScore,
+                  feedback: event.feedback,
+                  goalAchieved: event.goalAchieved,
+                  attempt: event.attempt
+                });
+              } else if (event.type === 'replan') {
+                // Agent is replanning due to low quality
+                console.log('🔄 [AGENT] Replan event:', event.whatChanged);
+                setIsReplanning(true);
+                setReplanInfo({
+                  reason: event.reason,
+                  whatChanged: event.whatChanged,
+                  newPlan: event.newPlan,
+                  attempt: event.attempt
+                });
+                // Update current plan with new adjusted plan
+                setCurrentPlan(event.newPlan);
               } else if (event.type === 'text') {
                 // Stream text token
                 setMessages(prev =>
@@ -849,6 +1230,8 @@ export function AgentProvider({ children }: AgentProviderProps) {
                       : msg
                   )
                 );
+                // Clear replanning state on completion
+                setIsReplanning(false);
                 console.log('✅ Agent response complete');
               } else if (event.type === 'error') {
                 // Error occurred
@@ -908,6 +1291,25 @@ export function AgentProvider({ children }: AgentProviderProps) {
     };
   }, []);
 
+  // Handle notification action events (from handleNotificationAction)
+  useEffect(() => {
+    const handleNotificationActionEvent = (event: CustomEvent) => {
+      const { type, message } = event.detail;
+
+      if (type === 'send_message' && message) {
+        // Open agent and send message
+        setIsOpen(true);
+        sendMessage(message);
+      }
+      // Navigation is handled by the component that receives the event
+    };
+
+    window.addEventListener('agent_notification_action', handleNotificationActionEvent as EventListener);
+    return () => {
+      window.removeEventListener('agent_notification_action', handleNotificationActionEvent as EventListener);
+    };
+  }, [sendMessage]);
+
   // Context value
   const value: AgentContextValue = {
     // State
@@ -923,6 +1325,26 @@ export function AgentProvider({ children }: AgentProviderProps) {
     currentArtifact,
     artifactHistory,
     isMinimized,
+
+    // Agentic Plan State
+    currentPlan,
+    lastReflection,
+    isReplanning,
+    replanInfo,
+
+    // Phase 3: Routing State
+    routingInfo,
+
+    // Phase 4: Goal Tracking State
+    activeGoal,
+
+    // Phase 5: Proactive Notifications
+    notifications,
+    notificationCount,
+    fetchNotifications,
+    dismissNotification,
+    markNotificationRead,
+    handleNotificationAction,
 
     // Actions
     openAgent,

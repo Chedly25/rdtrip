@@ -5476,6 +5476,437 @@ app.get('/api/agent/history/:sessionId', optionalAuth, async (req, res) => {
   }
 });
 
+// ==================== PHASE 2: USER PREFERENCES ENDPOINTS ====================
+
+/**
+ * GET /api/agent/preferences
+ * Get all user preferences
+ */
+app.get('/api/agent/preferences', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const result = await pool.query(`
+      SELECT preferences, updated_at
+      FROM agent_user_preferences
+      WHERE user_id = $1
+    `, [userId]);
+
+    if (result.rows.length === 0) {
+      return res.json({
+        success: true,
+        preferences: {},
+        message: 'No preferences stored yet'
+      });
+    }
+
+    res.json({
+      success: true,
+      preferences: result.rows[0].preferences,
+      updatedAt: result.rows[0].updated_at
+    });
+
+  } catch (error) {
+    console.error('Error fetching preferences:', error.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch preferences'
+    });
+  }
+});
+
+/**
+ * GET /api/agent/profile
+ * Get full user personality profile (preferences + memories summary)
+ */
+app.get('/api/agent/profile', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Get preferences
+    const prefResult = await pool.query(`
+      SELECT preferences, updated_at
+      FROM agent_user_preferences
+      WHERE user_id = $1
+    `, [userId]);
+
+    // Get memory counts by type
+    const memoryResult = await pool.query(`
+      SELECT
+        metadata->>'memoryType' as memory_type,
+        COUNT(*) as count
+      FROM agent_memory
+      WHERE user_id = $1
+      GROUP BY metadata->>'memoryType'
+    `, [userId]);
+
+    // Get recent memories
+    const recentResult = await pool.query(`
+      SELECT content, metadata, created_at
+      FROM agent_memory
+      WHERE user_id = $1
+      ORDER BY created_at DESC
+      LIMIT 5
+    `, [userId]);
+
+    const preferences = prefResult.rows[0]?.preferences || {};
+    const memoryCounts = {};
+    memoryResult.rows.forEach(row => {
+      memoryCounts[row.memory_type || 'general'] = parseInt(row.count);
+    });
+
+    // Build traits from preferences
+    const traits = [];
+    if (preferences.dietary?.value) traits.push(`${preferences.dietary.value} diet`);
+    if (preferences.budget?.value) traits.push(`${preferences.budget.value} budget`);
+    if (preferences.pace?.value) traits.push(`${preferences.pace.value} pace traveler`);
+    if (preferences.activities?.value) traits.push(`Enjoys ${preferences.activities.value}`);
+
+    res.json({
+      success: true,
+      profile: {
+        userId,
+        preferences,
+        traits,
+        memoryCounts,
+        totalMemories: Object.values(memoryCounts).reduce((a, b) => a + b, 0),
+        recentMemories: recentResult.rows.map(row => ({
+          content: row.content,
+          type: row.metadata?.memoryType || 'general',
+          createdAt: row.created_at
+        })),
+        updatedAt: prefResult.rows[0]?.updated_at || null
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching profile:', error.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch profile'
+    });
+  }
+});
+
+/**
+ * PUT /api/agent/preferences/:category
+ * Update a specific preference category
+ */
+app.put('/api/agent/preferences/:category', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { category } = req.params;
+    const { value, detail } = req.body;
+
+    if (!value) {
+      return res.status(400).json({
+        success: false,
+        error: 'Preference value is required'
+      });
+    }
+
+    // Get existing preferences
+    const existing = await pool.query(`
+      SELECT preferences FROM agent_user_preferences WHERE user_id = $1
+    `, [userId]);
+
+    let preferences = existing.rows[0]?.preferences || {};
+
+    // Update the category
+    preferences[category] = {
+      value,
+      detail: detail || null,
+      confidence: 1.0, // User-set preferences have full confidence
+      lastUpdated: new Date().toISOString(),
+      source: 'user_set'
+    };
+
+    // Upsert
+    await pool.query(`
+      INSERT INTO agent_user_preferences (user_id, preferences)
+      VALUES ($1, $2)
+      ON CONFLICT (user_id)
+      DO UPDATE SET preferences = $2, updated_at = NOW()
+    `, [userId, JSON.stringify(preferences)]);
+
+    res.json({
+      success: true,
+      message: `Preference '${category}' updated`,
+      preferences
+    });
+
+  } catch (error) {
+    console.error('Error updating preference:', error.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update preference'
+    });
+  }
+});
+
+/**
+ * DELETE /api/agent/preferences/:category
+ * Delete a specific preference category
+ */
+app.delete('/api/agent/preferences/:category', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { category } = req.params;
+
+    // Get existing preferences
+    const existing = await pool.query(`
+      SELECT preferences FROM agent_user_preferences WHERE user_id = $1
+    `, [userId]);
+
+    if (existing.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'No preferences found'
+      });
+    }
+
+    let preferences = existing.rows[0].preferences;
+    delete preferences[category];
+
+    // Update
+    await pool.query(`
+      UPDATE agent_user_preferences
+      SET preferences = $2, updated_at = NOW()
+      WHERE user_id = $1
+    `, [userId, JSON.stringify(preferences)]);
+
+    res.json({
+      success: true,
+      message: `Preference '${category}' deleted`,
+      preferences
+    });
+
+  } catch (error) {
+    console.error('Error deleting preference:', error.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete preference'
+    });
+  }
+});
+
+/**
+ * DELETE /api/agent/memories
+ * Clear all user memories (privacy feature)
+ */
+app.delete('/api/agent/memories', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Delete all memories
+    const memoryResult = await pool.query(`
+      DELETE FROM agent_memory WHERE user_id = $1 RETURNING id
+    `, [userId]);
+
+    // Delete preferences
+    await pool.query(`
+      DELETE FROM agent_user_preferences WHERE user_id = $1
+    `, [userId]);
+
+    res.json({
+      success: true,
+      message: 'All memories and preferences cleared',
+      deletedMemories: memoryResult.rows.length
+    });
+
+  } catch (error) {
+    console.error('Error clearing memories:', error.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to clear memories'
+    });
+  }
+});
+
+// ==================== PROACTIVE NOTIFICATIONS (Phase 5) ====================
+
+const ProactiveAgent = require('./server/services/ProactiveAgent');
+
+/**
+ * GET /api/agent/notifications
+ * Get pending notifications for the authenticated user
+ */
+app.get('/api/agent/notifications', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const limit = parseInt(req.query.limit) || 10;
+
+    const result = await pool.query(`
+      SELECT
+        id,
+        trigger_type,
+        priority,
+        title,
+        body,
+        actions,
+        metadata,
+        status,
+        created_at
+      FROM proactive_notifications
+      WHERE user_id = $1
+        AND status IN ('pending', 'sent')
+        AND created_at > NOW() - INTERVAL '7 days'
+      ORDER BY
+        CASE priority
+          WHEN 'urgent' THEN 1
+          WHEN 'high' THEN 2
+          WHEN 'medium' THEN 3
+          ELSE 4
+        END,
+        created_at DESC
+      LIMIT $2
+    `, [userId, limit]);
+
+    // Mark fetched notifications as sent
+    if (result.rows.length > 0) {
+      const ids = result.rows.map(r => r.id);
+      await pool.query(`
+        UPDATE proactive_notifications
+        SET status = 'sent'
+        WHERE id = ANY($1) AND status = 'pending'
+      `, [ids]);
+    }
+
+    res.json({
+      success: true,
+      notifications: result.rows,
+      count: result.rows.length
+    });
+
+  } catch (error) {
+    console.error('Error fetching notifications:', error.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch notifications'
+    });
+  }
+});
+
+/**
+ * PUT /api/agent/notifications/:id/read
+ * Mark a notification as read
+ */
+app.put('/api/agent/notifications/:id/read', authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    const result = await pool.query(`
+      UPDATE proactive_notifications
+      SET status = 'read', read_at = NOW()
+      WHERE id = $1 AND user_id = $2 AND status IN ('pending', 'sent')
+      RETURNING id
+    `, [id, userId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Notification not found'
+      });
+    }
+
+    res.json({ success: true });
+
+  } catch (error) {
+    console.error('Error marking notification read:', error.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to mark notification as read'
+    });
+  }
+});
+
+/**
+ * PUT /api/agent/notifications/:id/dismiss
+ * Dismiss a notification
+ */
+app.put('/api/agent/notifications/:id/dismiss', authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    await pool.query(`
+      UPDATE proactive_notifications
+      SET status = 'dismissed'
+      WHERE id = $1 AND user_id = $2
+    `, [id, userId]);
+
+    res.json({ success: true });
+
+  } catch (error) {
+    console.error('Error dismissing notification:', error.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to dismiss notification'
+    });
+  }
+});
+
+/**
+ * PUT /api/agent/notifications/:id/action
+ * Mark notification as actioned (user clicked an action button)
+ */
+app.put('/api/agent/notifications/:id/action', authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { action } = req.body;
+    const userId = req.user.id;
+
+    await pool.query(`
+      UPDATE proactive_notifications
+      SET status = 'actioned', actioned_at = NOW()
+      WHERE id = $1 AND user_id = $2
+    `, [id, userId]);
+
+    res.json({
+      success: true,
+      action: action
+    });
+
+  } catch (error) {
+    console.error('Error actioning notification:', error.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to action notification'
+    });
+  }
+});
+
+/**
+ * GET /api/agent/notifications/count
+ * Get count of unread notifications
+ */
+app.get('/api/agent/notifications/count', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const result = await pool.query(`
+      SELECT COUNT(*) as count
+      FROM proactive_notifications
+      WHERE user_id = $1
+        AND status IN ('pending', 'sent')
+        AND created_at > NOW() - INTERVAL '7 days'
+    `, [userId]);
+
+    res.json({
+      success: true,
+      count: parseInt(result.rows[0].count)
+    });
+
+  } catch (error) {
+    console.error('Error getting notification count:', error.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get notification count'
+    });
+  }
+});
+
 // ==================== END AI AGENT ENDPOINT ====================
 
 // Simplified image endpoint - no external validation

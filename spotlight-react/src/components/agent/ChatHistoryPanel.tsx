@@ -15,6 +15,9 @@ import { Bot, User, Loader, Sparkles } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { useAgent } from '../../contexts/AgentProvider';
 import { ToolExecutionStatus } from './ToolExecutionStatus';
+import { PlanProgress } from './PlanProgress';
+import { RoutingIndicator } from './RoutingIndicator';
+import { GoalProgress } from './GoalProgress';
 import { InlinePlaceCard } from './InlinePlaceCard';
 import { QuickActionChips } from './QuickActionChips';
 import { ToolSourceIndicator, extractToolNames } from './ToolSourceIndicator';
@@ -74,7 +77,7 @@ const smartMarkdownComponents = createSmartMarkdownComponents();
 // ============================================================================
 
 export function ChatHistoryPanel() {
-  const { messages, isLoading, activeTools, pageContext, sendMessage } = useAgent();
+  const { messages, isLoading, activeTools, pageContext, sendMessage, currentPlan, isReplanning, replanInfo, routingInfo, activeGoal } = useAgent();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Handle chip selection - send the chip's value as a message
@@ -253,10 +256,38 @@ export function ChatHistoryPanel() {
             className="flex justify-start"
           >
             <div className="bg-white border-2 border-gray-200 rounded-2xl px-4 py-3 shadow-sm max-w-[85%]">
-              <div className="flex items-center gap-2.5 mb-3">
-                <Loader className="w-4 h-4 text-teal-600 animate-spin" />
-                <p className="text-sm text-gray-600 font-medium">Thinking...</p>
-              </div>
+              {/* Phase 3: Show routing indicator when we have routing info */}
+              {routingInfo && (
+                <RoutingIndicator
+                  routingInfo={routingInfo}
+                  className="mb-3"
+                  compact={!!currentPlan || !!activeGoal} // Use compact mode when plan or goal is showing
+                />
+              )}
+
+              {/* Phase 4: Show goal progress if tracking a multi-step goal */}
+              {activeGoal && (
+                <GoalProgress
+                  goal={activeGoal}
+                  className="mb-3"
+                  compact={!!currentPlan} // Use compact mode when plan is also showing
+                />
+              )}
+
+              {/* Show plan progress if we have an active plan */}
+              {currentPlan ? (
+                <PlanProgress
+                  plan={currentPlan}
+                  className="mb-3"
+                  isReplanning={isReplanning}
+                  replanInfo={replanInfo}
+                />
+              ) : !routingInfo && !activeGoal && (
+                <div className="flex items-center gap-2.5 mb-3">
+                  <Loader className="w-4 h-4 text-teal-600 animate-spin" />
+                  <p className="text-sm text-gray-600 font-medium">Thinking...</p>
+                </div>
+              )}
 
               {/* Tool Execution Status */}
               <ToolExecutionStatus activeTools={activeTools} />
