@@ -14,8 +14,11 @@
  * Subtask States: todo, in_progress, done, skipped
  */
 
-const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
 const Anthropic = require('@anthropic-ai/sdk');
+
+// Use built-in crypto.randomUUID() instead of uuid package (ESM-only)
+const uuidv4 = () => crypto.randomUUID();
 
 // Goal status constants
 const GOAL_STATUS = {
