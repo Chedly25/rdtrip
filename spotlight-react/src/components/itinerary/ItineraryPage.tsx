@@ -545,8 +545,8 @@ export function ItineraryPage() {
                 </p>
                 <button
                   onClick={() => {
-                    // Navigate to active trip or save
-                    navigate(`/route/${route?.id || 'new'}?itinerary=${itinerary.id}`);
+                    // Navigate to active trip companion (Today view)
+                    navigate('/today');
                   }}
                   className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-[#C45830] to-[#D4A853] text-white font-semibold rounded-full shadow-lg shadow-[#C45830]/30 hover:shadow-xl hover:shadow-[#C45830]/40 transition-all hover:scale-105"
                 >

@@ -88,11 +88,20 @@ function LandingPage() {
 /**
  * Route View Handler
  * Handles /route/:id URLs for viewing routes
+ *
+ * IMPORTANT: Routes with discovery-* IDs redirect to /discover
+ * These are ephemeral discovery session IDs, not persisted routes
  */
 function RouteViewHandler() {
   const { id } = useParams<{ id: string }>()
   const [searchParams] = useSearchParams()
   const itineraryId = searchParams.get('itinerary')
+
+  // Redirect discovery-* routes back to discovery phase
+  // These IDs are ephemeral session IDs from the new discovery flow
+  if (id?.startsWith('discovery-')) {
+    return <Navigate to="/discover" replace />
+  }
 
   // Pass route ID via URL search params for SpotlightV2 compatibility
   if (id) {
