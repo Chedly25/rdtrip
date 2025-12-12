@@ -11,6 +11,8 @@ export { DiscoveryMap } from './DiscoveryMap';
 export { DiscoveryCityPin } from './DiscoveryCityPin';
 export { DiscoveryCompanionPanel } from './DiscoveryCompanionPanel';
 export { DiscoveryCityPreview } from './DiscoveryCityPreview';
+export { IntelligenceCityPreview } from './IntelligenceCityPreview';
+export { DiscoveryIntelligenceView } from './DiscoveryIntelligenceView';
 export { DiscoveryLoadingState } from './DiscoveryLoadingState';
 export { PlaceCard } from './PlaceCard';
 export { AddCityModal } from './AddCityModal';
