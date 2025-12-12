@@ -12,9 +12,6 @@ import {
   selectOverallProgress,
   selectCurrentPhase,
   selectGoal,
-  selectErrors,
-  selectAllCityIntelligence,
-  selectCompletedCities,
 } from '../stores/cityIntelligenceStore';
 import type {
   AgentName,
@@ -33,9 +30,23 @@ export function useCityIntelligence() {
   const overallProgress = useCityIntelligenceStore(selectOverallProgress) ?? 0;
   const currentPhase = useCityIntelligenceStore(selectCurrentPhase) ?? 'planning';
   const goal = useCityIntelligenceStore(selectGoal) ?? '';
-  const errors = useCityIntelligenceStore(selectErrors) ?? [];
-  const allCityIntelligence = useCityIntelligenceStore(selectAllCityIntelligence) ?? [];
-  const completedCities = useCityIntelligenceStore(selectCompletedCities) ?? [];
+
+  // IMPORTANT: Select stable object references, NOT arrays
+  // Using Object.values() in selectors creates new arrays every render,
+  // causing Zustand to think state changed and trigger infinite re-renders
+  const errorsArray = useCityIntelligenceStore((state) => state.errors);
+  const cityIntelligenceMap = useCityIntelligenceStore((state) => state.cityIntelligence);
+
+  // Derive arrays using useMemo - only recomputes when the underlying map changes
+  const errors = errorsArray ?? [];
+  const allCityIntelligence = useMemo(
+    () => Object.values(cityIntelligenceMap ?? {}),
+    [cityIntelligenceMap]
+  );
+  const completedCities = useMemo(
+    () => allCityIntelligence.filter((i) => i.status === 'complete'),
+    [allCityIntelligence]
+  );
 
   // Store actions
   const startIntelligence = useCityIntelligenceStore((s) => s.startIntelligence);
