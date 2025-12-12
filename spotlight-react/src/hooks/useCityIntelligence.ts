@@ -13,8 +13,6 @@ import {
   selectCurrentPhase,
   selectGoal,
   selectErrors,
-  selectCityIntelligence,
-  selectAgentStates,
   selectAllCityIntelligence,
   selectCompletedCities,
 } from '../stores/cityIntelligenceStore';
@@ -113,9 +111,15 @@ export function useCityIntelligenceForCity(cityId: string) {
   // Defensive: handle empty/invalid cityId
   const safeId = cityId || '';
 
-  const intelligence = useCityIntelligenceStore(selectCityIntelligence(safeId));
-  const agentStates = useCityIntelligenceStore(selectAgentStates(safeId)) ?? {};
+  // IMPORTANT: Select the whole sub-objects and access by key to avoid creating
+  // new selector functions on every render (which causes infinite re-render loops)
+  const allIntelligence = useCityIntelligenceStore((state) => state.cityIntelligence);
+  const allAgentStates = useCityIntelligenceStore((state) => state.agentStates);
   const isProcessing = useCityIntelligenceStore(selectIsProcessing) ?? false;
+
+  // Access the specific city's data from the selected objects
+  const intelligence = allIntelligence[safeId] || null;
+  const agentStates = allAgentStates[safeId] || {};
 
   // Calculate city-specific progress with defensive checks
   const progress = useMemo(() => {
@@ -192,70 +196,72 @@ export function useAgentState(
 
 // =============================================================================
 // Intelligence Sections Hooks
+// NOTE: These hooks select the whole cityIntelligence object to avoid creating
+// new selector functions on every render (which causes infinite re-render loops)
 // =============================================================================
 
 /**
  * Hook for accessing the story section
  */
 export function useCityStory(cityId: string) {
-  const intelligence = useCityIntelligenceStore(selectCityIntelligence(cityId));
-  return intelligence?.story || null;
+  const allIntelligence = useCityIntelligenceStore((state) => state.cityIntelligence);
+  return allIntelligence[cityId]?.story || null;
 }
 
 /**
  * Hook for accessing time blocks
  */
 export function useCityTimeBlocks(cityId: string) {
-  const intelligence = useCityIntelligenceStore(selectCityIntelligence(cityId));
-  return intelligence?.timeBlocks || null;
+  const allIntelligence = useCityIntelligenceStore((state) => state.cityIntelligence);
+  return allIntelligence[cityId]?.timeBlocks || null;
 }
 
 /**
  * Hook for accessing clusters
  */
 export function useCityClusters(cityId: string) {
-  const intelligence = useCityIntelligenceStore(selectCityIntelligence(cityId));
-  return intelligence?.clusters || null;
+  const allIntelligence = useCityIntelligenceStore((state) => state.cityIntelligence);
+  return allIntelligence[cityId]?.clusters || null;
 }
 
 /**
  * Hook for accessing match score
  */
 export function useCityMatchScore(cityId: string) {
-  const intelligence = useCityIntelligenceStore(selectCityIntelligence(cityId));
-  return intelligence?.matchScore || null;
+  const allIntelligence = useCityIntelligenceStore((state) => state.cityIntelligence);
+  return allIntelligence[cityId]?.matchScore || null;
 }
 
 /**
  * Hook for accessing hidden gems
  */
 export function useCityHiddenGems(cityId: string) {
-  const intelligence = useCityIntelligenceStore(selectCityIntelligence(cityId));
-  return intelligence?.hiddenGems || null;
+  const allIntelligence = useCityIntelligenceStore((state) => state.cityIntelligence);
+  return allIntelligence[cityId]?.hiddenGems || null;
 }
 
 /**
  * Hook for accessing logistics
  */
 export function useCityLogistics(cityId: string) {
-  const intelligence = useCityIntelligenceStore(selectCityIntelligence(cityId));
-  return intelligence?.logistics || null;
+  const allIntelligence = useCityIntelligenceStore((state) => state.cityIntelligence);
+  return allIntelligence[cityId]?.logistics || null;
 }
 
 /**
  * Hook for accessing weather
  */
 export function useCityWeather(cityId: string) {
-  const intelligence = useCityIntelligenceStore(selectCityIntelligence(cityId));
-  return intelligence?.weather || null;
+  const allIntelligence = useCityIntelligenceStore((state) => state.cityIntelligence);
+  return allIntelligence[cityId]?.weather || null;
 }
 
 /**
  * Hook for accessing photo spots
  */
 export function useCityPhotoSpots(cityId: string) {
-  const intelligence = useCityIntelligenceStore(selectCityIntelligence(cityId));
-  return intelligence?.photoSpots || null;
+  const allIntelligence = useCityIntelligenceStore((state) => state.cityIntelligence);
+  return allIntelligence[cityId]?.photoSpots || null;
 }
 
 // =============================================================================
