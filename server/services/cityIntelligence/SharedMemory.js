@@ -11,8 +11,11 @@
  * - Orchestrator state tracking
  */
 
-const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
 const EventEmitter = require('events');
+
+// Use Node's built-in crypto for UUID generation (compatible with CommonJS)
+const uuidv4 = () => crypto.randomUUID();
 
 class SharedMemory extends EventEmitter {
   constructor() {
