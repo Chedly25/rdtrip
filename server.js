@@ -8923,6 +8923,10 @@ app.use('/api/nearby', nearbyRoutes);
 const weatherRoutes = require('./server/routes/weather');
 app.use('/api/weather', weatherRoutes);
 
+// ==================== CITY INTELLIGENCE ROUTES ====================
+const cityIntelligenceRoutes = require('./server/routes/cityIntelligence');
+app.use('/api/city-intelligence', cityIntelligenceRoutes);
+
 // =====================================================
 // CATCH-ALL ROUTE - Serve unified React app for client-side routing
 // =====================================================

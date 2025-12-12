@@ -39,3 +39,17 @@ export {
   type SafeAreaInsets,
   type KeyboardState,
 } from './useMobile';
+
+// City Intelligence (Phase 4)
+export {
+  useCityIntelligence,
+  useCityIntelligenceForCity,
+  useAgentStatus,
+  getAgentDisplayName,
+  getAgentColor,
+} from './useCityIntelligence';
+
+export {
+  useIntelligenceSSE,
+  useIntelligenceConnectionStatus,
+} from './useIntelligenceSSE';
