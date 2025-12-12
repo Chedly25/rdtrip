@@ -443,6 +443,8 @@ function IntelligenceStatusBar({
 // =============================================================================
 
 function StorySection({ story }: { story: any }) {
+  if (!story || !story.hook) return null;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -458,14 +460,14 @@ function StorySection({ story }: { story: any }) {
       </p>
 
       {/* Narrative */}
-      {story.narrative && (
+      {story?.narrative && (
         <p className="text-stone-600 leading-relaxed">
           {story.narrative}
         </p>
       )}
 
       {/* Differentiators */}
-      {story.differentiators && story.differentiators.length > 0 && (
+      {story?.differentiators && story.differentiators.length > 0 && (
         <div className="flex flex-wrap gap-2 pt-2">
           {story.differentiators.map((diff: string, idx: number) => (
             <span
@@ -486,31 +488,52 @@ function StorySection({ story }: { story: any }) {
 // =============================================================================
 
 function MatchScoreSection({ matchScore }: { matchScore: any }) {
-  const score = matchScore.score || 0;
-  const scoreColor = score >= 80 ? 'emerald' : score >= 60 ? 'amber' : 'rose';
+  const score = matchScore?.score || 0;
+
+  // Use explicit class mappings instead of dynamic Tailwind classes
+  const colorClasses = score >= 80
+    ? {
+        container: 'bg-gradient-to-br from-emerald-50 to-emerald-100/50 border-emerald-200',
+        icon: 'text-emerald-600',
+        score: 'text-emerald-600',
+        check: 'text-emerald-500',
+      }
+    : score >= 60
+    ? {
+        container: 'bg-gradient-to-br from-amber-50 to-amber-100/50 border-amber-200',
+        icon: 'text-amber-600',
+        score: 'text-amber-600',
+        check: 'text-amber-500',
+      }
+    : {
+        container: 'bg-gradient-to-br from-rose-50 to-rose-100/50 border-rose-200',
+        icon: 'text-rose-600',
+        score: 'text-rose-600',
+        check: 'text-rose-500',
+      };
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`p-4 rounded-2xl bg-gradient-to-br from-${scoreColor}-50 to-${scoreColor}-100/50 border border-${scoreColor}-200`}
+      className={`p-4 rounded-2xl border ${colorClasses.container}`}
     >
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <Zap className={`w-5 h-5 text-${scoreColor}-600`} />
+          <Zap className={`w-5 h-5 ${colorClasses.icon}`} />
           <span className="font-semibold text-stone-900">Match Score</span>
         </div>
-        <span className={`text-2xl font-bold text-${scoreColor}-600`}>
+        <span className={`text-2xl font-bold ${colorClasses.score}`}>
           {score}%
         </span>
       </div>
 
       {/* Reasons */}
-      {matchScore.reasons && matchScore.reasons.length > 0 && (
+      {matchScore?.reasons && matchScore.reasons.length > 0 && (
         <div className="space-y-2">
           {matchScore.reasons.slice(0, 3).map((reason: any, idx: number) => (
             <div key={idx} className="flex items-start gap-2 text-sm">
-              <Check className={`w-4 h-4 text-${scoreColor}-500 flex-shrink-0 mt-0.5`} />
+              <Check className={`w-4 h-4 ${colorClasses.check} flex-shrink-0 mt-0.5`} />
               <span className="text-stone-700">
                 <strong>{reason.preference}</strong>: {reason.match}
               </span>
@@ -520,13 +543,13 @@ function MatchScoreSection({ matchScore }: { matchScore: any }) {
       )}
 
       {/* Warnings */}
-      {matchScore.warnings && matchScore.warnings.length > 0 && (
+      {matchScore?.warnings && matchScore.warnings.length > 0 && (
         <div className="mt-3 pt-3 border-t border-amber-200 space-y-2">
           {matchScore.warnings.map((warning: any, idx: number) => (
             <div key={idx} className="flex items-start gap-2 text-sm">
               <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
               <span className="text-amber-700">
-                {warning.preference}: {warning.gap}
+                {warning?.preference}: {warning?.gap}
               </span>
             </div>
           ))}
@@ -551,6 +574,10 @@ function TimeBlocksSection({ timeBlocks, totalHours }: { timeBlocks: any[]; tota
     relax: Sun,
   };
 
+  if (!timeBlocks || !Array.isArray(timeBlocks) || timeBlocks.length === 0) {
+    return null;
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -568,19 +595,20 @@ function TimeBlocksSection({ timeBlocks, totalHours }: { timeBlocks: any[]; tota
 
       <div className="space-y-2">
         {timeBlocks.map((block, idx) => {
+          if (!block) return null;
           const Icon = moodIcons[block.mood] || Clock;
           return (
             <div
-              key={idx}
+              key={block.id || idx}
               className="flex items-center gap-3 p-3 bg-indigo-50/50 rounded-xl border border-indigo-100"
             >
               <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center">
                 <Icon className="w-5 h-5 text-indigo-600" />
               </div>
               <div className="flex-1">
-                <p className="font-medium text-stone-900">{block.name}</p>
+                <p className="font-medium text-stone-900">{block.name || 'Activity'}</p>
                 <p className="text-sm text-stone-500">
-                  {block.hours}h · {block.suggested || block.mood}
+                  {block.hours || 0}h · {block.suggested || block.mood || 'explore'}
                 </p>
               </div>
             </div>
@@ -598,6 +626,10 @@ function TimeBlocksSection({ timeBlocks, totalHours }: { timeBlocks: any[]; tota
 function ClustersSection({ clusters }: { clusters: Cluster[] }) {
   const [expandedCluster, setExpandedCluster] = useState<string | null>(null);
 
+  if (!clusters || !Array.isArray(clusters) || clusters.length === 0) {
+    return null;
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -610,6 +642,7 @@ function ClustersSection({ clusters }: { clusters: Cluster[] }) {
 
       <div className="space-y-2">
         {clusters.map((cluster) => {
+          if (!cluster) return null;
           const Icon = CLUSTER_ICONS[cluster.theme || 'default'] || MapPin;
           const isExpanded = expandedCluster === cluster.id;
 
@@ -671,6 +704,10 @@ function ClustersSection({ clusters }: { clusters: Cluster[] }) {
 // =============================================================================
 
 function HiddenGemsSection({ gems }: { gems: HiddenGem[] }) {
+  if (!gems || !Array.isArray(gems) || gems.length === 0) {
+    return null;
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -682,25 +719,28 @@ function HiddenGemsSection({ gems }: { gems: HiddenGem[] }) {
       </h3>
 
       <div className="space-y-3">
-        {gems.slice(0, 4).map((gem, idx) => (
-          <div
-            key={idx}
-            className="p-4 bg-gradient-to-br from-purple-50 to-violet-50 rounded-xl border border-purple-100"
-          >
-            <div className="flex items-start justify-between mb-2">
-              <h4 className="font-medium text-stone-900">{gem.name}</h4>
-              <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full">
-                {gem.type}
-              </span>
+        {gems.slice(0, 4).map((gem, idx) => {
+          if (!gem) return null;
+          return (
+            <div
+              key={idx}
+              className="p-4 bg-gradient-to-br from-purple-50 to-violet-50 rounded-xl border border-purple-100"
+            >
+              <div className="flex items-start justify-between mb-2">
+                <h4 className="font-medium text-stone-900">{gem.name || 'Local Gem'}</h4>
+                <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full">
+                  {gem.type || 'experience'}
+                </span>
+              </div>
+              <p className="text-sm text-stone-600 mb-2">{gem.why || 'A local favorite'}</p>
+              {gem.insiderTip && (
+                <p className="text-xs text-purple-600 italic">
+                  💡 {gem.insiderTip}
+                </p>
+              )}
             </div>
-            <p className="text-sm text-stone-600 mb-2">{gem.why}</p>
-            {gem.insiderTip && (
-              <p className="text-xs text-purple-600 italic">
-                💡 {gem.insiderTip}
-              </p>
-            )}
-          </div>
-        ))}
+          );
+        })}
       </div>
     </motion.div>
   );
@@ -711,6 +751,10 @@ function HiddenGemsSection({ gems }: { gems: HiddenGem[] }) {
 // =============================================================================
 
 function PhotoSpotsSection({ spots }: { spots: PhotoSpot[] }) {
+  if (!spots || !Array.isArray(spots) || spots.length === 0) {
+    return null;
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -722,15 +766,18 @@ function PhotoSpotsSection({ spots }: { spots: PhotoSpot[] }) {
       </h3>
 
       <div className="grid grid-cols-2 gap-2">
-        {spots.slice(0, 4).map((spot, idx) => (
-          <div
-            key={idx}
-            className="p-3 bg-orange-50 rounded-xl border border-orange-100"
-          >
-            <p className="font-medium text-stone-900 text-sm mb-1">{spot.name}</p>
-            <p className="text-xs text-orange-600">{spot.bestTime}</p>
-          </div>
-        ))}
+        {spots.slice(0, 4).map((spot, idx) => {
+          if (!spot) return null;
+          return (
+            <div
+              key={idx}
+              className="p-3 bg-orange-50 rounded-xl border border-orange-100"
+            >
+              <p className="font-medium text-stone-900 text-sm mb-1">{spot.name || 'Photo Spot'}</p>
+              <p className="text-xs text-orange-600">{spot.bestTime || 'Golden hour'}</p>
+            </div>
+          );
+        })}
       </div>
     </motion.div>
   );
@@ -741,6 +788,8 @@ function PhotoSpotsSection({ spots }: { spots: PhotoSpot[] }) {
 // =============================================================================
 
 function LogisticsSection({ logistics }: { logistics: any }) {
+  if (!logistics) return null;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -752,21 +801,21 @@ function LogisticsSection({ logistics }: { logistics: any }) {
       </h3>
 
       <div className="space-y-2">
-        {logistics.parking && (
+        {logistics?.parking && (
           <div className="flex items-start gap-2 text-sm">
             <Car className="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" />
             <span className="text-stone-600">{logistics.parking}</span>
           </div>
         )}
 
-        {logistics.tips && logistics.tips.map((tip: string, idx: number) => (
+        {logistics?.tips?.map((tip: string, idx: number) => (
           <div key={idx} className="flex items-start gap-2 text-sm">
             <Check className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
             <span className="text-stone-600">{tip}</span>
           </div>
         ))}
 
-        {logistics.warnings && logistics.warnings.map((warning: string, idx: number) => (
+        {logistics?.warnings?.map((warning: string, idx: number) => (
           <div key={idx} className="flex items-start gap-2 text-sm">
             <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
             <span className="text-amber-700">{warning}</span>
@@ -782,6 +831,8 @@ function LogisticsSection({ logistics }: { logistics: any }) {
 // =============================================================================
 
 function WeatherSection({ weather }: { weather: any }) {
+  if (!weather) return null;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -793,16 +844,16 @@ function WeatherSection({ weather }: { weather: any }) {
         <span className="font-semibold text-stone-900">Weather</span>
       </div>
 
-      {weather.forecast && (
+      {weather?.forecast && (
         <p className="text-sm text-stone-600 mb-2">{weather.forecast}</p>
       )}
 
-      {weather.recommendations && (
+      {weather?.recommendations && (
         <div className="text-xs text-sky-600 space-y-1">
-          {weather.recommendations.goldenHour && (
+          {weather.recommendations?.goldenHour && (
             <p>🌅 Golden hour: {weather.recommendations.goldenHour}</p>
           )}
-          {weather.recommendations.backup && (
+          {weather.recommendations?.backup && (
             <p>☔ Backup: {weather.recommendations.backup}</p>
           )}
         </div>
