@@ -1203,6 +1203,53 @@ export function AgentProvider({ children }: AgentProviderProps) {
                   }
                 }
 
+                // Check if removeCityFromRoute tools were used successfully
+                const removeCityTools = event.tools.filter((tool: any) => tool.name === 'removeCityFromRoute');
+                for (const removeCityTool of removeCityTools) {
+                  try {
+                    const content = typeof removeCityTool.content === 'string'
+                      ? JSON.parse(removeCityTool.content)
+                      : removeCityTool.content;
+
+                    if (content.success && content.cityName) {
+                      console.log('🗑️ [AGENT] City removed from route:', content.cityName);
+                      // Dispatch custom event with city name for discovery store to handle
+                      window.dispatchEvent(new CustomEvent('agent_remove_city', {
+                        detail: {
+                          cityName: content.cityName,
+                          reason: content.reason
+                        }
+                      }));
+                    }
+                  } catch (e) {
+                    console.warn('⚠️ [AGENT] Failed to parse removeCityFromRoute result:', e);
+                  }
+                }
+
+                // Check if replaceCityInRoute tools were used successfully
+                const replaceCityTools = event.tools.filter((tool: any) => tool.name === 'replaceCityInRoute');
+                for (const replaceCityTool of replaceCityTools) {
+                  try {
+                    const content = typeof replaceCityTool.content === 'string'
+                      ? JSON.parse(replaceCityTool.content)
+                      : replaceCityTool.content;
+
+                    if (content.success && content.newCity && content.oldCityName) {
+                      console.log('🔄 [AGENT] City replaced in route:', content.oldCityName, '→', content.newCity.name);
+                      // Dispatch custom event with replacement data for discovery store to handle
+                      window.dispatchEvent(new CustomEvent('agent_replace_city', {
+                        detail: {
+                          oldCityName: content.oldCityName,
+                          newCity: content.newCity,
+                          reason: content.reason
+                        }
+                      }));
+                    }
+                  } catch (e) {
+                    console.warn('⚠️ [AGENT] Failed to parse replaceCityInRoute result:', e);
+                  }
+                }
+
                 // Detect and set artifact
                 const artifact = detectArtifact(event.tools);
                 if (artifact) {

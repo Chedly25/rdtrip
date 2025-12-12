@@ -567,7 +567,61 @@ class ToolRegistry {
       execute: require('../tools/addCityToRoute')
     });
 
-    // 24. Mention Place (Inline Place Cards)
+    // 24. Remove City from Route
+    this.register({
+      name: 'removeCityFromRoute',
+      description: 'Remove a city from the user\'s trip route. Use when the user wants to remove a stop (e.g., "remove Lyon from my trip", "I don\'t want to visit Paris anymore"). The city will be removed from the map and city list.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          cityName: {
+            type: 'string',
+            description: 'Name of the city to remove (e.g., "Lyon", "Paris"). Will fuzzy match against the cities in the route.'
+          },
+          reason: {
+            type: 'string',
+            description: 'Why this city is being removed (optional, for context)'
+          }
+        },
+        required: ['cityName']
+      },
+      execute: require('../tools/removeCityFromRoute')
+    });
+
+    // 25. Replace City in Route
+    this.register({
+      name: 'replaceCityInRoute',
+      description: 'Replace one city with another in the user\'s trip route. Use when the user wants to swap a city (e.g., "replace Lyon with Annecy", "swap Paris for Nice"). The new city will take the position and inherit the nights from the old city.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          oldCityName: {
+            type: 'string',
+            description: 'Name of the city to remove (e.g., "Lyon")'
+          },
+          newCityName: {
+            type: 'string',
+            description: 'Name of the new city to add (e.g., "Annecy")'
+          },
+          newCountry: {
+            type: 'string',
+            description: 'Country of the new city for disambiguation (optional)'
+          },
+          nights: {
+            type: 'number',
+            description: 'Number of nights for the new city (if not specified, inherits from old city)'
+          },
+          reason: {
+            type: 'string',
+            description: 'Why this replacement is being recommended'
+          }
+        },
+        required: ['oldCityName', 'newCityName']
+      },
+      execute: require('../tools/replaceCityInRoute')
+    });
+
+    // 25. Mention Place (Inline Place Cards)
     this.register({
       name: 'mentionPlace',
       description: 'Create an interactive place card to embed in your response. Use this when recommending a specific restaurant, attraction, or any place the user might want to add to their trip. Returns a marker string that you MUST include in your response text - it will render as a beautiful card with Add to Trip and Directions buttons.',

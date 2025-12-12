@@ -199,6 +199,8 @@ interface DiscoveryState {
   // Add/remove custom cities
   addCity: (city: Omit<DiscoveryCity, 'id' | 'isFixed'>, insertAfterIndex?: number) => string;
   removeCity: (cityId: string) => void;
+  removeCityByName: (cityName: string) => boolean;
+  replaceCity: (oldCityName: string, newCityData: Omit<DiscoveryCity, 'id' | 'isFixed'>) => string | null;
   reorderCities: (orderedCityIds: string[]) => void;
 
   // Companion
@@ -437,6 +439,94 @@ export const useDiscoveryStore = create<DiscoveryState>()(
 
         // Record action
         get().recordAction({ type: 'city_removed', data: { cityId, cityName: city.name } });
+      },
+
+      /**
+       * Remove city by name (fuzzy match) - used by AI agent
+       * Returns true if a city was removed
+       */
+      removeCityByName: (cityName: string): boolean => {
+        const { route } = get();
+        if (!route) return false;
+
+        // Find city by name (case-insensitive partial match)
+        const normalizedName = cityName.toLowerCase().trim();
+        const city = route.suggestedCities.find((c) =>
+          c.name.toLowerCase().includes(normalizedName) ||
+          normalizedName.includes(c.name.toLowerCase())
+        );
+
+        if (city && !city.isFixed) {
+          get().removeCity(city.id);
+          console.log(`🗑️ [Store] Removed city by name: ${cityName} → ${city.name}`);
+          return true;
+        }
+
+        console.warn(`⚠️ [Store] Could not find city to remove: ${cityName}`);
+        return false;
+      },
+
+      /**
+       * Replace one city with another - used by AI agent
+       * Preserves the position and nights from the old city
+       */
+      replaceCity: (oldCityName: string, newCityData: Omit<DiscoveryCity, 'id' | 'isFixed'>): string | null => {
+        const { route, selectedCityId, removedCityIds } = get();
+        if (!route) return null;
+
+        // Find old city by name (case-insensitive partial match)
+        const normalizedOldName = oldCityName.toLowerCase().trim();
+        const oldCityIndex = route.suggestedCities.findIndex((c) =>
+          c.name.toLowerCase().includes(normalizedOldName) ||
+          normalizedOldName.includes(c.name.toLowerCase())
+        );
+
+        if (oldCityIndex === -1) {
+          console.warn(`⚠️ [Store] Could not find city to replace: ${oldCityName}`);
+          return null;
+        }
+
+        const oldCity = route.suggestedCities[oldCityIndex];
+
+        // Can't replace fixed cities (origin/destination)
+        if (oldCity.isFixed) {
+          console.warn(`⚠️ [Store] Cannot replace fixed city: ${oldCity.name}`);
+          return null;
+        }
+
+        // Generate unique ID for the new city
+        const id = `custom-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+
+        // Create new city, inheriting nights from old city if not specified
+        const newCity: DiscoveryCity = {
+          ...newCityData,
+          id,
+          isFixed: false,
+          isSelected: true,
+          nights: newCityData.nights ?? oldCity.nights ?? oldCity.suggestedNights ?? 1,
+        };
+
+        // Replace in the same position
+        const newCities = [...route.suggestedCities];
+        newCities[oldCityIndex] = newCity;
+
+        set({
+          route: {
+            ...route,
+            suggestedCities: newCities,
+          },
+          // Update selection to new city if old was selected
+          selectedCityId: selectedCityId === oldCity.id ? id : selectedCityId,
+          // Track old city as removed
+          removedCityIds: [...removedCityIds, oldCity.id],
+        });
+
+        // Record actions
+        get().recordAction({ type: 'city_removed', data: { cityId: oldCity.id, cityName: oldCity.name } });
+        get().recordAction({ type: 'city_added', data: { cityId: id, cityName: newCity.name } });
+
+        console.log(`🔄 [Store] Replaced city: ${oldCity.name} → ${newCity.name}`);
+        return id;
       },
 
       reorderCities: (orderedCityIds) => {

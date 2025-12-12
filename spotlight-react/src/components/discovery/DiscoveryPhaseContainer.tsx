@@ -111,6 +111,86 @@ export function DiscoveryPhaseContainer() {
     return () => window.removeEventListener('agent_add_city', handleAgentAddCity as EventListener);
   }, [addCity, addCompanionMessage]);
 
+  // Listen for agent-removed cities (from AI companion tool)
+  const { removeCityByName, replaceCity } = useDiscoveryStore();
+
+  useEffect(() => {
+    const handleAgentRemoveCity = (event: CustomEvent<{
+      cityName: string;
+      reason?: string;
+    }>) => {
+      const { cityName, reason } = event.detail;
+      console.log('🗑️ [Discovery] Agent removing city:', cityName);
+
+      const success = removeCityByName(cityName);
+
+      if (success) {
+        addCompanionMessage({
+          type: 'assistant',
+          content: `I've removed **${cityName}** from your trip.${reason ? ` ${reason}` : ''}`,
+        });
+      } else {
+        addCompanionMessage({
+          type: 'assistant',
+          content: `I couldn't find **${cityName}** in your trip to remove. Maybe it was already removed or the name was different?`,
+        });
+      }
+    };
+
+    window.addEventListener('agent_remove_city', handleAgentRemoveCity as EventListener);
+    return () => window.removeEventListener('agent_remove_city', handleAgentRemoveCity as EventListener);
+  }, [removeCityByName, addCompanionMessage]);
+
+  // Listen for agent-replaced cities (from AI companion tool)
+  useEffect(() => {
+    const handleAgentReplaceCity = (event: CustomEvent<{
+      oldCityName: string;
+      newCity: {
+        name: string;
+        country: string;
+        coordinates: { lat: number; lng: number };
+        suggestedNights?: number;
+        nights?: number;
+        imageUrl?: string;
+        description?: string;
+      };
+      reason?: string;
+    }>) => {
+      const { oldCityName, newCity, reason } = event.detail;
+      console.log('🔄 [Discovery] Agent replacing city:', oldCityName, '→', newCity.name);
+
+      const newCityId = replaceCity(oldCityName, {
+        name: newCity.name,
+        country: newCity.country,
+        coordinates: newCity.coordinates,
+        suggestedNights: newCity.suggestedNights || newCity.nights || 1,
+        nights: newCity.nights || newCity.suggestedNights || 1,
+        imageUrl: newCity.imageUrl || undefined,
+        description: newCity.description || reason || `Replaced ${oldCityName}`,
+        isSelected: true,
+        placeCount: undefined,
+        distanceFromRoute: undefined,
+        drivingMinutes: undefined,
+      });
+
+      if (newCityId) {
+        console.log('✅ [Discovery] City replaced with ID:', newCityId);
+        addCompanionMessage({
+          type: 'assistant',
+          content: `I've replaced **${oldCityName}** with **${newCity.name}, ${newCity.country}**! You can see the updated route on the map.`,
+        });
+      } else {
+        addCompanionMessage({
+          type: 'assistant',
+          content: `I couldn't find **${oldCityName}** in your trip to replace. Maybe it was already removed?`,
+        });
+      }
+    };
+
+    window.addEventListener('agent_replace_city', handleAgentReplaceCity as EventListener);
+    return () => window.removeEventListener('agent_replace_city', handleAgentReplaceCity as EventListener);
+  }, [replaceCity, addCompanionMessage]);
+
   // Load route data from URL params or localStorage
   useEffect(() => {
     const loadDiscoveryData = async () => {
