@@ -1,12 +1,9 @@
 /**
  * IntelligenceCityPreview
  *
- * Enhanced city preview modal that displays rich City Intelligence data.
- * Shows agent progress, story hooks, clusters, match scores, hidden gems,
- * and other intelligence insights as they become available.
- *
- * Design: Editorial magazine aesthetic with elegant typography and
- * progressive reveal animations as intelligence data arrives.
+ * A luxurious, editorial-style city preview modal that feels like opening
+ * a page from Condé Nast Traveler. Warm earth tones, elegant typography,
+ * and immersive imagery that makes you want to pack your bags.
  */
 
 import { useState, useEffect, Component, type ReactNode } from 'react';
@@ -26,15 +23,14 @@ import {
   Car,
   Zap,
   Check,
-  Loader2,
-  Brain,
   Star,
   Coffee,
   Utensils,
   ShoppingBag,
   TreePine,
   AlertTriangle,
-  AlertCircle,
+  Compass,
+  Route,
 } from 'lucide-react';
 import type { DiscoveryCity } from '../../stores/discoveryStore';
 import { useDiscoveryStore } from '../../stores/discoveryStore';
@@ -43,7 +39,7 @@ import { fetchCityImage } from '../../services/cityImages';
 import type { AgentName, Cluster, HiddenGem, PhotoSpot } from '../../types/cityIntelligence';
 
 // =============================================================================
-// Error Boundary for Intelligence Preview
+// Error Boundary
 // =============================================================================
 
 interface ErrorBoundaryProps {
@@ -68,7 +64,6 @@ class IntelligencePreviewErrorBoundary extends Component<ErrorBoundaryProps, Err
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
     console.error('[IntelligenceCityPreview] Render error:', error, errorInfo);
-    // Try to clear potentially corrupted localStorage
     try {
       localStorage.removeItem('waycraft-city-intelligence');
     } catch {
@@ -85,7 +80,7 @@ class IntelligencePreviewErrorBoundary extends Component<ErrorBoundaryProps, Err
 }
 
 // =============================================================================
-// Types
+// Types & Constants
 // =============================================================================
 
 interface IntelligenceCityPreviewProps {
@@ -94,20 +89,16 @@ interface IntelligenceCityPreviewProps {
   onToggleSelection: () => void;
 }
 
-// =============================================================================
-// Constants
-// =============================================================================
-
 const AGENT_LABELS: Record<AgentName, string> = {
-  TimeAgent: 'Time Planning',
+  TimeAgent: 'Time',
   StoryAgent: 'Story',
-  PreferenceAgent: 'Matching',
+  PreferenceAgent: 'Match',
   ClusterAgent: 'Areas',
-  GemsAgent: 'Hidden Gems',
-  LogisticsAgent: 'Logistics',
+  GemsAgent: 'Gems',
+  LogisticsAgent: 'Tips',
   WeatherAgent: 'Weather',
   PhotoAgent: 'Photos',
-  SynthesisAgent: 'Synthesis',
+  SynthesisAgent: 'Complete',
 };
 
 const CLUSTER_ICONS: Record<string, typeof MapPin> = {
@@ -121,7 +112,7 @@ const CLUSTER_ICONS: Record<string, typeof MapPin> = {
 };
 
 // =============================================================================
-// Fallback Component (shown when Intelligence errors)
+// Fallback Component
 // =============================================================================
 
 function IntelligencePreviewFallback({
@@ -135,39 +126,29 @@ function IntelligencePreviewFallback({
 
   return (
     <>
-      {/* Backdrop */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
+        className="fixed inset-0 bg-[#2C2417]/60 backdrop-blur-sm z-40"
         onClick={onClose}
       />
-
-      {/* Modal */}
       <motion.div
         initial={{ opacity: 0, y: 100 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 100 }}
-        className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-3xl shadow-2xl max-h-[70vh] overflow-hidden flex flex-col"
+        className="fixed bottom-0 left-0 right-0 z-50 bg-[#FFFBF5] rounded-t-[2rem] shadow-2xl max-h-[70vh] overflow-hidden"
       >
-        <div className="p-5">
+        <div className="p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-stone-900">{city.name}</h2>
-            <button
-              onClick={onClose}
-              className="p-2 rounded-full hover:bg-stone-100"
-            >
-              <X className="w-5 h-5" />
+            <h2 className="text-2xl font-semibold text-[#2C2417]" style={{ fontFamily: 'Fraunces, serif' }}>
+              {city.name}
+            </h2>
+            <button onClick={onClose} className="p-2 rounded-full hover:bg-[#F5F0E8] transition-colors">
+              <X className="w-5 h-5 text-[#8B7355]" />
             </button>
           </div>
-
-          <div className="flex items-center gap-2 text-amber-600 mb-4">
-            <AlertCircle className="w-5 h-5" />
-            <span className="text-sm">Intelligence temporarily unavailable</span>
-          </div>
-
-          <p className="text-stone-600">{city.description || `Explore ${city.name}, ${city.country}`}</p>
+          <p className="text-[#8B7355]">{city.description || `Discover ${city.name}, ${city.country}`}</p>
         </div>
       </motion.div>
     </>
@@ -175,7 +156,7 @@ function IntelligencePreviewFallback({
 }
 
 // =============================================================================
-// Main Component (Internal)
+// Main Component
 // =============================================================================
 
 function IntelligenceCityPreviewContent({
@@ -185,10 +166,7 @@ function IntelligenceCityPreviewContent({
 }: IntelligenceCityPreviewProps) {
   const [cityImage, setCityImage] = useState<string | null>(null);
   const [imageLoading, setImageLoading] = useState(false);
-  const [_activeSection, _setActiveSection] = useState<string | null>(null);
-  void _activeSection; void _setActiveSection; // Available for section navigation
 
-  // Intelligence data for this city
   const {
     intelligence,
     agentStates,
@@ -200,11 +178,9 @@ function IntelligenceCityPreviewContent({
     totalAgentsCount,
   } = useCityIntelligenceForCity(city?.id || '');
 
-  // Get favourites state from store (available for future place favoriting)
   const { isPlaceFavourited: _isPlaceFavourited, togglePlaceFavourite: _togglePlaceFavourite } = useDiscoveryStore();
   void _isPlaceFavourited; void _togglePlaceFavourite;
 
-  // Fetch city image
   useEffect(() => {
     if (!city) return;
     setCityImage(null);
@@ -232,13 +208,14 @@ function IntelligenceCityPreviewContent({
 
   return (
     <>
-      {/* Backdrop */}
+      {/* Backdrop with warm overlay */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={onClose}
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
+        className="fixed inset-0 z-40"
+        style={{ backgroundColor: 'rgba(44, 36, 23, 0.7)', backdropFilter: 'blur(8px)' }}
       />
 
       {/* Modal */}
@@ -251,21 +228,24 @@ function IntelligenceCityPreviewContent({
           fixed bottom-0 left-0 right-0
           md:bottom-auto md:top-1/2 md:left-1/2
           md:-translate-x-1/2 md:-translate-y-1/2
-          md:max-w-xl md:w-full md:mx-4
+          md:max-w-lg md:w-full md:mx-4
           z-50
-          max-h-[92vh] md:max-h-[88vh]
+          max-h-[94vh] md:max-h-[90vh]
         "
       >
         <div
           className="
-            bg-white rounded-t-3xl md:rounded-3xl
+            rounded-t-[2rem] md:rounded-[2rem]
             overflow-hidden flex flex-col
-            max-h-[92vh] md:max-h-[88vh]
-            shadow-2xl
+            max-h-[94vh] md:max-h-[90vh]
           "
+          style={{
+            backgroundColor: '#FFFBF5',
+            boxShadow: '0 -10px 60px rgba(44, 36, 23, 0.3), 0 25px 80px rgba(44, 36, 23, 0.4)',
+          }}
         >
-          {/* Header with image */}
-          <CityHeader
+          {/* Hero Header */}
+          <HeroHeader
             city={city}
             cityImage={cityImage}
             imageLoading={imageLoading}
@@ -273,9 +253,9 @@ function IntelligenceCityPreviewContent({
             onClose={onClose}
           />
 
-          {/* Intelligence Status Bar */}
+          {/* Intelligence Status */}
           {hasIntelligence && (
-            <IntelligenceStatusBar
+            <IntelligenceStatus
               isProcessing={isProcessing}
               isComplete={isComplete}
               progress={progress}
@@ -286,10 +266,10 @@ function IntelligenceCityPreviewContent({
             />
           )}
 
-          {/* Scrollable content */}
+          {/* Scrollable Content */}
           <div className="flex-1 overflow-y-auto overscroll-contain">
-            <div className="p-5 space-y-5">
-              {/* Story Hook - The narrative intro */}
+            <div className="px-6 py-5 space-y-6">
+              {/* Story Hook */}
               {intelligence?.story?.hook && (
                 <StorySection story={intelligence.story} />
               )}
@@ -307,7 +287,7 @@ function IntelligenceCityPreviewContent({
                 />
               )}
 
-              {/* Clusters / Areas */}
+              {/* Clusters */}
               {intelligence?.clusters?.clusters && intelligence.clusters.clusters.length > 0 && (
                 <ClustersSection clusters={intelligence.clusters.clusters} />
               )}
@@ -332,15 +312,15 @@ function IntelligenceCityPreviewContent({
                 <WeatherSection weather={intelligence.weather} />
               )}
 
-              {/* Fallback: Basic city info if no intelligence yet */}
+              {/* Loading State */}
               {!hasIntelligence && (
-                <BasicCityInfo city={city} />
+                <LoadingState city={city} />
               )}
             </div>
           </div>
 
-          {/* Action buttons */}
-          <ActionButtons
+          {/* Action Footer */}
+          <ActionFooter
             city={city}
             isInTrip={isInTrip}
             isFixed={isFixed}
@@ -354,10 +334,10 @@ function IntelligenceCityPreviewContent({
 }
 
 // =============================================================================
-// City Header
+// Hero Header - Immersive city image with editorial overlay
 // =============================================================================
 
-interface CityHeaderProps {
+interface HeroHeaderProps {
   city: DiscoveryCity;
   cityImage: string | null;
   imageLoading: boolean;
@@ -365,99 +345,145 @@ interface CityHeaderProps {
   onClose: () => void;
 }
 
-function CityHeader({ city, cityImage, imageLoading, isFixed, onClose }: CityHeaderProps) {
+function HeroHeader({ city, cityImage, imageLoading, isFixed, onClose }: HeroHeaderProps) {
+  const nights = city.nights || city.suggestedNights;
+
   return (
-    <div className="relative h-44 md:h-52 flex-shrink-0 overflow-hidden">
-      {/* Gradient background */}
+    <div className="relative h-56 md:h-64 flex-shrink-0 overflow-hidden">
+      {/* Base gradient */}
       <div
         className="absolute inset-0"
         style={{
-          background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
+          background: 'linear-gradient(135deg, #2C2417 0%, #4A3F2F 50%, #5C4D3A 100%)',
         }}
       />
 
       {/* Loading shimmer */}
       {imageLoading && (
         <motion.div
-          className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent"
+          className="absolute inset-0"
+          style={{
+            background: 'linear-gradient(90deg, transparent 0%, rgba(255,251,245,0.08) 50%, transparent 100%)',
+          }}
           animate={{ x: ['-100%', '200%'] }}
-          transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
+          transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
         />
       )}
 
-      {/* City image */}
+      {/* City image with Ken Burns effect */}
       {(cityImage || city.imageUrl) && (
-        <motion.img
-          initial={{ opacity: 0, scale: 1.1 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5 }}
-          src={cityImage || city.imageUrl}
-          alt={city.name}
-          className="absolute inset-0 w-full h-full object-cover"
-        />
+        <motion.div
+          className="absolute inset-0"
+          initial={{ scale: 1.1, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 0.8, ease: 'easeOut' }}
+        >
+          <img
+            src={cityImage || city.imageUrl}
+            alt={city.name}
+            className="w-full h-full object-cover"
+          />
+        </motion.div>
       )}
 
-      {/* Overlay gradient */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+      {/* Gradient overlays for depth */}
+      <div className="absolute inset-0 bg-gradient-to-t from-[#2C2417] via-[#2C2417]/30 to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-r from-[#2C2417]/40 to-transparent" />
+
+      {/* Grain texture */}
+      <div
+        className="absolute inset-0 opacity-[0.03] pointer-events-none"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
+        }}
+      />
 
       {/* Badge */}
-      <div
-        className={`
-          absolute top-4 left-4 px-3 py-1.5 rounded-full
-          text-xs font-semibold backdrop-blur-md
-          ${isFixed
-            ? 'bg-amber-500/90 text-white'
-            : 'bg-white/90 text-stone-800'
-          }
-        `}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="absolute top-4 left-4"
       >
-        {isFixed
-          ? city.id === 'origin' ? 'Starting Point' : 'Final Destination'
-          : 'Suggested Stop'}
-      </div>
+        <div
+          className="px-3.5 py-1.5 rounded-full text-xs font-medium tracking-wide backdrop-blur-md"
+          style={{
+            backgroundColor: isFixed ? 'rgba(196, 88, 48, 0.9)' : 'rgba(255, 251, 245, 0.95)',
+            color: isFixed ? '#FFFBF5' : '#2C2417',
+            fontFamily: 'Satoshi, sans-serif',
+          }}
+        >
+          {isFixed
+            ? city.id === 'origin' ? '◆ Starting Point' : '◆ Destination'
+            : '✦ Suggested Stop'}
+        </div>
+      </motion.div>
 
       {/* Close button */}
       <button
         onClick={onClose}
         className="
           absolute top-4 right-4 w-10 h-10 rounded-full
-          bg-black/30 backdrop-blur-md hover:bg-black/50
-          flex items-center justify-center text-white
-          transition-colors duration-200
+          flex items-center justify-center
+          transition-all duration-200
+          hover:scale-105 active:scale-95
         "
+        style={{
+          backgroundColor: 'rgba(44, 36, 23, 0.4)',
+          backdropFilter: 'blur(8px)',
+        }}
       >
-        <X className="w-5 h-5" />
+        <X className="w-5 h-5 text-[#FFFBF5]" />
       </button>
 
-      {/* City name */}
-      <div className="absolute bottom-0 left-0 right-0 p-5">
-        <h2
-          className="text-3xl font-bold text-white mb-1"
-          style={{ fontFamily: '"Fraunces", serif' }}
+      {/* City name - Editorial typography */}
+      <div className="absolute bottom-0 left-0 right-0 p-6">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1, duration: 0.5 }}
         >
-          {city.name}
-        </h2>
-        <p className="text-white/70 text-sm flex items-center gap-2">
-          <MapPin className="w-4 h-4" />
-          {city.country}
-          {city.nights || city.suggestedNights ? (
-            <>
-              <span className="text-white/40">·</span>
-              <Moon className="w-4 h-4" />
-              {city.nights || city.suggestedNights} {(city.nights || city.suggestedNights) === 1 ? 'night' : 'nights'}
-            </>
-          ) : null}
-        </p>
+          <h2
+            className="text-4xl md:text-5xl font-semibold text-[#FFFBF5] mb-2 tracking-tight"
+            style={{ fontFamily: 'Fraunces, serif', lineHeight: 1.1 }}
+          >
+            {city.name}
+          </h2>
+          <div className="flex items-center gap-3 text-[#FFFBF5]/80 text-sm">
+            <span className="flex items-center gap-1.5">
+              <MapPin className="w-3.5 h-3.5" />
+              {city.country}
+            </span>
+            {nights && (
+              <>
+                <span className="text-[#FFFBF5]/40">•</span>
+                <span className="flex items-center gap-1.5">
+                  <Moon className="w-3.5 h-3.5" />
+                  {nights} {nights === 1 ? 'night' : 'nights'}
+                </span>
+              </>
+            )}
+            {city.distanceFromRoute !== undefined && city.distanceFromRoute > 0 && (
+              <>
+                <span className="text-[#FFFBF5]/40">•</span>
+                <span className="flex items-center gap-1.5">
+                  <Route className="w-3.5 h-3.5" />
+                  {city.distanceFromRoute}km detour
+                </span>
+              </>
+            )}
+          </div>
+        </motion.div>
       </div>
     </div>
   );
 }
 
 // =============================================================================
-// Intelligence Status Bar
+// Intelligence Status - Elegant progress indicator
 // =============================================================================
 
-interface IntelligenceStatusBarProps {
+interface IntelligenceStatusProps {
   isProcessing: boolean;
   isComplete: boolean;
   progress: number;
@@ -467,7 +493,7 @@ interface IntelligenceStatusBarProps {
   agentStates: Record<string, any>;
 }
 
-function IntelligenceStatusBar({
+function IntelligenceStatus({
   isProcessing,
   isComplete,
   progress,
@@ -475,59 +501,94 @@ function IntelligenceStatusBar({
   completedCount,
   totalCount,
   agentStates,
-}: IntelligenceStatusBarProps) {
+}: IntelligenceStatusProps) {
   const runningAgents = Object.entries(agentStates)
     .filter(([, state]) => state.status === 'running')
     .map(([name]) => AGENT_LABELS[name as AgentName] || name);
 
   return (
-    <div className={`
-      px-5 py-3 border-b
-      ${isComplete
-        ? 'bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-100'
-        : 'bg-gradient-to-r from-amber-50 to-orange-50 border-amber-100'
-      }
-    `}>
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <Brain className={`w-4 h-4 ${isComplete ? 'text-emerald-600' : 'text-amber-600'}`} />
-          <span className={`text-sm font-medium ${isComplete ? 'text-emerald-700' : 'text-amber-700'}`}>
-            {isComplete ? 'Intelligence Ready' : 'Analyzing...'}
+    <div
+      className="px-6 py-4"
+      style={{
+        backgroundColor: isComplete ? 'rgba(74, 124, 89, 0.08)' : 'rgba(196, 88, 48, 0.06)',
+        borderBottom: `1px solid ${isComplete ? 'rgba(74, 124, 89, 0.15)' : 'rgba(196, 88, 48, 0.12)'}`,
+      }}
+    >
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2.5">
+          {isComplete ? (
+            <div className="w-6 h-6 rounded-full bg-[#4A7C59]/15 flex items-center justify-center">
+              <Sparkles className="w-3.5 h-3.5 text-[#4A7C59]" />
+            </div>
+          ) : (
+            <motion.div
+              className="w-6 h-6 rounded-full flex items-center justify-center"
+              style={{ backgroundColor: 'rgba(196, 88, 48, 0.15)' }}
+              animate={{ rotate: 360 }}
+              transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
+            >
+              <Compass className="w-3.5 h-3.5 text-[#C45830]" />
+            </motion.div>
+          )}
+          <span
+            className="text-sm font-medium"
+            style={{
+              color: isComplete ? '#4A7C59' : '#C45830',
+              fontFamily: 'Satoshi, sans-serif',
+            }}
+          >
+            {isComplete ? 'Intelligence Ready' : 'Discovering insights...'}
           </span>
         </div>
 
         {isComplete && quality > 0 && (
-          <div className="flex items-center gap-1.5 px-2 py-1 bg-emerald-100 rounded-full">
-            <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-            <span className="text-xs font-semibold text-emerald-700">{quality}% quality</span>
+          <div
+            className="px-2.5 py-1 rounded-full text-xs font-medium"
+            style={{
+              backgroundColor: 'rgba(74, 124, 89, 0.12)',
+              color: '#4A7C59',
+              fontFamily: 'Satoshi, sans-serif',
+            }}
+          >
+            {quality}% quality
           </div>
         )}
 
         {isProcessing && (
-          <span className="text-xs text-amber-600">
-            {completedCount}/{totalCount} agents
+          <span
+            className="text-xs"
+            style={{ color: '#C45830', fontFamily: 'Satoshi, sans-serif' }}
+          >
+            {completedCount}/{totalCount}
           </span>
         )}
       </div>
 
       {/* Progress bar */}
-      <div className="relative h-1.5 bg-white/60 rounded-full overflow-hidden">
+      <div
+        className="relative h-1 rounded-full overflow-hidden"
+        style={{ backgroundColor: isComplete ? 'rgba(74, 124, 89, 0.15)' : 'rgba(196, 88, 48, 0.15)' }}
+      >
         <motion.div
-          className={`absolute inset-y-0 left-0 rounded-full ${
-            isComplete
-              ? 'bg-gradient-to-r from-emerald-500 to-teal-500'
-              : 'bg-gradient-to-r from-amber-500 to-orange-500'
-          }`}
+          className="absolute inset-y-0 left-0 rounded-full"
+          style={{
+            background: isComplete
+              ? 'linear-gradient(90deg, #4A7C59, #5A9A6A)'
+              : 'linear-gradient(90deg, #C45830, #D4A853)',
+          }}
           initial={{ width: 0 }}
           animate={{ width: `${progress}%` }}
-          transition={{ duration: 0.3 }}
+          transition={{ duration: 0.4, ease: 'easeOut' }}
         />
       </div>
 
       {/* Running agents */}
       {isProcessing && runningAgents.length > 0 && (
-        <p className="text-xs text-amber-600 mt-1.5 flex items-center gap-1">
-          <Loader2 className="w-3 h-3 animate-spin" />
+        <p
+          className="text-xs mt-2 flex items-center gap-1.5"
+          style={{ color: '#C45830', fontFamily: 'Satoshi, sans-serif' }}
+        >
+          <span className="opacity-60">Analyzing:</span>
           {runningAgents.join(', ')}
         </p>
       )}
@@ -536,40 +597,60 @@ function IntelligenceStatusBar({
 }
 
 // =============================================================================
-// Story Section
+// Story Section - Editorial quote style
 // =============================================================================
 
 function StorySection({ story }: { story: any }) {
-  if (!story || !story.hook) return null;
+  if (!story?.hook) return null;
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
-      className="space-y-3"
+      className="space-y-4"
     >
-      {/* Hook */}
-      <p
-        className="text-xl font-medium text-stone-900 leading-relaxed"
-        style={{ fontFamily: '"Fraunces", serif' }}
-      >
-        "{story.hook}"
-      </p>
+      {/* Large quote */}
+      <div className="relative">
+        <div
+          className="absolute -left-2 -top-2 text-6xl leading-none opacity-10"
+          style={{ color: '#C45830', fontFamily: 'Fraunces, serif' }}
+        >
+          "
+        </div>
+        <p
+          className="text-xl leading-relaxed pl-4"
+          style={{
+            color: '#2C2417',
+            fontFamily: 'Fraunces, serif',
+            fontWeight: 500,
+          }}
+        >
+          {story.hook}
+        </p>
+      </div>
 
       {/* Narrative */}
-      {story?.narrative && (
-        <p className="text-stone-600 leading-relaxed">
+      {story.narrative && (
+        <p
+          className="text-sm leading-relaxed"
+          style={{ color: '#8B7355', fontFamily: 'Satoshi, sans-serif' }}
+        >
           {story.narrative}
         </p>
       )}
 
       {/* Differentiators */}
-      {story?.differentiators && story.differentiators.length > 0 && (
-        <div className="flex flex-wrap gap-2 pt-2">
+      {story.differentiators?.length > 0 && (
+        <div className="flex flex-wrap gap-2 pt-1">
           {story.differentiators.map((diff: string, idx: number) => (
             <span
               key={idx}
-              className="px-3 py-1 bg-stone-100 text-stone-700 text-sm rounded-full"
+              className="px-3 py-1.5 text-xs font-medium rounded-full"
+              style={{
+                backgroundColor: '#F5F0E8',
+                color: '#8B7355',
+                fontFamily: 'Satoshi, sans-serif',
+              }}
             >
               {diff}
             </span>
@@ -587,51 +668,40 @@ function StorySection({ story }: { story: any }) {
 function MatchScoreSection({ matchScore }: { matchScore: any }) {
   const score = matchScore?.score || 0;
 
-  // Use explicit class mappings instead of dynamic Tailwind classes
-  const colorClasses = score >= 80
-    ? {
-        container: 'bg-gradient-to-br from-emerald-50 to-emerald-100/50 border-emerald-200',
-        icon: 'text-emerald-600',
-        score: 'text-emerald-600',
-        check: 'text-emerald-500',
-      }
+  const colors = score >= 80
+    ? { bg: 'rgba(74, 124, 89, 0.08)', border: 'rgba(74, 124, 89, 0.2)', text: '#4A7C59' }
     : score >= 60
-    ? {
-        container: 'bg-gradient-to-br from-amber-50 to-amber-100/50 border-amber-200',
-        icon: 'text-amber-600',
-        score: 'text-amber-600',
-        check: 'text-amber-500',
-      }
-    : {
-        container: 'bg-gradient-to-br from-rose-50 to-rose-100/50 border-rose-200',
-        icon: 'text-rose-600',
-        score: 'text-rose-600',
-        check: 'text-rose-500',
-      };
+    ? { bg: 'rgba(212, 168, 83, 0.1)', border: 'rgba(212, 168, 83, 0.2)', text: '#B8943D' }
+    : { bg: 'rgba(181, 74, 74, 0.08)', border: 'rgba(181, 74, 74, 0.2)', text: '#B54A4A' };
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`p-4 rounded-2xl border ${colorClasses.container}`}
+      className="p-5 rounded-2xl"
+      style={{ backgroundColor: colors.bg, border: `1px solid ${colors.border}` }}
     >
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <Zap className={`w-5 h-5 ${colorClasses.icon}`} />
-          <span className="font-semibold text-stone-900">Match Score</span>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2.5">
+          <Zap className="w-5 h-5" style={{ color: colors.text }} />
+          <span className="font-semibold" style={{ color: '#2C2417', fontFamily: 'Satoshi, sans-serif' }}>
+            Match Score
+          </span>
         </div>
-        <span className={`text-2xl font-bold ${colorClasses.score}`}>
+        <span
+          className="text-3xl font-bold"
+          style={{ color: colors.text, fontFamily: 'Fraunces, serif' }}
+        >
           {score}%
         </span>
       </div>
 
-      {/* Reasons */}
-      {matchScore?.reasons && matchScore.reasons.length > 0 && (
-        <div className="space-y-2">
+      {matchScore?.reasons?.length > 0 && (
+        <div className="space-y-2.5">
           {matchScore.reasons.slice(0, 3).map((reason: any, idx: number) => (
-            <div key={idx} className="flex items-start gap-2 text-sm">
-              <Check className={`w-4 h-4 ${colorClasses.check} flex-shrink-0 mt-0.5`} />
-              <span className="text-stone-700">
+            <div key={idx} className="flex items-start gap-2.5 text-sm">
+              <Check className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: colors.text }} />
+              <span style={{ color: '#2C2417', fontFamily: 'Satoshi, sans-serif' }}>
                 <strong>{reason.preference}</strong>: {reason.match}
               </span>
             </div>
@@ -639,13 +709,12 @@ function MatchScoreSection({ matchScore }: { matchScore: any }) {
         </div>
       )}
 
-      {/* Warnings */}
-      {matchScore?.warnings && matchScore.warnings.length > 0 && (
-        <div className="mt-3 pt-3 border-t border-amber-200 space-y-2">
+      {matchScore?.warnings?.length > 0 && (
+        <div className="mt-4 pt-4 space-y-2" style={{ borderTop: '1px solid rgba(212, 168, 83, 0.2)' }}>
           {matchScore.warnings.map((warning: any, idx: number) => (
-            <div key={idx} className="flex items-start gap-2 text-sm">
-              <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
-              <span className="text-amber-700">
+            <div key={idx} className="flex items-start gap-2.5 text-sm">
+              <AlertTriangle className="w-4 h-4 text-[#D4A853] flex-shrink-0 mt-0.5" />
+              <span style={{ color: '#B8943D', fontFamily: 'Satoshi, sans-serif' }}>
                 {warning?.preference}: {warning?.gap}
               </span>
             </div>
@@ -671,22 +740,22 @@ function TimeBlocksSection({ timeBlocks, totalHours }: { timeBlocks: any[]; tota
     relax: Sun,
   };
 
-  if (!timeBlocks || !Array.isArray(timeBlocks) || timeBlocks.length === 0) {
-    return null;
-  }
+  if (!timeBlocks?.length) return null;
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
     >
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="font-semibold text-stone-900 flex items-center gap-2">
-          <Clock className="w-5 h-5 text-indigo-500" />
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="flex items-center gap-2.5 font-semibold" style={{ color: '#2C2417', fontFamily: 'Satoshi, sans-serif' }}>
+          <Clock className="w-5 h-5 text-[#4A90A4]" />
           Your Time
         </h3>
         {totalHours && (
-          <span className="text-sm text-stone-500">{totalHours}h total</span>
+          <span className="text-sm" style={{ color: '#8B7355', fontFamily: 'Satoshi, sans-serif' }}>
+            {totalHours}h available
+          </span>
         )}
       </div>
 
@@ -697,14 +766,15 @@ function TimeBlocksSection({ timeBlocks, totalHours }: { timeBlocks: any[]; tota
           return (
             <div
               key={block.id || idx}
-              className="flex items-center gap-3 p-3 bg-indigo-50/50 rounded-xl border border-indigo-100"
+              className="flex items-center gap-3 p-3 rounded-xl"
+              style={{ backgroundColor: 'rgba(74, 144, 164, 0.08)', border: '1px solid rgba(74, 144, 164, 0.12)' }}
             >
-              <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center">
-                <Icon className="w-5 h-5 text-indigo-600" />
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(74, 144, 164, 0.15)' }}>
+                <Icon className="w-5 h-5 text-[#4A90A4]" />
               </div>
               <div className="flex-1">
-                <p className="font-medium text-stone-900">{block.name || 'Activity'}</p>
-                <p className="text-sm text-stone-500">
+                <p className="font-medium" style={{ color: '#2C2417', fontFamily: 'Satoshi, sans-serif' }}>{block.name || 'Activity'}</p>
+                <p className="text-sm" style={{ color: '#8B7355', fontFamily: 'Satoshi, sans-serif' }}>
                   {block.hours || 0}h · {block.suggested || block.mood || 'explore'}
                 </p>
               </div>
@@ -721,19 +791,14 @@ function TimeBlocksSection({ timeBlocks, totalHours }: { timeBlocks: any[]; tota
 // =============================================================================
 
 function ClustersSection({ clusters }: { clusters: Cluster[] }) {
-  const [expandedCluster, setExpandedCluster] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<string | null>(null);
 
-  if (!clusters || !Array.isArray(clusters) || clusters.length === 0) {
-    return null;
-  }
+  if (!clusters?.length) return null;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-    >
-      <h3 className="font-semibold text-stone-900 flex items-center gap-2 mb-3">
-        <MapPin className="w-5 h-5 text-emerald-500" />
+    <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }}>
+      <h3 className="flex items-center gap-2.5 font-semibold mb-4" style={{ color: '#2C2417', fontFamily: 'Satoshi, sans-serif' }}>
+        <MapPin className="w-5 h-5 text-[#4A7C59]" />
         Walkable Areas
       </h3>
 
@@ -741,28 +806,29 @@ function ClustersSection({ clusters }: { clusters: Cluster[] }) {
         {clusters.map((cluster) => {
           if (!cluster) return null;
           const Icon = CLUSTER_ICONS[cluster.theme || 'default'] || MapPin;
-          const isExpanded = expandedCluster === cluster.id;
+          const isExpanded = expanded === cluster.id;
 
           return (
             <div
               key={cluster.id}
-              className="border border-stone-200 rounded-xl overflow-hidden"
+              className="rounded-xl overflow-hidden"
+              style={{ border: '1px solid #E5DDD0' }}
             >
               <button
-                onClick={() => setExpandedCluster(isExpanded ? null : cluster.id)}
-                className="w-full flex items-center gap-3 p-3 hover:bg-stone-50 transition-colors"
+                onClick={() => setExpanded(isExpanded ? null : cluster.id)}
+                className="w-full flex items-center gap-3 p-3 transition-colors hover:bg-[#FAF7F2]"
               >
-                <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center">
-                  <Icon className="w-5 h-5 text-emerald-600" />
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(74, 124, 89, 0.1)' }}>
+                  <Icon className="w-5 h-5 text-[#4A7C59]" />
                 </div>
                 <div className="flex-1 text-left">
-                  <p className="font-medium text-stone-900">{cluster.name}</p>
-                  <p className="text-sm text-stone-500">
+                  <p className="font-medium" style={{ color: '#2C2417', fontFamily: 'Satoshi, sans-serif' }}>{cluster.name}</p>
+                  <p className="text-sm" style={{ color: '#8B7355', fontFamily: 'Satoshi, sans-serif' }}>
                     {cluster.walkingMinutes}min walk · {cluster.places?.length || 0} spots
                   </p>
                 </div>
                 <ChevronDown
-                  className={`w-5 h-5 text-stone-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                  className={`w-5 h-5 text-[#C4B8A5] transition-transform ${isExpanded ? 'rotate-180' : ''}`}
                 />
               </button>
 
@@ -772,15 +838,15 @@ function ClustersSection({ clusters }: { clusters: Cluster[] }) {
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
-                    className="border-t border-stone-100"
+                    style={{ borderTop: '1px solid #E5DDD0' }}
                   >
                     <div className="p-3 space-y-2">
                       {cluster.places.slice(0, 5).map((place, idx) => (
                         <div key={idx} className="flex items-center gap-2 text-sm">
-                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                          <span className="text-stone-700">{place.name}</span>
+                          <div className="w-1.5 h-1.5 rounded-full bg-[#4A7C59]" />
+                          <span style={{ color: '#2C2417', fontFamily: 'Satoshi, sans-serif' }}>{place.name}</span>
                           {place.rating && (
-                            <span className="text-stone-400">★ {place.rating}</span>
+                            <span style={{ color: '#C4B8A5', fontFamily: 'Satoshi, sans-serif' }}>★ {place.rating}</span>
                           )}
                         </div>
                       ))}
@@ -801,17 +867,12 @@ function ClustersSection({ clusters }: { clusters: Cluster[] }) {
 // =============================================================================
 
 function HiddenGemsSection({ gems }: { gems: HiddenGem[] }) {
-  if (!gems || !Array.isArray(gems) || gems.length === 0) {
-    return null;
-  }
+  if (!gems?.length) return null;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-    >
-      <h3 className="font-semibold text-stone-900 flex items-center gap-2 mb-3">
-        <Gem className="w-5 h-5 text-purple-500" />
+    <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }}>
+      <h3 className="flex items-center gap-2.5 font-semibold mb-4" style={{ color: '#2C2417', fontFamily: 'Satoshi, sans-serif' }}>
+        <Gem className="w-5 h-5 text-[#C45830]" />
         Hidden Gems
       </h3>
 
@@ -821,18 +882,25 @@ function HiddenGemsSection({ gems }: { gems: HiddenGem[] }) {
           return (
             <div
               key={idx}
-              className="p-4 bg-gradient-to-br from-purple-50 to-violet-50 rounded-xl border border-purple-100"
+              className="p-4 rounded-2xl"
+              style={{
+                background: 'linear-gradient(135deg, rgba(196, 88, 48, 0.06) 0%, rgba(212, 168, 83, 0.04) 100%)',
+                border: '1px solid rgba(196, 88, 48, 0.12)',
+              }}
             >
               <div className="flex items-start justify-between mb-2">
-                <h4 className="font-medium text-stone-900">{gem.name || 'Local Gem'}</h4>
-                <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full">
+                <h4 className="font-medium" style={{ color: '#2C2417', fontFamily: 'Satoshi, sans-serif' }}>{gem.name || 'Local Gem'}</h4>
+                <span
+                  className="text-xs px-2 py-0.5 rounded-full"
+                  style={{ backgroundColor: 'rgba(196, 88, 48, 0.1)', color: '#C45830', fontFamily: 'Satoshi, sans-serif' }}
+                >
                   {gem.type || 'experience'}
                 </span>
               </div>
-              <p className="text-sm text-stone-600 mb-2">{gem.why || 'A local favorite'}</p>
+              <p className="text-sm mb-2" style={{ color: '#8B7355', fontFamily: 'Satoshi, sans-serif' }}>{gem.why || 'A local favorite'}</p>
               {gem.insiderTip && (
-                <p className="text-xs text-purple-600 italic">
-                  💡 {gem.insiderTip}
+                <p className="text-xs italic" style={{ color: '#C45830', fontFamily: 'Satoshi, sans-serif' }}>
+                  ✧ {gem.insiderTip}
                 </p>
               )}
             </div>
@@ -848,17 +916,12 @@ function HiddenGemsSection({ gems }: { gems: HiddenGem[] }) {
 // =============================================================================
 
 function PhotoSpotsSection({ spots }: { spots: PhotoSpot[] }) {
-  if (!spots || !Array.isArray(spots) || spots.length === 0) {
-    return null;
-  }
+  if (!spots?.length) return null;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-    >
-      <h3 className="font-semibold text-stone-900 flex items-center gap-2 mb-3">
-        <Camera className="w-5 h-5 text-orange-500" />
+    <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }}>
+      <h3 className="flex items-center gap-2.5 font-semibold mb-4" style={{ color: '#2C2417', fontFamily: 'Satoshi, sans-serif' }}>
+        <Camera className="w-5 h-5 text-[#D4A853]" />
         Photo Spots
       </h3>
 
@@ -868,10 +931,11 @@ function PhotoSpotsSection({ spots }: { spots: PhotoSpot[] }) {
           return (
             <div
               key={idx}
-              className="p-3 bg-orange-50 rounded-xl border border-orange-100"
+              className="p-3 rounded-xl"
+              style={{ backgroundColor: 'rgba(212, 168, 83, 0.08)', border: '1px solid rgba(212, 168, 83, 0.15)' }}
             >
-              <p className="font-medium text-stone-900 text-sm mb-1">{spot.name || 'Photo Spot'}</p>
-              <p className="text-xs text-orange-600">{spot.bestTime || 'Golden hour'}</p>
+              <p className="font-medium text-sm mb-1" style={{ color: '#2C2417', fontFamily: 'Satoshi, sans-serif' }}>{spot.name || 'Photo Spot'}</p>
+              <p className="text-xs" style={{ color: '#D4A853', fontFamily: 'Satoshi, sans-serif' }}>{spot.bestTime || 'Golden hour'}</p>
             </div>
           );
         })}
@@ -888,34 +952,29 @@ function LogisticsSection({ logistics }: { logistics: any }) {
   if (!logistics) return null;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-    >
-      <h3 className="font-semibold text-stone-900 flex items-center gap-2 mb-3">
-        <Car className="w-5 h-5 text-slate-500" />
+    <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }}>
+      <h3 className="flex items-center gap-2.5 font-semibold mb-4" style={{ color: '#2C2417', fontFamily: 'Satoshi, sans-serif' }}>
+        <Car className="w-5 h-5 text-[#8B7355]" />
         Practical Tips
       </h3>
 
-      <div className="space-y-2">
-        {logistics?.parking && (
-          <div className="flex items-start gap-2 text-sm">
-            <Car className="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" />
-            <span className="text-stone-600">{logistics.parking}</span>
+      <div className="space-y-2.5">
+        {logistics.parking && (
+          <div className="flex items-start gap-2.5 text-sm">
+            <Car className="w-4 h-4 text-[#C4B8A5] flex-shrink-0 mt-0.5" />
+            <span style={{ color: '#8B7355', fontFamily: 'Satoshi, sans-serif' }}>{logistics.parking}</span>
           </div>
         )}
-
-        {logistics?.tips?.map((tip: string, idx: number) => (
-          <div key={idx} className="flex items-start gap-2 text-sm">
-            <Check className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
-            <span className="text-stone-600">{tip}</span>
+        {logistics.tips?.map((tip: string, idx: number) => (
+          <div key={idx} className="flex items-start gap-2.5 text-sm">
+            <Check className="w-4 h-4 text-[#4A7C59] flex-shrink-0 mt-0.5" />
+            <span style={{ color: '#8B7355', fontFamily: 'Satoshi, sans-serif' }}>{tip}</span>
           </div>
         ))}
-
-        {logistics?.warnings?.map((warning: string, idx: number) => (
-          <div key={idx} className="flex items-start gap-2 text-sm">
-            <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
-            <span className="text-amber-700">{warning}</span>
+        {logistics.warnings?.map((warning: string, idx: number) => (
+          <div key={idx} className="flex items-start gap-2.5 text-sm">
+            <AlertTriangle className="w-4 h-4 text-[#D4A853] flex-shrink-0 mt-0.5" />
+            <span style={{ color: '#B8943D', fontFamily: 'Satoshi, sans-serif' }}>{warning}</span>
           </div>
         ))}
       </div>
@@ -932,27 +991,22 @@ function WeatherSection({ weather }: { weather: any }) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
-      className="p-4 bg-sky-50 rounded-xl border border-sky-100"
+      className="p-4 rounded-2xl"
+      style={{ backgroundColor: 'rgba(74, 144, 164, 0.08)', border: '1px solid rgba(74, 144, 164, 0.15)' }}
     >
       <div className="flex items-center gap-2 mb-2">
-        <Sun className="w-5 h-5 text-sky-500" />
-        <span className="font-semibold text-stone-900">Weather</span>
+        <Sun className="w-5 h-5 text-[#4A90A4]" />
+        <span className="font-semibold" style={{ color: '#2C2417', fontFamily: 'Satoshi, sans-serif' }}>Weather</span>
       </div>
-
-      {weather?.forecast && (
-        <p className="text-sm text-stone-600 mb-2">{weather.forecast}</p>
+      {weather.forecast && (
+        <p className="text-sm mb-2" style={{ color: '#8B7355', fontFamily: 'Satoshi, sans-serif' }}>{weather.forecast}</p>
       )}
-
-      {weather?.recommendations && (
-        <div className="text-xs text-sky-600 space-y-1">
-          {weather.recommendations?.goldenHour && (
-            <p>🌅 Golden hour: {weather.recommendations.goldenHour}</p>
-          )}
-          {weather.recommendations?.backup && (
-            <p>☔ Backup: {weather.recommendations.backup}</p>
-          )}
+      {weather.recommendations && (
+        <div className="text-xs space-y-1" style={{ color: '#4A90A4', fontFamily: 'Satoshi, sans-serif' }}>
+          {weather.recommendations.goldenHour && <p>☀ Golden hour: {weather.recommendations.goldenHour}</p>}
+          {weather.recommendations.backup && <p>☂ Backup: {weather.recommendations.backup}</p>}
         </div>
       )}
     </motion.div>
@@ -960,47 +1014,69 @@ function WeatherSection({ weather }: { weather: any }) {
 }
 
 // =============================================================================
-// Basic City Info (fallback when no intelligence)
+// Loading State - Beautiful waiting experience
 // =============================================================================
 
-function BasicCityInfo({ city }: { city: DiscoveryCity }) {
+function LoadingState({ city }: { city: DiscoveryCity }) {
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      {/* Description */}
       {city.description && (
-        <p className="text-stone-600 leading-relaxed">{city.description}</p>
+        <p className="text-base leading-relaxed" style={{ color: '#8B7355', fontFamily: 'Satoshi, sans-serif' }}>
+          {city.description}
+        </p>
       )}
 
-      <div className="flex items-center gap-4">
+      {/* Stats */}
+      <div className="flex items-center gap-6">
         {city.placeCount && (
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center">
-              <Gem className="w-4 h-4 text-amber-600" />
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(196, 88, 48, 0.1)' }}>
+              <Gem className="w-5 h-5 text-[#C45830]" />
             </div>
             <div>
-              <p className="font-semibold text-stone-900">{city.placeCount}</p>
-              <p className="text-xs text-stone-500">places</p>
+              <p className="font-semibold" style={{ color: '#2C2417', fontFamily: 'Fraunces, serif' }}>{city.placeCount}</p>
+              <p className="text-xs" style={{ color: '#8B7355', fontFamily: 'Satoshi, sans-serif' }}>places</p>
             </div>
           </div>
         )}
-
         {city.distanceFromRoute !== undefined && city.distanceFromRoute > 0 && (
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-teal-100 flex items-center justify-center">
-              <MapPin className="w-4 h-4 text-teal-600" />
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(74, 144, 164, 0.1)' }}>
+              <Route className="w-5 h-5 text-[#4A90A4]" />
             </div>
             <div>
-              <p className="font-semibold text-stone-900">{city.distanceFromRoute}km</p>
-              <p className="text-xs text-stone-500">detour</p>
+              <p className="font-semibold" style={{ color: '#2C2417', fontFamily: 'Fraunces, serif' }}>{city.distanceFromRoute}km</p>
+              <p className="text-xs" style={{ color: '#8B7355', fontFamily: 'Satoshi, sans-serif' }}>detour</p>
             </div>
           </div>
         )}
       </div>
 
-      {/* Intelligence loading state */}
-      <div className="p-4 bg-stone-50 rounded-xl text-center">
-        <Loader2 className="w-6 h-6 text-stone-400 mx-auto mb-2 animate-spin" />
-        <p className="text-sm text-stone-500">
-          Loading city intelligence...
+      {/* Elegant loading */}
+      <div className="py-8 text-center">
+        <motion.div
+          className="w-12 h-12 mx-auto mb-4 rounded-full flex items-center justify-center"
+          style={{ backgroundColor: 'rgba(196, 88, 48, 0.08)' }}
+        >
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+          >
+            <Compass className="w-6 h-6 text-[#C45830]" />
+          </motion.div>
+        </motion.div>
+        <p
+          className="text-sm"
+          style={{ color: '#C45830', fontFamily: 'Satoshi, sans-serif' }}
+        >
+          Discovering {city.name}...
+        </p>
+        <p
+          className="text-xs mt-1"
+          style={{ color: '#C4B8A5', fontFamily: 'Satoshi, sans-serif' }}
+        >
+          Finding hidden gems and local insights
         </p>
       </div>
     </div>
@@ -1008,10 +1084,10 @@ function BasicCityInfo({ city }: { city: DiscoveryCity }) {
 }
 
 // =============================================================================
-// Action Buttons
+// Action Footer - Warm, inviting CTAs
 // =============================================================================
 
-interface ActionButtonsProps {
+interface ActionFooterProps {
   city: DiscoveryCity;
   isInTrip: boolean;
   isFixed: boolean;
@@ -1019,36 +1095,41 @@ interface ActionButtonsProps {
   hasIntelligence: boolean;
 }
 
-function ActionButtons({
-  city: _city,
-  isInTrip,
-  isFixed,
-  onToggleSelection,
-  hasIntelligence,
-}: ActionButtonsProps) {
-  void _city; // Available for city-specific actions
+function ActionFooter({ isInTrip, isFixed, onToggleSelection, hasIntelligence }: ActionFooterProps) {
   return (
-    <div className="flex-shrink-0 p-5 pt-3 border-t border-stone-100 bg-stone-50">
+    <div
+      className="flex-shrink-0 px-6 py-5"
+      style={{
+        backgroundColor: '#FAF7F2',
+        borderTop: '1px solid #E5DDD0',
+      }}
+    >
       <div className="flex gap-3">
         {!isFixed && (
           <motion.button
             onClick={onToggleSelection}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            className={`
-              flex-1 flex items-center justify-center gap-2
-              py-4 rounded-2xl font-semibold
-              transition-all duration-200
-              ${isInTrip
-                ? 'bg-stone-200 text-stone-700 hover:bg-rose-100 hover:text-rose-600'
-                : 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/25'
-              }
-            `}
+            className="flex-1 flex items-center justify-center gap-2.5 py-4 rounded-2xl font-semibold transition-all duration-200"
+            style={{
+              fontFamily: 'Satoshi, sans-serif',
+              ...(isInTrip
+                ? {
+                    backgroundColor: '#F5F0E8',
+                    color: '#8B7355',
+                    border: '1px solid #E5DDD0',
+                  }
+                : {
+                    background: 'linear-gradient(135deg, #C45830 0%, #D4A853 100%)',
+                    color: '#FFFBF5',
+                    boxShadow: '0 8px 24px rgba(196, 88, 48, 0.3)',
+                  }),
+            }}
           >
             {isInTrip ? (
               <>
                 <X className="w-5 h-5" />
-                <span>Remove</span>
+                <span>Remove from Trip</span>
               </>
             ) : (
               <>
@@ -1066,11 +1147,15 @@ function ActionButtons({
             className={`
               ${isFixed ? 'flex-1' : 'w-14'}
               flex items-center justify-center gap-2
-              py-4 rounded-2xl
-              bg-stone-200 text-stone-700
-              font-semibold hover:bg-stone-300
-              transition-colors duration-200
+              py-4 rounded-2xl font-semibold
+              transition-all duration-200
             `}
+            style={{
+              backgroundColor: '#F5F0E8',
+              color: '#2C2417',
+              border: '1px solid #E5DDD0',
+              fontFamily: 'Satoshi, sans-serif',
+            }}
           >
             {isFixed ? (
               <>
@@ -1088,7 +1173,7 @@ function ActionButtons({
 }
 
 // =============================================================================
-// Exported Wrapper with Error Boundary
+// Exported Component with Error Boundary
 // =============================================================================
 
 export function IntelligenceCityPreview(props: IntelligenceCityPreviewProps) {
