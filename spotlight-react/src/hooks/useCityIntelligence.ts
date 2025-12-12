@@ -30,21 +30,21 @@ import type {
 // =============================================================================
 
 export function useCityIntelligence() {
-  // Store state
-  const isProcessing = useCityIntelligenceStore(selectIsProcessing);
-  const overallProgress = useCityIntelligenceStore(selectOverallProgress);
-  const currentPhase = useCityIntelligenceStore(selectCurrentPhase);
-  const goal = useCityIntelligenceStore(selectGoal);
-  const errors = useCityIntelligenceStore(selectErrors);
-  const allCityIntelligence = useCityIntelligenceStore(selectAllCityIntelligence);
-  const completedCities = useCityIntelligenceStore(selectCompletedCities);
+  // Store state - with defensive fallbacks
+  const isProcessing = useCityIntelligenceStore(selectIsProcessing) ?? false;
+  const overallProgress = useCityIntelligenceStore(selectOverallProgress) ?? 0;
+  const currentPhase = useCityIntelligenceStore(selectCurrentPhase) ?? 'planning';
+  const goal = useCityIntelligenceStore(selectGoal) ?? '';
+  const errors = useCityIntelligenceStore(selectErrors) ?? [];
+  const allCityIntelligence = useCityIntelligenceStore(selectAllCityIntelligence) ?? [];
+  const completedCities = useCityIntelligenceStore(selectCompletedCities) ?? [];
 
   // Store actions
   const startIntelligence = useCityIntelligenceStore((s) => s.startIntelligence);
   const cancelIntelligence = useCityIntelligenceStore((s) => s.cancelIntelligence);
-  const reset = useCityIntelligenceStore((s) => s.reset);
+  const resetStore = useCityIntelligenceStore((s) => s.reset);
 
-  // Memoized start function with typed parameters
+  // Memoized start function with typed parameters and error handling
   const start = useCallback(
     async (params: {
       cities: CityData[];
@@ -61,16 +61,22 @@ export function useCityIntelligence() {
       };
       sessionId?: string;
     }) => {
-      return startIntelligence(params);
+      try {
+        return await startIntelligence(params);
+      } catch (error) {
+        console.error('[useCityIntelligence] Error starting intelligence:', error);
+        // Don't throw - let the component continue working
+        return undefined;
+      }
     },
     [startIntelligence]
   );
 
-  // Computed values
+  // Computed values with defensive checks
   const isComplete = currentPhase === 'complete';
-  const hasErrors = errors.length > 0;
-  const citiesCount = allCityIntelligence.length;
-  const completedCount = completedCities.length;
+  const hasErrors = Array.isArray(errors) && errors.length > 0;
+  const citiesCount = Array.isArray(allCityIntelligence) ? allCityIntelligence.length : 0;
+  const completedCount = Array.isArray(completedCities) ? completedCities.length : 0;
 
   return {
     // State
@@ -91,7 +97,7 @@ export function useCityIntelligence() {
     // Actions
     start,
     cancel: cancelIntelligence,
-    reset,
+    reset: resetStore,
   };
 }
 
@@ -101,51 +107,72 @@ export function useCityIntelligence() {
 
 /**
  * Hook for accessing intelligence for a specific city
+ * Made defensive against corrupted/missing data
  */
 export function useCityIntelligenceForCity(cityId: string) {
-  const intelligence = useCityIntelligenceStore(selectCityIntelligence(cityId));
-  const agentStates = useCityIntelligenceStore(selectAgentStates(cityId));
-  const isProcessing = useCityIntelligenceStore(selectIsProcessing);
+  // Defensive: handle empty/invalid cityId
+  const safeId = cityId || '';
 
-  // Calculate city-specific progress
+  const intelligence = useCityIntelligenceStore(selectCityIntelligence(safeId));
+  const agentStates = useCityIntelligenceStore(selectAgentStates(safeId)) ?? {};
+  const isProcessing = useCityIntelligenceStore(selectIsProcessing) ?? false;
+
+  // Calculate city-specific progress with defensive checks
   const progress = useMemo(() => {
-    if (!agentStates || Object.keys(agentStates).length === 0) return 0;
+    if (!agentStates || typeof agentStates !== 'object') return 0;
+    const keys = Object.keys(agentStates);
+    if (keys.length === 0) return 0;
 
-    const states = Object.values(agentStates);
-    const totalProgress = states.reduce((sum, state) => {
-      if (state.status === 'completed') return sum + 100;
-      if (state.status === 'running') return sum + (state.progress || 0);
-      return sum;
-    }, 0);
+    try {
+      const states = Object.values(agentStates);
+      const totalProgress = states.reduce((sum, state) => {
+        if (!state || typeof state !== 'object') return sum;
+        if (state.status === 'completed') return sum + 100;
+        if (state.status === 'running') return sum + (state.progress || 0);
+        return sum;
+      }, 0);
 
-    return Math.round(totalProgress / states.length);
+      return Math.round(totalProgress / states.length);
+    } catch {
+      return 0;
+    }
   }, [agentStates]);
 
   // Check if any agents are running
   const hasRunningAgents = useMemo(() => {
-    if (!agentStates) return false;
-    return Object.values(agentStates).some((s) => s.status === 'running');
+    if (!agentStates || typeof agentStates !== 'object') return false;
+    try {
+      return Object.values(agentStates).some((s) => s?.status === 'running');
+    } catch {
+      return false;
+    }
   }, [agentStates]);
 
   // Get completed agent count
   const completedAgentsCount = useMemo(() => {
-    if (!agentStates) return 0;
-    return Object.values(agentStates).filter((s) => s.status === 'completed').length;
+    if (!agentStates || typeof agentStates !== 'object') return 0;
+    try {
+      return Object.values(agentStates).filter((s) => s?.status === 'completed').length;
+    } catch {
+      return 0;
+    }
   }, [agentStates]);
 
   // Get total agents count
-  const totalAgentsCount = Object.keys(agentStates || {}).length;
+  const totalAgentsCount = agentStates && typeof agentStates === 'object'
+    ? Object.keys(agentStates).length
+    : 0;
 
   return {
     intelligence,
     agentStates,
     progress,
-    isProcessing: isProcessing && (intelligence?.status === 'processing' || hasRunningAgents),
+    isProcessing: Boolean(isProcessing && (intelligence?.status === 'processing' || hasRunningAgents)),
     isComplete: intelligence?.status === 'complete',
     hasRunningAgents,
     completedAgentsCount,
     totalAgentsCount,
-    quality: intelligence?.quality || 0,
+    quality: intelligence?.quality ?? 0,
   };
 }
 

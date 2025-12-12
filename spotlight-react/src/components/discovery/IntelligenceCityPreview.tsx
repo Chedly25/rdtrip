@@ -9,7 +9,7 @@
  * progressive reveal animations as intelligence data arrives.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Component, type ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
@@ -34,12 +34,55 @@ import {
   ShoppingBag,
   TreePine,
   AlertTriangle,
+  AlertCircle,
 } from 'lucide-react';
 import type { DiscoveryCity } from '../../stores/discoveryStore';
 import { useDiscoveryStore } from '../../stores/discoveryStore';
 import { useCityIntelligenceForCity } from '../../hooks/useCityIntelligence';
 import { fetchCityImage } from '../../services/cityImages';
 import type { AgentName, Cluster, HiddenGem, PhotoSpot } from '../../types/cityIntelligence';
+
+// =============================================================================
+// Error Boundary for Intelligence Preview
+// =============================================================================
+
+interface ErrorBoundaryProps {
+  children: ReactNode;
+  fallback: ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+class IntelligencePreviewErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
+    console.error('[IntelligenceCityPreview] Render error:', error, errorInfo);
+    // Try to clear potentially corrupted localStorage
+    try {
+      localStorage.removeItem('waycraft-city-intelligence');
+    } catch {
+      // Ignore
+    }
+  }
+
+  render(): ReactNode {
+    if (this.state.hasError) {
+      return this.props.fallback;
+    }
+    return this.props.children;
+  }
+}
 
 // =============================================================================
 // Types
@@ -78,10 +121,64 @@ const CLUSTER_ICONS: Record<string, typeof MapPin> = {
 };
 
 // =============================================================================
-// Main Component
+// Fallback Component (shown when Intelligence errors)
 // =============================================================================
 
-export function IntelligenceCityPreview({
+function IntelligencePreviewFallback({
+  city,
+  onClose,
+}: {
+  city: DiscoveryCity | null;
+  onClose: () => void;
+}) {
+  if (!city) return null;
+
+  return (
+    <>
+      {/* Backdrop */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
+        onClick={onClose}
+      />
+
+      {/* Modal */}
+      <motion.div
+        initial={{ opacity: 0, y: 100 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 100 }}
+        className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-3xl shadow-2xl max-h-[70vh] overflow-hidden flex flex-col"
+      >
+        <div className="p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-stone-900">{city.name}</h2>
+            <button
+              onClick={onClose}
+              className="p-2 rounded-full hover:bg-stone-100"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2 text-amber-600 mb-4">
+            <AlertCircle className="w-5 h-5" />
+            <span className="text-sm">Intelligence temporarily unavailable</span>
+          </div>
+
+          <p className="text-stone-600">{city.description || `Explore ${city.name}, ${city.country}`}</p>
+        </div>
+      </motion.div>
+    </>
+  );
+}
+
+// =============================================================================
+// Main Component (Internal)
+// =============================================================================
+
+function IntelligenceCityPreviewContent({
   city,
   onClose,
   onToggleSelection,
@@ -987,6 +1084,20 @@ function ActionButtons({
         )}
       </div>
     </div>
+  );
+}
+
+// =============================================================================
+// Exported Wrapper with Error Boundary
+// =============================================================================
+
+export function IntelligenceCityPreview(props: IntelligenceCityPreviewProps) {
+  return (
+    <IntelligencePreviewErrorBoundary
+      fallback={<IntelligencePreviewFallback city={props.city} onClose={props.onClose} />}
+    >
+      <IntelligenceCityPreviewContent {...props} />
+    </IntelligencePreviewErrorBoundary>
   );
 }
 

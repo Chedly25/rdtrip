@@ -645,6 +645,7 @@ export const useCityIntelligenceStore = create<CityIntelligenceState>()(
     }),
     {
       name: 'waycraft-city-intelligence',
+      version: 2, // Increment this to clear old/corrupted localStorage data
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         // Only persist completed intelligence, not processing state
@@ -654,13 +655,35 @@ export const useCityIntelligenceStore = create<CityIntelligenceState>()(
           )
         ),
       }),
-      // Handle Date deserialization
-      onRehydrateStorage: () => (state) => {
+      // Handle migration from old versions
+      migrate: (persistedState, version) => {
+        console.log('[CityIntelligenceStore] Migrating from version', version, 'to version 2');
+        // If version is old or data is corrupted, reset to initial state
+        if (version < 2) {
+          console.log('[CityIntelligenceStore] Clearing old data');
+          return { ...initialState };
+        }
+        return persistedState as CityIntelligenceState;
+      },
+      // Handle Date deserialization and errors
+      onRehydrateStorage: () => (state, error) => {
+        if (error) {
+          console.error('[CityIntelligenceStore] Rehydration error:', error);
+          // Clear corrupted localStorage
+          try {
+            localStorage.removeItem('waycraft-city-intelligence');
+          } catch (e) {
+            console.error('[CityIntelligenceStore] Failed to clear localStorage:', e);
+          }
+          return;
+        }
         if (state) {
           // Reset processing state on rehydration
           state.isProcessing = false;
           state.isConnected = false;
           state.overallProgress = 0;
+          state.currentPhase = 'planning';
+          state.errors = [];
         }
       },
     }

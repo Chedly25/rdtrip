@@ -3,15 +3,17 @@ import { useNavigate } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { useDiscoveryStore } from '../../stores/discoveryStore';
 import { useSpotlightStoreV2 } from '../../stores/spotlightStoreV2';
+import { useCityIntelligence } from '../../hooks/useCityIntelligence';
 import { DiscoveryHeader } from './DiscoveryHeader';
 import { DiscoveryMap } from './DiscoveryMap';
 import { DiscoveryCompanionPanel } from './DiscoveryCompanionPanel';
-import { DiscoveryCityPreview } from './DiscoveryCityPreview';
+import { IntelligenceCityPreview } from './IntelligenceCityPreview';
 import { DiscoveryLoadingState } from './DiscoveryLoadingState';
 import { AddCityModal } from './AddCityModal';
 import { ProceedConfirmationModal } from './ProceedConfirmationModal';
 import { searchHiddenGemsInCity } from '../../services/hiddenGems';
 import type { DiscoveryRoute, DiscoveryCity, DiscoveryPlace, PlaceType } from '../../stores/discoveryStore';
+import type { CityData } from '../../types/cityIntelligence';
 
 // API base URL
 const API_BASE_URL = import.meta.env.VITE_API_URL || (
@@ -57,9 +59,16 @@ export function DiscoveryPhaseContainer() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationError, setGenerationError] = useState<string | null>(null);
 
-  // City Intelligence - TEMPORARILY DISABLED for debugging
+  // City Intelligence - track if we've started gathering
   const intelligenceStarted = useRef(false);
-  void intelligenceStarted; // Silence unused warning
+  const {
+    isProcessing: _isIntelligenceProcessing,
+    isComplete: _isIntelligenceComplete,
+    start: startIntelligence,
+    reset: _resetIntelligence,
+  } = useCityIntelligence();
+  // Available for showing intelligence status in UI
+  void _isIntelligenceProcessing; void _isIntelligenceComplete; void _resetIntelligence;
 
   // Check viewport size
   useEffect(() => {
@@ -253,8 +262,64 @@ export function DiscoveryPhaseContainer() {
     };
   }, [navigate, setTripSummary]);
 
-  // City Intelligence gathering - TEMPORARILY DISABLED for debugging
-  // Will be re-enabled once we identify the render error
+  // Start City Intelligence gathering when route and cities are ready
+  useEffect(() => {
+    if (!route || !tripSummary || intelligenceStarted.current || phase !== 'exploring') {
+      return;
+    }
+
+    // Get all selected cities
+    const selectedCities = useDiscoveryStore.getState().getSelectedCities();
+    if (selectedCities.length < 2) {
+      return;
+    }
+
+    // Convert to CityData format for intelligence system
+    const cities: CityData[] = selectedCities.map(city => ({
+      id: city.id,
+      name: city.name,
+      country: city.country,
+      coordinates: city.coordinates,
+    }));
+
+    // Build nights map
+    const nights: Record<string, number> = {};
+    selectedCities.forEach(city => {
+      nights[city.id] = city.nights || city.suggestedNights || 1;
+    });
+
+    // Start intelligence gathering (wrapped in try-catch for safety)
+    console.log('🧠 Starting City Intelligence for', cities.length, 'cities...');
+    intelligenceStarted.current = true;
+
+    try {
+      startIntelligence({
+        cities,
+        nights,
+        preferences: {
+          travellerType: tripSummary.travellerType,
+        },
+        trip: {
+          origin: cities[0],
+          destination: cities[cities.length - 1],
+          totalNights: tripSummary.totalNights,
+          travellerType: tripSummary.travellerType,
+          transportMode: 'car',
+          startDate: tripSummary.startDate?.toISOString(),
+          endDate: tripSummary.endDate?.toISOString(),
+        },
+      });
+
+      // Add companion message about intelligence
+      addCompanionMessage({
+        type: 'assistant',
+        content: `🧠 I'm now analyzing each city to find the perfect experiences for you. You'll see rich insights appear as I work through time planning, local stories, hidden gems, and more...`,
+      });
+    } catch (error) {
+      console.error('[Discovery] Error starting intelligence:', error);
+      // Don't fail the whole page - just log the error
+    }
+  }, [route, tripSummary, phase, startIntelligence, addCompanionMessage]);
 
   // Fetch suggested cities from API
   const fetchSuggestedCities = async (data: any) => {
@@ -718,10 +783,10 @@ export function DiscoveryPhaseContainer() {
       />
 
       {/* City Preview Modal - Shows when a city is selected */}
-      {/* TEMPORARILY using DiscoveryCityPreview for debugging */}
+      {/* Uses IntelligenceCityPreview for rich AI insights (with error boundary) */}
       <AnimatePresence>
         {showCityPreview && selectedCityId && route && (
-          <DiscoveryCityPreview
+          <IntelligenceCityPreview
             city={findCityById(route, selectedCityId)}
             onClose={() => {
               setShowCityPreview(false);

@@ -259,12 +259,16 @@ export function IntelligenceSidebar({
                     <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
                       Current Goal
                     </p>
-                    <p className="text-sm text-gray-700">{goal.description}</p>
-                    <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
-                      <span>{goal.cities.length} cities</span>
-                      <span>•</span>
-                      <span>Quality: {goal.qualityThreshold}%</span>
-                    </div>
+                    <p className="text-sm text-gray-700">
+                      {typeof goal === 'string' ? goal : goal.description}
+                    </p>
+                    {typeof goal !== 'string' && (
+                      <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
+                        <span>{goal.cities?.length || 0} cities</span>
+                        <span>•</span>
+                        <span>Quality: {goal.qualityThreshold || 0}%</span>
+                      </div>
+                    )}
                   </div>
                 )}
 
