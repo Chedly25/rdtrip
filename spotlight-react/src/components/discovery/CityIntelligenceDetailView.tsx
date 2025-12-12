@@ -24,13 +24,10 @@ import {
   CloudSun,
   Camera,
   ChevronDown,
-  Layers,
   Sparkles,
   BookOpen,
-  Navigation,
   Star,
   ArrowRight,
-  ExternalLink,
 } from 'lucide-react';
 
 // Import all Phase 2 & 3 components
@@ -44,7 +41,7 @@ import { PhotoSpotsDisplay } from './PhotoSpotsDisplay';
 import { AgentStatusGroup } from './AgentStatusIndicator';
 
 import { useCityIntelligenceForCity } from '../../hooks/useCityIntelligence';
-import type { CityIntelligence, Cluster } from '../../types/cityIntelligence';
+import type { Cluster } from '../../types/cityIntelligence';
 
 // =============================================================================
 // Types
@@ -104,15 +101,15 @@ export function CityIntelligenceDetailView({
   const heroScale = useTransform(scrollYProgress, [0, 0.3], [1, 0.95]);
 
   // Determine available sections
-  const sections: Section[] = [
-    { id: 'overview', label: 'Overview', icon: BookOpen, available: true },
-    { id: 'time', label: 'Your Time', icon: Clock, available: !!intelligence?.timeBlocks?.blocks?.length },
-    { id: 'clusters', label: 'Explore', icon: MapPin, available: !!intelligence?.clusters?.clusters?.length },
-    { id: 'gems', label: 'Hidden Gems', icon: Gem, available: !!intelligence?.hiddenGems?.hiddenGems?.length },
-    { id: 'logistics', label: 'Know Before', icon: Car, available: !!intelligence?.logistics },
-    { id: 'weather', label: 'Weather', icon: CloudSun, available: !!intelligence?.weather },
-    { id: 'photos', label: 'Photo Spots', icon: Camera, available: !!intelligence?.photoSpots?.spots?.length },
-  ].filter(s => s.available);
+  const sections: Section[] = ([
+    { id: 'overview' as SectionId, label: 'Overview', icon: BookOpen, available: true },
+    { id: 'time' as SectionId, label: 'Your Time', icon: Clock, available: !!intelligence?.timeBlocks?.blocks?.length },
+    { id: 'clusters' as SectionId, label: 'Explore', icon: MapPin, available: !!intelligence?.clusters?.clusters?.length },
+    { id: 'gems' as SectionId, label: 'Hidden Gems', icon: Gem, available: !!intelligence?.hiddenGems?.hiddenGems?.length },
+    { id: 'logistics' as SectionId, label: 'Know Before', icon: Car, available: !!intelligence?.logistics },
+    { id: 'weather' as SectionId, label: 'Weather', icon: CloudSun, available: !!intelligence?.weather },
+    { id: 'photos' as SectionId, label: 'Photo Spots', icon: Camera, available: !!intelligence?.photoSpots?.spots?.length },
+  ] as Section[]).filter(s => s.available);
 
   // Intersection observer for section tracking
   useEffect(() => {
@@ -333,7 +330,7 @@ export function CityIntelligenceDetailView({
                 <div className="px-6 md:px-12 lg:px-16 py-12 space-y-16">
                   {/* Overview Section */}
                   <section
-                    ref={(el) => (sectionRefs.current.overview = el)}
+                    ref={(el) => { sectionRefs.current.overview = el; }}
                     data-section="overview"
                     className="scroll-mt-20"
                   >
@@ -405,9 +402,9 @@ export function CityIntelligenceDetailView({
                   </section>
 
                   {/* Time Section */}
-                  {intelligence.timeBlocks?.blocks?.length > 0 && (
+                  {(intelligence.timeBlocks?.blocks?.length ?? 0) > 0 && (
                     <section
-                      ref={(el) => (sectionRefs.current.time = el)}
+                      ref={(el) => { sectionRefs.current.time = el; }}
                       data-section="time"
                       className="scroll-mt-20"
                     >
@@ -419,17 +416,17 @@ export function CityIntelligenceDetailView({
                         className="mt-8"
                       >
                         <TimeBlocksDisplay
-                          blocks={intelligence.timeBlocks.blocks}
-                          totalHours={intelligence.timeBlocks.totalUsableHours}
+                          blocks={intelligence.timeBlocks!.blocks}
+                          totalHours={intelligence.timeBlocks!.totalUsableHours}
                         />
                       </motion.div>
                     </section>
                   )}
 
                   {/* Clusters Section */}
-                  {intelligence.clusters?.clusters?.length > 0 && (
+                  {(intelligence.clusters?.clusters?.length ?? 0) > 0 && (
                     <section
-                      ref={(el) => (sectionRefs.current.clusters = el)}
+                      ref={(el) => { sectionRefs.current.clusters = el; }}
                       data-section="clusters"
                       className="scroll-mt-20"
                     >
@@ -441,7 +438,7 @@ export function CityIntelligenceDetailView({
                         className="mt-8"
                       >
                         <ClusterVisualization
-                          clusters={intelligence.clusters.clusters}
+                          clusters={intelligence.clusters!.clusters}
                           onClusterSelect={onClusterSelect}
                         />
                       </motion.div>
@@ -449,9 +446,9 @@ export function CityIntelligenceDetailView({
                   )}
 
                   {/* Hidden Gems Section */}
-                  {intelligence.hiddenGems?.hiddenGems?.length > 0 && (
+                  {(intelligence.hiddenGems?.hiddenGems?.length ?? 0) > 0 && (
                     <section
-                      ref={(el) => (sectionRefs.current.gems = el)}
+                      ref={(el) => { sectionRefs.current.gems = el; }}
                       data-section="gems"
                       className="scroll-mt-20"
                     >
@@ -462,7 +459,7 @@ export function CityIntelligenceDetailView({
                         viewport={{ once: true }}
                         className="mt-8"
                       >
-                        <HiddenGemsDisplay gems={intelligence.hiddenGems.hiddenGems} />
+                        <HiddenGemsDisplay gems={intelligence.hiddenGems!.hiddenGems} />
                       </motion.div>
                     </section>
                   )}
@@ -473,7 +470,7 @@ export function CityIntelligenceDetailView({
                       {/* Logistics */}
                       {intelligence.logistics && (
                         <section
-                          ref={(el) => (sectionRefs.current.logistics = el)}
+                          ref={(el) => { sectionRefs.current.logistics = el; }}
                           data-section="logistics"
                           className="scroll-mt-20"
                         >
@@ -492,7 +489,7 @@ export function CityIntelligenceDetailView({
                       {/* Weather */}
                       {intelligence.weather && (
                         <section
-                          ref={(el) => (sectionRefs.current.weather = el)}
+                          ref={(el) => { sectionRefs.current.weather = el; }}
                           data-section="weather"
                           className="scroll-mt-20"
                         >
@@ -511,9 +508,9 @@ export function CityIntelligenceDetailView({
                   )}
 
                   {/* Photo Spots Section */}
-                  {intelligence.photoSpots?.spots?.length > 0 && (
+                  {(intelligence.photoSpots?.spots?.length ?? 0) > 0 && (
                     <section
-                      ref={(el) => (sectionRefs.current.photos = el)}
+                      ref={(el) => { sectionRefs.current.photos = el; }}
                       data-section="photos"
                       className="scroll-mt-20"
                     >
@@ -524,7 +521,7 @@ export function CityIntelligenceDetailView({
                         viewport={{ once: true }}
                         className="mt-8"
                       >
-                        <PhotoSpotsDisplay spots={intelligence.photoSpots.spots} />
+                        <PhotoSpotsDisplay spots={intelligence.photoSpots!.spots} />
                       </motion.div>
                     </section>
                   )}

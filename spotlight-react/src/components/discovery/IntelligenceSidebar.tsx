@@ -450,12 +450,14 @@ function CityProgressCard({ cityId, onFeedback }: CityProgressCardProps) {
   } = useCityIntelligenceForCity(cityId);
 
   const cityName = intelligence?.city?.name || cityId;
-  const status = intelligence?.status || 'pending';
+  const _status = intelligence?.status || 'pending';
+  void _status; // Available for status display
 
   // Calculate agent completion
   const agents = Object.entries(agentStates || {}) as [AgentName, AgentExecutionState][];
   const completedAgents = agents.filter(([, s]) => s.status === 'completed').length;
-  const runningAgents = agents.filter(([, s]) => s.status === 'running');
+  const _runningAgents = agents.filter(([, s]) => s.status === 'running');
+  void _runningAgents; // Available for running status display
   const failedAgents = agents.filter(([, s]) => s.status === 'failed');
 
   // Handle feedback

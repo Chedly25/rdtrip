@@ -32,8 +32,8 @@ import {
   Zap,
 } from 'lucide-react';
 
-import { useCityIntelligence, getAgentDisplayName } from '../../hooks/useCityIntelligence';
-import type { AgentName, AgentExecutionState } from '../../types/cityIntelligence';
+import { useCityIntelligence } from '../../hooks/useCityIntelligence';
+import type { AgentName } from '../../types/cityIntelligence';
 
 // =============================================================================
 // Types
@@ -56,7 +56,7 @@ interface IntelligenceProgressPanelProps {
 // Configuration
 // =============================================================================
 
-const AGENT_ICONS: Record<AgentName, typeof Clock> = {
+const _AGENT_ICONS: Record<AgentName, typeof Clock> = {
   TimeAgent: Clock,
   StoryAgent: BookOpen,
   PreferenceAgent: Heart,
@@ -67,6 +67,7 @@ const AGENT_ICONS: Record<AgentName, typeof Clock> = {
   PhotoAgent: Camera,
   SynthesisAgent: Layers,
 };
+void _AGENT_ICONS; // Available for agent icon display
 
 // =============================================================================
 // Main Component
@@ -86,7 +87,7 @@ export function IntelligenceProgressPanel({
     isProcessing,
     isComplete,
     overallProgress,
-    currentPhase,
+    currentPhase: _currentPhase,
     allCityIntelligence,
     completedCount,
     citiesCount,
@@ -94,6 +95,7 @@ export function IntelligenceProgressPanel({
     errors,
     cancel,
   } = useCityIntelligence();
+  void _currentPhase; // Available for future use
 
   // Don't show if dismissed or nothing to show
   if (isDismissed || (!isProcessing && !isComplete)) {
@@ -105,12 +107,14 @@ export function IntelligenceProgressPanel({
     onDismiss?.();
   };
 
-  // Gather all running agents across cities
-  const runningAgents: { cityName: string; agentName: AgentName; progress?: number }[] = [];
+  // Gather all running agents across cities (placeholder for future implementation)
+  const _runningAgents: { cityName: string; agentName: AgentName; progress?: number }[] = [];
   allCityIntelligence.forEach((intel) => {
-    const cityAgents = Object.entries(intel) as [string, unknown][];
+    const _cityAgents = Object.entries(intel) as [string, unknown][];
     // This is a simplification - in reality we'd get agent states from the store
+    void _cityAgents;
   });
+  void _runningAgents;
 
   // Position classes
   const positionClasses = floating

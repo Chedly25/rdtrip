@@ -21,8 +21,8 @@ import React, {
   useEffect,
   useRef,
   useState,
-  ReactNode,
 } from 'react';
+import type { ReactNode } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 
 // =============================================================================

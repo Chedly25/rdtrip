@@ -44,9 +44,9 @@ export {
 export {
   useCityIntelligence,
   useCityIntelligenceForCity,
-  useAgentStatus,
+  useAgentState,
   getAgentDisplayName,
-  getAgentColor,
+  getAgentIcon,
 } from './useCityIntelligence';
 
 export {

@@ -12,7 +12,7 @@
  * - Graceful degradation suggestions
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   AlertCircle,
@@ -21,13 +21,10 @@ import {
   Clock,
   Server,
   XCircle,
-  ChevronDown,
   ChevronRight,
   CheckCircle,
   Zap,
-  ArrowRight,
   Copy,
-  ExternalLink,
   HelpCircle,
 } from 'lucide-react';
 
@@ -139,13 +136,14 @@ export function ErrorRecoveryPanel({
   const [expandedError, setExpandedError] = useState<string | null>(null);
   const [copiedError, setCopiedError] = useState<string | null>(null);
 
-  // Group errors by city
-  const errorsByCityId = errors.reduce((acc, error) => {
+  // Group errors by city (computed for potential future use)
+  const _errorsByCityId = errors.reduce((acc, error) => {
     const key = error.cityId || 'general';
     if (!acc[key]) acc[key] = [];
     acc[key].push(error);
     return acc;
   }, {} as Record<string, IntelligenceError[]>);
+  void _errorsByCityId; // Suppress unused variable warning
 
   // Get error ID for tracking
   const getErrorId = (error: IntelligenceError) =>

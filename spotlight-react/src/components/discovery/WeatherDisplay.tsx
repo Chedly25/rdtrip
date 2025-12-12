@@ -19,7 +19,6 @@ import {
   CloudRain,
   CloudSnow,
   Wind,
-  Thermometer,
   Droplets,
   Sunrise,
   Camera,
@@ -29,7 +28,7 @@ import {
   Clock,
   AlertCircle,
 } from 'lucide-react';
-import type { WeatherOutput, WeatherRecommendation } from '../../types/cityIntelligence';
+import type { WeatherOutput } from '../../types/cityIntelligence';
 
 // =============================================================================
 // Types

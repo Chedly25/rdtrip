@@ -17,7 +17,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   MapPin,
   Footprints,
-  ChevronDown,
   ChevronRight,
   Building2,
   Utensils,
@@ -29,7 +28,7 @@ import {
   Clock,
   Layers,
 } from 'lucide-react';
-import type { Cluster, ClusterPlace, ClustersOutput } from '../../types/cityIntelligence';
+import type { Cluster, ClusterPlace } from '../../types/cityIntelligence';
 
 // =============================================================================
 // Types
@@ -176,7 +175,7 @@ export function ClusterVisualization({
 // Cluster Card
 // =============================================================================
 
-function ClusterCard({
+export function ClusterCard({
   cluster,
   isSelected,
   onSelect,

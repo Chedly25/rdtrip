@@ -166,7 +166,7 @@ const DEFAULT_TOPICS: DeepDiveTopic[] = [
 // =============================================================================
 
 export function DeepDiveRequest({
-  cityId,
+  cityId: _cityId,
   cityName,
   onRequest,
   isLoading = false,

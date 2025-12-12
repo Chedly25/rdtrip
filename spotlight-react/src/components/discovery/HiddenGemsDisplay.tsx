@@ -17,7 +17,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Gem,
   Sparkles,
-  MapPin,
   Utensils,
   Coffee,
   Wine,
@@ -30,7 +29,7 @@ import {
   ChevronDown,
   Star,
 } from 'lucide-react';
-import type { HiddenGem, GemsOutput } from '../../types/cityIntelligence';
+import type { HiddenGem } from '../../types/cityIntelligence';
 
 // =============================================================================
 // Types
@@ -176,7 +175,7 @@ export function HiddenGemsDisplay({
       {/* Gems list */}
       <div className={compact ? 'space-y-2' : 'space-y-3'}>
         {gems.map((gem, idx) => (
-          <GemCard
+          <HiddenGemCard
             key={gem.name + idx}
             gem={gem}
             index={idx}
@@ -193,7 +192,7 @@ export function HiddenGemsDisplay({
 // Gem Card
 // =============================================================================
 
-function GemCard({ gem, index, delay, compact }: GemCardProps) {
+export function HiddenGemCard({ gem, index: _index, delay, compact }: GemCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const config = GEM_TYPE_CONFIG[gem.type as keyof typeof GEM_TYPE_CONFIG] || GEM_TYPE_CONFIG.activity;
   const Icon = config.icon;

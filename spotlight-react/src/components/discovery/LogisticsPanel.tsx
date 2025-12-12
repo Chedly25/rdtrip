@@ -49,7 +49,7 @@ export function LogisticsPanel({
 }: LogisticsPanelProps) {
   const { parking, tips, warnings, bestTimes, marketDays } = logistics;
 
-  const hasContent = parking || tips?.length > 0 || warnings?.length > 0 || bestTimes?.length > 0 || marketDays?.length > 0;
+  const hasContent = parking || (tips?.length ?? 0) > 0 || (warnings?.length ?? 0) > 0 || (bestTimes?.length ?? 0) > 0 || (marketDays?.length ?? 0) > 0;
 
   if (!hasContent) {
     return (

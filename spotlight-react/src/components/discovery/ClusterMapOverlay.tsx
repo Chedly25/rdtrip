@@ -29,7 +29,6 @@ import {
   Wine,
   Eye,
   EyeOff,
-  Navigation,
   Compass,
   Route,
 } from 'lucide-react';
@@ -184,7 +183,7 @@ export function ClusterMapOverlay({
   }, []);
 
   // Create place marker element
-  const createPlaceMarkerElement = useCallback((place: ClusterPlace, theme: { color: string }) => {
+  const createPlaceMarkerElement = useCallback((_place: ClusterPlace, theme: { color: string }) => {
     const el = document.createElement('div');
     el.className = 'place-marker';
     el.innerHTML = `

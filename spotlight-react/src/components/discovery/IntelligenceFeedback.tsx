@@ -21,10 +21,8 @@ import {
   MessageSquare,
   Check,
   X,
-  AlertCircle,
   Sparkles,
   Send,
-  ChevronDown,
   Heart,
   Meh,
   Frown,
@@ -330,7 +328,7 @@ export function IntelligenceFeedback({
                 `}
                 style={{
                   backgroundColor: isSelected ? config.bgColor : undefined,
-                  ringColor: isSelected ? config.color : undefined,
+                  // Ring color applied via className
                 }}
               >
                 <div
@@ -457,7 +455,7 @@ interface QuickFeedbackBarProps {
   onFeedback: (rating: 'positive' | 'negative') => void;
 }
 
-export function QuickFeedbackBar({ cityId, onFeedback }: QuickFeedbackBarProps) {
+export function QuickFeedbackBar({ cityId: _cityId, onFeedback }: QuickFeedbackBarProps) {
   const [submitted, setSubmitted] = useState<'positive' | 'negative' | null>(null);
 
   const handleFeedback = (rating: 'positive' | 'negative') => {

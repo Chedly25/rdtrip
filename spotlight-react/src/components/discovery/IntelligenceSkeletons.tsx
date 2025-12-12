@@ -21,11 +21,12 @@ import { motion } from 'framer-motion';
 interface ShimmerProps {
   className?: string;
   children?: React.ReactNode;
+  style?: React.CSSProperties;
 }
 
-export function Shimmer({ className = '', children }: ShimmerProps) {
+export function Shimmer({ className = '', children, style }: ShimmerProps) {
   return (
-    <div className={`relative overflow-hidden ${className}`}>
+    <div className={`relative overflow-hidden ${className}`} style={style}>
       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent shimmer-animation" />
       {children}
       <style>{`

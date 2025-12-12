@@ -11,7 +11,7 @@
  * - Subtle animations
  */
 
-import React, { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { motion } from 'framer-motion';
 
 // =============================================================================

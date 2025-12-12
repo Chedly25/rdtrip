@@ -11,8 +11,10 @@
  * - Respects reduced motion preferences
  */
 
-import React, { useCallback, useEffect, useRef, useState, ReactNode } from 'react';
-import { motion, useSpring, useTransform, AnimatePresence, Variants, MotionValue, useMotionValue } from 'framer-motion';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
+import { motion, useSpring, useTransform, AnimatePresence, useMotionValue } from 'framer-motion';
+import type { Variants } from 'framer-motion';
 
 // =============================================================================
 // Animation Variants

@@ -437,4 +437,128 @@ export function AgentProgressBar({
   );
 }
 
+// =============================================================================
+// Agent Timeline (Vertical Activity View)
+// =============================================================================
+
+interface AgentTimelineProps {
+  agentStates: Record<string, AgentExecutionState>;
+  /** Show timestamps */
+  showTimestamps?: boolean;
+  /** Compact mode */
+  compact?: boolean;
+}
+
+export function AgentTimeline({
+  agentStates,
+  showTimestamps = false,
+  compact = false,
+}: AgentTimelineProps) {
+  const agents = Object.entries(agentStates) as [AgentName, AgentExecutionState][];
+
+  // Sort by status: running first, then by start time
+  const sortedAgents = [...agents].sort(([, a], [, b]) => {
+    if (a.status === 'running' && b.status !== 'running') return -1;
+    if (b.status === 'running' && a.status !== 'running') return 1;
+    const aTime = a.startedAt ? new Date(a.startedAt).getTime() : 0;
+    const bTime = b.startedAt ? new Date(b.startedAt).getTime() : 0;
+    return bTime - aTime;
+  });
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className={compact ? 'space-y-2' : 'space-y-3'}
+    >
+      {sortedAgents.map(([name, state], index) => {
+        const config = AGENT_CONFIG[name] || {
+          icon: Cpu,
+          label: name,
+          color: 'text-gray-500',
+          bgColor: 'bg-gray-50',
+          description: 'Processing',
+        };
+        const Icon = config.icon;
+
+        return (
+          <motion.div
+            key={name}
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: index * 0.05 }}
+            className={`
+              flex items-center gap-3
+              ${compact ? 'py-1' : 'py-2'}
+              ${state.status === 'running' ? 'bg-amber-50/50 -mx-2 px-2 rounded-lg' : ''}
+            `}
+          >
+            {/* Timeline connector */}
+            <div className="relative flex flex-col items-center">
+              <div
+                className={`
+                  w-8 h-8 rounded-full flex items-center justify-center
+                  ${state.status === 'completed' ? 'bg-emerald-100' : ''}
+                  ${state.status === 'running' ? config.bgColor : ''}
+                  ${state.status === 'pending' ? 'bg-gray-100' : ''}
+                  ${state.status === 'failed' ? 'bg-rose-100' : ''}
+                `}
+              >
+                {state.status === 'completed' ? (
+                  <Check className="w-4 h-4 text-emerald-600" />
+                ) : state.status === 'failed' ? (
+                  <AlertCircle className="w-4 h-4 text-rose-500" />
+                ) : state.status === 'running' ? (
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+                  >
+                    <Icon className={`w-4 h-4 ${config.color}`} />
+                  </motion.div>
+                ) : (
+                  <Icon className="w-4 h-4 text-gray-400" />
+                )}
+              </div>
+              {/* Connector line */}
+              {index < sortedAgents.length - 1 && (
+                <div className="w-0.5 h-4 bg-gray-200 mt-1" />
+              )}
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span
+                  className={`
+                    font-medium text-sm
+                    ${state.status === 'pending' ? 'text-gray-400' : 'text-gray-800'}
+                  `}
+                >
+                  {config.label}
+                </span>
+                {state.status === 'running' && (
+                  <span className="text-xs text-amber-600 font-medium">
+                    {state.progress ? `${state.progress}%` : 'Running'}
+                  </span>
+                )}
+                {state.status === 'completed' && (
+                  <span className="text-xs text-emerald-600">Done</span>
+                )}
+              </div>
+              {state.status === 'running' && (
+                <p className="text-xs text-gray-500 mt-0.5">{config.description}</p>
+              )}
+              {showTimestamps && state.completedAt && (
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {new Date(state.completedAt).toLocaleTimeString()}
+                </p>
+              )}
+            </div>
+          </motion.div>
+        );
+      })}
+    </motion.div>
+  );
+}
+
 export default AgentStatusIndicator;

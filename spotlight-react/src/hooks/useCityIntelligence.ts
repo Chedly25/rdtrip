@@ -22,7 +22,6 @@ import type {
   AgentName,
   CityData,
   UserPreferences,
-  CityIntelligence,
   AgentExecutionState,
 } from '../types/cityIntelligence';
 

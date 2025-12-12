@@ -19,14 +19,11 @@ import {
   Sliders,
   Gauge,
   Zap,
-  Clock,
   Shield,
   Sparkles,
-  ChevronDown,
   ChevronRight,
   Check,
   RotateCcw,
-  Info,
   AlertTriangle,
   X,
   Save,
@@ -110,10 +107,11 @@ export function IntelligenceSettingsPanel({
   onSettingsChange,
   onSave,
   onReset,
-  isOpen = true,
+  isOpen: _isOpen = true,
   onOpenChange,
   variant = 'panel',
 }: IntelligenceSettingsPanelProps) {
+  void _isOpen; // Available for panel visibility control
   const [localSettings, setLocalSettings] = useState(settings);
   const [hasChanges, setHasChanges] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['quality']));
@@ -562,13 +560,14 @@ function SliderInput({
 }: SliderInputProps) {
   const percentage = ((value - min) / (max - min)) * 100;
 
-  const colorClasses = {
+  const _colorClasses = {
     amber: 'bg-amber-500',
     violet: 'bg-violet-500',
     emerald: 'bg-emerald-500',
     sky: 'bg-sky-500',
     gray: 'bg-gray-500',
   };
+  void _colorClasses; // Available for styling
 
   return (
     <div className="relative">

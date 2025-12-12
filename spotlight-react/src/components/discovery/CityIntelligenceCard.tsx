@@ -23,7 +23,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Clock,
   MapPin,
-  Star,
   Gem,
   ChevronDown,
   ChevronUp,
@@ -39,7 +38,7 @@ import {
 import { AgentStatusGroup, AgentProgressBar } from './AgentStatusIndicator';
 import { CityIntelligenceDetailView } from './CityIntelligenceDetailView';
 import { useCityIntelligenceForCity } from '../../hooks/useCityIntelligence';
-import type { CityIntelligence, TimeBlock, Cluster, HiddenGem } from '../../types/cityIntelligence';
+import type { TimeBlock, Cluster, HiddenGem } from '../../types/cityIntelligence';
 
 // =============================================================================
 // Types
@@ -519,12 +518,14 @@ function IntelligenceSection({
 }
 
 function TimeBlockBadge({ block }: { block: TimeBlock }) {
-  const moodColors = {
+  const moodColors: Record<string, string> = {
     explore: 'bg-emerald-50 text-emerald-700 border-emerald-200',
     dine: 'bg-rose-50 text-rose-700 border-rose-200',
     activity: 'bg-sky-50 text-sky-700 border-sky-200',
     depart: 'bg-slate-50 text-slate-700 border-slate-200',
     arrive: 'bg-violet-50 text-violet-700 border-violet-200',
+    coffee: 'bg-amber-50 text-amber-700 border-amber-200',
+    relax: 'bg-teal-50 text-teal-700 border-teal-200',
   };
 
   return (

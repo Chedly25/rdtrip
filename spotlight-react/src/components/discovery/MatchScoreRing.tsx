@@ -12,7 +12,7 @@
  * - Warm, inviting aesthetic with subtle depth
  */
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
 import {
   Heart,
@@ -20,11 +20,8 @@ import {
   AlertTriangle,
   ChevronDown,
   ChevronUp,
-  Sparkles,
-  ThumbsUp,
-  ThumbsDown,
 } from 'lucide-react';
-import type { MatchScoreOutput, MatchReason, MatchWarning } from '../../types/cityIntelligence';
+import type { MatchReason, MatchWarning } from '../../types/cityIntelligence';
 
 // =============================================================================
 // Types
@@ -413,6 +410,71 @@ export function MatchScoreInline({ score }: { score: number }) {
       <Heart className="w-3 h-3 fill-current" />
       {score}%
     </span>
+  );
+}
+
+// =============================================================================
+// Standalone Reasons Display
+// =============================================================================
+
+interface MatchReasonsDisplayProps {
+  reasons: MatchReason[];
+  warnings?: MatchWarning[];
+  /** Animation delay */
+  delay?: number;
+  /** Compact mode for embedding */
+  compact?: boolean;
+}
+
+export function MatchReasonsDisplay({
+  reasons,
+  warnings = [],
+  delay = 0,
+  compact = false,
+}: MatchReasonsDisplayProps) {
+  if (reasons.length === 0 && warnings.length === 0) {
+    return null;
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, delay }}
+      className={compact ? 'space-y-2' : 'space-y-4'}
+    >
+      {/* Positive reasons */}
+      {reasons.length > 0 && (
+        <div>
+          {!compact && (
+            <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+              Why it matches
+            </h4>
+          )}
+          <div className={compact ? 'space-y-1.5' : 'space-y-2'}>
+            {reasons.map((reason, idx) => (
+              <MatchReasonItem key={idx} reason={reason} delay={delay + idx * 0.05} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Warnings */}
+      {warnings.length > 0 && (
+        <div>
+          {!compact && (
+            <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+              Things to note
+            </h4>
+          )}
+          <div className={compact ? 'space-y-1.5' : 'space-y-2'}>
+            {warnings.map((warning, idx) => (
+              <MatchWarningItem key={idx} warning={warning} delay={delay + idx * 0.05} />
+            ))}
+          </div>
+        </div>
+      )}
+    </motion.div>
   );
 }
 

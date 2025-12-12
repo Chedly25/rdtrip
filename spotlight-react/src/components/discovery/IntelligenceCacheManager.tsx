@@ -25,9 +25,7 @@ import {
   AlertTriangle,
   ChevronRight,
   Sparkles,
-  Zap,
   Archive,
-  X,
   CloudOff,
 } from 'lucide-react';
 import { useCityIntelligenceStore } from '../../stores/cityIntelligenceStore';

@@ -22,13 +22,11 @@ import {
   Sunset,
   Moon,
   Clock,
-  MapPin,
   Focus,
   Eye,
   ChevronDown,
-  Sparkles,
 } from 'lucide-react';
-import type { PhotoSpot, PhotoSpotsOutput } from '../../types/cityIntelligence';
+import type { PhotoSpot } from '../../types/cityIntelligence';
 
 // =============================================================================
 // Types

@@ -86,6 +86,22 @@ const MOOD_CONFIG = {
     accentColor: 'bg-violet-500',
     label: 'Arrive',
   },
+  coffee: {
+    gradient: 'from-amber-50 to-orange-50',
+    border: 'border-amber-200',
+    icon: Coffee,
+    iconColor: 'text-amber-600',
+    accentColor: 'bg-amber-500',
+    label: 'Coffee',
+  },
+  relax: {
+    gradient: 'from-teal-50 to-cyan-50',
+    border: 'border-teal-200',
+    icon: Sun,
+    iconColor: 'text-teal-500',
+    accentColor: 'bg-teal-500',
+    label: 'Relax',
+  },
 };
 
 // Time of day icons
@@ -239,7 +255,7 @@ interface TimeBlockCardProps {
   delay: number;
 }
 
-function TimeBlockCard({ block, delay }: TimeBlockCardProps) {
+export function TimeBlockCard({ block, delay }: TimeBlockCardProps) {
   const config = MOOD_CONFIG[block.mood] || MOOD_CONFIG.explore;
   const Icon = config.icon;
 
@@ -396,7 +412,7 @@ function CompactTimelineView({
       <div className="flex items-center gap-3 mt-2">
         {Object.entries(moodSummary)
           .slice(0, 3)
-          .map(([mood, hours]) => {
+          .map(([mood, _hours]) => {
             const config = MOOD_CONFIG[mood as keyof typeof MOOD_CONFIG];
             return (
               <div key={mood} className="flex items-center gap-1">

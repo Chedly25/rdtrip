@@ -90,6 +90,10 @@ export interface AgentExecutionState {
   status: AgentStatus;
   startTime?: Date;
   endTime?: Date;
+  /** Alias for startTime */
+  startedAt?: Date;
+  /** Alias for endTime */
+  completedAt?: Date;
   progress?: number; // 0-100
   output?: AgentOutput;
   error?: string;
@@ -144,9 +148,13 @@ export interface TimeBlock {
   id: string;
   name: string;
   hours: number;
-  mood: 'explore' | 'dine' | 'activity' | 'depart' | 'arrive';
+  mood: 'explore' | 'dine' | 'activity' | 'depart' | 'arrive' | 'coffee' | 'relax';
   flexibility: 'high' | 'medium' | 'low';
   suggested?: string;
+  /** Day number for multi-day trips */
+  dayNumber?: number;
+  /** Time of day (e.g., "Morning", "Afternoon", "Evening") */
+  timeOfDay?: string;
 }
 
 export interface TimeBlocksOutput {
