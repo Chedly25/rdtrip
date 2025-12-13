@@ -18,12 +18,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter as Router, Route, Routes, Navigate, useParams, useSearchParams } from 'react-router-dom'
 import { Suspense, lazy } from 'react'
 
-// Core components (eagerly loaded)
-import SpotlightV2 from './components/spotlight/v2/SpotlightV2'
-import { ItineraryGenerationPage } from './components/itinerary/ItineraryGenerationPage'
-import { ItineraryPage } from './components/itinerary/ItineraryPage'
-import { TodayView } from './components/today/TodayView'
-import { DiscoveryPhaseContainer } from './components/discovery'
+// Lazy-loaded app phase components for better performance
+const SpotlightV2 = lazy(() => import('./components/spotlight/v2/SpotlightV2'))
+const ItineraryGenerationPage = lazy(() => import('./components/itinerary/ItineraryGenerationPage').then(m => ({ default: m.ItineraryGenerationPage })))
+const ItineraryPage = lazy(() => import('./components/itinerary/ItineraryPage').then(m => ({ default: m.ItineraryPage })))
+const TodayView = lazy(() => import('./components/today/TodayView').then(m => ({ default: m.TodayView })))
+const DiscoveryPhaseContainer = lazy(() => import('./components/discovery').then(m => ({ default: m.DiscoveryPhaseContainer })))
 import { AgentProvider } from './contexts/AgentProvider'
 import { CompanionProvider } from './contexts/CompanionProvider'
 import { AuthProvider } from './contexts/AuthContext'
@@ -50,6 +50,7 @@ const MyRoutes = lazy(() => import('./pages/MyRoutes'))
 const SharedRoute = lazy(() => import('./pages/SharedRoute'))
 const MarketplacePage = lazy(() => import('./pages/MarketplacePage'))
 const RouteDetailPage = lazy(() => import('./pages/RouteDetailPage'))
+const PlanningPage = lazy(() => import('./pages/PlanningPage'))
 
 // Create a client
 const queryClient = new QueryClient({
@@ -217,6 +218,16 @@ function App() {
                         element={
                           <PageTransition variant="slideRight">
                             <DiscoveryPhaseContainer />
+                          </PageTransition>
+                        }
+                      />
+
+                      {/* Planning Phase - Build trip itinerary with clusters */}
+                      <Route
+                        path="/plan/:routeId"
+                        element={
+                          <PageTransition variant="slideRight">
+                            <PlanningPage />
                           </PageTransition>
                         }
                       />

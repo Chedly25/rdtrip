@@ -1,0 +1,1018 @@
+/**
+ * Planning API Routes
+ *
+ * Routes for the proximity-based trip planner feature.
+ * Handles plan CRUD, cluster operations, and companion interactions.
+ */
+
+const express = require('express');
+const router = express.Router();
+const crypto = require('crypto');
+
+// Database pool (passed from main server)
+let pool;
+
+function initializeRoutes(dbPool) {
+  pool = dbPool;
+  return router;
+}
+
+// ============================================
+// Helper Functions
+// ============================================
+
+function generateId(prefix = 'id') {
+  return `${prefix}-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+}
+
+/**
+ * Build initial plan from route data
+ */
+async function buildInitialPlan(routeId, routeData) {
+  const cities = routeData.waypoints || [];
+
+  return {
+    id: generateId('plan'),
+    routeId,
+    userId: routeData.user_id || null,
+    status: 'planning',
+    cities: cities.map((city, index) => ({
+      id: generateId('city'),
+      cityId: city.id || `city-${index}`,
+      city: {
+        id: city.id || `city-${index}`,
+        name: city.name || city.city || 'Unknown',
+        country: city.country || '',
+        coordinates: {
+          lat: city.lat || city.latitude || 0,
+          lng: city.lng || city.longitude || 0,
+        },
+        nights: city.nights || 1,
+        isOrigin: index === 0,
+        isDestination: index === cities.length - 1,
+        imageUrl: city.imageUrl || null,
+      },
+      clusters: [],
+      unclustered: [],
+      suggestedClusters: generateSuggestedClusters(city),
+    })),
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+}
+
+/**
+ * Generate suggested cluster areas for a city
+ * In a real implementation, this would use City Intelligence data
+ */
+function generateSuggestedClusters(city) {
+  // Default suggestions based on typical city areas
+  const cityName = city.name || city.city || 'City';
+
+  // Basic suggestions - in production, these come from City Intelligence
+  const suggestions = [
+    {
+      id: generateId('suggested'),
+      name: 'Historic Center',
+      description: `The heart of ${cityName} with historic architecture, main squares, and local atmosphere`,
+      center: {
+        lat: city.lat || city.latitude || 0,
+        lng: city.lng || city.longitude || 0,
+      },
+    },
+  ];
+
+  return suggestions;
+}
+
+// ============================================
+// Plan Routes
+// ============================================
+
+/**
+ * POST /api/planning/start
+ * Create a new route and planning state from discovery data
+ * This allows users to start planning without a pre-existing route
+ */
+router.post('/start', async (req, res) => {
+  try {
+    const {
+      origin,
+      destination,
+      waypoints,
+      startDate,
+      endDate,
+      totalNights,
+      travellerType,
+      userId,
+    } = req.body;
+
+    // Validate required fields
+    if (!origin || !destination) {
+      return res.status(400).json({ error: 'Origin and destination are required' });
+    }
+
+    // Generate a new route ID
+    const routeId = generateId('route');
+
+    // Build route data structure
+    const routeData = {
+      origin: origin.name || origin,
+      destination: destination.name || destination,
+      waypoints: waypoints || [],
+      startDate,
+      endDate,
+      totalNights: totalNights || waypoints?.reduce((sum, w) => sum + (w.nights || 1), 0) || 1,
+      travellerType: travellerType || 'couple',
+    };
+
+    // Insert route into database
+    try {
+      await pool.query(
+        `INSERT INTO routes (id, user_id, name, origin, destination, route_data, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())`,
+        [
+          routeId,
+          userId || null,
+          `${origin.name || origin} to ${destination.name || destination}`,
+          origin.name || origin,
+          destination.name || destination,
+          routeData,
+        ]
+      );
+    } catch (dbError) {
+      console.error('[planning] Error creating route:', dbError);
+      // Continue anyway - we'll work with in-memory data
+    }
+
+    // Build initial plan with city data from waypoints
+    const cities = [
+      // Origin city
+      {
+        id: origin.id || 'origin',
+        name: origin.name || origin,
+        country: origin.country || '',
+        coordinates: origin.coordinates || { lat: 0, lng: 0 },
+        nights: 1,
+        isOrigin: true,
+        isDestination: false,
+      },
+      // Waypoint cities
+      ...(waypoints || []).map((city, index) => ({
+        id: city.id || `city-${index}`,
+        name: city.name || city.city || 'Unknown',
+        country: city.country || '',
+        coordinates: city.coordinates || { lat: city.lat || 0, lng: city.lng || 0 },
+        nights: city.nights || city.suggestedNights || 1,
+        isOrigin: false,
+        isDestination: false,
+      })),
+      // Destination city
+      {
+        id: destination.id || 'destination',
+        name: destination.name || destination,
+        country: destination.country || '',
+        coordinates: destination.coordinates || { lat: 0, lng: 0 },
+        nights: 2,
+        isOrigin: false,
+        isDestination: true,
+      },
+    ];
+
+    // Create trip plan
+    const tripPlan = {
+      id: generateId('plan'),
+      routeId,
+      userId: userId || null,
+      status: 'planning',
+      cities: cities.map((city, index) => ({
+        id: generateId('cityplan'),
+        cityId: city.id,
+        city: city,
+        clusters: [],
+        unclustered: [],
+        suggestedClusters: generateSuggestedClusters(city),
+      })),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    // Save trip plan to database
+    try {
+      await pool.query(
+        `INSERT INTO trip_plans (id, route_id, user_id, status, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [tripPlan.id, routeId, userId || null, 'planning', tripPlan.createdAt, tripPlan.updatedAt]
+      );
+
+      // Save city plans
+      for (let i = 0; i < tripPlan.cities.length; i++) {
+        const cityPlan = tripPlan.cities[i];
+        await pool.query(
+          `INSERT INTO city_plans (id, trip_plan_id, city_id, city_data, display_order)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [cityPlan.id, tripPlan.id, cityPlan.cityId, cityPlan.city, i]
+        );
+      }
+    } catch (dbError) {
+      console.error('[planning] Error saving plan:', dbError);
+      // Continue - return plan in memory
+    }
+
+    console.log('[planning] Created new planning route:', routeId);
+
+    res.json({
+      routeId,
+      tripPlan,
+    });
+  } catch (error) {
+    console.error('[planning] POST /start error:', error);
+    res.status(500).json({ error: 'Failed to start planning' });
+  }
+});
+
+/**
+ * GET /api/planning/:routeId
+ * Get or create planning state for a route
+ */
+router.get('/:routeId', async (req, res) => {
+  try {
+    const { routeId } = req.params;
+
+    // First, check if we have an existing plan
+    const existingPlan = await pool.query(
+      'SELECT * FROM trip_plans WHERE route_id = $1',
+      [routeId]
+    ).catch(() => ({ rows: [] }));
+
+    if (existingPlan.rows.length > 0) {
+      // Load existing plan with all its data
+      const plan = existingPlan.rows[0];
+
+      // Load city plans
+      const cityPlans = await pool.query(
+        'SELECT * FROM city_plans WHERE trip_plan_id = $1 ORDER BY display_order',
+        [plan.id]
+      ).catch(() => ({ rows: [] }));
+
+      // Load clusters for each city
+      const cities = await Promise.all(
+        cityPlans.rows.map(async (cityPlan) => {
+          const clusters = await pool.query(
+            'SELECT * FROM plan_clusters WHERE city_plan_id = $1 ORDER BY display_order',
+            [cityPlan.id]
+          ).catch(() => ({ rows: [] }));
+
+          // Load items for each cluster
+          const clustersWithItems = await Promise.all(
+            clusters.rows.map(async (cluster) => {
+              const items = await pool.query(
+                'SELECT * FROM plan_items WHERE cluster_id = $1 ORDER BY display_order',
+                [cluster.id]
+              ).catch(() => ({ rows: [] }));
+
+              return {
+                id: cluster.id,
+                name: cluster.name,
+                center: {
+                  lat: parseFloat(cluster.center_lat) || 0,
+                  lng: parseFloat(cluster.center_lng) || 0,
+                },
+                items: items.rows.map((item) => item.card_data),
+                totalDuration: items.rows.reduce((sum, item) =>
+                  sum + (item.card_data?.duration || 0), 0),
+                maxWalkingDistance: 5, // Placeholder
+              };
+            })
+          );
+
+          // Load unclustered items
+          const unclustered = await pool.query(
+            'SELECT * FROM plan_items WHERE city_plan_id = $1 AND cluster_id IS NULL ORDER BY display_order',
+            [cityPlan.id]
+          ).catch(() => ({ rows: [] }));
+
+          return {
+            id: cityPlan.id,
+            cityId: cityPlan.city_id,
+            city: cityPlan.city_data,
+            clusters: clustersWithItems,
+            unclustered: unclustered.rows.map((item) => item.card_data),
+            suggestedClusters: generateSuggestedClusters(cityPlan.city_data),
+          };
+        })
+      );
+
+      return res.json({
+        tripPlan: {
+          id: plan.id,
+          routeId: plan.route_id,
+          userId: plan.user_id,
+          status: plan.status,
+          cities,
+          createdAt: plan.created_at,
+          updatedAt: plan.updated_at,
+        },
+      });
+    }
+
+    // No existing plan - fetch route data and create initial plan
+    const routeResult = await pool.query(
+      'SELECT * FROM routes WHERE id = $1',
+      [routeId]
+    ).catch(() => ({ rows: [] }));
+
+    if (routeResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Route not found' });
+    }
+
+    const route = routeResult.rows[0];
+    const routeData = route.route_data || {};
+
+    // Build initial plan from route
+    const tripPlan = await buildInitialPlan(routeId, routeData);
+
+    // Save the new plan to database
+    try {
+      await pool.query(
+        `INSERT INTO trip_plans (id, route_id, user_id, status, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [tripPlan.id, routeId, tripPlan.userId, tripPlan.status, tripPlan.createdAt, tripPlan.updatedAt]
+      );
+
+      // Save city plans
+      for (let i = 0; i < tripPlan.cities.length; i++) {
+        const cityPlan = tripPlan.cities[i];
+        await pool.query(
+          `INSERT INTO city_plans (id, trip_plan_id, city_id, city_data, display_order)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [cityPlan.id, tripPlan.id, cityPlan.cityId, cityPlan.city, i]
+        );
+      }
+    } catch (dbError) {
+      console.error('[planning] Error saving new plan:', dbError);
+      // Continue even if save fails - return the plan in memory
+    }
+
+    res.json({ tripPlan });
+  } catch (error) {
+    console.error('[planning] GET /:routeId error:', error);
+    res.status(500).json({ error: 'Failed to get planning data' });
+  }
+});
+
+/**
+ * POST /api/planning/:routeId/save
+ * Save the current plan state
+ */
+router.post('/:routeId/save', async (req, res) => {
+  try {
+    const { routeId } = req.params;
+    const { cities } = req.body;
+
+    // Find the plan
+    const planResult = await pool.query(
+      'SELECT id FROM trip_plans WHERE route_id = $1',
+      [routeId]
+    );
+
+    if (planResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Plan not found' });
+    }
+
+    const planId = planResult.rows[0].id;
+
+    // Update each city's clusters and items
+    for (const cityPlan of cities) {
+      // Find or create city plan
+      let cityPlanId;
+      const existingCity = await pool.query(
+        'SELECT id FROM city_plans WHERE trip_plan_id = $1 AND city_id = $2',
+        [planId, cityPlan.cityId]
+      );
+
+      if (existingCity.rows.length > 0) {
+        cityPlanId = existingCity.rows[0].id;
+      } else {
+        cityPlanId = generateId('city');
+        await pool.query(
+          `INSERT INTO city_plans (id, trip_plan_id, city_id, city_data, display_order)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [cityPlanId, planId, cityPlan.cityId, cityPlan.city, 0]
+        );
+      }
+
+      // Delete existing clusters and items for this city
+      await pool.query(
+        'DELETE FROM plan_items WHERE city_plan_id = $1',
+        [cityPlanId]
+      );
+      await pool.query(
+        'DELETE FROM plan_clusters WHERE city_plan_id = $1',
+        [cityPlanId]
+      );
+
+      // Insert clusters
+      for (let i = 0; i < (cityPlan.clusters || []).length; i++) {
+        const cluster = cityPlan.clusters[i];
+        await pool.query(
+          `INSERT INTO plan_clusters (id, city_plan_id, name, center_lat, center_lng, display_order)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [cluster.id, cityPlanId, cluster.name, cluster.center?.lat, cluster.center?.lng, i]
+        );
+
+        // Insert items in cluster
+        for (let j = 0; j < (cluster.items || []).length; j++) {
+          const item = cluster.items[j];
+          await pool.query(
+            `INSERT INTO plan_items (id, city_plan_id, cluster_id, card_data, display_order)
+             VALUES ($1, $2, $3, $4, $5)`,
+            [item.id || generateId('item'), cityPlanId, cluster.id, item, j]
+          );
+        }
+      }
+
+      // Insert unclustered items
+      for (let i = 0; i < (cityPlan.unclustered || []).length; i++) {
+        const item = cityPlan.unclustered[i];
+        await pool.query(
+          `INSERT INTO plan_items (id, city_plan_id, cluster_id, card_data, display_order)
+           VALUES ($1, $2, NULL, $3, $4)`,
+          [item.id || generateId('item'), cityPlanId, item, i]
+        );
+      }
+    }
+
+    // Update plan timestamp
+    await pool.query(
+      'UPDATE trip_plans SET updated_at = NOW() WHERE id = $1',
+      [planId]
+    );
+
+    res.json({ success: true, updatedAt: new Date() });
+  } catch (error) {
+    console.error('[planning] POST /:routeId/save error:', error);
+    res.status(500).json({ error: 'Failed to save plan' });
+  }
+});
+
+// ============================================
+// Cluster Routes
+// ============================================
+
+/**
+ * POST /api/planning/:routeId/clusters
+ * Create a new cluster
+ */
+router.post('/:routeId/clusters', async (req, res) => {
+  try {
+    const { routeId } = req.params;
+    const { cityId, name, center, initialItems } = req.body;
+
+    // Find the city plan
+    const cityPlan = await pool.query(
+      `SELECT cp.id FROM city_plans cp
+       JOIN trip_plans tp ON cp.trip_plan_id = tp.id
+       WHERE tp.route_id = $1 AND cp.city_id = $2`,
+      [routeId, cityId]
+    );
+
+    if (cityPlan.rows.length === 0) {
+      return res.status(404).json({ error: 'City plan not found' });
+    }
+
+    const cityPlanId = cityPlan.rows[0].id;
+
+    // Get display order
+    const orderResult = await pool.query(
+      'SELECT COALESCE(MAX(display_order), -1) + 1 as next_order FROM plan_clusters WHERE city_plan_id = $1',
+      [cityPlanId]
+    );
+    const displayOrder = orderResult.rows[0].next_order;
+
+    // Create cluster
+    const clusterId = generateId('cluster');
+    await pool.query(
+      `INSERT INTO plan_clusters (id, city_plan_id, name, center_lat, center_lng, display_order)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [clusterId, cityPlanId, name, center?.lat, center?.lng, displayOrder]
+    );
+
+    // Add initial items if provided
+    if (initialItems && initialItems.length > 0) {
+      for (let i = 0; i < initialItems.length; i++) {
+        const item = initialItems[i];
+        await pool.query(
+          `INSERT INTO plan_items (id, city_plan_id, cluster_id, card_data, display_order)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [item.id || generateId('item'), cityPlanId, clusterId, item, i]
+        );
+      }
+    }
+
+    const cluster = {
+      id: clusterId,
+      name,
+      center: center || { lat: 0, lng: 0 },
+      items: initialItems || [],
+      totalDuration: (initialItems || []).reduce((sum, item) => sum + (item.duration || 0), 0),
+      maxWalkingDistance: 0,
+    };
+
+    res.json({ cluster });
+  } catch (error) {
+    console.error('[planning] POST /:routeId/clusters error:', error);
+    res.status(500).json({ error: 'Failed to create cluster' });
+  }
+});
+
+/**
+ * PUT /api/planning/:routeId/clusters/:clusterId
+ * Update a cluster
+ */
+router.put('/:routeId/clusters/:clusterId', async (req, res) => {
+  try {
+    const { clusterId } = req.params;
+    const { name, addItems, removeItemIds, reorderItems } = req.body;
+
+    // Update name if provided
+    if (name) {
+      await pool.query(
+        'UPDATE plan_clusters SET name = $1 WHERE id = $2',
+        [name, clusterId]
+      );
+    }
+
+    // Add items if provided
+    if (addItems && addItems.length > 0) {
+      const cluster = await pool.query(
+        'SELECT city_plan_id FROM plan_clusters WHERE id = $1',
+        [clusterId]
+      );
+
+      if (cluster.rows.length > 0) {
+        const cityPlanId = cluster.rows[0].city_plan_id;
+
+        const orderResult = await pool.query(
+          'SELECT COALESCE(MAX(display_order), -1) + 1 as next_order FROM plan_items WHERE cluster_id = $1',
+          [clusterId]
+        );
+        let displayOrder = orderResult.rows[0].next_order;
+
+        for (const item of addItems) {
+          await pool.query(
+            `INSERT INTO plan_items (id, city_plan_id, cluster_id, card_data, display_order)
+             VALUES ($1, $2, $3, $4, $5)`,
+            [item.id || generateId('item'), cityPlanId, clusterId, item, displayOrder++]
+          );
+        }
+      }
+    }
+
+    // Remove items if provided
+    if (removeItemIds && removeItemIds.length > 0) {
+      await pool.query(
+        'DELETE FROM plan_items WHERE id = ANY($1) AND cluster_id = $2',
+        [removeItemIds, clusterId]
+      );
+    }
+
+    // Get updated cluster
+    const updatedCluster = await pool.query(
+      'SELECT * FROM plan_clusters WHERE id = $1',
+      [clusterId]
+    );
+
+    const items = await pool.query(
+      'SELECT * FROM plan_items WHERE cluster_id = $1 ORDER BY display_order',
+      [clusterId]
+    );
+
+    const cluster = {
+      id: clusterId,
+      name: updatedCluster.rows[0]?.name || name,
+      center: {
+        lat: parseFloat(updatedCluster.rows[0]?.center_lat) || 0,
+        lng: parseFloat(updatedCluster.rows[0]?.center_lng) || 0,
+      },
+      items: items.rows.map((item) => item.card_data),
+      totalDuration: items.rows.reduce((sum, item) => sum + (item.card_data?.duration || 0), 0),
+      maxWalkingDistance: 5,
+    };
+
+    res.json({ cluster });
+  } catch (error) {
+    console.error('[planning] PUT /:routeId/clusters/:clusterId error:', error);
+    res.status(500).json({ error: 'Failed to update cluster' });
+  }
+});
+
+/**
+ * DELETE /api/planning/:routeId/clusters/:clusterId
+ * Delete a cluster (items move to unclustered)
+ */
+router.delete('/:routeId/clusters/:clusterId', async (req, res) => {
+  try {
+    const { clusterId } = req.params;
+
+    // Move items to unclustered (set cluster_id to NULL)
+    await pool.query(
+      'UPDATE plan_items SET cluster_id = NULL WHERE cluster_id = $1',
+      [clusterId]
+    );
+
+    // Delete the cluster
+    await pool.query(
+      'DELETE FROM plan_clusters WHERE id = $1',
+      [clusterId]
+    );
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('[planning] DELETE /:routeId/clusters/:clusterId error:', error);
+    res.status(500).json({ error: 'Failed to delete cluster' });
+  }
+});
+
+// ============================================
+// Card Generation
+// ============================================
+
+const cardGenerationService = require('../services/cardGenerationService');
+
+/**
+ * POST /api/planning/:routeId/generate
+ * Generate new suggestion cards using Claude
+ */
+router.post('/:routeId/generate', async (req, res) => {
+  try {
+    const { routeId } = req.params;
+    const { cityId, type, count = 4, filters, excludeIds } = req.body;
+
+    console.log('[planning] Generate cards request:', { routeId, cityId, type, count });
+
+    // Load route and city data for context
+    const routeResult = await pool.query(
+      'SELECT * FROM routes WHERE id = $1',
+      [routeId]
+    ).catch(() => ({ rows: [] }));
+
+    let cityName = cityId;
+    let cityCoordinates = { lat: 0, lng: 0 };
+    let clusters = [];
+
+    if (routeResult.rows.length > 0) {
+      const routeData = routeResult.rows[0].route_data || {};
+      const waypoints = routeData.waypoints || [];
+      const city = waypoints.find(w => w.id === cityId || w.name === cityId);
+      if (city) {
+        cityName = city.name || city.city || cityId;
+        cityCoordinates = {
+          lat: city.lat || city.latitude || 0,
+          lng: city.lng || city.longitude || 0,
+        };
+      }
+    }
+
+    // Load existing clusters for proximity calculation
+    const planResult = await pool.query(
+      'SELECT id FROM trip_plans WHERE route_id = $1',
+      [routeId]
+    ).catch(() => ({ rows: [] }));
+
+    if (planResult.rows.length > 0) {
+      const planId = planResult.rows[0].id;
+      const cityPlanResult = await pool.query(
+        'SELECT id FROM city_plans WHERE trip_plan_id = $1 AND city_id = $2',
+        [planId, cityId]
+      ).catch(() => ({ rows: [] }));
+
+      if (cityPlanResult.rows.length > 0) {
+        const cityPlanId = cityPlanResult.rows[0].id;
+        const clusterResult = await pool.query(
+          'SELECT * FROM plan_clusters WHERE city_plan_id = $1',
+          [cityPlanId]
+        ).catch(() => ({ rows: [] }));
+
+        clusters = clusterResult.rows.map(c => ({
+          id: c.id,
+          name: c.name,
+          center: {
+            lat: parseFloat(c.center_lat) || cityCoordinates.lat,
+            lng: parseFloat(c.center_lng) || cityCoordinates.lng,
+          },
+        }));
+      }
+    }
+
+    // If no clusters, create a virtual one at city center for proximity
+    if (clusters.length === 0 && cityCoordinates.lat !== 0) {
+      clusters = [{
+        id: 'city-center',
+        name: 'City Center',
+        center: cityCoordinates,
+      }];
+    }
+
+    // Get existing item names to exclude
+    let existingNames = [];
+    if (planResult.rows.length > 0) {
+      const itemsResult = await pool.query(
+        `SELECT pi.card_data FROM plan_items pi
+         JOIN city_plans cp ON pi.city_plan_id = cp.id
+         JOIN trip_plans tp ON cp.trip_plan_id = tp.id
+         WHERE tp.route_id = $1`,
+        [routeId]
+      ).catch(() => ({ rows: [] }));
+
+      existingNames = itemsResult.rows
+        .map(r => r.card_data?.name)
+        .filter(Boolean);
+    }
+
+    // Generate cards using Claude
+    const generatedCards = await cardGenerationService.generateCards({
+      cityId,
+      cityName,
+      type,
+      count,
+      filters,
+      excludeIds,
+      context: {
+        travelerType: 'couple',
+        clusterNames: clusters.map(c => c.name),
+        excludeNames: existingNames,
+        nights: 2,
+      },
+    });
+
+    // Enrich with proximity data
+    const enrichedCards = cardGenerationService.enrichWithProximity(generatedCards, clusters);
+
+    // Sort by proximity
+    const sortedCards = cardGenerationService.sortByProximity(enrichedCards);
+
+    // Return cards with proximity info
+    const cards = sortedCards.map(item => ({
+      ...item.card,
+      proximity: item.nearestCluster ? {
+        clusterName: item.nearestCluster.name,
+        walkingMinutes: item.nearestCluster.walkingMinutes,
+        isNear: item.isNearPlan,
+      } : null,
+    }));
+
+    res.json({
+      cards,
+      hasMore: true,
+    });
+  } catch (error) {
+    console.error('[planning] POST /:routeId/generate error:', error);
+    res.status(500).json({ error: 'Failed to generate cards' });
+  }
+});
+
+// ============================================
+// Companion - AI Planning Assistant
+// ============================================
+
+const { handleCompanionMessage, generateReactiveMessage } = require('../agents/planningAgent');
+
+/**
+ * GET /api/planning/:routeId/companion/stream
+ * SSE streaming endpoint for companion messages
+ */
+router.get('/:routeId/companion/stream', async (req, res) => {
+  const { routeId } = req.params;
+  const { message, cityId, context: contextJson } = req.query;
+
+  // Set SSE headers
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no'); // Disable nginx buffering
+
+  // Parse context
+  let context = {};
+  try {
+    if (contextJson) {
+      context = JSON.parse(decodeURIComponent(contextJson));
+    }
+  } catch (e) {
+    console.error('[planning] Failed to parse context:', e);
+  }
+
+  // Load additional context from database
+  try {
+    // Get route data for city info
+    const routeResult = await pool.query(
+      'SELECT * FROM routes WHERE id = $1',
+      [routeId]
+    ).catch(() => ({ rows: [] }));
+
+    let cityName = cityId;
+    let cityData = null;
+
+    if (routeResult.rows.length > 0) {
+      const routeData = routeResult.rows[0].route_data || {};
+      const waypoints = routeData.waypoints || [];
+      const city = waypoints.find(w => w.id === cityId || w.name === cityId);
+      if (city) {
+        cityName = city.name || city.city || cityId;
+        cityData = city;
+      }
+    }
+
+    // Enrich context
+    const enrichedContext = {
+      ...context,
+      cityName,
+      cityData,
+      travelerType: context.preferences?.travelerType || 'couple',
+      preferences: context.preferences || {},
+    };
+
+    console.log('[planning] Companion stream started:', { routeId, cityId, message: message?.substring(0, 50) });
+
+    // Stream events from planning agent
+    for await (const event of handleCompanionMessage(message, enrichedContext)) {
+      const eventData = JSON.stringify(event);
+      res.write(`data: ${eventData}\n\n`);
+
+      // Flush to ensure immediate delivery
+      if (res.flush) res.flush();
+    }
+  } catch (error) {
+    console.error('[planning] Companion stream error:', error);
+    res.write(`data: ${JSON.stringify({ type: 'error', error: error.message })}\n\n`);
+    res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
+  }
+
+  res.end();
+});
+
+/**
+ * POST /api/planning/:routeId/companion
+ * Non-streaming fallback for companion messages
+ */
+router.post('/:routeId/companion', async (req, res) => {
+  try {
+    const { routeId } = req.params;
+    const { cityId, message, context } = req.body;
+
+    console.log('[planning] Companion message (non-streaming):', { routeId, cityId, message: message?.substring(0, 50) });
+
+    // Get route data for city info
+    const routeResult = await pool.query(
+      'SELECT * FROM routes WHERE id = $1',
+      [routeId]
+    ).catch(() => ({ rows: [] }));
+
+    let cityName = cityId;
+    let cityData = null;
+
+    if (routeResult.rows.length > 0) {
+      const routeData = routeResult.rows[0].route_data || {};
+      const waypoints = routeData.waypoints || [];
+      const city = waypoints.find(w => w.id === cityId || w.name === cityId);
+      if (city) {
+        cityName = city.name || city.city || cityId;
+        cityData = city;
+      }
+    }
+
+    // Enrich context
+    const enrichedContext = {
+      ...context,
+      cityName,
+      cityData,
+      travelerType: context?.preferences?.travelerType || 'couple',
+      preferences: context?.preferences || {},
+    };
+
+    // Collect all events
+    let responseText = '';
+    let cards = [];
+    let actions = [];
+
+    for await (const event of handleCompanionMessage(message, enrichedContext)) {
+      switch (event.type) {
+        case 'message':
+          responseText += event.content;
+          break;
+        case 'cards':
+          cards = event.cards;
+          break;
+        case 'actions':
+          actions = event.actions;
+          break;
+        case 'error':
+          throw new Error(event.error);
+      }
+    }
+
+    res.json({
+      message: responseText,
+      cards,
+      actions,
+    });
+  } catch (error) {
+    console.error('[planning] POST /:routeId/companion error:', error);
+    res.status(500).json({ error: 'Failed to process companion message' });
+  }
+});
+
+/**
+ * POST /api/planning/:routeId/companion/reactive
+ * Trigger reactive message based on user action
+ */
+router.post('/:routeId/companion/reactive', async (req, res) => {
+  try {
+    const { action, context } = req.body;
+
+    console.log('[planning] Reactive trigger:', action?.type);
+
+    const events = await generateReactiveMessage(action, context);
+
+    if (!events || events.length === 0) {
+      return res.json({ triggered: false });
+    }
+
+    // Extract final message and cards
+    let responseText = '';
+    let cards = [];
+    let actions = [];
+
+    for (const event of events) {
+      switch (event.type) {
+        case 'message':
+          responseText += event.content;
+          break;
+        case 'cards':
+          cards = event.cards;
+          break;
+        case 'actions':
+          actions = event.actions;
+          break;
+      }
+    }
+
+    res.json({
+      triggered: true,
+      message: responseText,
+      cards,
+      actions,
+    });
+  } catch (error) {
+    console.error('[planning] POST /:routeId/companion/reactive error:', error);
+    res.status(500).json({ error: 'Failed to generate reactive message' });
+  }
+});
+
+// ============================================
+// Utility Routes
+// ============================================
+
+/**
+ * GET /api/planning/distance
+ * Calculate walking distance between two points
+ */
+router.get('/distance', async (req, res) => {
+  try {
+    const { from, to } = req.query;
+
+    if (!from || !to) {
+      return res.status(400).json({ error: 'from and to parameters required' });
+    }
+
+    const [fromLat, fromLng] = from.split(',').map(Number);
+    const [toLat, toLng] = to.split(',').map(Number);
+
+    // Simple distance calculation (Haversine)
+    const R = 6371; // Earth's radius in km
+    const dLat = ((toLat - fromLat) * Math.PI) / 180;
+    const dLng = ((toLng - fromLng) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((fromLat * Math.PI) / 180) *
+        Math.cos((toLat * Math.PI) / 180) *
+        Math.sin(dLng / 2) *
+        Math.sin(dLng / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const distance = R * c; // Distance in km
+
+    // Assume average walking speed of 5 km/h = ~12 min per km
+    const walkingMinutes = Math.round(distance * 12);
+
+    res.json({
+      walkingMinutes,
+      transitMinutes: Math.round(walkingMinutes * 0.5), // Rough estimate
+      drivingMinutes: Math.round(walkingMinutes * 0.3), // Rough estimate
+    });
+  } catch (error) {
+    console.error('[planning] GET /distance error:', error);
+    res.status(500).json({ error: 'Failed to calculate distance' });
+  }
+});
+
+module.exports = { initializeRoutes, router };

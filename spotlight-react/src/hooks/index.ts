@@ -53,3 +53,13 @@ export {
   useIntelligenceSSE,
   useIntelligenceConnectionStatus,
 } from './useIntelligenceSSE';
+
+// Planning Companion Triggers (Phase 4)
+export {
+  useCompanionTriggers,
+  type TriggerAction,
+  type TriggerContext,
+} from './useCompanionTriggers';
+
+// Planning Trip Context (Phase 5)
+export { usePlanningTripContext } from './usePlanningTripContext';

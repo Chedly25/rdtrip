@@ -8927,6 +8927,10 @@ app.use('/api/weather', weatherRoutes);
 const cityIntelligenceRoutes = require('./server/routes/cityIntelligence');
 app.use('/api/city-intelligence', cityIntelligenceRoutes);
 
+// ==================== PLANNING ROUTES ====================
+const planningRoutes = require('./server/routes/planning');
+app.use('/api/planning', planningRoutes.initializeRoutes(pool));
+
 // =====================================================
 // CATCH-ALL ROUTE - Serve unified React app for client-side routing
 // =====================================================

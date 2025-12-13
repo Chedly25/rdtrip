@@ -100,6 +100,14 @@ export {
   type CompanionResponse,
 } from './useCompanion';
 
+// Planning Companion SSE Hook
+export {
+  useCompanionSSE,
+  useCompanionFallback,
+  type UseCompanionSSEResult,
+  type UseCompanionFallbackResult,
+} from './useCompanionSSE';
+
 // ============================================================================
 // Memory Hooks
 // ============================================================================

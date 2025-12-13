@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { ArrowLeft, Calendar, Users, MapPin, ArrowRight, Sparkles, Plus } from 'lucide-react';
+import { ArrowLeft, Calendar, Users, MapPin, ArrowRight, Sparkles, Plus, Map } from 'lucide-react';
 import type { DiscoveryRoute, TripSummary } from '../../stores/discoveryStore';
 import { useDiscoveryStore } from '../../stores/discoveryStore';
 
@@ -8,8 +8,10 @@ interface DiscoveryHeaderProps {
   route: DiscoveryRoute | null;
   onBack: () => void;
   onProceed: () => void;
+  onPlanTrip?: () => void;
   onAddCity: () => void;
   isDesktop: boolean;
+  isPlanningLoading?: boolean;
 }
 
 /**
@@ -23,8 +25,10 @@ export function DiscoveryHeader({
   route,
   onBack,
   onProceed,
+  onPlanTrip,
   onAddCity,
   isDesktop,
+  isPlanningLoading = false,
 }: DiscoveryHeaderProps) {
   const getSelectedCities = useDiscoveryStore((state) => state.getSelectedCities);
   const getTotalSelectedNights = useDiscoveryStore((state) => state.getTotalSelectedNights);
@@ -125,25 +129,59 @@ export function DiscoveryHeader({
                 </div>
               </div>
 
-              {/* Desktop: Proceed button */}
+              {/* Desktop: Action buttons */}
               {isDesktop && (
-                <motion.button
-                  onClick={onProceed}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="
-                    flex-shrink-0 flex items-center gap-2
-                    px-5 py-2.5 rounded-xl
-                    bg-rui-accent text-white
-                    font-body font-semibold text-body-2
-                    shadow-lg shadow-rui-accent/25
-                    hover:shadow-xl hover:shadow-rui-accent/30
-                    transition-shadow duration-200
-                  "
-                >
-                  <Sparkles className="w-4 h-4" />
-                  <span>Generate Itinerary</span>
-                </motion.button>
+                <div className="flex items-center gap-2">
+                  {/* Plan Your Trip button */}
+                  {onPlanTrip && (
+                    <motion.button
+                      onClick={onPlanTrip}
+                      disabled={isPlanningLoading}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="
+                        flex-shrink-0 flex items-center gap-2
+                        px-5 py-2.5 rounded-xl
+                        bg-rui-grey-5 border border-rui-grey-20
+                        text-rui-black
+                        font-body font-semibold text-body-2
+                        hover:bg-rui-grey-10 hover:border-rui-grey-30
+                        disabled:opacity-50 disabled:cursor-not-allowed
+                        transition-all duration-200
+                      "
+                    >
+                      {isPlanningLoading ? (
+                        <motion.div
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                          className="w-4 h-4 border-2 border-rui-grey-40 border-t-rui-accent rounded-full"
+                        />
+                      ) : (
+                        <Map className="w-4 h-4" />
+                      )}
+                      <span>Plan Your Trip</span>
+                    </motion.button>
+                  )}
+
+                  {/* Generate Itinerary button */}
+                  <motion.button
+                    onClick={onProceed}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="
+                      flex-shrink-0 flex items-center gap-2
+                      px-5 py-2.5 rounded-xl
+                      bg-rui-accent text-white
+                      font-body font-semibold text-body-2
+                      shadow-lg shadow-rui-accent/25
+                      hover:shadow-xl hover:shadow-rui-accent/30
+                      transition-shadow duration-200
+                    "
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    <span>Generate Itinerary</span>
+                  </motion.button>
+                </div>
               )}
             </div>
 
