@@ -8931,6 +8931,12 @@ app.use('/api/city-intelligence', cityIntelligenceRoutes);
 const planningRoutes = require('./server/routes/planning');
 app.use('/api/planning', planningRoutes.initializeRoutes(pool));
 
+// ==================== ANALYTICS ROUTES ====================
+const analyticsRoutes = require('./server/routes/analytics');
+const { getCostTracker } = require('./server/services/CostTracker');
+getCostTracker(pool); // Initialize with database
+app.use('/api/analytics', analyticsRoutes);
+
 // =====================================================
 // CATCH-ALL ROUTE - Serve unified React app for client-side routing
 // =====================================================

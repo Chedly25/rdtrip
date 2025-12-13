@@ -3,17 +3,23 @@
  *
  * Routes for the proximity-based trip planner feature.
  * Handles plan CRUD, cluster operations, and companion interactions.
+ *
+ * Cost Tracking: All API calls are tracked via CostTracker service
+ * to ensure we stay within budget limits per user session.
  */
 
 const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
+const { getCostTracker } = require('../services/CostTracker');
 
 // Database pool (passed from main server)
 let pool;
+let costTracker;
 
 function initializeRoutes(dbPool) {
   pool = dbPool;
+  costTracker = getCostTracker(pool);
   return router;
 }
 
@@ -119,8 +125,13 @@ router.post('/start', async (req, res) => {
       return res.status(400).json({ error: 'Origin and destination are required' });
     }
 
-    // Generate a new route ID
+    // Generate a new route ID (also serves as session ID for cost tracking)
     const routeId = generateId('route');
+
+    // Start cost tracking for this planning session
+    if (costTracker) {
+      costTracker.startPhase(routeId, 'planning_init');
+    }
 
     // Build route data structure
     const routeData = {
@@ -229,9 +240,23 @@ router.post('/start', async (req, res) => {
 
     console.log('[planning] Created new planning route:', routeId);
 
+    // End phase tracking and get summary
+    let costSummary = null;
+    if (costTracker) {
+      costTracker.endPhase(routeId);
+      costSummary = costTracker.getSessionSummary(routeId);
+    }
+
     res.json({
       routeId,
       tripPlan,
+      _analytics: costSummary ? {
+        sessionId: routeId,
+        phase: 'planning_init',
+        duration: costSummary.totalDurationFormatted,
+        cost: costSummary.spentFormatted,
+        budgetRemaining: costSummary.remainingFormatted,
+      } : null,
     });
   } catch (error) {
     console.error('[planning] POST /start error:', error);
@@ -654,11 +679,17 @@ const { getImageService } = require('../services/imageService');
  * Generate new suggestion cards using Claude
  */
 router.post('/:routeId/generate', async (req, res) => {
+  const startTime = Date.now();
   try {
     const { routeId } = req.params;
     const { cityId, type, count = 4, filters, excludeIds } = req.body;
 
     console.log('[planning] Generate cards request:', { routeId, cityId, type, count });
+
+    // Start cost tracking for discover phase
+    if (costTracker) {
+      costTracker.startPhase(routeId, `discover_${type}`);
+    }
 
     // Load route and city data for context
     const routeResult = await pool.query(
@@ -780,12 +811,33 @@ router.post('/:routeId/generate', async (req, res) => {
       // Continue without images
     }
 
+    // End phase tracking and get summary
+    const duration = Date.now() - startTime;
+    let costSummary = null;
+    if (costTracker) {
+      costTracker.endPhase(routeId);
+      costSummary = costTracker.getSessionSummary(routeId);
+    }
+
+    console.log(`[planning] Generated ${cards.length} ${type} cards in ${duration}ms`);
+
     res.json({
       cards,
       hasMore: true,
+      _analytics: costSummary ? {
+        sessionId: routeId,
+        phase: `discover_${type}`,
+        duration: `${duration}ms`,
+        totalCost: costSummary.spentFormatted,
+        budgetRemaining: costSummary.remainingFormatted,
+        budgetUsed: costSummary.budgetUsedPercent,
+      } : null,
     });
   } catch (error) {
     console.error('[planning] POST /:routeId/generate error:', error);
+    if (costTracker) {
+      costTracker.endPhase(req.params.routeId);
+    }
     res.status(500).json({ error: 'Failed to generate cards' });
   }
 });
