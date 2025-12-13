@@ -103,54 +103,78 @@ function buildActivityPrompt(request) {
     season,
   } = request;
 
-  return `Generate ${count} activities for ${city} for a ${travelerType || 'couple'} trip of ${nights || 2} nights.
+  return `You are recommending places to TOURISTS visiting ${city} for ${nights || 2} nights.
 
-## User Context
-- Traveler type: ${travelerType || 'couple'}
-- Preferences: ${preferences || 'authentic experiences, photography, local culture'}
-- Time in city: ${nights || 2} nights
+## CRITICAL: What Tourists Actually Want
 
-## Current Plan Context
-- Areas they're visiting: ${clusterNames?.join(', ') || 'city center'}
-- Activities already planned: ${existingActivities?.join(', ') || 'none yet'}
+Tourists visiting ${city} want to see what makes this city FAMOUS. They want the bucket-list items, the Instagram shots, the "must-sees" that ${city} is known for.
 
-## Requirements
-1. ${count} unique activities, not duplicating: ${excludeNames?.join(', ') || 'none'}
-2. Mix of:
-   - Durations (some 1-2h, some half-day)
-   - Free and paid options
-   - Indoor and outdoor
-   - At least 1 thing not in typical guidebooks
-3. Consider:
-   - Season: ${season || 'spring/fall'}
-   - Their areas: prioritize things near their clusters
-   - Pace: they're ${travelerType || 'couple'}, adjust energy level
-4. For couples: shared experiences > solo activities
+## Priority Hierarchy (FOLLOW THIS STRICTLY)
+
+**1. ICONIC LANDMARKS & MONUMENTS (50% of your suggestions)**
+Examples of what this means:
+- Paris → Eiffel Tower, Notre-Dame, Arc de Triomphe
+- Rome → Colosseum, Trevi Fountain, Pantheon
+- Barcelona → Sagrada Familia, Park Güell, La Rambla
+- Amsterdam → Anne Frank House, Rijksmuseum, Canal Ring
+
+For ${city}, think: What are the 5 places that DEFINE this city? What appears on every postcard? What would a tourist regret missing?
+
+**2. WORLD-CLASS MUSEUMS & CULTURAL SITES (25% of suggestions)**
+- Major museums with renowned collections
+- UNESCO World Heritage sites
+- Famous churches, cathedrals, palaces
+- Historic districts or neighborhoods worth exploring
+
+**3. GENUINE LOCAL EXPERIENCES (25% of suggestions)**
+- Charming neighborhoods for walking
+- Scenic viewpoints
+- Famous local markets
+- ONLY workshops/classes if they're ICONIC to ${city}
+  (Example: Pasta-making in Rome = YES. Random pottery class = NO)
+
+## NEVER SUGGEST (These are banned)
+- Generic workshops (pottery, photography, cooking classes unless world-famous)
+- "Hidden courtyard hunts" or scavenger-type activities
+- "Photography walks" or "food tours" unless it's a specific famous location
+- Activities that exist in every city (escape rooms, bike rentals, etc.)
+- Airbnb Experience-style filler content
+
+## Already Planned (exclude these)
+${existingActivities?.join(', ') || 'nothing yet'}
+
+## Output Requirements
+Generate exactly ${count} places, not duplicating: ${excludeNames?.join(', ') || 'none'}
+
+Each must have:
+- Real, accurate coordinates for ${city}
+- Actual place names (not made-up activities)
+- Realistic duration and pricing
 
 ## Output Format
-Return ONLY a valid JSON array with this exact structure (no markdown, no explanation):
+Return ONLY a valid JSON array (no markdown, no explanation):
 [
   {
     "id": "act-${Date.now()}-unique",
     "type": "activity",
-    "name": "Activity Name",
-    "description": "What you do and why it's special",
-    "whyGreat": "Why this matches their trip",
+    "name": "Actual Place Name",
+    "description": "What it is and why it's worth visiting",
+    "whyGreat": "Why tourists love this place",
     "location": {
       "lat": 43.2965,
       "lng": 5.3698,
-      "address": "Location or starting point",
-      "area": "Le Panier"
+      "address": "Real street address",
+      "area": "Neighborhood name"
     },
     "duration": 120,
     "priceLevel": 2,
-    "priceEstimate": "€15-20 per person",
+    "priceEstimate": "€15 or Free",
     "bestTime": "morning",
-    "tags": ["outdoor", "walking", "photography"]
+    "tags": ["landmark", "must-see", "historic"]
   }
 ]
 
-Generate ${count} activities now:`;
+Generate ${count} must-visit places in ${city}:`;
 }
 
 function buildPhotoSpotPrompt(request) {
@@ -162,43 +186,79 @@ function buildPhotoSpotPrompt(request) {
     excludeNames,
   } = request;
 
-  return `Generate ${count} photo spot recommendations for ${city} for a ${travelerType || 'couple'} trip.
+  return `You are recommending the BEST photo spots in ${city} for tourists.
 
-## Requirements
-1. ${count} unique photo spots, not duplicating: ${excludeNames?.join(', ') || 'none'}
-2. Mix of:
-   - Classic iconic views
-   - Hidden gems locals know about
-   - Different times of day (golden hour, blue hour, midday)
-3. Include:
-   - Best time to visit for photos
-   - What makes the shot unique
-   - Approximate visit duration
+## What Makes a Great Tourist Photo Spot
+
+These are the locations where tourists take their BEST, most memorable photos. Think:
+- Where do people post their ${city} photos on Instagram?
+- What views appear on postcards and travel magazines?
+- What are the "money shots" every visitor wants?
+
+## Priority Hierarchy (FOLLOW STRICTLY)
+
+**1. ICONIC VIEWPOINTS & LANDMARKS (60% of suggestions)**
+The famous shots everyone wants:
+- Panoramic city views from famous viewpoints
+- In front of/with famous landmarks as backdrop
+- Classic architectural shots (bridges, squares, monuments)
+- The angles that made ${city} famous
+
+Examples:
+- Paris → Trocadéro view of Eiffel Tower, Sacré-Cœur steps
+- Barcelona → Park Güell mosaic bench, Bunkers del Carmel sunset
+- Amsterdam → Skinny Bridge at dusk, canal house reflections
+
+**2. PHOTOGENIC ARCHITECTURE & STREETS (30% of suggestions)**
+- Colorful or historic streets worth photographing
+- Famous bridges, staircases, or courtyards
+- Unique architectural features specific to ${city}
+- Charming squares and plazas
+
+**3. SCENIC NATURE SPOTS (10% of suggestions)**
+- Waterfront locations with city skyline
+- Parks with famous views
+- Gardens or natural features
+
+## NEVER SUGGEST
+- "Photography walks" or "photo tours" (those aren't places)
+- Generic parks without scenic value
+- Spots that require hiring a guide
+- Interior-only locations (museums, etc.)
+
+## Output Requirements
+Generate exactly ${count} photo spots, not duplicating: ${excludeNames?.join(', ') || 'none'}
+
+Each must have:
+- Exact coordinates where to stand/shoot
+- Specific location name (not "somewhere in old town")
+- Best time of day for lighting
+- Free access (or note if paid entry required)
 
 ## Output Format
-Return ONLY a valid JSON array with this exact structure (no markdown, no explanation):
+Return ONLY a valid JSON array (no markdown, no explanation):
 [
   {
     "id": "photo-${Date.now()}-unique",
     "type": "photo_spot",
-    "name": "Spot Name",
-    "description": "What makes this photo spot special",
-    "whyGreat": "Why photographers love this spot",
+    "name": "Specific Location Name",
+    "description": "What shot you'll get and why it's special",
+    "whyGreat": "The iconic photo you'll capture here",
     "location": {
       "lat": 43.2965,
       "lng": 5.3698,
-      "address": "Viewpoint location",
-      "area": "Le Panier"
+      "address": "Exact viewpoint location",
+      "area": "Neighborhood"
     },
     "duration": 30,
     "priceLevel": 1,
     "priceEstimate": "Free",
     "bestTime": "sunset",
-    "tags": ["panorama", "architecture", "golden-hour"]
+    "tags": ["panorama", "iconic", "instagram"]
   }
 ]
 
-Generate ${count} photo spots now:`;
+Generate ${count} must-photograph spots in ${city}:`;
 }
 
 function buildBarPrompt(request) {
