@@ -4,8 +4,9 @@
  * Unified service to fetch images for planning suggestions.
  * Uses a priority chain:
  * 1. Google Places Photo API (best for specific businesses)
- * 2. Wikipedia/Wikimedia Commons (good for landmarks/monuments)
- * 3. Unsplash (fallback for generic category images)
+ * 2. Wikipedia Search + Image (handles disambiguated titles)
+ * 3. Wikimedia Commons (good for landmarks/monuments)
+ * 4. Unsplash (fallback for generic category images)
  *
  * All images are cached in the database to avoid repeated API calls.
  */
@@ -18,6 +19,14 @@ class ImageService {
     this.cache = new Map();
     this.googleApiKey = process.env.GOOGLE_PLACES_API_KEY || process.env.GOOGLE_API_KEY;
     this.unsplashAccessKey = process.env.UNSPLASH_ACCESS_KEY;
+
+    // Common search term cleanups for better Wikipedia matching
+    this.searchCleanups = [
+      { pattern: /\s+\([^)]+\)$/g, replacement: '' }, // Remove parenthetical info
+      { pattern: /^the\s+/i, replacement: '' }, // Remove leading "The"
+      { pattern: /\s+museum$/i, replacement: '' }, // Try without "museum"
+      { pattern: /\s+cathedral$/i, replacement: '' }, // Try without "cathedral"
+    ];
   }
 
   /**
@@ -80,30 +89,189 @@ class ImageService {
    * Fetch image using priority fallback chain
    */
   async fetchImageWithFallbacks(card, cityName) {
+    console.log(`[imageService] Fetching image for "${card.name}" (${card.type}) in ${cityName}`);
+
     // Strategy 1: Google Places (best for restaurants, bars, cafes, hotels)
     if (['restaurant', 'bar', 'cafe', 'hotel'].includes(card.type)) {
       const googleImage = await this.fetchGooglePlacePhoto(card.name, cityName);
       if (googleImage) return googleImage;
     }
 
-    // Strategy 2: Wikipedia (best for landmarks, activities, photo spots)
-    const wikiImage = await this.fetchWikipediaImage(card.name, cityName);
+    // Strategy 2: Smart Wikipedia search (handles disambiguated titles)
+    const wikiImage = await this.smartWikipediaSearch(card.name, cityName);
     if (wikiImage) return wikiImage;
 
-    // Strategy 3: Wikipedia with location area
-    if (card.location?.area) {
-      const areaImage = await this.fetchWikipediaImage(`${card.location.area} ${cityName}`);
-      if (areaImage) return areaImage;
+    // Strategy 3: Wikimedia Commons search (great for landmarks)
+    if (['activity', 'photo_spot', 'experience'].includes(card.type)) {
+      const commonsImage = await this.fetchWikimediaCommonsImage(card.name, cityName);
+      if (commonsImage) return commonsImage;
     }
 
-    // Strategy 4: Unsplash category fallback
+    // Strategy 4: Google Places for landmarks too (as fallback)
+    if (['activity', 'photo_spot'].includes(card.type)) {
+      const googleImage = await this.fetchGooglePlacePhoto(card.name, cityName);
+      if (googleImage) return googleImage;
+    }
+
+    // Strategy 5: Unsplash category fallback
     const unsplashImage = await this.fetchUnsplashImage(card, cityName);
     if (unsplashImage) return unsplashImage;
 
-    // Strategy 5: City generic image
+    // Strategy 6: City generic image from Wikipedia
     const cityImage = await this.fetchWikipediaImage(cityName);
     if (cityImage) return cityImage;
 
+    console.log(`[imageService] No image found for "${card.name}"`);
+    return null;
+  }
+
+  /**
+   * Smart Wikipedia search - tries multiple strategies to find the right article
+   */
+  async smartWikipediaSearch(placeName, cityName) {
+    // Build search variations from most specific to least
+    const searchVariations = [
+      `${placeName} ${cityName}`,           // "Cathedral of Our Lady Antwerp"
+      placeName,                             // "Cathedral of Our Lady"
+      `${placeName} (${cityName})`,          // "Cathedral of Our Lady (Antwerp)"
+      this.simplifyName(placeName),          // Simplified version
+      `${this.simplifyName(placeName)} ${cityName}`, // Simplified + city
+    ];
+
+    // Remove duplicates
+    const uniqueSearches = [...new Set(searchVariations.filter(Boolean))];
+
+    for (const searchTerm of uniqueSearches) {
+      // First use Wikipedia's search API to find the actual article title
+      const articleTitle = await this.findWikipediaArticle(searchTerm);
+      if (articleTitle) {
+        const imageUrl = await this.fetchWikipediaImageByTitle(articleTitle);
+        if (imageUrl) {
+          console.log(`[imageService] Found Wikipedia image for "${placeName}" via search "${searchTerm}"`);
+          return imageUrl;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Find Wikipedia article title using search API
+   */
+  async findWikipediaArticle(searchTerm) {
+    try {
+      const searchUrl = `https://en.wikipedia.org/w/api.php?` +
+        `action=opensearch` +
+        `&search=${encodeURIComponent(searchTerm)}` +
+        `&limit=5` +
+        `&namespace=0` +
+        `&format=json`;
+
+      const response = await axios.get(searchUrl, { timeout: 5000 });
+
+      // opensearch returns [searchTerm, [titles], [descriptions], [urls]]
+      if (response.data && response.data[1] && response.data[1].length > 0) {
+        // Return the first matching title
+        return response.data[1][0];
+      }
+    } catch (error) {
+      // Silently fail
+    }
+    return null;
+  }
+
+  /**
+   * Fetch Wikipedia image by exact article title
+   */
+  async fetchWikipediaImageByTitle(title) {
+    try {
+      // Use the page images API to get the main image
+      const imageUrl = `https://en.wikipedia.org/w/api.php?` +
+        `action=query` +
+        `&titles=${encodeURIComponent(title)}` +
+        `&prop=pageimages` +
+        `&pithumbsize=800` +
+        `&format=json`;
+
+      const response = await axios.get(imageUrl, { timeout: 5000 });
+
+      const pages = response.data?.query?.pages;
+      if (pages) {
+        const pageData = Object.values(pages)[0];
+        if (pageData?.thumbnail?.source) {
+          return pageData.thumbnail.source;
+        }
+      }
+
+      // Fallback: try the REST API for originalimage
+      const summaryUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`;
+      const summaryResponse = await axios.get(summaryUrl, {
+        headers: { Accept: 'application/json' },
+        timeout: 5000
+      });
+
+      if (summaryResponse.data.originalimage?.source) {
+        return summaryResponse.data.originalimage.source;
+      }
+      if (summaryResponse.data.thumbnail?.source) {
+        // Upscale thumbnail
+        return summaryResponse.data.thumbnail.source.replace(/\/\d+px-/, '/800px-');
+      }
+    } catch (error) {
+      // Silently fail
+    }
+    return null;
+  }
+
+  /**
+   * Simplify a place name for better search matching
+   */
+  simplifyName(name) {
+    let simplified = name;
+    for (const cleanup of this.searchCleanups) {
+      simplified = simplified.replace(cleanup.pattern, cleanup.replacement);
+    }
+    return simplified.trim();
+  }
+
+  /**
+   * Search Wikimedia Commons for images
+   */
+  async fetchWikimediaCommonsImage(placeName, cityName) {
+    try {
+      const searchTerm = `${placeName} ${cityName}`;
+      const searchUrl = `https://commons.wikimedia.org/w/api.php?` +
+        `action=query` +
+        `&generator=search` +
+        `&gsrsearch=${encodeURIComponent(searchTerm)}` +
+        `&gsrlimit=5` +
+        `&gsrnamespace=6` + // File namespace
+        `&prop=imageinfo` +
+        `&iiprop=url|extmetadata` +
+        `&iiurlwidth=800` +
+        `&format=json`;
+
+      const response = await axios.get(searchUrl, { timeout: 5000 });
+
+      const pages = response.data?.query?.pages;
+      if (pages) {
+        // Find the first image that's not an icon/logo
+        for (const page of Object.values(pages)) {
+          const imageInfo = page?.imageinfo?.[0];
+          if (imageInfo?.thumburl) {
+            // Skip very small images (likely icons)
+            const width = imageInfo.width || 0;
+            if (width >= 400) {
+              console.log(`[imageService] Found Wikimedia Commons image for "${placeName}"`);
+              return imageInfo.thumburl;
+            }
+          }
+        }
+      }
+    } catch (error) {
+      // Silently fail
+    }
     return null;
   }
 

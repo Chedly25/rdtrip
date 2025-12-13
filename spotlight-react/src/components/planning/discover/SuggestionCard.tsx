@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { DistanceBadge } from '../shared/DistanceBadge';
 import { PriceBadge } from '../shared/PriceBadge';
+import { CardImagePlaceholder } from './CardImagePlaceholder';
 import type { PlanCard, PlanCardType } from '../../../types/planning';
 
 // Type icons mapping
@@ -186,19 +187,11 @@ export function SuggestionCard({
             onError={() => setImageError(true)}
           />
         ) : (
-          // Fallback gradient with icon
-          <div
-            className="absolute inset-0 flex items-center justify-center"
-            style={{
-              background: `linear-gradient(135deg, ${styles.bg} 0%, #F5F0E8 100%)`,
-            }}
-          >
-            <Icon
-              className="w-16 h-16 opacity-30 transition-transform duration-300 group-hover:scale-110"
-              style={{ color: styles.accent }}
-              strokeWidth={1}
-            />
-          </div>
+          // Beautiful type-specific placeholder
+          <CardImagePlaceholder
+            type={card.type}
+            area={card.location?.area}
+          />
         )}
 
         {/* Gradient overlay for text readability */}
