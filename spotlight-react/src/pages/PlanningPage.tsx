@@ -55,35 +55,49 @@ export default function PlanningPage() {
     isLoading,
     error,
     isInitialized,
+    routeId: storeRouteId,
     setCurrentCity,
     loadPlan,
     savePlan,
     getTotalItemCount,
+    reset,
   } = usePlanningStore();
 
   // Reactive companion triggers - watches for user actions and triggers companion responses
   // This enables automatic companion reactions when users add items, create clusters, etc.
   useCompanionTriggers(currentCityId || '', {
-    enabled: isInitialized && !!currentCityId,
+    enabled: isInitialized && !!currentCityId && storeRouteId === routeId,
   });
 
-  // Load planning data on mount
+  // Load planning data on mount - handles both fresh loads and route changes
   useEffect(() => {
-    if (routeId && !isInitialized) {
+    if (!routeId) return;
+
+    // If store has data for a DIFFERENT route, reset first
+    if (isInitialized && storeRouteId && storeRouteId !== routeId) {
+      console.log('[PlanningPage] Route changed, resetting store');
+      reset();
+    }
+
+    // Load if not initialized OR if this is a different route
+    if (!isInitialized || storeRouteId !== routeId) {
       loadPlan(routeId, token || undefined);
     }
-  }, [routeId, token, isInitialized, loadPlan]);
+  }, [routeId, token, isInitialized, storeRouteId, loadPlan, reset]);
 
   // Auto-save debounce (save 2 seconds after last change)
   useEffect(() => {
-    if (!isInitialized || !routeId) return;
+    // Only auto-save when properly initialized with matching route
+    if (!isInitialized || !routeId || storeRouteId !== routeId) return;
+    // Skip if there are no city plans (store was just reset)
+    if (Object.keys(cityPlans).length === 0) return;
 
     const timeoutId = setTimeout(() => {
       handleSave(true); // Silent save
     }, 2000);
 
     return () => clearTimeout(timeoutId);
-  }, [cityPlans]);
+  }, [cityPlans, isInitialized, routeId, storeRouteId]);
 
   const handleSave = async (silent = false) => {
     if (!routeId) return;
