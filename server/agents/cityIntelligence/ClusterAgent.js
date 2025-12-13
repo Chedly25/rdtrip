@@ -504,19 +504,26 @@ class ClusterAgent extends BaseAgent {
 
   /**
    * Generate fallback clusters when discovery fails
+   * Uses day-based naming to match the planning UX
    */
   generateFallbackClusters(city) {
-    return [
-      {
-        id: 'cluster-1',
-        name: 'Historic Center',
-        theme: 'cultural',
-        bestFor: 'afternoon',
-        walkingMinutes: 30,
+    const nights = city.nights || city.suggestedNights || 2;
+    const clusters = [];
+
+    for (let i = 1; i <= nights; i++) {
+      clusters.push({
+        id: `day-${i}`,
+        name: `Day ${i}`,
+        theme: i === 1 ? 'arrival' : i === nights ? 'departure' : 'exploration',
+        bestFor: 'all-day',
+        walkingMinutes: 0,
         centerPoint: city.coordinates,
+        dayNumber: i,
         places: []
-      }
-    ];
+      });
+    }
+
+    return clusters;
   }
 
   /**

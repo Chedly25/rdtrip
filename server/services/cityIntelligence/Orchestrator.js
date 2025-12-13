@@ -575,12 +575,23 @@ class CityIntelligenceOrchestrator extends EventEmitter {
         data: {
           clusters: [
             {
-              id: 'center-cluster',
-              name: 'Historic Center',
-              theme: 'heritage',
-              bestFor: 'afternoon',
-              walkingMinutes: 45,
+              id: 'day-1',
+              name: 'Day 1',
+              theme: 'arrival',
+              bestFor: 'all-day',
+              walkingMinutes: 0,
               centerPoint: city.coordinates,
+              dayNumber: 1,
+              places: []
+            },
+            {
+              id: 'day-2',
+              name: 'Day 2',
+              theme: 'exploration',
+              bestFor: 'all-day',
+              walkingMinutes: 0,
+              centerPoint: city.coordinates,
+              dayNumber: 2,
               places: []
             }
           ]

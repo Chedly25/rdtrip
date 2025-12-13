@@ -374,57 +374,63 @@ export function DiscoverPanel({ cityId, cityName, cityCenter = { lat: 0, lng: 0 
           )}
         </AnimatePresence>
 
-        {/* Surprise me button */}
+        {/* Discover more button - refined premium design */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.3 }}
-          className="pt-4 border-t border-[#E5DDD0]"
+          className="pt-6"
         >
-          <button
+          <motion.button
             onClick={handleSurpriseMe}
             disabled={isTabGenerating}
+            whileHover={{ y: -1 }}
+            whileTap={{ scale: 0.98 }}
             className={`
-              w-full py-4 rounded-xl
-              bg-gradient-to-r
-              ${activeTab === 'activities'
-                ? 'from-[#7C5CDB] to-[#4A90A4]'
-                : activeTab === 'restaurants'
-                  ? 'from-[#C45830] to-[#8B4A5E]'
-                  : 'from-[#5C6B7A] to-[#4A5866]'
-              }
-              text-white font-['Satoshi',system-ui,sans-serif] font-semibold text-base
-              flex items-center justify-center gap-2
-              shadow-lg
-              ${activeTab === 'activities'
-                ? 'shadow-[#7C5CDB]/20 hover:shadow-[#7C5CDB]/30'
-                : activeTab === 'restaurants'
-                  ? 'shadow-[#C45830]/20 hover:shadow-[#C45830]/30'
-                  : 'shadow-[#5C6B7A]/20 hover:shadow-[#5C6B7A]/30'
-              }
-              hover:scale-[1.01] active:scale-[0.99]
-              transition-all duration-200
-              disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100
+              w-full py-4 px-6 rounded-2xl
+              bg-[#2C2417]
+              text-[#FFFBF5] font-['Satoshi',system-ui,sans-serif] font-semibold text-[15px]
+              flex items-center justify-center gap-3
+              shadow-sm
+              transition-all duration-300
+              disabled:opacity-50 disabled:cursor-not-allowed
+              hover:bg-[#3D3225]
+              relative overflow-hidden
             `}
           >
+            {/* Subtle shimmer effect when loading */}
+            {isTabGenerating && (
+              <motion.div
+                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent"
+                animate={{ x: ['-100%', '100%'] }}
+                transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
+              />
+            )}
+
             {isTabGenerating ? (
               <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                Generating...
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                >
+                  <Loader2 className="w-[18px] h-[18px]" strokeWidth={2} />
+                </motion.div>
+                <span>Discovering...</span>
               </>
             ) : (
               <>
-                <Shuffle className="w-5 h-5" />
-                Surprise me!
+                <Shuffle className="w-[18px] h-[18px]" strokeWidth={2} />
+                <span>Surprise me</span>
               </>
             )}
-          </button>
-          <p className="text-xs text-[#C4B8A5] text-center mt-2 font-['Satoshi',system-ui,sans-serif]">
+          </motion.button>
+
+          <p className="text-[12px] text-[#B8A99A] text-center mt-3 font-['Satoshi',system-ui,sans-serif] tracking-wide">
             {activeTab === 'activities'
               ? 'Discover unique experiences'
               : activeTab === 'restaurants'
                 ? 'Find a hidden gem'
-                : 'Show more hotel options'
+                : 'Show more options'
             }
           </p>
         </motion.div>
