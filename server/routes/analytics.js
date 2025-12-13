@@ -146,6 +146,31 @@ router.post('/phase/end', (req, res) => {
 });
 
 /**
+ * GET /api/analytics/images
+ * Get image service statistics (Google API calls made/blocked)
+ */
+router.get('/images', (req, res) => {
+  try {
+    const { ImageService } = require('../services/imageService');
+    const stats = ImageService.getGoogleApiStats();
+
+    res.json({
+      success: true,
+      data: {
+        ...stats,
+        note: 'Google Places Photo API costs $0.007 per call',
+        costSavingsStrategy: 'Prioritize FREE sources: Wikipedia, Wikimedia Commons, Unsplash',
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
+/**
  * GET /api/analytics/costs
  * Get the cost table for all API types
  */

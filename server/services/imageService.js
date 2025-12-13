@@ -2,23 +2,38 @@
  * Image Service for Planning Cards
  *
  * Unified service to fetch images for planning suggestions.
- * Uses a priority chain:
- * 1. Google Places Photo API (best for specific businesses)
- * 2. Wikipedia Search + Image (handles disambiguated titles)
- * 3. Wikimedia Commons (good for landmarks/monuments)
- * 4. Unsplash (fallback for generic category images)
+ *
+ * COST OPTIMIZATION (€3 budget per user):
+ * - Prioritize FREE sources: Wikipedia, Wikimedia Commons
+ * - Google Places Photo costs $0.007 per request - USE SPARINGLY
+ * - Aggressive caching to avoid repeat calls
+ *
+ * Priority chain (optimized for cost):
+ * 1. Cache (database + memory)
+ * 2. Wikipedia Search + Image (FREE)
+ * 3. Wikimedia Commons (FREE, great for landmarks)
+ * 4. Unsplash (FREE with limits)
+ * 5. Google Places Photo (ONLY if skipGooglePlaces=false, costs $0.007)
  *
  * All images are cached in the database to avoid repeated API calls.
  */
 
 const axios = require('axios');
 
+// Track Google API calls for cost monitoring
+let googleApiCallCount = 0;
+let googleApiCallsBlocked = 0;
+
 class ImageService {
-  constructor(db) {
+  constructor(db, options = {}) {
     this.db = db;
     this.cache = new Map();
     this.googleApiKey = process.env.GOOGLE_PLACES_API_KEY || process.env.GOOGLE_API_KEY;
     this.unsplashAccessKey = process.env.UNSPLASH_ACCESS_KEY;
+
+    // Cost control options
+    this.skipGooglePlaces = options.skipGooglePlaces ?? true; // Default: skip Google to save costs
+    this.maxGoogleCallsPerSession = options.maxGoogleCalls ?? 10; // Max 10 Google calls = $0.07
 
     // Common search term cleanups for better Wikipedia matching
     this.searchCleanups = [
@@ -87,42 +102,72 @@ class ImageService {
 
   /**
    * Fetch image using priority fallback chain
+   * COST OPTIMIZED: Free sources first, Google Places last
    */
   async fetchImageWithFallbacks(card, cityName) {
     console.log(`[imageService] Fetching image for "${card.name}" (${card.type}) in ${cityName}`);
 
-    // Strategy 1: Google Places (best for restaurants, bars, cafes, hotels)
-    if (['restaurant', 'bar', 'cafe', 'hotel'].includes(card.type)) {
-      const googleImage = await this.fetchGooglePlacePhoto(card.name, cityName);
-      if (googleImage) return googleImage;
-    }
+    // ============================================
+    // FREE SOURCES FIRST (cost = $0)
+    // ============================================
 
-    // Strategy 2: Smart Wikipedia search (handles disambiguated titles)
+    // Strategy 1: Smart Wikipedia search (FREE, handles disambiguated titles)
     const wikiImage = await this.smartWikipediaSearch(card.name, cityName);
-    if (wikiImage) return wikiImage;
-
-    // Strategy 3: Wikimedia Commons search (great for landmarks)
-    if (['activity', 'photo_spot', 'experience'].includes(card.type)) {
-      const commonsImage = await this.fetchWikimediaCommonsImage(card.name, cityName);
-      if (commonsImage) return commonsImage;
+    if (wikiImage) {
+      console.log(`[imageService] Found FREE Wikipedia image for "${card.name}"`);
+      return wikiImage;
     }
 
-    // Strategy 4: Google Places for landmarks too (as fallback)
-    if (['activity', 'photo_spot'].includes(card.type)) {
+    // Strategy 2: Wikimedia Commons search (FREE, great for landmarks)
+    const commonsImage = await this.fetchWikimediaCommonsImage(card.name, cityName);
+    if (commonsImage) {
+      console.log(`[imageService] Found FREE Wikimedia Commons image for "${card.name}"`);
+      return commonsImage;
+    }
+
+    // Strategy 3: Unsplash category fallback (FREE with limits)
+    const unsplashImage = await this.fetchUnsplashImage(card, cityName);
+    if (unsplashImage) {
+      console.log(`[imageService] Found FREE Unsplash image for "${card.name}"`);
+      return unsplashImage;
+    }
+
+    // Strategy 4: City generic image from Wikipedia (FREE)
+    const cityImage = await this.fetchWikipediaImage(cityName);
+    if (cityImage) {
+      console.log(`[imageService] Found FREE Wikipedia city image for ${cityName}`);
+      return cityImage;
+    }
+
+    // ============================================
+    // PAID SOURCE - GOOGLE PLACES (cost = $0.007 per call)
+    // Only use if explicitly enabled
+    // ============================================
+    if (!this.skipGooglePlaces && this.googleApiKey) {
+      googleApiCallCount++;
+      console.log(`[imageService] Using PAID Google Places API (call #${googleApiCallCount})`);
+
       const googleImage = await this.fetchGooglePlacePhoto(card.name, cityName);
       if (googleImage) return googleImage;
+    } else if (this.googleApiKey) {
+      googleApiCallsBlocked++;
+      console.log(`[imageService] Skipped Google Places to save costs (blocked: ${googleApiCallsBlocked})`);
     }
 
-    // Strategy 5: Unsplash category fallback
-    const unsplashImage = await this.fetchUnsplashImage(card, cityName);
-    if (unsplashImage) return unsplashImage;
-
-    // Strategy 6: City generic image from Wikipedia
-    const cityImage = await this.fetchWikipediaImage(cityName);
-    if (cityImage) return cityImage;
-
-    console.log(`[imageService] No image found for "${card.name}"`);
+    console.log(`[imageService] No image found for "${card.name}" (tried all FREE sources)`);
     return null;
+  }
+
+  /**
+   * Get Google API call statistics
+   */
+  static getGoogleApiStats() {
+    return {
+      callsMade: googleApiCallCount,
+      callsBlocked: googleApiCallsBlocked,
+      estimatedCost: `$${(googleApiCallCount * 0.007).toFixed(4)}`,
+      estimatedSavings: `$${(googleApiCallsBlocked * 0.007).toFixed(4)}`,
+    };
   }
 
   /**
