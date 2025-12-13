@@ -9,7 +9,7 @@
  * Design: Wanderlust Editorial - warm earth tones, refined typography, magazine feel
  */
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -47,6 +47,9 @@ export default function PlanningPage() {
     return !localStorage.getItem('planning_onboarding_seen');
   });
 
+  // Track if we've initiated loading for this route to prevent infinite loops
+  const loadingInitiatedRef = useRef<string | null>(null);
+
   // Planning store
   const {
     tripPlan,
@@ -65,25 +68,32 @@ export default function PlanningPage() {
 
   // Reactive companion triggers - watches for user actions and triggers companion responses
   // This enables automatic companion reactions when users add items, create clusters, etc.
+  // TEMPORARILY DISABLED for debugging - TODO: Re-enable once infinite loop is fixed
   useCompanionTriggers(currentCityId || '', {
-    enabled: isInitialized && !!currentCityId && storeRouteId === routeId,
+    enabled: false, // isInitialized && !!currentCityId && storeRouteId === routeId,
   });
 
   // Load planning data on mount - handles both fresh loads and route changes
   useEffect(() => {
     if (!routeId) return;
 
+    // Skip if we've already initiated loading for this exact route
+    if (loadingInitiatedRef.current === routeId) {
+      return;
+    }
+
     // If store has data for a DIFFERENT route, reset first
-    if (isInitialized && storeRouteId && storeRouteId !== routeId) {
+    if (storeRouteId && storeRouteId !== routeId) {
       console.log('[PlanningPage] Route changed, resetting store');
       reset();
     }
 
-    // Load if not initialized OR if this is a different route
-    if (!isInitialized || storeRouteId !== routeId) {
-      loadPlan(routeId, token || undefined);
-    }
-  }, [routeId, token, isInitialized, storeRouteId, loadPlan, reset]);
+    // Mark that we're loading this route (before the async call)
+    loadingInitiatedRef.current = routeId;
+
+    // Load the plan
+    loadPlan(routeId, token || undefined);
+  }, [routeId, token, storeRouteId, loadPlan, reset]);
 
   // Auto-save debounce (save 2 seconds after last change)
   useEffect(() => {
