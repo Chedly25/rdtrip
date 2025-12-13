@@ -62,25 +62,32 @@ async function buildInitialPlan(routeId, routeData) {
 }
 
 /**
- * Generate suggested cluster areas for a city
- * In a real implementation, this would use City Intelligence data
+ * Generate day-based clusters for a city
+ * Creates Day 1, Day 2, etc. based on the number of nights staying
  */
 function generateSuggestedClusters(city) {
-  // Default suggestions based on typical city areas
   const cityName = city.name || city.city || 'City';
+  const nights = city.nights || city.suggestedNights || 2;
+  const center = {
+    lat: city.lat || city.latitude || city.coordinates?.lat || 0,
+    lng: city.lng || city.longitude || city.coordinates?.lng || 0,
+  };
 
-  // Basic suggestions - in production, these come from City Intelligence
-  const suggestions = [
-    {
-      id: generateId('suggested'),
-      name: 'Historic Center',
-      description: `The heart of ${cityName} with historic architecture, main squares, and local atmosphere`,
-      center: {
-        lat: city.lat || city.latitude || 0,
-        lng: city.lng || city.longitude || 0,
-      },
-    },
-  ];
+  const suggestions = [];
+
+  for (let i = 1; i <= nights; i++) {
+    suggestions.push({
+      id: generateId(`day-${i}`),
+      name: `Day ${i}`,
+      description: i === 1
+        ? `Your first day exploring ${cityName}`
+        : i === nights
+          ? `Final day in ${cityName}`
+          : `Day ${i} in ${cityName}`,
+      dayNumber: i,
+      center: center,
+    });
+  }
 
   return suggestions;
 }

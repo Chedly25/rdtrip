@@ -1,22 +1,19 @@
 /**
  * Auto-Clustering Utility
  *
- * Automatically organizes plan items into geographic clusters.
- * When a user adds an item, the system determines the best cluster
- * based on proximity to existing clusters or creates a new one.
+ * Day-based organization for trip planning.
+ * When a user adds an item, the system assigns it to a day using load balancing.
  *
  * Key rules:
- * - Items within 15 min walk of each other = same cluster
- * - Restaurants placed near activity clusters when possible
- * - New clusters named after the item's area
+ * - Distribute items evenly across days (load balancing)
+ * - Consider item types for smart day assignment
+ * - Activities and photo spots: prefer earlier days
+ * - Restaurants: distribute evenly for meals across days
  */
 
 import type { CityPlan, Cluster, PlanCard, LatLng } from '../types/planning';
 
-// Maximum walking time (minutes) to consider items as part of the same cluster
-const MAX_WALKING_MINUTES = 15;
-
-// Types that count as "activities" for restaurant placement logic
+// Types for categorization
 const ACTIVITY_TYPES = ['activity', 'photo_spot', 'experience'];
 const RESTAURANT_TYPES = ['restaurant', 'bar', 'cafe'];
 
@@ -65,7 +62,8 @@ export function calculateClusterCenter(items: PlanCard[]): LatLng {
 }
 
 /**
- * Find the best existing cluster for an item, or determine a new cluster is needed
+ * Find the best day (cluster) for an item using load balancing
+ * Distributes items evenly across days while considering item types
  */
 export function findBestClusterForItem(
   cityPlan: CityPlan,
@@ -73,79 +71,69 @@ export function findBestClusterForItem(
 ): { clusterId: string | null; shouldCreateNew: boolean; suggestedName: string } {
   const { clusters } = cityPlan;
 
-  // If no item location, can't determine proximity
-  if (!newItem.location?.lat || !newItem.location?.lng) {
-    // Just use the first cluster or create a new one
-    if (clusters.length > 0) {
-      return { clusterId: clusters[0].id, shouldCreateNew: false, suggestedName: '' };
-    }
+  // No clusters exist - create Day 1
+  if (clusters.length === 0) {
     return {
       clusterId: null,
       shouldCreateNew: true,
-      suggestedName: newItem.location?.area || 'New Area',
+      suggestedName: 'Day 1',
     };
   }
 
-  // For restaurants/bars, prefer clusters with activities
+  // Load balance: find the day with the fewest items
+  const sortedByLoad = [...clusters].sort((a, b) => a.items.length - b.items.length);
+
+  // For restaurants, consider meal distribution
   if (RESTAURANT_TYPES.includes(newItem.type)) {
-    const clusterWithActivities = findBestClusterForRestaurant(clusters, newItem);
-    if (clusterWithActivities) {
-      return { clusterId: clusterWithActivities.id, shouldCreateNew: false, suggestedName: '' };
+    // Count restaurants per day
+    const dayRestaurantCounts = clusters.map(cluster => ({
+      cluster,
+      restaurantCount: cluster.items.filter(i => RESTAURANT_TYPES.includes(i.type)).length,
+    }));
+
+    // Prefer days with fewer restaurants (max 2-3 meals per day)
+    const daysNeedingMeals = dayRestaurantCounts
+      .filter(d => d.restaurantCount < 3)
+      .sort((a, b) => a.restaurantCount - b.restaurantCount);
+
+    if (daysNeedingMeals.length > 0) {
+      return {
+        clusterId: daysNeedingMeals[0].cluster.id,
+        shouldCreateNew: false,
+        suggestedName: ''
+      };
     }
   }
 
-  // Find nearest cluster within walking distance
-  let nearestCluster: Cluster | null = null;
-  let nearestDistance = Infinity;
+  // For activities and photo spots, prefer earlier days if they're not too full
+  if (ACTIVITY_TYPES.includes(newItem.type)) {
+    // Find days that aren't overloaded (less than 5 activities)
+    const availableDays = clusters
+      .map((cluster, index) => ({
+        cluster,
+        dayNumber: index + 1,
+        activityCount: cluster.items.filter(i => ACTIVITY_TYPES.includes(i.type)).length,
+      }))
+      .filter(d => d.activityCount < 5)
+      .sort((a, b) => a.dayNumber - b.dayNumber); // Prefer earlier days
 
-  for (const cluster of clusters) {
-    // Calculate distance to cluster center
-    const walkingTime = calculateWalkingMinutes(newItem.location, cluster.center);
-
-    if (walkingTime <= MAX_WALKING_MINUTES && walkingTime < nearestDistance) {
-      nearestDistance = walkingTime;
-      nearestCluster = cluster;
+    if (availableDays.length > 0) {
+      return {
+        clusterId: availableDays[0].cluster.id,
+        shouldCreateNew: false,
+        suggestedName: ''
+      };
     }
   }
 
-  if (nearestCluster) {
-    return { clusterId: nearestCluster.id, shouldCreateNew: false, suggestedName: '' };
-  }
-
-  // No nearby cluster - need to create a new one
+  // Default: use the day with fewest items (load balancing)
   return {
-    clusterId: null,
-    shouldCreateNew: true,
-    suggestedName: newItem.location?.area || 'New Area',
+    clusterId: sortedByLoad[0].id,
+    shouldCreateNew: false,
+    suggestedName: ''
   };
 }
 
-/**
- * Find the best cluster for a restaurant based on activity presence
- */
-function findBestClusterForRestaurant(
-  clusters: Cluster[],
-  restaurant: PlanCard
-): Cluster | null {
-  // Sort clusters by activity count (restaurants should be near activities)
-  const clustersWithActivities = clusters
-    .map(cluster => ({
-      cluster,
-      activityCount: cluster.items.filter(i => ACTIVITY_TYPES.includes(i.type)).length,
-    }))
-    .filter(c => c.activityCount > 0)
-    .sort((a, b) => b.activityCount - a.activityCount);
-
-  // Find the closest cluster with activities
-  for (const { cluster } of clustersWithActivities) {
-    const walkingTime = calculateWalkingMinutes(restaurant.location, cluster.center);
-    if (walkingTime <= MAX_WALKING_MINUTES) {
-      return cluster;
-    }
-  }
-
-  return null;
-}
 
 /**
  * Generate a unique cluster ID

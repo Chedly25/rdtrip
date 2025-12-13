@@ -379,41 +379,29 @@ async function getClusterWithItems(pool, clusterId) {
 // ============================================
 
 /**
- * Generate suggested clusters for a city
- * Phase 1: Default suggestions based on typical city areas
- * Phase 2+: Will integrate with City Intelligence for actual discovered areas
+ * Generate day-based clusters for a city
+ * Creates Day 1, Day 2, etc. based on the number of nights staying
  */
 function generateSuggestedClusters(cityData) {
   const cityName = cityData?.name || 'City';
+  const nights = cityData?.nights || 2;
   const center = cityData?.coordinates || { lat: 0, lng: 0 };
 
-  // Generate varied default suggestions that work for most cities
-  const suggestions = [
-    {
-      id: generateId('suggested'),
-      name: 'Historic Center',
-      description: `The heart of ${cityName} with historic architecture, main squares, and local atmosphere`,
+  const suggestions = [];
+
+  for (let i = 1; i <= nights; i++) {
+    suggestions.push({
+      id: generateId(`day-${i}`),
+      name: `Day ${i}`,
+      description: i === 1
+        ? `Your first day exploring ${cityName}`
+        : i === nights
+          ? `Final day in ${cityName}`
+          : `Day ${i} in ${cityName}`,
+      dayNumber: i,
       center: center,
-    },
-    {
-      id: generateId('suggested'),
-      name: 'Local Neighborhood',
-      description: `A charming residential area where locals live, with authentic cafés and hidden gems`,
-      center: {
-        lat: center.lat + 0.01, // Slight offset to indicate different area
-        lng: center.lng + 0.008,
-      },
-    },
-    {
-      id: generateId('suggested'),
-      name: 'Waterfront & Views',
-      description: `Scenic area with beautiful views, perfect for sunset walks and photo opportunities`,
-      center: {
-        lat: center.lat - 0.008,
-        lng: center.lng + 0.01,
-      },
-    },
-  ];
+    });
+  }
 
   return suggestions;
 }
