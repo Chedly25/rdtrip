@@ -168,3 +168,85 @@ CREATE TRIGGER update_city_details_updated_at
   BEFORE UPDATE ON city_details
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
+
+-- =====================================================
+-- PLANNING FEATURE TABLES (Phase 5)
+-- =====================================================
+
+-- Planning Routes: Simplified route storage for the planning feature
+-- Uses string IDs (not UUID) for client-side generation
+CREATE TABLE IF NOT EXISTS planning_routes (
+  id VARCHAR(100) PRIMARY KEY,
+  user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  name VARCHAR(255),
+  origin VARCHAR(255) NOT NULL,
+  destination VARCHAR(255) NOT NULL,
+  route_data JSONB,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_planning_routes_user_id ON planning_routes(user_id);
+
+-- Trip Plans: Overall planning state for a route
+CREATE TABLE IF NOT EXISTS trip_plans (
+  id VARCHAR(100) PRIMARY KEY,
+  route_id VARCHAR(100) NOT NULL REFERENCES planning_routes(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  status VARCHAR(50) DEFAULT 'planning',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_trip_plans_route_id ON trip_plans(route_id);
+CREATE INDEX IF NOT EXISTS idx_trip_plans_user_id ON trip_plans(user_id);
+
+-- City Plans: Planning data for each city in a trip
+CREATE TABLE IF NOT EXISTS city_plans (
+  id VARCHAR(100) PRIMARY KEY,
+  trip_plan_id VARCHAR(100) NOT NULL REFERENCES trip_plans(id) ON DELETE CASCADE,
+  city_id VARCHAR(100) NOT NULL,
+  city_data JSONB NOT NULL,
+  display_order INTEGER DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_city_plans_trip_plan_id ON city_plans(trip_plan_id);
+
+-- Plan Clusters: Geographic area clusters within a city
+CREATE TABLE IF NOT EXISTS plan_clusters (
+  id VARCHAR(100) PRIMARY KEY,
+  city_plan_id VARCHAR(100) NOT NULL REFERENCES city_plans(id) ON DELETE CASCADE,
+  name VARCHAR(255) NOT NULL,
+  description TEXT,
+  center_lat DECIMAL(10, 8),
+  center_lng DECIMAL(11, 8),
+  display_order INTEGER DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_plan_clusters_city_plan_id ON plan_clusters(city_plan_id);
+
+-- Plan Items: Individual places/activities in a cluster or unclustered
+CREATE TABLE IF NOT EXISTS plan_items (
+  id VARCHAR(100) PRIMARY KEY,
+  city_plan_id VARCHAR(100) NOT NULL REFERENCES city_plans(id) ON DELETE CASCADE,
+  cluster_id VARCHAR(100) REFERENCES plan_clusters(id) ON DELETE SET NULL,
+  card_data JSONB NOT NULL,
+  display_order INTEGER DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_plan_items_city_plan_id ON plan_items(city_plan_id);
+CREATE INDEX IF NOT EXISTS idx_plan_items_cluster_id ON plan_items(cluster_id);
+
+-- Triggers for planning tables
+CREATE TRIGGER update_planning_routes_updated_at
+  BEFORE UPDATE ON planning_routes
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_trip_plans_updated_at
+  BEFORE UPDATE ON trip_plans
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();

@@ -126,10 +126,10 @@ router.post('/start', async (req, res) => {
       travellerType: travellerType || 'couple',
     };
 
-    // Insert route into database
+    // Insert route into planning_routes table (uses string IDs, not UUID)
     try {
       await pool.query(
-        `INSERT INTO routes (id, user_id, name, origin, destination, route_data, created_at, updated_at)
+        `INSERT INTO planning_routes (id, user_id, name, origin, destination, route_data, created_at, updated_at)
          VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())`,
         [
           routeId,
@@ -140,9 +140,10 @@ router.post('/start', async (req, res) => {
           routeData,
         ]
       );
+      console.log('[planning] Route saved to database:', routeId);
     } catch (dbError) {
       console.error('[planning] Error creating route:', dbError);
-      // Continue anyway - we'll work with in-memory data
+      throw new Error('Failed to create planning route');
     }
 
     // Build initial plan with city data from waypoints
@@ -318,7 +319,7 @@ router.get('/:routeId', async (req, res) => {
 
     // No existing plan - fetch route data and create initial plan
     const routeResult = await pool.query(
-      'SELECT * FROM routes WHERE id = $1',
+      'SELECT * FROM planning_routes WHERE id = $1',
       [routeId]
     ).catch(() => ({ rows: [] }));
 
@@ -653,7 +654,7 @@ router.post('/:routeId/generate', async (req, res) => {
 
     // Load route and city data for context
     const routeResult = await pool.query(
-      'SELECT * FROM routes WHERE id = $1',
+      'SELECT * FROM planning_routes WHERE id = $1',
       [routeId]
     ).catch(() => ({ rows: [] }));
 
@@ -806,7 +807,7 @@ router.get('/:routeId/companion/stream', async (req, res) => {
   try {
     // Get route data for city info
     const routeResult = await pool.query(
-      'SELECT * FROM routes WHERE id = $1',
+      'SELECT * FROM planning_routes WHERE id = $1',
       [routeId]
     ).catch(() => ({ rows: [] }));
 
@@ -864,7 +865,7 @@ router.post('/:routeId/companion', async (req, res) => {
 
     // Get route data for city info
     const routeResult = await pool.query(
-      'SELECT * FROM routes WHERE id = $1',
+      'SELECT * FROM planning_routes WHERE id = $1',
       [routeId]
     ).catch(() => ({ rows: [] }));
 
