@@ -657,13 +657,19 @@ export const usePlanningStore = create<PlanningStore>()(
 // Selectors (for use outside store)
 // ============================================
 
+// Stable empty arrays to prevent infinite re-render loops
+// In JavaScript, [] !== [], so returning a new empty array each time
+// causes Zustand to think the state changed, triggering re-renders.
+const EMPTY_ARRAY: never[] = [];
+const EMPTY_CITIES_ARRAY: { id: string; name: string; nights: number; isOrigin?: boolean; isDestination?: boolean; itemCount: number; isComplete: boolean }[] = [];
+
 export const selectCurrentCityPlan = (state: PlanningStore) => {
   if (!state.currentCityId) return null;
   return state.cityPlans[state.currentCityId] || null;
 };
 
 export const selectCitiesForTabs = (state: PlanningStore) => {
-  if (!state.tripPlan) return [];
+  if (!state.tripPlan) return EMPTY_CITIES_ARRAY;
   return state.tripPlan.cities.map((cityPlan) => ({
     id: cityPlan.cityId,
     name: cityPlan.city.name,
@@ -676,13 +682,13 @@ export const selectCitiesForTabs = (state: PlanningStore) => {
 };
 
 export const selectSuggestionsForType = (state: PlanningStore, type: string) => {
-  if (!state.currentCityId) return [];
-  return state.suggestions[state.currentCityId]?.[type] || [];
+  if (!state.currentCityId) return EMPTY_ARRAY;
+  return state.suggestions[state.currentCityId]?.[type] || EMPTY_ARRAY;
 };
 
 export const selectCompanionMessages = (state: PlanningStore) => {
-  if (!state.currentCityId) return [];
-  return state.companionMessages[state.currentCityId] || [];
+  if (!state.currentCityId) return EMPTY_ARRAY;
+  return state.companionMessages[state.currentCityId] || EMPTY_ARRAY;
 };
 
 export const selectIsGenerating = (state: PlanningStore, type: string) => {
