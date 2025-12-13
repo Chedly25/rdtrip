@@ -2,18 +2,27 @@
  * PlanningLayout
  *
  * Two-column responsive layout for the planning page.
- * - Left panel (45%): Your Plan (clusters)
+ * - Left panel (45%): Your Plan (clusters + inline tips)
  * - Right panel (55%): Discover (suggestions)
- * - Bottom panel: Companion (always visible, expandable)
+ * - Bottom panel: Companion (optional, now replaced by inline tips)
+ *
+ * Update: Companion panel is now optional as tips appear inline in YourPlan
  */
 
-import { motion } from 'framer-motion';
-import type { PlanningLayoutProps } from '../../types/planning';
+import { motion, AnimatePresence } from 'framer-motion';
+
+interface PlanningLayoutProps {
+  leftPanel: React.ReactNode;
+  rightPanel: React.ReactNode;
+  companionPanel?: React.ReactNode; // Now optional
+  showCompanion?: boolean; // Control visibility
+}
 
 export function PlanningLayout({
   leftPanel,
   rightPanel,
   companionPanel,
+  showCompanion = false, // Default to hidden (inline tips replace it)
 }: PlanningLayoutProps) {
   return (
     <div className="flex-1 flex flex-col bg-[#FAF7F2] overflow-hidden">
@@ -66,15 +75,20 @@ export function PlanningLayout({
         </motion.div>
       </div>
 
-      {/* Companion Panel - Fixed at bottom */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: 'easeOut', delay: 0.2 }}
-        className="border-t border-[#E5DDD0] bg-[#FFFBF5] shadow-[0_-4px_20px_rgba(44,36,23,0.06)]"
-      >
-        {companionPanel}
-      </motion.div>
+      {/* Companion Panel - Optional, hidden by default (replaced by inline tips) */}
+      <AnimatePresence>
+        {showCompanion && companionPanel && (
+          <motion.div
+            initial={{ opacity: 0, y: 20, height: 0 }}
+            animate={{ opacity: 1, y: 0, height: 'auto' }}
+            exit={{ opacity: 0, y: 20, height: 0 }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+            className="border-t border-[#E5DDD0] bg-[#FFFBF5] shadow-[0_-4px_20px_rgba(44,36,23,0.06)]"
+          >
+            {companionPanel}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

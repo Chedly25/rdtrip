@@ -167,6 +167,16 @@ export default function PlanningPage() {
     setShowOnboarding(false);
   }, []);
 
+  // State for tab navigation from inline tips
+  const [requestedTab, setRequestedTab] = useState<'activities' | 'restaurants' | 'hotels' | null>(null);
+
+  // Handler for tip actions that scroll to a tab
+  const handleScrollToTab = useCallback((tab: 'restaurants' | 'hotels' | 'activities') => {
+    setRequestedTab(tab);
+    // Reset after a short delay so it can be triggered again
+    setTimeout(() => setRequestedTab(null), 100);
+  }, []);
+
   // Loading state - use skeleton
   if (isLoading) {
     return <PlanningPageSkeleton />;
@@ -382,6 +392,9 @@ export default function PlanningPage() {
               clusters={currentCityPlan.clusters}
               unclustered={currentCityPlan.unclustered}
               suggestedClusters={currentCityPlan.suggestedClusters}
+              cityName={currentCityPlan.city.name}
+              nights={currentCityPlan.city.nights || 1}
+              onScrollToTab={handleScrollToTab}
             />
           )
         }
@@ -390,7 +403,9 @@ export default function PlanningPage() {
             <DiscoverPanel
               cityId={currentCityPlan.cityId}
               cityName={currentCityPlan.city.name}
+              cityCenter={currentCityPlan.city.coordinates}
               clusters={currentCityPlan.clusters}
+              requestedTab={requestedTab}
             />
           )
         }
@@ -404,6 +419,7 @@ export default function PlanningPage() {
             />
           )
         }
+        showCompanion={false} // Hide companion panel - tips are now inline
       />
 
       {/* Mobile Start Trip button */}

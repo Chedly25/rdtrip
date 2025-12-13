@@ -241,6 +241,75 @@ export async function deleteCluster(
 }
 
 // ============================================
+// Auto-Clustering Item Operations
+// ============================================
+
+export interface AddItemRequest {
+  cityId: string;
+  card: PlanCard;
+}
+
+export interface AddItemResponse {
+  success: boolean;
+  itemId: string;
+  clusterId: string;
+  clusterName: string;
+  isNewCluster: boolean;
+}
+
+/**
+ * Add an item to the plan with auto-clustering.
+ * The system automatically places the item in the best cluster
+ * or creates a new one based on geographic proximity.
+ */
+export async function addItemAutoClustered(
+  routeId: string,
+  request: AddItemRequest,
+  options?: RequestOptions
+): Promise<AddItemResponse> {
+  const response = await fetch(`${API_BASE}/${routeId}/add-item`, {
+    method: 'POST',
+    headers: getHeaders(options),
+    body: JSON.stringify(request),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error || 'Failed to add item');
+  }
+
+  return response.json();
+}
+
+export interface RemoveItemRequest {
+  itemId: string;
+  clusterId?: string;
+}
+
+/**
+ * Remove an item from the plan.
+ * Automatically handles cluster cleanup if the cluster becomes empty.
+ */
+export async function removeItem(
+  routeId: string,
+  request: RemoveItemRequest,
+  options?: RequestOptions
+): Promise<{ success: boolean }> {
+  const response = await fetch(`${API_BASE}/${routeId}/remove-item`, {
+    method: 'DELETE',
+    headers: getHeaders(options),
+    body: JSON.stringify(request),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error || 'Failed to remove item');
+  }
+
+  return response.json();
+}
+
+// ============================================
 // Companion
 // ============================================
 

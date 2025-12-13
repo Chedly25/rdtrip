@@ -5,9 +5,13 @@
  * Shows: area name, items list, stats (duration, walking distance), actions.
  *
  * Design: Editorial card with warm tones, subtle shadows, refined typography
+ *
+ * Phase 6 Enhancement:
+ * - Warm glow animation when new items are added
+ * - Items slide in with delight micro-interactions
  */
 
-import { useState, useRef, memo } from 'react';
+import { useState, useRef, memo, useEffect } from 'react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import {
   MapPin,
@@ -19,6 +23,7 @@ import {
   Trash2,
   ChevronDown,
   ChevronUp,
+  Sparkles,
 } from 'lucide-react';
 import { PlanItem } from './PlanItem';
 import type { ClusterCardProps, PlanCard, Cluster } from '../../../types/planning';
@@ -59,6 +64,31 @@ function ClusterStats({ totalDuration, maxWalkingDistance }: ClusterStatsProps) 
   );
 }
 
+// Animation variants for new item entrance
+const newItemVariants = {
+  initial: {
+    opacity: 0,
+    y: -20,
+    scale: 0.8,
+  },
+  animate: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      type: 'spring' as const,
+      stiffness: 400,
+      damping: 25,
+    },
+  },
+  exit: {
+    opacity: 0,
+    x: -20,
+    scale: 0.9,
+    transition: { duration: 0.2 },
+  },
+};
+
 interface ExtendedClusterCardProps extends ClusterCardProps {
   allClusters?: Cluster[];
   onMoveItem?: (itemId: string, toClusterId: string) => void;
@@ -82,6 +112,44 @@ export function ClusterCard({
   const [editName, setEditName] = useState(cluster.name);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Track item count for "item added" animation
+  const [prevItemCount, setPrevItemCount] = useState(cluster.items.length);
+  const [isHighlighted, setIsHighlighted] = useState(false);
+  const [newlyAddedId, setNewlyAddedId] = useState<string | null>(null);
+  const prevItemIdsRef = useRef<Set<string>>(new Set(cluster.items.map(i => i.id)));
+
+  // Detect when a new item is added and trigger highlight animation
+  useEffect(() => {
+    const currentIds = new Set(cluster.items.map(i => i.id));
+    const prevIds = prevItemIdsRef.current;
+
+    // Find newly added items
+    const addedIds = [...currentIds].filter(id => !prevIds.has(id));
+
+    if (addedIds.length > 0 && cluster.items.length > prevItemCount) {
+      // New item was added - trigger highlight
+      setIsHighlighted(true);
+      setNewlyAddedId(addedIds[0]); // Track the newest item
+
+      // Auto-expand if collapsed
+      if (!isExpanded) {
+        setIsExpanded(true);
+      }
+
+      // Clear highlight after animation
+      const timer = setTimeout(() => {
+        setIsHighlighted(false);
+        setNewlyAddedId(null);
+      }, 1500);
+
+      return () => clearTimeout(timer);
+    }
+
+    // Update tracking refs
+    setPrevItemCount(cluster.items.length);
+    prevItemIdsRef.current = currentIds;
+  }, [cluster.items, cluster.items.length, prevItemCount, isExpanded]);
+
   const handleRename = () => {
     if (editName.trim() && editName !== cluster.name) {
       onRename?.(editName.trim());
@@ -101,13 +169,49 @@ export function ClusterCard({
   return (
     <motion.div
       layout
-      className="
-        bg-[#FFFBF5] rounded-2xl border border-[#E5DDD0]
+      animate={isHighlighted ? {
+        boxShadow: [
+          '0 1px 3px rgba(44, 36, 23, 0.05)',
+          '0 0 0 3px rgba(196, 88, 48, 0.15), 0 8px 25px rgba(196, 88, 48, 0.2)',
+          '0 1px 3px rgba(44, 36, 23, 0.05)',
+        ],
+      } : {}}
+      transition={isHighlighted ? {
+        duration: 1.2,
+        ease: 'easeInOut',
+      } : {}}
+      className={`
+        relative bg-[#FFFBF5] rounded-2xl border
         shadow-sm hover:shadow-md
-        transition-shadow duration-200
-        overflow-hidden
-      "
+        transition-all duration-300
+        overflow-visible
+        ${isHighlighted
+          ? 'border-[#C45830]/40 bg-gradient-to-br from-[#FFFBF5] via-[#FEF8F5] to-[#FFFBF5]'
+          : 'border-[#E5DDD0]'
+        }
+      `}
     >
+      {/* Celebration sparkle for new items */}
+      <AnimatePresence>
+        {isHighlighted && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0 }}
+            className="absolute -top-2 -right-2 z-10"
+          >
+            <motion.div
+              animate={{
+                rotate: [0, 15, -15, 0],
+                scale: [1, 1.2, 1],
+              }}
+              transition={{ duration: 0.6, ease: 'easeInOut' }}
+            >
+              <Sparkles className="w-6 h-6 text-[#D4A853]" />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       {/* Header */}
       <div className="flex items-start justify-between p-4 pb-3">
         <div className="flex items-start gap-3 flex-1 min-w-0">
@@ -279,15 +383,29 @@ export function ClusterCard({
                 ) : (
                   <AnimatePresence mode="popLayout">
                     {cluster.items.map((item, index) => (
-                      <PlanItem
+                      <motion.div
                         key={item.id}
-                        item={item}
-                        index={index}
-                        onRemove={() => onRemoveItem?.(item.id)}
-                        onMove={onMoveItem ? (toClusterId) => onMoveItem(item.id, toClusterId) : undefined}
-                        clusters={allClusters}
-                        currentClusterId={cluster.id}
-                      />
+                        variants={newItemVariants}
+                        initial={item.id === newlyAddedId ? 'initial' : false}
+                        animate="animate"
+                        exit="exit"
+                        layout
+                        className={`
+                          ${item.id === newlyAddedId
+                            ? 'ring-2 ring-[#C45830]/30 ring-offset-2 ring-offset-[#FFFBF5] rounded-xl'
+                            : ''
+                          }
+                        `}
+                      >
+                        <PlanItem
+                          item={item}
+                          index={index}
+                          onRemove={() => onRemoveItem?.(item.id)}
+                          onMove={onMoveItem ? (toClusterId) => onMoveItem(item.id, toClusterId) : undefined}
+                          clusters={allClusters}
+                          currentClusterId={cluster.id}
+                        />
+                      </motion.div>
                     ))}
                   </AnimatePresence>
                 )

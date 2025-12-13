@@ -640,6 +640,7 @@ router.delete('/:routeId/clusters/:clusterId', async (req, res) => {
 // ============================================
 
 const cardGenerationService = require('../services/cardGenerationService');
+const { getImageService } = require('../services/imageService');
 
 /**
  * POST /api/planning/:routeId/generate
@@ -754,7 +755,7 @@ router.post('/:routeId/generate', async (req, res) => {
     const sortedCards = cardGenerationService.sortByProximity(enrichedCards);
 
     // Return cards with proximity info
-    const cards = sortedCards.map(item => ({
+    let cards = sortedCards.map(item => ({
       ...item.card,
       proximity: item.nearestCluster ? {
         clusterName: item.nearestCluster.name,
@@ -762,6 +763,15 @@ router.post('/:routeId/generate', async (req, res) => {
         isNear: item.isNearPlan,
       } : null,
     }));
+
+    // Enrich cards with images (async, non-blocking)
+    try {
+      const imageService = getImageService(pool);
+      cards = await imageService.enrichCardsWithImages(cards, cityName);
+    } catch (imageError) {
+      console.warn('[planning] Image enrichment failed:', imageError.message);
+      // Continue without images
+    }
 
     res.json({
       cards,
@@ -967,6 +977,415 @@ router.post('/:routeId/companion/reactive', async (req, res) => {
   } catch (error) {
     console.error('[planning] POST /:routeId/companion/reactive error:', error);
     res.status(500).json({ error: 'Failed to generate reactive message' });
+  }
+});
+
+// ============================================
+// Auto-Clustering Item Addition
+// ============================================
+
+// Maximum walking time (minutes) to consider items as part of the same cluster
+const MAX_WALKING_MINUTES = 15;
+
+// Types that count as "activities" for restaurant placement logic
+const ACTIVITY_TYPES = ['activity', 'photo_spot', 'experience'];
+const RESTAURANT_TYPES = ['restaurant', 'bar', 'cafe'];
+
+/**
+ * Calculate walking time between two points (in minutes)
+ */
+function calculateWalkingMinutes(from, to) {
+  if (!from || !to || !from.lat || !to.lat) return Infinity;
+
+  const R = 6371; // Earth's radius in km
+  const dLat = ((to.lat - from.lat) * Math.PI) / 180;
+  const dLng = ((to.lng - from.lng) * Math.PI) / 180;
+
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((from.lat * Math.PI) / 180) *
+      Math.cos((to.lat * Math.PI) / 180) *
+      Math.sin(dLng / 2) *
+      Math.sin(dLng / 2);
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const distanceKm = R * c;
+
+  // Average walking speed: 5 km/h, add 20% for non-straight paths
+  const walkingHours = (distanceKm / 5) * 1.2;
+  return Math.round(walkingHours * 60);
+}
+
+/**
+ * Calculate the center point from items
+ */
+function calculateClusterCenter(items) {
+  if (items.length === 0) return { lat: 0, lng: 0 };
+
+  const validItems = items.filter(item => item.location?.lat && item.location?.lng);
+  if (validItems.length === 0) return { lat: 0, lng: 0 };
+
+  const sumLat = validItems.reduce((sum, item) => sum + item.location.lat, 0);
+  const sumLng = validItems.reduce((sum, item) => sum + item.location.lng, 0);
+
+  return {
+    lat: sumLat / validItems.length,
+    lng: sumLng / validItems.length,
+  };
+}
+
+/**
+ * Find the best cluster for a restaurant based on activity presence
+ */
+function findBestClusterForRestaurant(clusters, restaurant) {
+  const clustersWithActivities = clusters
+    .map(cluster => ({
+      cluster,
+      activityCount: cluster.items.filter(i => ACTIVITY_TYPES.includes(i.type)).length,
+    }))
+    .filter(c => c.activityCount > 0)
+    .sort((a, b) => b.activityCount - a.activityCount);
+
+  for (const { cluster } of clustersWithActivities) {
+    const walkingTime = calculateWalkingMinutes(restaurant.location, cluster.center);
+    if (walkingTime <= MAX_WALKING_MINUTES) {
+      return cluster;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Find the best existing cluster for an item, or determine a new cluster is needed
+ */
+function findBestClusterForItem(clusters, newItem) {
+  // If no item location, can't determine proximity
+  if (!newItem.location?.lat || !newItem.location?.lng) {
+    if (clusters.length > 0) {
+      return { clusterId: clusters[0].id, shouldCreateNew: false, suggestedName: '' };
+    }
+    return {
+      clusterId: null,
+      shouldCreateNew: true,
+      suggestedName: newItem.location?.area || 'New Area',
+    };
+  }
+
+  // For restaurants/bars, prefer clusters with activities
+  if (RESTAURANT_TYPES.includes(newItem.type)) {
+    const clusterWithActivities = findBestClusterForRestaurant(clusters, newItem);
+    if (clusterWithActivities) {
+      return { clusterId: clusterWithActivities.id, shouldCreateNew: false, suggestedName: '' };
+    }
+  }
+
+  // Find nearest cluster within walking distance
+  let nearestCluster = null;
+  let nearestDistance = Infinity;
+
+  for (const cluster of clusters) {
+    const walkingTime = calculateWalkingMinutes(newItem.location, cluster.center);
+
+    if (walkingTime <= MAX_WALKING_MINUTES && walkingTime < nearestDistance) {
+      nearestDistance = walkingTime;
+      nearestCluster = cluster;
+    }
+  }
+
+  if (nearestCluster) {
+    return { clusterId: nearestCluster.id, shouldCreateNew: false, suggestedName: '' };
+  }
+
+  // No nearby cluster - need to create a new one
+  return {
+    clusterId: null,
+    shouldCreateNew: true,
+    suggestedName: newItem.location?.area || 'New Area',
+  };
+}
+
+/**
+ * Get neighborhood name from coordinates using reverse geocoding
+ * Falls back to area from card or generic name
+ */
+async function getNeighborhoodName(location, cityName) {
+  // Try to get neighborhood from Mapbox (if API key available)
+  const mapboxKey = process.env.MAPBOX_ACCESS_TOKEN;
+  if (mapboxKey && location?.lat && location?.lng) {
+    try {
+      const response = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${location.lng},${location.lat}.json?types=neighborhood,locality&access_token=${mapboxKey}`
+      );
+      const data = await response.json();
+      if (data.features && data.features.length > 0) {
+        // Get the most specific neighborhood name
+        const neighborhood = data.features.find(f => f.place_type.includes('neighborhood'));
+        if (neighborhood) {
+          return neighborhood.text;
+        }
+        const locality = data.features.find(f => f.place_type.includes('locality'));
+        if (locality) {
+          return locality.text;
+        }
+      }
+    } catch (error) {
+      console.warn('[planning] Reverse geocoding failed:', error.message);
+    }
+  }
+
+  // Fallback: use area from location or generate generic name
+  if (location?.area) {
+    return location.area;
+  }
+
+  return `${cityName} Area`;
+}
+
+/**
+ * POST /api/planning/:routeId/add-item
+ * Add an item and auto-assign to the best cluster
+ */
+router.post('/:routeId/add-item', async (req, res) => {
+  try {
+    const { routeId } = req.params;
+    const { cityId, card } = req.body;
+
+    if (!cityId || !card) {
+      return res.status(400).json({ error: 'cityId and card are required' });
+    }
+
+    console.log('[planning] Add item request:', { routeId, cityId, cardName: card.name, cardType: card.type });
+
+    // 1. Get the trip plan and city plan
+    const planResult = await pool.query(
+      'SELECT id FROM trip_plans WHERE route_id = $1',
+      [routeId]
+    );
+
+    if (planResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Plan not found for this route' });
+    }
+
+    const planId = planResult.rows[0].id;
+
+    // 2. Get or create city plan
+    let cityPlanId;
+    const cityPlanResult = await pool.query(
+      'SELECT id FROM city_plans WHERE trip_plan_id = $1 AND city_id = $2',
+      [planId, cityId]
+    );
+
+    if (cityPlanResult.rows.length > 0) {
+      cityPlanId = cityPlanResult.rows[0].id;
+    } else {
+      // Create city plan if it doesn't exist
+      cityPlanId = generateId('cityplan');
+
+      // Get city data from route
+      const routeResult = await pool.query(
+        'SELECT route_data FROM planning_routes WHERE id = $1',
+        [routeId]
+      );
+
+      let cityData = { id: cityId, name: cityId };
+      if (routeResult.rows.length > 0) {
+        const routeData = routeResult.rows[0].route_data || {};
+        const waypoints = routeData.waypoints || [];
+        const city = waypoints.find(w => w.id === cityId || w.name === cityId);
+        if (city) {
+          cityData = city;
+        }
+      }
+
+      await pool.query(
+        `INSERT INTO city_plans (id, trip_plan_id, city_id, city_data, display_order)
+         VALUES ($1, $2, $3, $4, 0)`,
+        [cityPlanId, planId, cityId, cityData]
+      );
+    }
+
+    // 3. Load existing clusters with their items
+    const clusterResult = await pool.query(
+      'SELECT * FROM plan_clusters WHERE city_plan_id = $1 ORDER BY display_order',
+      [cityPlanId]
+    );
+
+    const clusters = await Promise.all(
+      clusterResult.rows.map(async (c) => {
+        const itemsResult = await pool.query(
+          'SELECT * FROM plan_items WHERE cluster_id = $1 ORDER BY display_order',
+          [c.id]
+        );
+        return {
+          id: c.id,
+          name: c.name,
+          center: {
+            lat: parseFloat(c.center_lat) || 0,
+            lng: parseFloat(c.center_lng) || 0,
+          },
+          items: itemsResult.rows.map(i => i.card_data),
+        };
+      })
+    );
+
+    // 4. Find or determine cluster for this item
+    const { clusterId: existingClusterId, shouldCreateNew, suggestedName } = findBestClusterForItem(clusters, card);
+
+    let targetClusterId;
+    let targetClusterName;
+    let isNewCluster = false;
+
+    if (shouldCreateNew) {
+      // Get city name for neighborhood lookup
+      const routeResult = await pool.query(
+        'SELECT route_data FROM planning_routes WHERE id = $1',
+        [routeId]
+      );
+
+      let cityName = cityId;
+      if (routeResult.rows.length > 0) {
+        const routeData = routeResult.rows[0].route_data || {};
+        const waypoints = routeData.waypoints || [];
+        const city = waypoints.find(w => w.id === cityId || w.name === cityId);
+        if (city) {
+          cityName = city.name || city.city || cityId;
+        }
+      }
+
+      // Get neighborhood name via reverse geocoding
+      const neighborhoodName = await getNeighborhoodName(card.location, cityName);
+      targetClusterName = neighborhoodName || suggestedName;
+
+      // Create new cluster
+      targetClusterId = generateId('cluster');
+      const clusterCenter = card.location || { lat: 0, lng: 0 };
+
+      const displayOrder = clusters.length;
+      await pool.query(
+        `INSERT INTO plan_clusters (id, city_plan_id, name, center_lat, center_lng, display_order)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [targetClusterId, cityPlanId, targetClusterName, clusterCenter.lat, clusterCenter.lng, displayOrder]
+      );
+
+      isNewCluster = true;
+      console.log('[planning] Created new cluster:', { targetClusterId, targetClusterName });
+    } else {
+      targetClusterId = existingClusterId;
+      const existingCluster = clusters.find(c => c.id === existingClusterId);
+      targetClusterName = existingCluster?.name || 'Unknown Area';
+      console.log('[planning] Adding to existing cluster:', { targetClusterId, targetClusterName });
+    }
+
+    // 5. Add item to cluster
+    const itemId = card.id || generateId('item');
+    const itemOrder = await pool.query(
+      'SELECT COALESCE(MAX(display_order), -1) + 1 as next_order FROM plan_items WHERE cluster_id = $1',
+      [targetClusterId]
+    );
+
+    await pool.query(
+      `INSERT INTO plan_items (id, city_plan_id, cluster_id, card_data, display_order)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [itemId, cityPlanId, targetClusterId, { ...card, id: itemId }, itemOrder.rows[0].next_order]
+    );
+
+    // 6. Update cluster center if needed (average of all items)
+    if (!isNewCluster) {
+      const allItemsResult = await pool.query(
+        'SELECT card_data FROM plan_items WHERE cluster_id = $1',
+        [targetClusterId]
+      );
+      const allItems = allItemsResult.rows.map(r => r.card_data);
+      const newCenter = calculateClusterCenter(allItems);
+
+      await pool.query(
+        'UPDATE plan_clusters SET center_lat = $1, center_lng = $2 WHERE id = $3',
+        [newCenter.lat, newCenter.lng, targetClusterId]
+      );
+    }
+
+    // 7. Update plan timestamp
+    await pool.query(
+      'UPDATE trip_plans SET updated_at = NOW() WHERE id = $1',
+      [planId]
+    );
+
+    // 8. Return result
+    res.json({
+      success: true,
+      itemId,
+      clusterId: targetClusterId,
+      clusterName: targetClusterName,
+      isNewCluster,
+    });
+  } catch (error) {
+    console.error('[planning] POST /:routeId/add-item error:', error);
+    res.status(500).json({ error: 'Failed to add item' });
+  }
+});
+
+/**
+ * DELETE /api/planning/:routeId/remove-item
+ * Remove an item from a cluster
+ */
+router.delete('/:routeId/remove-item', async (req, res) => {
+  try {
+    const { routeId } = req.params;
+    const { itemId, clusterId } = req.body;
+
+    if (!itemId) {
+      return res.status(400).json({ error: 'itemId is required' });
+    }
+
+    console.log('[planning] Remove item request:', { routeId, itemId, clusterId });
+
+    // Delete the item
+    await pool.query('DELETE FROM plan_items WHERE id = $1', [itemId]);
+
+    // Check if cluster is now empty
+    if (clusterId) {
+      const remainingItems = await pool.query(
+        'SELECT COUNT(*) as count FROM plan_items WHERE cluster_id = $1',
+        [clusterId]
+      );
+
+      if (parseInt(remainingItems.rows[0].count) === 0) {
+        // Delete empty cluster
+        await pool.query('DELETE FROM plan_clusters WHERE id = $1', [clusterId]);
+        console.log('[planning] Deleted empty cluster:', clusterId);
+      } else {
+        // Recalculate cluster center
+        const allItemsResult = await pool.query(
+          'SELECT card_data FROM plan_items WHERE cluster_id = $1',
+          [clusterId]
+        );
+        const allItems = allItemsResult.rows.map(r => r.card_data);
+        const newCenter = calculateClusterCenter(allItems);
+
+        await pool.query(
+          'UPDATE plan_clusters SET center_lat = $1, center_lng = $2 WHERE id = $3',
+          [newCenter.lat, newCenter.lng, clusterId]
+        );
+      }
+    }
+
+    // Update plan timestamp
+    const planResult = await pool.query(
+      'SELECT id FROM trip_plans WHERE route_id = $1',
+      [routeId]
+    );
+    if (planResult.rows.length > 0) {
+      await pool.query(
+        'UPDATE trip_plans SET updated_at = NOW() WHERE id = $1',
+        [planResult.rows[0].id]
+      );
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('[planning] DELETE /:routeId/remove-item error:', error);
+    res.status(500).json({ error: 'Failed to remove item' });
   }
 });
 

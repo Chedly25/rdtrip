@@ -20,8 +20,7 @@ export interface CategorySectionProps {
   isLoading: boolean;
   hasMore: boolean;
   onShowMore: () => void;
-  onAddCard: (card: PlanCard, clusterId?: string) => void;
-  onCreateCluster?: () => void;
+  onAddCard: (card: PlanCard) => void;
   clusters: Cluster[];
   addedIds: Set<string>;
 }
@@ -85,7 +84,6 @@ export function CategorySection({
   hasMore,
   onShowMore,
   onAddCard,
-  onCreateCluster,
   clusters,
   addedIds,
 }: CategorySectionProps) {
@@ -121,10 +119,8 @@ export function CategorySection({
               <SuggestionCard
                 card={card}
                 nearestCluster={getNearestCluster(card, clusters)}
-                onAdd={(clusterId) => onAddCard(card, clusterId)}
-                onCreateCluster={onCreateCluster}
+                onAdd={() => onAddCard(card)}
                 isAdded={addedIds.has(card.id)}
-                clusters={clusters}
               />
             </motion.div>
           ))}

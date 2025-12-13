@@ -18,16 +18,24 @@ export interface DistanceBadgeProps {
 }
 
 export function DistanceBadge({ minutes, fromName, compact = false }: DistanceBadgeProps) {
+  // Sanity check - walking time should never exceed 24 hours (1440 minutes)
+  // If it does, the input was likely in meters instead of minutes
+  const validMinutes = Math.min(Math.max(0, Math.round(minutes)), 1440);
+
+  if (minutes > 1440 || minutes < 0) {
+    console.warn('[DistanceBadge] Received unrealistic minutes value:', minutes, '- clamping to', validMinutes);
+  }
+
   // Color coding based on walking time
   const getColorClasses = () => {
-    if (minutes < 10) {
+    if (validMinutes < 10) {
       return {
         text: 'text-[#4A7C59]',
         bg: 'bg-[#F0F7F4]',
         border: 'border-[#4A7C59]/20',
       };
     }
-    if (minutes <= 20) {
+    if (validMinutes <= 20) {
       return {
         text: 'text-[#D4A853]',
         bg: 'bg-[#FFF8E6]',
@@ -42,7 +50,7 @@ export function DistanceBadge({ minutes, fromName, compact = false }: DistanceBa
   };
 
   const colors = getColorClasses();
-  const displayTime = minutes < 60 ? `${minutes} min` : `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
+  const displayTime = validMinutes < 60 ? `${validMinutes} min` : `${Math.floor(validMinutes / 60)}h ${validMinutes % 60}m`;
 
   if (compact) {
     return (

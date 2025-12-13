@@ -32,6 +32,20 @@ export type PlanCardType =
   | 'cafe'
   | 'experience';
 
+// Type groupings for UI tab organization
+export const ACTIVITY_TYPES: PlanCardType[] = ['activity', 'photo_spot', 'experience'];
+export const RESTAURANT_TYPES: PlanCardType[] = ['restaurant', 'bar', 'cafe'];
+export const HOTEL_TYPES: PlanCardType[] = ['hotel'];
+
+// Browse tab definitions
+export type BrowseTabId = 'activities' | 'restaurants' | 'hotels';
+
+export interface BrowseTab {
+  id: BrowseTabId;
+  label: string;
+  types: PlanCardType[];
+}
+
 export type PlanCardSource =
   | 'ai_generated'
   | 'companion'
@@ -110,6 +124,7 @@ export interface CityPlan {
   clusters: Cluster[];
   unclustered: PlanCard[]; // Saved but not in a cluster
   suggestedClusters: SuggestedCluster[]; // AI-suggested areas
+  selectedHotel?: PlanCard | null; // Selected hotel for this city
 }
 
 export type TripPlanStatus = 'planning' | 'ready' | 'active' | 'completed';
@@ -276,7 +291,8 @@ export interface CityTabsProps {
 export interface PlanningLayoutProps {
   leftPanel: React.ReactNode;
   rightPanel: React.ReactNode;
-  companionPanel: React.ReactNode;
+  companionPanel?: React.ReactNode; // Now optional (replaced by inline tips)
+  showCompanion?: boolean; // Control visibility, defaults to false
 }
 
 export interface YourPlanProps {
@@ -370,6 +386,12 @@ export interface PlanningActions {
   reorderItemsInCluster: (cityId: string, clusterId: string, reorderedItems: PlanCard[]) => void;
   addToUnclustered: (cityId: string, card: PlanCard) => void;
   removeFromUnclustered: (cityId: string, itemId: string) => void;
+  addItemAutoClustered: (cityId: string, card: PlanCard, cityCenter?: LatLng) => void;
+
+  // Hotel operations
+  selectHotel: (cityId: string, hotel: PlanCard) => void;
+  removeHotel: (cityId: string) => void;
+  getSelectedHotel: (cityId: string) => PlanCard | null;
 
   // Suggestions
   setSuggestions: (cityId: string, type: string, cards: PlanCard[]) => void;

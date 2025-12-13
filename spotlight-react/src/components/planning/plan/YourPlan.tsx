@@ -1,20 +1,27 @@
 /**
  * YourPlan
  *
- * Left panel container showing the user's planned clusters.
- * Features: welcome state, cluster list, suggested areas, create button.
+ * Left panel showing the user's planned clusters.
+ * Now with browse-first UX: no manual cluster creation, system auto-organizes.
+ *
+ * Features:
+ * - Browse-first empty state (encourages exploring suggestions)
+ * - Auto-organized clusters by area
+ * - Summary stats
+ * - Inline companion tips (contextual, helpful suggestions)
+ * - Drag-and-drop reordering (future)
  *
  * Design: Wanderlust Editorial - warm, inviting, magazine-quality
  */
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Sparkles, MapPin, Clock, Footprints } from 'lucide-react';
+import { MapPin, Clock, Footprints, ArrowRight, Sparkles } from 'lucide-react';
 import { ClusterCard } from './ClusterCard';
-import { EmptyClusterSuggestion } from './EmptyClusterSuggestion';
-import { CreateClusterModal } from './CreateClusterModal';
+import { InlineTipStack } from '../shared/InlineTip';
+import { useCompanionTips } from '../../../hooks/useCompanionTips';
 import { usePlanningStore } from '../../../stores/planningStore';
-import type { YourPlanProps, SuggestedCluster, LatLng } from '../../../types/planning';
+import type { YourPlanProps, LatLng, CityPlan } from '../../../types/planning';
 
 // Animation variants for staggered reveal
 const containerVariants = {
@@ -43,66 +50,81 @@ const itemVariants = {
 
 interface WelcomeStateProps {
   cityName?: string;
-  onStartBuilding: () => void;
 }
 
-function WelcomeState({ cityName, onStartBuilding }: WelcomeStateProps) {
+/**
+ * Browse-first empty state
+ * Encourages users to explore suggestions rather than manually create clusters
+ */
+function BrowseFirstEmptyState({ cityName }: WelcomeStateProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: 'easeOut' }}
-      className="flex flex-col items-center justify-center py-12 px-6 text-center"
+      className="flex flex-col items-center justify-center py-16 px-6 text-center"
     >
       {/* Decorative illustration */}
       <div className="relative mb-8">
-        <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[#FEF3EE] to-[#FCE8DE] flex items-center justify-center">
-          <MapPin className="w-10 h-10 text-[#C45830]" strokeWidth={1.5} />
-        </div>
+        <motion.div
+          animate={{
+            scale: [1, 1.05, 1],
+          }}
+          transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+          className="w-28 h-28 rounded-full bg-gradient-to-br from-[#FEF3EE] via-[#F5F0FF] to-[#EEF6F8] flex items-center justify-center shadow-lg shadow-[#2C2417]/5"
+        >
+          <MapPin className="w-12 h-12 text-[#C45830]" strokeWidth={1.5} />
+        </motion.div>
         {/* Floating sparkles */}
         <motion.div
           animate={{
-            y: [-2, 2, -2],
-            rotate: [0, 10, 0],
+            y: [-4, 4, -4],
+            rotate: [0, 15, 0],
           }}
-          transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-          className="absolute -top-2 -right-2"
+          transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+          className="absolute -top-1 -right-1"
         >
           <Sparkles className="w-6 h-6 text-[#D4A853]" />
         </motion.div>
+        <motion.div
+          animate={{
+            y: [4, -4, 4],
+            rotate: [0, -10, 0],
+          }}
+          transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
+          className="absolute -bottom-2 -left-2"
+        >
+          <Sparkles className="w-4 h-4 text-[#7C5CDB]" />
+        </motion.div>
       </div>
 
-      <h3 className="font-['Fraunces',serif] text-xl sm:text-2xl text-[#2C2417] font-semibold mb-3">
-        Start building your {cityName || 'trip'}
+      <h3 className="font-['Fraunces',Georgia,serif] text-2xl text-[#2C2417] font-semibold mb-4">
+        Your {cityName || 'Trip'} Plan
       </h3>
 
-      <p className="text-[#8B7355] font-['Satoshi',sans-serif] text-sm sm:text-base max-w-sm mb-8 leading-relaxed">
-        Explore the suggestions on the right and add places to build your perfect itinerary.
-        We'll organize everything by area so you can walk between spots easily.
+      <p className="text-[#8B7355] font-['Satoshi',system-ui,sans-serif] text-base max-w-sm mb-2 leading-relaxed">
+        Browse activities on the right and tap{' '}
+        <span className="inline-flex items-center gap-1 text-[#C45830] font-semibold">
+          + Add to Plan
+        </span>{' '}
+        to build your itinerary.
       </p>
 
-      <button
-        onClick={onStartBuilding}
-        className="
-          group relative px-6 py-3
-          bg-gradient-to-r from-[#C45830] to-[#D4724A]
-          text-white font-['Satoshi',sans-serif] font-semibold text-sm
-          rounded-xl shadow-lg shadow-[#C45830]/20
-          hover:shadow-xl hover:shadow-[#C45830]/30
-          hover:scale-[1.02] active:scale-[0.98]
-          transition-all duration-200
-        "
+      <p className="text-[#C4B8A5] font-['Satoshi',system-ui,sans-serif] text-sm max-w-sm leading-relaxed">
+        We'll automatically organize everything by area so you can walk between spots easily.
+      </p>
+
+      {/* Arrow pointing to suggestions */}
+      <motion.div
+        animate={{ x: [0, 8, 0] }}
+        transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+        className="mt-8 flex items-center gap-2 text-[#C45830]"
       >
-        <span className="flex items-center gap-2">
-          <Plus className="w-4 h-4" />
-          Create your first area
+        <span className="text-sm font-medium font-['Satoshi',system-ui,sans-serif]">
+          Start exploring
         </span>
-      </button>
-
-      {/* Subtle hint */}
-      <p className="mt-6 text-xs text-[#C4B8A5] font-['Satoshi',sans-serif]">
-        Or browse suggestions and we'll create areas automatically
-      </p>
+        <ArrowRight className="w-5 h-5" />
+      </motion.div>
     </motion.div>
   );
 }
@@ -124,14 +146,14 @@ function PlanSummary({ totalItems, totalDuration, clusterCount }: PlanSummaryPro
     <motion.div
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="flex items-center gap-4 px-4 py-3 mb-4 bg-[#FFFBF5] rounded-xl border border-[#E5DDD0]"
+      className="flex items-center gap-4 px-4 py-3 mb-4 bg-[#FFFBF5] rounded-xl border border-[#E5DDD0] shadow-sm"
     >
       <div className="flex items-center gap-2 text-sm">
         <div className="w-8 h-8 rounded-lg bg-[#FEF3EE] flex items-center justify-center">
           <MapPin className="w-4 h-4 text-[#C45830]" />
         </div>
         <div>
-          <span className="font-['Satoshi',sans-serif] font-semibold text-[#2C2417]">
+          <span className="font-['Satoshi',system-ui,sans-serif] font-semibold text-[#2C2417]">
             {totalItems}
           </span>
           <span className="text-[#8B7355] ml-1">
@@ -147,7 +169,7 @@ function PlanSummary({ totalItems, totalDuration, clusterCount }: PlanSummaryPro
           <Clock className="w-4 h-4 text-[#4A7C59]" />
         </div>
         <div>
-          <span className="font-['Satoshi',sans-serif] font-semibold text-[#2C2417]">
+          <span className="font-['Satoshi',system-ui,sans-serif] font-semibold text-[#2C2417]">
             {durationText}
           </span>
           <span className="text-[#8B7355] ml-1">total</span>
@@ -161,7 +183,7 @@ function PlanSummary({ totalItems, totalDuration, clusterCount }: PlanSummaryPro
           <Footprints className="w-4 h-4 text-[#4A90A4]" />
         </div>
         <div>
-          <span className="font-['Satoshi',sans-serif] font-semibold text-[#2C2417]">
+          <span className="font-['Satoshi',system-ui,sans-serif] font-semibold text-[#2C2417]">
             {clusterCount}
           </span>
           <span className="text-[#8B7355] ml-1">
@@ -176,39 +198,65 @@ function PlanSummary({ totalItems, totalDuration, clusterCount }: PlanSummaryPro
 interface YourPlanExtendedProps extends YourPlanProps {
   cityName?: string;
   cityCenter?: LatLng;
+  nights?: number;
+  onScrollToTab?: (tab: 'restaurants' | 'hotels' | 'activities') => void;
 }
 
 export function YourPlan({
   cityId,
   clusters,
   unclustered,
-  suggestedClusters = [],
   cityName = 'this city',
-  cityCenter = { lat: 0, lng: 0 },
+  nights = 1,
+  onScrollToTab,
 }: YourPlanExtendedProps) {
-  // Modal state
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  // Dismissed tips state
+  const [dismissedTips, setDismissedTips] = useState<Set<string>>(new Set());
 
-  // Store actions
+  // Store actions and state
   const {
-    createCluster,
     removeItemFromCluster,
     moveItemToCluster,
     reorderItemsInCluster,
     renameCluster,
     deleteCluster,
+    cityPlans,
   } = usePlanningStore();
+
+  // Get the full city plan for tips
+  const cityPlan = cityPlans[cityId] as CityPlan | undefined;
+
+  // Generate contextual tips
+  const allTips = useCompanionTips(cityPlan || null, { maxTips: 3, nights });
+
+  // Filter out dismissed tips
+  const visibleTips = allTips.filter(tip => !dismissedTips.has(tip.id));
+
+  // Handle tip dismissal
+  const handleDismissTip = useCallback((tipId: string) => {
+    setDismissedTips(prev => new Set([...prev, tipId]));
+  }, []);
+
+  // Handle tip actions
+  const handleTipAction = useCallback((actionType: string) => {
+    switch (actionType) {
+      case 'scroll_to_restaurants':
+        onScrollToTab?.('restaurants');
+        break;
+      case 'scroll_to_hotels':
+        onScrollToTab?.('hotels');
+        break;
+      default:
+        break;
+    }
+  }, [onScrollToTab]);
 
   // Compute totals
   const totalItems = clusters.reduce((sum, c) => sum + c.items.length, 0) + unclustered.length;
   const totalDuration = clusters.reduce((sum, c) => sum + c.totalDuration, 0);
 
-  // Check if empty
-  const isEmpty = clusters.length === 0 && suggestedClusters.length === 0;
-
-  const handleStartFromSuggestion = (suggestion: SuggestedCluster) => {
-    createCluster(cityId, suggestion.name, suggestion.center);
-  };
+  // Check if empty (no clusters with items)
+  const isEmpty = clusters.length === 0 || (clusters.every(c => c.items.length === 0) && unclustered.length === 0);
 
   const handleRemoveItem = (clusterId: string, itemId: string) => {
     removeItemFromCluster(cityId, clusterId, itemId);
@@ -230,27 +278,9 @@ export function YourPlan({
     reorderItemsInCluster(cityId, clusterId, reorderedItems);
   };
 
-  const handleCreateCluster = (name: string, center?: LatLng) => {
-    createCluster(cityId, name, center || cityCenter);
-  };
-
-  // Empty state
+  // Empty state - encourage browsing
   if (isEmpty) {
-    return (
-      <>
-        <WelcomeState
-          cityName={cityName}
-          onStartBuilding={() => setIsCreateModalOpen(true)}
-        />
-        <CreateClusterModal
-          isOpen={isCreateModalOpen}
-          onClose={() => setIsCreateModalOpen(false)}
-          onCreateCluster={handleCreateCluster}
-          cityName={cityName}
-          cityCenter={cityCenter}
-        />
-      </>
-    );
+    return <BrowseFirstEmptyState cityName={cityName} />;
   }
 
   return (
@@ -260,65 +290,49 @@ export function YourPlan({
         <PlanSummary
           totalItems={totalItems}
           totalDuration={totalDuration}
-          clusterCount={clusters.length}
+          clusterCount={clusters.filter(c => c.items.length > 0).length}
         />
       )}
 
-      {/* Clusters and suggestions */}
+      {/* Inline Companion Tips */}
+      {visibleTips.length > 0 && (
+        <InlineTipStack
+          tips={visibleTips}
+          onDismiss={handleDismissTip}
+          onAction={handleTipAction}
+        />
+      )}
+
+      {/* Clusters */}
       <motion.div
         variants={containerVariants}
         initial="hidden"
         animate="visible"
         className="space-y-4"
       >
-        {/* Active clusters */}
+        {/* Active clusters with items */}
         <AnimatePresence mode="popLayout">
-          {clusters.map((cluster) => (
-            <motion.div
-              key={cluster.id}
-              variants={itemVariants}
-              layout
-              exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
-            >
-              <ClusterCard
-                cluster={cluster}
-                onRemoveItem={(itemId) => handleRemoveItem(cluster.id, itemId)}
-                onRename={(name) => handleRenameCluster(cluster.id, name)}
-                onDelete={() => handleDeleteCluster(cluster.id)}
-                allClusters={clusters}
-                onMoveItem={(itemId, toClusterId) => handleMoveItem(cluster.id, itemId, toClusterId)}
-                onReorderItems={(reorderedItems) => handleReorderItems(cluster.id, reorderedItems)}
-              />
-            </motion.div>
-          ))}
+          {clusters
+            .filter(cluster => cluster.items.length > 0)
+            .map((cluster) => (
+              <motion.div
+                key={cluster.id}
+                variants={itemVariants}
+                layout
+                exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
+              >
+                <ClusterCard
+                  cluster={cluster}
+                  onRemoveItem={(itemId) => handleRemoveItem(cluster.id, itemId)}
+                  onRename={(name) => handleRenameCluster(cluster.id, name)}
+                  onDelete={() => handleDeleteCluster(cluster.id)}
+                  allClusters={clusters}
+                  onMoveItem={(itemId, toClusterId) => handleMoveItem(cluster.id, itemId, toClusterId)}
+                  onReorderItems={(reorderedItems) => handleReorderItems(cluster.id, reorderedItems)}
+                />
+              </motion.div>
+            ))}
         </AnimatePresence>
-
-        {/* Suggested clusters (not yet started) */}
-        {suggestedClusters.map((suggestion) => (
-          <motion.div key={suggestion.id} variants={itemVariants}>
-            <EmptyClusterSuggestion
-              area={suggestion}
-              onStart={() => handleStartFromSuggestion(suggestion)}
-            />
-          </motion.div>
-        ))}
-
-        {/* Create new area button */}
-        <motion.button
-          variants={itemVariants}
-          onClick={() => setIsCreateModalOpen(true)}
-          className="
-            w-full p-4
-            border-2 border-dashed border-[#E5DDD0] rounded-xl
-            text-[#8B7355] font-['Satoshi',sans-serif] font-medium text-sm
-            hover:border-[#C45830] hover:text-[#C45830] hover:bg-[#FEF3EE]/50
-            transition-all duration-200
-            flex items-center justify-center gap-2
-          "
-        >
-          <Plus className="w-4 h-4" />
-          Create new area
-        </motion.button>
       </motion.div>
 
       {/* Unclustered items reminder */}
@@ -328,22 +342,12 @@ export function YourPlan({
           animate={{ opacity: 1 }}
           className="mt-6 p-4 bg-[#FEF3EE] rounded-xl border border-[#F5E6DC]"
         >
-          <p className="text-sm text-[#8B7355] font-['Satoshi',sans-serif]">
+          <p className="text-sm text-[#8B7355] font-['Satoshi',system-ui,sans-serif]">
             <span className="font-semibold text-[#C45830]">{unclustered.length}</span>
-            {' '}saved {unclustered.length === 1 ? 'place' : 'places'} not in any area yet.
-            Drag them to an area or create a new one.
+            {' '}saved {unclustered.length === 1 ? 'place' : 'places'} not organized yet.
           </p>
         </motion.div>
       )}
-
-      {/* Create Cluster Modal */}
-      <CreateClusterModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onCreateCluster={handleCreateCluster}
-        cityName={cityName}
-        cityCenter={cityCenter}
-      />
     </div>
   );
 }

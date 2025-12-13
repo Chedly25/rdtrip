@@ -1,0 +1,310 @@
+/**
+ * Image Service for Planning Cards
+ *
+ * Unified service to fetch images for planning suggestions.
+ * Uses a priority chain:
+ * 1. Google Places Photo API (best for specific businesses)
+ * 2. Wikipedia/Wikimedia Commons (good for landmarks/monuments)
+ * 3. Unsplash (fallback for generic category images)
+ *
+ * All images are cached in the database to avoid repeated API calls.
+ */
+
+const axios = require('axios');
+
+class ImageService {
+  constructor(db) {
+    this.db = db;
+    this.cache = new Map();
+    this.googleApiKey = process.env.GOOGLE_PLACES_API_KEY || process.env.GOOGLE_API_KEY;
+    this.unsplashAccessKey = process.env.UNSPLASH_ACCESS_KEY;
+  }
+
+  /**
+   * Get image URL for a planning card
+   * Main entry point for the service
+   */
+  async getImageForCard(card, cityName) {
+    const cacheKey = `card_${card.name}_${cityName}`;
+
+    // Check memory cache
+    if (this.cache.has(cacheKey)) {
+      return this.cache.get(cacheKey);
+    }
+
+    // Check database cache
+    const dbResult = await this.getFromDatabase(card.type, card.name, cityName);
+    if (dbResult) {
+      this.cache.set(cacheKey, dbResult);
+      return dbResult;
+    }
+
+    // Fetch new image using fallback chain
+    const imageUrl = await this.fetchImageWithFallbacks(card, cityName);
+
+    // Cache in database
+    if (imageUrl) {
+      await this.saveToDatabase(card.type, card.name, cityName, imageUrl);
+    }
+
+    this.cache.set(cacheKey, imageUrl);
+    return imageUrl;
+  }
+
+  /**
+   * Batch enrich cards with images
+   * More efficient than calling getImageForCard one by one
+   */
+  async enrichCardsWithImages(cards, cityName) {
+    console.log(`[imageService] Enriching ${cards.length} cards with images for ${cityName}...`);
+
+    const enrichedCards = await Promise.all(
+      cards.map(async (card) => {
+        try {
+          const imageUrl = await this.getImageForCard(card, cityName);
+          return { ...card, imageUrl: imageUrl || null };
+        } catch (error) {
+          console.warn(`[imageService] Failed to get image for ${card.name}:`, error.message);
+          return { ...card, imageUrl: null };
+        }
+      })
+    );
+
+    const successCount = enrichedCards.filter(c => c.imageUrl).length;
+    console.log(`[imageService] Successfully fetched ${successCount}/${cards.length} images`);
+
+    return enrichedCards;
+  }
+
+  /**
+   * Fetch image using priority fallback chain
+   */
+  async fetchImageWithFallbacks(card, cityName) {
+    // Strategy 1: Google Places (best for restaurants, bars, cafes, hotels)
+    if (['restaurant', 'bar', 'cafe', 'hotel'].includes(card.type)) {
+      const googleImage = await this.fetchGooglePlacePhoto(card.name, cityName);
+      if (googleImage) return googleImage;
+    }
+
+    // Strategy 2: Wikipedia (best for landmarks, activities, photo spots)
+    const wikiImage = await this.fetchWikipediaImage(card.name, cityName);
+    if (wikiImage) return wikiImage;
+
+    // Strategy 3: Wikipedia with location area
+    if (card.location?.area) {
+      const areaImage = await this.fetchWikipediaImage(`${card.location.area} ${cityName}`);
+      if (areaImage) return areaImage;
+    }
+
+    // Strategy 4: Unsplash category fallback
+    const unsplashImage = await this.fetchUnsplashImage(card, cityName);
+    if (unsplashImage) return unsplashImage;
+
+    // Strategy 5: City generic image
+    const cityImage = await this.fetchWikipediaImage(cityName);
+    if (cityImage) return cityImage;
+
+    return null;
+  }
+
+  /**
+   * Search Google Places and get photo
+   */
+  async fetchGooglePlacePhoto(placeName, cityName) {
+    if (!this.googleApiKey) {
+      console.warn('[imageService] No Google API key configured');
+      return null;
+    }
+
+    try {
+      // First, find the place
+      const searchQuery = `${placeName} ${cityName}`;
+      const findPlaceUrl = `https://maps.googleapis.com/maps/api/place/findplacefromtext/json?` +
+        `input=${encodeURIComponent(searchQuery)}` +
+        `&inputtype=textquery` +
+        `&fields=place_id,photos` +
+        `&key=${this.googleApiKey}`;
+
+      const response = await axios.get(findPlaceUrl, { timeout: 5000 });
+
+      if (response.data.candidates?.[0]?.photos?.[0]?.photo_reference) {
+        const photoRef = response.data.candidates[0].photos[0].photo_reference;
+
+        // Generate photo URL
+        const photoUrl = `https://maps.googleapis.com/maps/api/place/photo?` +
+          `maxwidth=800` +
+          `&photoreference=${photoRef}` +
+          `&key=${this.googleApiKey}`;
+
+        console.log(`[imageService] Found Google Places photo for "${placeName}"`);
+        return photoUrl;
+      }
+    } catch (error) {
+      console.warn(`[imageService] Google Places API error for "${placeName}":`, error.message);
+    }
+
+    return null;
+  }
+
+  /**
+   * Fetch image from Wikipedia
+   */
+  async fetchWikipediaImage(searchTerm, cityName = '') {
+    try {
+      const cleanTerm = searchTerm.trim().replace(/[()]/g, '');
+      const fullSearch = cityName ? `${cleanTerm} ${cityName}` : cleanTerm;
+
+      // Try Wikipedia REST API first
+      const summaryUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(fullSearch)}`;
+      const response = await axios.get(summaryUrl, {
+        headers: { Accept: 'application/json' },
+        timeout: 5000
+      });
+
+      if (response.data.originalimage?.source) {
+        console.log(`[imageService] Found Wikipedia image for "${searchTerm}"`);
+        return response.data.originalimage.source;
+      }
+
+      if (response.data.thumbnail?.source) {
+        // Upscale thumbnail
+        const imageUrl = response.data.thumbnail.source.replace(/\/\d+px-/, '/800px-');
+        console.log(`[imageService] Found Wikipedia thumbnail for "${searchTerm}"`);
+        return imageUrl;
+      }
+
+      // Try without city name if we added it
+      if (cityName) {
+        return await this.fetchWikipediaImage(searchTerm);
+      }
+    } catch (error) {
+      // Silently fail and try next strategy
+    }
+
+    return null;
+  }
+
+  /**
+   * Fetch image from Unsplash API
+   */
+  async fetchUnsplashImage(card, cityName) {
+    if (!this.unsplashAccessKey) {
+      // No Unsplash key - skip
+      return null;
+    }
+
+    try {
+      // Build search query based on card type
+      const searchTerms = this.buildUnsplashSearchTerms(card, cityName);
+
+      const response = await axios.get('https://api.unsplash.com/search/photos', {
+        params: {
+          query: searchTerms,
+          per_page: 1,
+          orientation: 'landscape',
+        },
+        headers: {
+          Authorization: `Client-ID ${this.unsplashAccessKey}`,
+        },
+        timeout: 5000,
+      });
+
+      if (response.data.results?.[0]?.urls?.regular) {
+        console.log(`[imageService] Found Unsplash image for "${card.name}" (${searchTerms})`);
+        return response.data.results[0].urls.regular;
+      }
+    } catch (error) {
+      console.warn(`[imageService] Unsplash API error:`, error.message);
+    }
+
+    return null;
+  }
+
+  /**
+   * Build Unsplash search terms based on card type
+   */
+  buildUnsplashSearchTerms(card, cityName) {
+    const typeQueries = {
+      restaurant: `${cityName} restaurant food dining`,
+      bar: `${cityName} bar cocktails nightlife`,
+      cafe: `${cityName} cafe coffee`,
+      hotel: `${cityName} hotel luxury`,
+      activity: `${cityName} ${card.tags?.[0] || 'tourism'}`,
+      photo_spot: `${cityName} ${card.tags?.[0] || 'scenic view'}`,
+      experience: `${cityName} ${card.tags?.[0] || 'local experience'}`,
+    };
+
+    return typeQueries[card.type] || `${cityName} travel`;
+  }
+
+  /**
+   * Get image from database cache
+   */
+  async getFromDatabase(entityType, entityName, city) {
+    if (!this.db) return null;
+
+    try {
+      const result = await this.db.query(
+        `SELECT image_url FROM scraped_images
+         WHERE entity_type = $1 AND entity_name = $2 AND city = $3
+         AND expires_at > NOW()
+         LIMIT 1`,
+        [entityType, entityName, city]
+      );
+
+      if (result.rows.length > 0) {
+        return result.rows[0].image_url;
+      }
+    } catch (error) {
+      // Table might not exist, silently fail
+    }
+    return null;
+  }
+
+  /**
+   * Save image to database cache
+   */
+  async saveToDatabase(entityType, entityName, city, imageUrl) {
+    if (!this.db || !imageUrl) return;
+
+    try {
+      await this.db.query(
+        `INSERT INTO scraped_images (entity_type, entity_name, city, image_url, source_type)
+         VALUES ($1, $2, $3, $4, 'planning_card')
+         ON CONFLICT (entity_type, entity_name, city)
+         DO UPDATE SET
+           image_url = $4,
+           source_type = 'planning_card',
+           scraped_at = NOW(),
+           expires_at = NOW() + INTERVAL '30 days'`,
+        [entityType, entityName, city, imageUrl]
+      );
+    } catch (error) {
+      // Table might not exist, silently fail
+      console.warn('[imageService] Failed to cache image:', error.message);
+    }
+  }
+
+  /**
+   * Clear cache for a specific city (useful for refresh)
+   */
+  clearCacheForCity(cityName) {
+    for (const key of this.cache.keys()) {
+      if (key.includes(cityName)) {
+        this.cache.delete(key);
+      }
+    }
+  }
+}
+
+// Singleton instance (will be initialized with db in routes)
+let imageServiceInstance = null;
+
+function getImageService(db) {
+  if (!imageServiceInstance) {
+    imageServiceInstance = new ImageService(db);
+  }
+  return imageServiceInstance;
+}
+
+module.exports = { ImageService, getImageService };

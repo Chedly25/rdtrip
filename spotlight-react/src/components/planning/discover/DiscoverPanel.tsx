@@ -1,61 +1,90 @@
 /**
  * DiscoverPanel
  *
- * Right panel showing suggestions for activities, restaurants, etc.
- * Features: FilterBar, NearbySection, CategorySections, Surprise me button.
+ * Right panel with three-tab browse experience:
+ * - Activities (activity + photo_spot + experience)
+ * - Restaurants (restaurant + bar + cafe)
+ * - Hotels (single selection per city with optimal location recommendation)
  *
- * Design: Editorial card grid with warm tones, magazine-quality presentation
+ * Design: Travel Journal Editorial - warm, tactile, magazine-quality
+ * Each tab is like a chapter in a beautiful travel guide.
  */
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sparkles,
   Utensils,
   Camera,
   Wine,
+  Coffee,
   Shuffle,
   Loader2,
 } from 'lucide-react';
+import { BrowseTabs } from './BrowseTabs';
 import { FilterBar } from './FilterBar';
-import { NearbySection } from './NearbySection';
 import { CategorySection } from './CategorySection';
-import { CreateClusterModal } from '../plan/CreateClusterModal';
+import { HotelSection } from './HotelSection';
 import { usePlanningStore, selectSuggestionsForType } from '../../../stores/planningStore';
-import type { Cluster, PlanCard, PlanCardType, PriceLevel, LatLng } from '../../../types/planning';
+import type {
+  Cluster,
+  PlanCard,
+  PlanCardType,
+  PriceLevel,
+  LatLng,
+  BrowseTabId,
+} from '../../../types/planning';
 
 interface DiscoverPanelProps {
   cityId: string;
   cityName: string;
   cityCenter?: LatLng;
   clusters: Cluster[];
+  requestedTab?: BrowseTabId | null; // External tab navigation (from inline tips)
 }
 
-// Category configuration
-const categories: {
+// Activity sub-categories for the Activities tab
+const activityCategories: {
+  type: PlanCardType;
+  title: string;
+  icon: React.ReactNode;
+  iconColor: string;
+}[] = [
+  { type: 'activity', title: 'Activities', icon: <Sparkles className="w-4 h-4" />, iconColor: '#7C5CDB' },
+  { type: 'photo_spot', title: 'Photo Spots', icon: <Camera className="w-4 h-4" />, iconColor: '#4A90A4' },
+];
+
+// Restaurant sub-categories for the Restaurants tab
+const restaurantCategories: {
   type: PlanCardType;
   title: string;
   icon: React.ReactNode;
   iconColor: string;
 }[] = [
   { type: 'restaurant', title: 'Restaurants', icon: <Utensils className="w-4 h-4" />, iconColor: '#C45830' },
-  { type: 'activity', title: 'Activities', icon: <Sparkles className="w-4 h-4" />, iconColor: '#7C5CDB' },
-  { type: 'photo_spot', title: 'Photo Spots', icon: <Camera className="w-4 h-4" />, iconColor: '#4A90A4' },
-  { type: 'bar', title: 'Bars & Cafes', icon: <Wine className="w-4 h-4" />, iconColor: '#C4507C' },
+  { type: 'bar', title: 'Bars', icon: <Wine className="w-4 h-4" />, iconColor: '#C4507C' },
+  { type: 'cafe', title: 'Cafes', icon: <Coffee className="w-4 h-4" />, iconColor: '#8B7355' },
 ];
 
-export function DiscoverPanel({ cityId, cityName, cityCenter = { lat: 0, lng: 0 }, clusters }: DiscoverPanelProps) {
-  // Modal state for creating new cluster
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [pendingCard, setPendingCard] = useState<PlanCard | null>(null);
+export function DiscoverPanel({ cityId, cityName, cityCenter = { lat: 0, lng: 0 }, clusters, requestedTab }: DiscoverPanelProps) {
+  // Active tab state
+  const [activeTab, setActiveTab] = useState<BrowseTabId>('activities');
+
+  // React to external tab navigation requests (from inline tips)
+  useEffect(() => {
+    if (requestedTab) {
+      setActiveTab(requestedTab);
+    }
+  }, [requestedTab]);
 
   // Store state and actions
   const {
     filters,
     setFilters,
     generateSuggestions,
-    addItemToCluster,
-    createCluster,
+    addItemAutoClustered,
+    selectHotel,
+    removeHotel,
     isGenerating,
   } = usePlanningStore();
 
@@ -64,13 +93,37 @@ export function DiscoverPanel({ cityId, cityName, cityCenter = { lat: 0, lng: 0 
   const activitySuggestions = usePlanningStore((state) => selectSuggestionsForType(state, 'activity'));
   const photoSpotSuggestions = usePlanningStore((state) => selectSuggestionsForType(state, 'photo_spot'));
   const barSuggestions = usePlanningStore((state) => selectSuggestionsForType(state, 'bar'));
+  const cafeSuggestions = usePlanningStore((state) => selectSuggestionsForType(state, 'cafe'));
+  const hotelSuggestions = usePlanningStore((state) => selectSuggestionsForType(state, 'hotel'));
 
-  const suggestionsMap: Record<string, PlanCard[]> = useMemo(() => ({
-    restaurant: restaurantSuggestions,
+  // Get selected hotel
+  const selectedHotel = usePlanningStore((state) =>
+    state.cityPlans[cityId]?.selectedHotel || null
+  );
+
+  // Suggestions maps for each tab
+  const activitySuggestionsMap: Record<string, PlanCard[]> = useMemo(() => ({
     activity: activitySuggestions,
     photo_spot: photoSpotSuggestions,
+  }), [activitySuggestions, photoSpotSuggestions]);
+
+  const restaurantSuggestionsMap: Record<string, PlanCard[]> = useMemo(() => ({
+    restaurant: restaurantSuggestions,
     bar: barSuggestions,
-  }), [restaurantSuggestions, activitySuggestions, photoSpotSuggestions, barSuggestions]);
+    cafe: cafeSuggestions,
+  }), [restaurantSuggestions, barSuggestions, cafeSuggestions]);
+
+  // Tab counts (suggestions + added items)
+  const tabCounts = useMemo(() => {
+    const activityCount = activitySuggestions.length + photoSpotSuggestions.length;
+    const restaurantCount = restaurantSuggestions.length + barSuggestions.length + cafeSuggestions.length;
+    const hotelCount = hotelSuggestions.length;
+    return {
+      activities: activityCount,
+      restaurants: restaurantCount,
+      hotels: hotelCount,
+    };
+  }, [activitySuggestions, photoSpotSuggestions, restaurantSuggestions, barSuggestions, cafeSuggestions, hotelSuggestions]);
 
   // Collect all item IDs that are already in the plan
   const addedIds = useMemo(() => {
@@ -80,8 +133,11 @@ export function DiscoverPanel({ cityId, cityName, cityCenter = { lat: 0, lng: 0 
         ids.add(item.id);
       });
     });
+    if (selectedHotel) {
+      ids.add(selectedHotel.id);
+    }
     return ids;
-  }, [clusters]);
+  }, [clusters, selectedHotel]);
 
   // Filter suggestions by price
   const filterByPrice = useCallback((cards: PlanCard[]): PlanCard[] => {
@@ -96,7 +152,6 @@ export function DiscoverPanel({ cityId, cityName, cityCenter = { lat: 0, lng: 0 
     const sorted = [...cards];
     switch (filters.sortBy) {
       case 'proximity':
-        // Already sorted by proximity from backend
         return sorted;
       case 'rating':
         return sorted.sort((a, b) => (b.rating || 0) - (a.rating || 0));
@@ -107,199 +162,273 @@ export function DiscoverPanel({ cityId, cityName, cityCenter = { lat: 0, lng: 0 
     }
   }, [filters.sortBy]);
 
-  // Get nearby suggestions (within 10 min walk)
-  const nearbySuggestions = useMemo(() => {
-    if (clusters.length === 0) return [];
-
-    const allSuggestions = [
-      ...restaurantSuggestions,
-      ...activitySuggestions,
-      ...photoSpotSuggestions,
-      ...barSuggestions,
-    ];
-
-    return allSuggestions.filter((card) => {
-      const cardWithProximity = card as PlanCard & {
-        proximity?: { isNear: boolean; walkingMinutes: number };
-      };
-      return cardWithProximity.proximity?.isNear || (cardWithProximity.proximity?.walkingMinutes ?? Infinity) <= 10;
-    });
-  }, [clusters, restaurantSuggestions, activitySuggestions, photoSpotSuggestions, barSuggestions]);
-
-  // Auto-generate initial suggestions on mount
+  // Auto-generate initial suggestions based on active tab
   useEffect(() => {
-    const generateInitial = async () => {
-      // Generate 4 cards for each category if empty
-      for (const category of categories) {
-        const suggestions = suggestionsMap[category.type];
-        if (suggestions.length === 0 && !isGenerating[category.type]) {
-          await generateSuggestions(category.type, 4);
+    const generateForTab = async () => {
+      if (activeTab === 'activities') {
+        for (const cat of activityCategories) {
+          const suggestions = activitySuggestionsMap[cat.type];
+          if (suggestions.length === 0 && !isGenerating[cat.type]) {
+            await generateSuggestions(cat.type, 4);
+          }
+        }
+      } else if (activeTab === 'restaurants') {
+        for (const cat of restaurantCategories) {
+          const suggestions = restaurantSuggestionsMap[cat.type];
+          if (suggestions.length === 0 && !isGenerating[cat.type]) {
+            await generateSuggestions(cat.type, 4);
+          }
+        }
+      } else if (activeTab === 'hotels') {
+        if (hotelSuggestions.length === 0 && !isGenerating['hotel']) {
+          await generateSuggestions('hotel', 3);
         }
       }
     };
 
-    generateInitial();
-  }, [cityId]); // Re-run when city changes
+    generateForTab();
+  }, [activeTab, cityId]);
 
-  // Handle adding a card to the plan
-  const handleAddCard = useCallback((card: PlanCard, clusterId?: string) => {
-    if (clusterId) {
-      // Add to specific cluster
-      addItemToCluster(cityId, clusterId, card);
-    } else if (clusters.length > 0) {
-      // Fallback: add to first cluster if no clusterId provided
-      addItemToCluster(cityId, clusters[0].id, card);
-    } else {
-      // No clusters exist, open modal to create one first
-      setPendingCard(card);
-      setIsCreateModalOpen(true);
-    }
-  }, [cityId, clusters, addItemToCluster]);
-
-  // Handle opening create cluster modal (from dropdown)
-  const handleOpenCreateModal = useCallback(() => {
-    setIsCreateModalOpen(true);
-  }, []);
-
-  // Handle creating cluster from modal
-  const handleCreateCluster = useCallback((name: string, center?: LatLng) => {
-    const newClusterId = createCluster(cityId, name, center || cityCenter);
-    // If there was a pending card, add it to the new cluster
-    if (pendingCard && newClusterId) {
-      addItemToCluster(cityId, newClusterId, pendingCard);
-      setPendingCard(null);
-    }
-  }, [cityId, cityCenter, createCluster, addItemToCluster, pendingCard]);
+  // Handle adding a card to the plan (auto-clustering)
+  const handleAddCard = useCallback((card: PlanCard) => {
+    addItemAutoClustered(cityId, card, cityCenter);
+  }, [cityId, cityCenter, addItemAutoClustered]);
 
   // Handle "Show more" for a category
   const handleShowMore = useCallback((type: PlanCardType) => {
-    generateSuggestions(type, 10);
+    generateSuggestions(type, 6);
   }, [generateSuggestions]);
 
-  // Handle "Surprise me" - generate random cards across all types
+  // Handle hotel selection
+  const handleSelectHotel = useCallback((hotel: PlanCard) => {
+    selectHotel(cityId, hotel);
+  }, [cityId, selectHotel]);
+
+  const handleRemoveHotel = useCallback(() => {
+    removeHotel(cityId);
+  }, [cityId, removeHotel]);
+
+  // Handle "Surprise me" - generate random cards for current tab
   const handleSurpriseMe = useCallback(async () => {
-    // Generate 1 card for 3 random categories
-    const shuffled = [...categories].sort(() => Math.random() - 0.5).slice(0, 3);
-    for (const category of shuffled) {
-      await generateSuggestions(category.type, 1);
+    if (activeTab === 'activities') {
+      const types = ['activity', 'photo_spot'] as PlanCardType[];
+      const randomType = types[Math.floor(Math.random() * types.length)];
+      await generateSuggestions(randomType, 2);
+    } else if (activeTab === 'restaurants') {
+      const types = ['restaurant', 'bar', 'cafe'] as PlanCardType[];
+      const randomType = types[Math.floor(Math.random() * types.length)];
+      await generateSuggestions(randomType, 2);
+    } else if (activeTab === 'hotels') {
+      await generateSuggestions('hotel', 2);
     }
-  }, [generateSuggestions]);
+  }, [activeTab, generateSuggestions]);
 
-  // Check if any category is generating
-  const isAnyGenerating = Object.values(isGenerating).some(Boolean);
+  // Check if current tab is generating
+  const isTabGenerating = useMemo(() => {
+    if (activeTab === 'activities') {
+      return activityCategories.some(c => isGenerating[c.type]);
+    } else if (activeTab === 'restaurants') {
+      return restaurantCategories.some(c => isGenerating[c.type]);
+    } else {
+      return isGenerating['hotel'] || false;
+    }
+  }, [activeTab, isGenerating]);
+
+  // Tab descriptions
+  const tabDescriptions: Record<BrowseTabId, string> = {
+    activities: 'Discover experiences & photo spots',
+    restaurants: 'Find places to eat & drink',
+    hotels: 'Choose where to stay',
+  };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
+    <div className="flex flex-col h-full">
+      {/* Header with city name */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-center"
+        className="text-center pt-4 pb-3 px-4"
       >
-        <h3 className="font-['Fraunces',serif] text-xl text-[#2C2417] font-semibold mb-1">
+        <h3 className="font-['Fraunces',Georgia,serif] text-xl text-[#2C2417] font-semibold mb-1">
           Discover {cityName}
         </h3>
-        <p className="text-sm text-[#8B7355] font-['Satoshi',sans-serif]">
-          Browse suggestions or generate more options
+        <p className="text-sm text-[#8B7355] font-['Satoshi',system-ui,sans-serif]">
+          {tabDescriptions[activeTab]}
         </p>
       </motion.div>
 
-      {/* Filter bar */}
-      <FilterBar
-        priceFilter={filters.priceRange || null}
-        sortBy={filters.sortBy}
-        onPriceChange={(levels) => setFilters({ priceRange: levels as PriceLevel[] | undefined })}
-        onSortChange={(sort) => setFilters({ sortBy: sort })}
+      {/* Tab navigation */}
+      <BrowseTabs
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        counts={tabCounts}
       />
 
-      {/* Nearby section (only if user has clusters with items) */}
-      {clusters.length > 0 && clusters.some((c) => c.items.length > 0) && (
-        <NearbySection
-          cards={filterByPrice(nearbySuggestions)}
-          onAddCard={handleAddCard}
-          addedIds={addedIds}
-        />
-      )}
+      {/* Scrollable content area */}
+      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-6">
+        {/* Filter bar (not shown for hotels) */}
+        {activeTab !== 'hotels' && (
+          <FilterBar
+            priceFilter={filters.priceRange || null}
+            sortBy={filters.sortBy}
+            onPriceChange={(levels) => setFilters({ priceRange: levels as PriceLevel[] | undefined })}
+            onSortChange={(sort) => setFilters({ sortBy: sort })}
+          />
+        )}
 
-      {/* Category sections */}
-      <div className="space-y-8">
-        {categories.map((category) => {
-          const suggestions = suggestionsMap[category.type] || [];
-          const filtered = sortSuggestions(filterByPrice(suggestions));
+        {/* Tab content with animation */}
+        <AnimatePresence mode="wait">
+          {/* Activities Tab */}
+          {activeTab === 'activities' && (
+            <motion.div
+              key="activities"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.2 }}
+              className="space-y-8"
+            >
+              {activityCategories.map((category) => {
+                const suggestions = activitySuggestionsMap[category.type] || [];
+                const filtered = sortSuggestions(filterByPrice(suggestions));
 
-          return (
-            <CategorySection
-              key={category.type}
-              type={category.type}
-              title={category.title}
-              icon={
-                <span style={{ color: category.iconColor }}>
-                  {category.icon}
-                </span>
-              }
-              cards={filtered}
-              isLoading={isGenerating[category.type] || false}
-              hasMore={true}
-              onShowMore={() => handleShowMore(category.type)}
-              onAddCard={handleAddCard}
-              onCreateCluster={handleOpenCreateModal}
-              clusters={clusters}
-              addedIds={addedIds}
-            />
-          );
-        })}
-      </div>
-
-      {/* Surprise me button */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.3 }}
-        className="pt-4 border-t border-[#E5DDD0]"
-      >
-        <button
-          onClick={handleSurpriseMe}
-          disabled={isAnyGenerating}
-          className={`
-            w-full py-4 rounded-xl
-            bg-gradient-to-r from-[#7C5CDB] to-[#C45830]
-            text-white font-['Satoshi',sans-serif] font-semibold text-base
-            flex items-center justify-center gap-2
-            shadow-lg shadow-[#7C5CDB]/20
-            hover:shadow-xl hover:shadow-[#7C5CDB]/30
-            hover:scale-[1.01] active:scale-[0.99]
-            transition-all duration-200
-            disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100
-          `}
-        >
-          {isAnyGenerating ? (
-            <>
-              <Loader2 className="w-5 h-5 animate-spin" />
-              Generating...
-            </>
-          ) : (
-            <>
-              <Shuffle className="w-5 h-5" />
-              Surprise me!
-            </>
+                return (
+                  <CategorySection
+                    key={category.type}
+                    type={category.type}
+                    title={category.title}
+                    icon={
+                      <span style={{ color: category.iconColor }}>
+                        {category.icon}
+                      </span>
+                    }
+                    cards={filtered}
+                    isLoading={isGenerating[category.type] || false}
+                    hasMore={true}
+                    onShowMore={() => handleShowMore(category.type)}
+                    onAddCard={handleAddCard}
+                    clusters={clusters}
+                    addedIds={addedIds}
+                  />
+                );
+              })}
+            </motion.div>
           )}
-        </button>
-        <p className="text-xs text-[#C4B8A5] text-center mt-2 font-['Satoshi',sans-serif]">
-          Generate 3 random suggestions across all categories
-        </p>
-      </motion.div>
 
-      {/* Create Cluster Modal */}
-      <CreateClusterModal
-        isOpen={isCreateModalOpen}
-        onClose={() => {
-          setIsCreateModalOpen(false);
-          setPendingCard(null);
-        }}
-        onCreateCluster={handleCreateCluster}
-        cityName={cityName}
-        cityCenter={cityCenter}
-      />
+          {/* Restaurants Tab */}
+          {activeTab === 'restaurants' && (
+            <motion.div
+              key="restaurants"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.2 }}
+              className="space-y-8"
+            >
+              {restaurantCategories.map((category) => {
+                const suggestions = restaurantSuggestionsMap[category.type] || [];
+                const filtered = sortSuggestions(filterByPrice(suggestions));
+
+                return (
+                  <CategorySection
+                    key={category.type}
+                    type={category.type}
+                    title={category.title}
+                    icon={
+                      <span style={{ color: category.iconColor }}>
+                        {category.icon}
+                      </span>
+                    }
+                    cards={filtered}
+                    isLoading={isGenerating[category.type] || false}
+                    hasMore={true}
+                    onShowMore={() => handleShowMore(category.type)}
+                    onAddCard={handleAddCard}
+                    clusters={clusters}
+                    addedIds={addedIds}
+                  />
+                );
+              })}
+            </motion.div>
+          )}
+
+          {/* Hotels Tab */}
+          {activeTab === 'hotels' && (
+            <motion.div
+              key="hotels"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.2 }}
+            >
+              <HotelSection
+                hotels={hotelSuggestions}
+                selectedHotel={selectedHotel}
+                clusters={clusters}
+                isLoading={isGenerating['hotel'] || false}
+                onSelectHotel={handleSelectHotel}
+                onRemoveHotel={handleRemoveHotel}
+                onGenerateMore={() => handleShowMore('hotel')}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Surprise me button */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+          className="pt-4 border-t border-[#E5DDD0]"
+        >
+          <button
+            onClick={handleSurpriseMe}
+            disabled={isTabGenerating}
+            className={`
+              w-full py-4 rounded-xl
+              bg-gradient-to-r
+              ${activeTab === 'activities'
+                ? 'from-[#7C5CDB] to-[#4A90A4]'
+                : activeTab === 'restaurants'
+                  ? 'from-[#C45830] to-[#8B4A5E]'
+                  : 'from-[#5C6B7A] to-[#4A5866]'
+              }
+              text-white font-['Satoshi',system-ui,sans-serif] font-semibold text-base
+              flex items-center justify-center gap-2
+              shadow-lg
+              ${activeTab === 'activities'
+                ? 'shadow-[#7C5CDB]/20 hover:shadow-[#7C5CDB]/30'
+                : activeTab === 'restaurants'
+                  ? 'shadow-[#C45830]/20 hover:shadow-[#C45830]/30'
+                  : 'shadow-[#5C6B7A]/20 hover:shadow-[#5C6B7A]/30'
+              }
+              hover:scale-[1.01] active:scale-[0.99]
+              transition-all duration-200
+              disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100
+            `}
+          >
+            {isTabGenerating ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Shuffle className="w-5 h-5" />
+                Surprise me!
+              </>
+            )}
+          </button>
+          <p className="text-xs text-[#C4B8A5] text-center mt-2 font-['Satoshi',system-ui,sans-serif]">
+            {activeTab === 'activities'
+              ? 'Discover unique experiences'
+              : activeTab === 'restaurants'
+                ? 'Find a hidden gem'
+                : 'Show more hotel options'
+            }
+          </p>
+        </motion.div>
+      </div>
     </div>
   );
 }

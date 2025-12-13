@@ -19,6 +19,11 @@ import type {
   PlanningFilters,
   LatLng,
 } from '../types/planning';
+import {
+  findBestClusterForItem,
+  generateClusterId,
+  orderItemsOptimally,
+} from '../utils/autoClustering';
 
 // ============================================
 // Initial State
@@ -405,6 +410,156 @@ export const usePlanningStore = create<PlanningStore>()(
             },
           },
         });
+      },
+
+      /**
+       * Add item with auto-clustering - system determines the best cluster
+       * This is the main entry point for adding items in the new UX
+       *
+       * Does optimistic local update for immediate feedback, then syncs with backend
+       * Backend returns proper cluster naming via reverse geocoding
+       */
+      addItemAutoClustered: (cityId: string, card: PlanCard, cityCenter?: LatLng) => {
+        const { cityPlans, routeId } = get();
+        const cityPlan = cityPlans[cityId];
+        if (!cityPlan) return;
+
+        // Find the best cluster for this item (local calculation for immediate update)
+        const { clusterId, shouldCreateNew, suggestedName } = findBestClusterForItem(cityPlan, card);
+
+        // Generate temporary IDs for new cluster/item
+        const tempClusterId = shouldCreateNew ? generateClusterId() : clusterId;
+        const itemWithId = { ...card, id: card.id || generateId('item') };
+
+        if (shouldCreateNew) {
+          // Optimistic: Create a new cluster and add the item locally
+          const center = card.location || cityCenter || { lat: 0, lng: 0 };
+
+          const newCluster: Cluster = {
+            id: tempClusterId!,
+            name: suggestedName, // Temporary name until backend responds
+            center,
+            items: [itemWithId],
+            totalDuration: card.duration || 0,
+            maxWalkingDistance: 0,
+          };
+
+          set({
+            cityPlans: {
+              ...cityPlans,
+              [cityId]: {
+                ...cityPlan,
+                clusters: [...cityPlan.clusters, newCluster],
+              },
+            },
+          });
+        } else if (clusterId) {
+          // Optimistic: Add to existing cluster locally with smart ordering
+          set({
+            cityPlans: {
+              ...cityPlans,
+              [cityId]: {
+                ...cityPlan,
+                clusters: cityPlan.clusters.map((cluster) => {
+                  if (cluster.id !== clusterId) return cluster;
+                  // Add item and apply smart ordering for optimal day flow
+                  const newItems = [...cluster.items, itemWithId];
+                  const orderedItems = orderItemsOptimally(newItems);
+                  const updatedCluster = {
+                    ...cluster,
+                    items: orderedItems,
+                  };
+                  const stats = computeClusterStats(updatedCluster);
+                  return {
+                    ...updatedCluster,
+                    totalDuration: stats.totalDuration,
+                    maxWalkingDistance: stats.maxWalkingDistance,
+                  };
+                }),
+              },
+            },
+          });
+        }
+
+        // Sync with backend (non-blocking - don't await)
+        if (routeId) {
+          fetch(`/api/planning/${routeId}/add-item`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ cityId, card: itemWithId }),
+          })
+            .then(async (response) => {
+              if (response.ok) {
+                const result = await response.json();
+                // Update cluster name from backend (which has reverse geocoding)
+                if (result.isNewCluster && result.clusterName && result.clusterName !== suggestedName) {
+                  const { cityPlans: currentPlans } = get();
+                  const currentCityPlan = currentPlans[cityId];
+                  if (currentCityPlan) {
+                    set({
+                      cityPlans: {
+                        ...currentPlans,
+                        [cityId]: {
+                          ...currentCityPlan,
+                          clusters: currentCityPlan.clusters.map((c) => {
+                            if (c.id === tempClusterId) {
+                              return { ...c, name: result.clusterName };
+                            }
+                            return c;
+                          }),
+                        },
+                      },
+                    });
+                  }
+                }
+              }
+            })
+            .catch((error) => {
+              console.error('[planningStore] Backend sync failed:', error);
+              // Item was already added locally, so user experience is preserved
+            });
+        }
+      },
+
+      // ============================================
+      // Hotel Operations
+      // ============================================
+
+      selectHotel: (cityId: string, hotel: PlanCard) => {
+        const { cityPlans } = get();
+        const cityPlan = cityPlans[cityId];
+        if (!cityPlan) return;
+
+        set({
+          cityPlans: {
+            ...cityPlans,
+            [cityId]: {
+              ...cityPlan,
+              selectedHotel: hotel,
+            },
+          },
+        });
+      },
+
+      removeHotel: (cityId: string) => {
+        const { cityPlans } = get();
+        const cityPlan = cityPlans[cityId];
+        if (!cityPlan) return;
+
+        set({
+          cityPlans: {
+            ...cityPlans,
+            [cityId]: {
+              ...cityPlan,
+              selectedHotel: null,
+            },
+          },
+        });
+      },
+
+      getSelectedHotel: (cityId: string): PlanCard | null => {
+        const { cityPlans } = get();
+        return cityPlans[cityId]?.selectedHotel || null;
       },
 
       // ============================================
