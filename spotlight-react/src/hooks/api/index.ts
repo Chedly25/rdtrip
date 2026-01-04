@@ -74,39 +74,10 @@ export {
 } from './usePlaces';
 
 // ============================================================================
-// Companion Hooks
+// Companion Hooks - REMOVED (Planning feature being rebuilt)
 // ============================================================================
-export {
-  // Main hook
-  useCompanionChat,
-  // Suggestions
-  useCompanionSuggestions,
-  // Quick actions
-  useCompanionQuickActions,
-  // Feedback
-  useCompanionFeedback,
-  // Utilities
-  formatCompanionMessages,
-  getLatestAssistantMessage,
-  getConversationStats,
-  // Query keys
-  companionKeys,
-  // Types
-  type CompanionPhase,
-  type CompanionMessage,
-  type CompanionSuggestion,
-  type CompanionAction,
-  type CompanionContext,
-  type CompanionResponse,
-} from './useCompanion';
-
-// Planning Companion SSE Hook
-export {
-  useCompanionSSE,
-  useCompanionFallback,
-  type UseCompanionSSEResult,
-  type UseCompanionFallbackResult,
-} from './useCompanionSSE';
+// Companion hooks have been removed while the planning feature is being rebuilt.
+// See useProactiveSuggestions.ts for local stub implementations.
 
 // ============================================================================
 // Memory Hooks

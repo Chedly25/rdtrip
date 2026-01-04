@@ -22,9 +22,11 @@ import {
   AlertCircle,
   Camera,
   X,
+  Loader2,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { cn } from '../../lib/utils';
+import { supabase } from '../../lib/supabase';
 
 interface AccountSettingsProps {
   onClose?: () => void;
@@ -42,7 +44,62 @@ export function AccountSettings({ onClose }: AccountSettingsProps) {
 
   // Profile state
   const [displayName, setDisplayName] = useState(user?.displayName || '');
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Handle avatar upload
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user?.id) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setError('Please select an image file');
+      return;
+    }
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      setError('Image must be less than 2MB');
+      return;
+    }
+
+    setError('');
+    setIsUploadingAvatar(true);
+
+    try {
+      // Create unique filename
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+      const filePath = `avatars/${fileName}`;
+
+      // Upload to Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) {
+        throw new Error(uploadError.message);
+      }
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      // Update user profile with new avatar URL
+      await updateUserProfile({ avatarUrl: publicUrl });
+      setSuccess('Avatar updated successfully');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to upload avatar');
+    } finally {
+      setIsUploadingAvatar(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
 
   // Email state
   const [newEmail, setNewEmail] = useState('');
@@ -297,7 +354,11 @@ export function AccountSettings({ onClose }: AccountSettingsProps) {
                   <User className="w-8 h-8" style={{ color: '#C45830' }} />
                 )}
                 <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Camera className="w-5 h-5 text-white" />
+                  {isUploadingAvatar ? (
+                    <Loader2 className="w-5 h-5 text-white animate-spin" />
+                  ) : (
+                    <Camera className="w-5 h-5 text-white" />
+                  )}
                 </div>
               </div>
               <input
@@ -305,9 +366,8 @@ export function AccountSettings({ onClose }: AccountSettingsProps) {
                 type="file"
                 accept="image/*"
                 className="hidden"
-                onChange={() => {
-                  // TODO: Handle avatar upload
-                }}
+                onChange={handleAvatarUpload}
+                disabled={isUploadingAvatar}
               />
               <div className="text-sm" style={{ color: '#8B7355' }}>
                 Click to upload new photo

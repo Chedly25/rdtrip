@@ -6,6 +6,8 @@
  *   /                    Landing page
  *   /discover            Discovery phase
  *   /generate            Generation phase
+ *   /plan                Planning mode (slot-based day planning)
+ *   /itinerary           Editorial itinerary view
  *   /route/:id           Route view (SpotlightV2)
  *   /today               Active trip view
  *   /my-routes           User's saved routes
@@ -24,6 +26,7 @@ const ItineraryGenerationPage = lazy(() => import('./components/itinerary/Itiner
 const ItineraryPage = lazy(() => import('./components/itinerary/ItineraryPage').then(m => ({ default: m.ItineraryPage })))
 const TodayView = lazy(() => import('./components/today/TodayView').then(m => ({ default: m.TodayView })))
 const DiscoveryPhaseContainer = lazy(() => import('./components/discovery').then(m => ({ default: m.DiscoveryPhaseContainer })))
+const PlanningMode = lazy(() => import('./components/planning').then(m => ({ default: m.PlanningMode })))
 import { AgentProvider } from './contexts/AgentProvider'
 import { CompanionProvider } from './contexts/CompanionProvider'
 import { AuthProvider } from './contexts/AuthContext'
@@ -50,7 +53,6 @@ const MyRoutes = lazy(() => import('./pages/MyRoutes'))
 const SharedRoute = lazy(() => import('./pages/SharedRoute'))
 const MarketplacePage = lazy(() => import('./pages/MarketplacePage'))
 const RouteDetailPage = lazy(() => import('./pages/RouteDetailPage'))
-const PlanningPage = lazy(() => import('./pages/PlanningPage'))
 
 // Create a client
 const queryClient = new QueryClient({
@@ -222,16 +224,6 @@ function App() {
                         }
                       />
 
-                      {/* Planning Phase - Build trip itinerary with clusters */}
-                      <Route
-                        path="/plan/:routeId"
-                        element={
-                          <PageTransition variant="slideRight">
-                            <PlanningPage />
-                          </PageTransition>
-                        }
-                      />
-
                       {/* Generation Phase - AI itinerary creation (Legacy) */}
                       <Route
                         path="/generate"
@@ -248,6 +240,16 @@ function App() {
                         element={
                           <PageTransition variant="scale">
                             <ItineraryPage />
+                          </PageTransition>
+                        }
+                      />
+
+                      {/* Planning Mode - Slot-based day planning */}
+                      <Route
+                        path="/plan"
+                        element={
+                          <PageTransition variant="slideRight">
+                            <PlanningMode />
                           </PageTransition>
                         }
                       />

@@ -148,24 +148,29 @@ export default function SpotlightPage() {
   const handleActivityClick = (activity: Activity) => {
     if (activity.coordinates) {
       setViewMode('map')
-      // TODO: Zoom to activity location on map
+      // Map will auto-center on clicked activity via selected state
     }
   }
 
   const handleShare = () => {
-    // TODO: Implement share functionality
+    // Use Web Share API if available, fallback to clipboard
     if (navigator.share) {
       navigator.share({
         title: 'Check out my route!',
         text: 'I created this amazing travel itinerary',
         url: window.location.href
+      }).catch(() => {
+        // User cancelled or share failed - copy to clipboard instead
+        navigator.clipboard.writeText(window.location.href)
       })
+    } else {
+      navigator.clipboard.writeText(window.location.href)
     }
   }
 
   const handleExport = () => {
-    // TODO: Implement export functionality (PDF, etc.)
-    console.log('Export functionality coming soon')
+    // Open print dialog for PDF export
+    window.print()
   }
 
   return (

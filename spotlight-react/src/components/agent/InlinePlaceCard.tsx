@@ -49,9 +49,39 @@ interface InlinePlaceCardProps {
   variant?: 'compact' | 'expanded';
 }
 
+// Helper functions for favorites persistence
+const FAVORITES_KEY = 'rdtrip_favorites';
+
+function getFavorites(): string[] {
+  try {
+    const stored = localStorage.getItem(FAVORITES_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveFavorite(placeId: string): void {
+  const favorites = getFavorites();
+  if (!favorites.includes(placeId)) {
+    favorites.push(placeId);
+    localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
+  }
+}
+
+function removeFavorite(placeId: string): void {
+  const favorites = getFavorites().filter(id => id !== placeId);
+  localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
+}
+
+function isFavorite(placeId: string): boolean {
+  return getFavorites().includes(placeId);
+}
+
 export function InlinePlaceCard({ place, variant: _variant = 'compact' }: InlinePlaceCardProps) {
+  const placeKey = place.placeId || place.name;
   const [isExpanded, setIsExpanded] = useState(false);
-  const [isFavorited, setIsFavorited] = useState(false);
+  const [isFavorited, setIsFavorited] = useState(() => isFavorite(placeKey));
   const [showDayPicker, setShowDayPicker] = useState(false);
   const { itineraryId, addActivityToDay } = useAgent();
 
@@ -102,11 +132,16 @@ export function InlinePlaceCard({ place, variant: _variant = 'compact' }: Inline
     }
   };
 
-  // Handle favorite
+  // Handle favorite toggle with localStorage persistence
   const handleFavorite = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setIsFavorited(!isFavorited);
-    // TODO: Persist to favorites store
+    const newState = !isFavorited;
+    setIsFavorited(newState);
+    if (newState) {
+      saveFavorite(placeKey);
+    } else {
+      removeFavorite(placeKey);
+    }
   };
 
   return (

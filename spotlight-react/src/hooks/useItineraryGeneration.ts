@@ -195,8 +195,8 @@ export function useItineraryGeneration(): UseItineraryGenerationReturn {
       const { itineraryId } = await response.json();
       console.log(`✅ Itinerary job started: ${itineraryId}`);
 
-      // Try to use SSE streaming if available, fallback to polling
-      const useSSE = false; // TODO: Enable when V3 is stable
+      // Use SSE streaming for real-time updates with V3 orchestrator
+      const useSSE = true;
 
       if (useSSE) {
         // Use SSE for real-time updates

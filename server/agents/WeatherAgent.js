@@ -44,17 +44,60 @@ class WeatherAgent {
   }
 
   async fetchWeatherForDay(city, date) {
-    // For MVP, return reasonable placeholder data
-    // In production, call OpenWeatherMap API with city + date
-
     try {
-      // TODO: Implement actual API call when OPENWEATHER_API_KEY is available
-      // const url = `https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=${this.apiKey}&units=metric`;
-      // const response = await fetch(url);
-      // const data = await response.json();
-      // Find forecast for specific date...
+      // Call OpenWeatherMap API for 5-day forecast
+      const url = `https://api.openweathermap.org/data/2.5/forecast?q=${encodeURIComponent(city)}&appid=${this.apiKey}&units=metric`;
+      const response = await fetch(url);
 
-      return this.generateRealisticWeather(city, date);
+      if (!response.ok) {
+        console.warn(`Weather API returned ${response.status} for ${city}`);
+        return this.generateRealisticWeather(city, date);
+      }
+
+      const data = await response.json();
+
+      // Find forecast closest to the target date
+      const targetDate = new Date(date);
+      targetDate.setHours(12, 0, 0, 0); // Noon on target day
+
+      let closestForecast = data.list[0];
+      let closestDiff = Math.abs(new Date(closestForecast.dt * 1000) - targetDate);
+
+      for (const forecast of data.list) {
+        const forecastDate = new Date(forecast.dt * 1000);
+        const diff = Math.abs(forecastDate - targetDate);
+        if (diff < closestDiff) {
+          closestDiff = diff;
+          closestForecast = forecast;
+        }
+      }
+
+      // Map OpenWeatherMap conditions to our format
+      const weatherMain = closestForecast.weather[0]?.main?.toLowerCase() || 'clear';
+      const conditionMap = {
+        'clear': 'sunny',
+        'clouds': closestForecast.clouds?.all > 50 ? 'cloudy' : 'partly_cloudy',
+        'rain': 'light_rain',
+        'drizzle': 'light_rain',
+        'thunderstorm': 'light_rain',
+        'snow': 'cloudy',
+        'mist': 'cloudy',
+        'fog': 'cloudy'
+      };
+
+      const conditions = conditionMap[weatherMain] || 'partly_cloudy';
+
+      return {
+        temp: {
+          high: Math.round(closestForecast.main.temp_max),
+          low: Math.round(closestForecast.main.temp_min)
+        },
+        conditions,
+        precipitation: closestForecast.pop ? Math.round(closestForecast.pop * 100) : 0,
+        windSpeed: Math.round(closestForecast.wind?.speed || 10),
+        uvIndex: conditions === 'sunny' ? 7 : conditions === 'cloudy' ? 2 : 5,
+        recommendation: this.getWeatherRecommendation(conditions, Math.round(closestForecast.main.temp_max))
+      };
 
     } catch (error) {
       console.error(`Weather fetch error for ${city}:`, error.message);

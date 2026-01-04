@@ -40,12 +40,110 @@ import { useDiscoveryStore } from '../../stores/discoveryStore';
 import { getStoredItineraryId } from '../../hooks/useItineraryGeneration';
 import type { DiscoveryRoute, TripSummary, DiscoveryCity } from '../../stores/discoveryStore';
 import { SortableCityList } from './SortableCityList';
-import { usePlanningCompanion } from '../../hooks/usePlanningCompanion';
-import {
-  QuickActionChips,
-  createVibeChips,
-  createTextChips,
-} from '../planning';
+
+// ============================================================================
+// Stub implementations for removed planning features
+// These provide minimal functionality while planning is being rebuilt
+// ============================================================================
+
+interface CompanionMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+interface CompanionConversation {
+  messages: CompanionMessage[];
+}
+
+/**
+ * Stub hook replacing usePlanningCompanion while planning feature is being rebuilt
+ */
+function useCompanionStub() {
+  const [conversation, setConversation] = useState<CompanionConversation>({ messages: [] });
+  const [isLoading, setIsLoading] = useState(false);
+
+  const sendMessage = useCallback((content: string) => {
+    // Add user message
+    const userMessage: CompanionMessage = {
+      id: `user-${Date.now()}`,
+      role: 'user',
+      content,
+    };
+    setConversation(prev => ({
+      messages: [...prev.messages, userMessage],
+    }));
+
+    // Simulate assistant response
+    setIsLoading(true);
+    setTimeout(() => {
+      const assistantMessage: CompanionMessage = {
+        id: `assistant-${Date.now()}`,
+        role: 'assistant',
+        content: `Thanks for your message! The AI companion is being rebuilt with improved features. In the meantime, you can explore the map and add cities to your trip.`,
+      };
+      setConversation(prev => ({
+        messages: [...prev.messages, assistantMessage],
+      }));
+      setIsLoading(false);
+    }, 1000);
+  }, []);
+
+  return { conversation, isLoading, sendMessage };
+}
+
+interface QuickChip {
+  id: string;
+  label: string;
+  emoji?: string;
+}
+
+/**
+ * Stub QuickActionChips component
+ */
+function QuickActionChips({
+  options,
+  onSelect,
+  visible,
+}: {
+  options: QuickChip[];
+  onSelect: (chip: QuickChip) => void;
+  visible: boolean;
+  dismissDelay?: number;
+}) {
+  if (!visible) return null;
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {options.map((chip) => (
+        <button
+          key={chip.id}
+          onClick={() => onSelect(chip)}
+          className="px-3 py-1.5 bg-stone-100 hover:bg-stone-200 rounded-full text-sm text-stone-700 transition-colors"
+        >
+          {chip.emoji && <span className="mr-1">{chip.emoji}</span>}
+          {chip.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function createVibeChips(): QuickChip[] {
+  return [
+    { id: 'adventure', label: 'Adventure', emoji: '🏔️' },
+    { id: 'culture', label: 'Culture', emoji: '🏛️' },
+    { id: 'food', label: 'Food & Wine', emoji: '🍷' },
+    { id: 'relaxation', label: 'Relaxation', emoji: '🌴' },
+  ];
+}
+
+function createTextChips(labels: string[]): QuickChip[] {
+  return labels.map((label, i) => ({
+    id: `chip-${i}`,
+    label,
+  }));
+}
 
 interface DiscoveryCompanionPanelProps {
   route: DiscoveryRoute | null;
@@ -189,7 +287,7 @@ function DesktopSidebar({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const { conversation, isLoading, sendMessage } = usePlanningCompanion();
+  const { conversation, isLoading, sendMessage } = useCompanionStub();
 
   const [inputValue, setInputValue] = useState('');
   const [showChat, setShowChat] = useState(false);
@@ -511,7 +609,7 @@ function MobileBottomSheet({
   const swipeX = useMotionValue(0);
 
   // Chat state
-  const { conversation, isLoading, sendMessage } = usePlanningCompanion();
+  const { conversation, isLoading, sendMessage } = useCompanionStub();
   const [inputValue, setInputValue] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 

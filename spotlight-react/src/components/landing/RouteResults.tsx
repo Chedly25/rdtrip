@@ -453,15 +453,12 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
   }
 
   const handleSaveRoute = async (name: string) => {
-    console.log('[DEBUG] handleSaveRoute START - name:', name, 'token exists:', !!token)
-
     if (!token) {
       throw new Error('You must be logged in to save routes')
     }
 
     // Get enriched route data with modifications
     const enrichedRouteData = getEnrichedRouteData()
-    console.log('[DEBUG] Enriched route data prepared, origin:', enrichedRouteData.origin, 'dest:', enrichedRouteData.destination)
 
     const response = await fetch('/api/routes', {
       method: 'POST',
@@ -480,29 +477,22 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
       })
     })
 
-    console.log('[DEBUG] Fetch response received - status:', response.status, 'ok:', response.ok)
-
     if (!response.ok) {
       const error = await response.json()
-      console.error('[DEBUG] Save failed:', error)
       throw new Error(error.error || 'Failed to save route')
     }
 
     const savedRoute = await response.json()
-    console.log('[DEBUG] Parsed response - savedRoute:', savedRoute, 'id:', savedRoute.id)
 
     // API returns { message: '...', route: { id: '...' } }
     const routeId = savedRoute.route?.id || savedRoute.id
-    console.log('[DEBUG] Extracted routeId:', routeId)
 
     setSavedRouteId(routeId)
     savedRouteIdRef.current = routeId // Also update ref immediately
-    console.log('[DEBUG] Set state and ref - ref is now:', savedRouteIdRef.current)
 
     setSaveSuccess(true)
     setTimeout(() => setSaveSuccess(false), 3000)
 
-    console.log('[DEBUG] handleSaveRoute RETURNING:', routeId)
     return routeId
   }
 
@@ -562,15 +552,10 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
       return
     }
 
-    console.log('[DEBUG] handleShareClick START - ref:', savedRouteIdRef.current, 'state:', savedRouteId)
-
     // If route isn't saved yet, save it first
     if (!savedRouteIdRef.current) {
-      console.log('[DEBUG] Route not saved, saving now...')
       try {
-        const routeId = await handleSaveRoute(`${getLocationName(routeData.origin)} to ${getLocationName(routeData.destination)}`)
-        console.log('[DEBUG] Save completed, routeId:', routeId, 'ref after save:', savedRouteIdRef.current)
-        // Both state and ref are updated in handleSaveRoute
+        await handleSaveRoute(`${getLocationName(routeData.origin)} to ${getLocationName(routeData.destination)}`)
       } catch (error) {
         console.error('Error saving route before sharing:', error)
         alert('Please save the route first before sharing')
@@ -578,14 +563,12 @@ export function RouteResults({ routeData, onStartOver }: RouteResultsProps) {
       }
     }
 
-    console.log('[DEBUG] Opening share modal - ref:', savedRouteIdRef.current, 'state:', savedRouteId)
     setShowShareModal(true)
   }
 
   const handleShareRoute = async (): Promise<{ shareUrl: string; shareToken: string }> => {
     // Use ref to get the most current value, even if state hasn't updated yet
     const currentRouteId = savedRouteIdRef.current || savedRouteId
-    console.log('[DEBUG] handleShareRoute - currentRouteId:', currentRouteId, 'ref:', savedRouteIdRef.current, 'state:', savedRouteId)
 
     if (!currentRouteId) {
       throw new Error('Route must be saved before sharing')

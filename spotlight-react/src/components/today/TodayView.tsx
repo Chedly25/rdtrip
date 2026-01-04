@@ -16,7 +16,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useGPS } from '../../hooks/useGPS';
 import { useTripContext } from '../../hooks/useTripContext';
-import { usePlanningTripContext } from '../../hooks/usePlanningTripContext';
 import { DayProgress } from './DayProgress';
 import { QuickActions } from './QuickActions';
 import { ModalInput } from '../agent/ModalInput';
@@ -27,11 +26,7 @@ export function TodayView() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const itineraryId = searchParams.get('itinerary');
-  const planId = searchParams.get('plan'); // Planning route ID
   const startDate = searchParams.get('startDate'); // ISO date when trip started
-
-  // Determine mode: planning or itinerary
-  const mode = planId ? 'planning' : 'itinerary';
 
   const [completedActivities, setCompletedActivities] = useState<Set<string>>(new Set());
   const [showChat, setShowChat] = useState(false);
@@ -49,21 +44,12 @@ export function TodayView() {
     trackingInterval: 30000 // Update every 30 seconds
   });
 
-  // Trip context - use either itinerary or planning hook
-  const itineraryContext = useTripContext({
-    itineraryId: mode === 'itinerary' ? itineraryId || undefined : undefined,
+  // Trip context
+  const tripContext = useTripContext({
+    itineraryId: itineraryId || undefined,
     startDate: startDate || undefined,
-    enableGPS: mode === 'itinerary',
+    enableGPS: true,
   });
-
-  const planningContext = usePlanningTripContext({
-    routeId: mode === 'planning' ? planId || undefined : undefined,
-    startDate: startDate || undefined,
-    enableGPS: mode === 'planning',
-  });
-
-  // Select the active context
-  const tripContext = mode === 'planning' ? planningContext : itineraryContext;
 
   const {
     currentDay,

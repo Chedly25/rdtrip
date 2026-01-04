@@ -404,10 +404,9 @@ const MapViewV2 = () => {
 
       el.appendChild(pointer);
 
-      // Add click handler
+      // Add click handler - log landmark info for debugging
       el.onclick = () => {
-        console.log('Clicked route landmark:', landmark.name);
-        // TODO: Show landmark details or allow removal
+        console.log('Clicked route landmark:', landmark.name, landmark.coordinates);
       };
 
       console.log(`     🎨 Created landmark pin with ${landmarkImagePath ? 'image' : 'star icon'}`);

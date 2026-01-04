@@ -13,7 +13,6 @@ import { DiscoveryLoadingState } from './DiscoveryLoadingState';
 import { AddCityModal } from './AddCityModal';
 import { ProceedConfirmationModal } from './ProceedConfirmationModal';
 import { searchHiddenGemsInCity } from '../../services/hiddenGems';
-import { startPlanning } from '../../services/planningApi';
 import type { DiscoveryRoute, DiscoveryCity, DiscoveryPlace, PlaceType } from '../../stores/discoveryStore';
 import type { CityData } from '../../types/cityIntelligence';
 
@@ -53,8 +52,9 @@ export function DiscoveryPhaseContainer() {
     reset,
   } = useDiscoveryStore();
 
-  // Auth context
-  const { user, token } = useAuth();
+  // Auth context - available for future use
+  const _auth = useAuth();
+  void _auth;
 
   // Local state
   const [isDesktop, setIsDesktop] = useState(false);
@@ -63,7 +63,6 @@ export function DiscoveryPhaseContainer() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationError, setGenerationError] = useState<string | null>(null);
-  const [isPlanningLoading, setIsPlanningLoading] = useState(false);
 
   // City Intelligence - track if we've started gathering
   const intelligenceStarted = useRef(false);
@@ -573,71 +572,6 @@ export function DiscoveryPhaseContainer() {
     setShowConfirmModal(true);
   }, []);
 
-  // Handle "Plan Your Trip" - navigate to proximity-based planner
-  const handlePlanTrip = useCallback(async () => {
-    const store = useDiscoveryStore.getState();
-    const selectedCities = store.getSelectedCities();
-
-    // Validation
-    if (selectedCities.length < 2) {
-      addCompanionMessage({
-        type: 'assistant',
-        content: 'Please select at least 2 cities to start planning your trip.',
-      });
-      return;
-    }
-
-    setIsPlanningLoading(true);
-
-    try {
-      // Get waypoints (excluding origin and destination)
-      const waypoints = selectedCities
-        .filter((c) => !c.isFixed)
-        .map((city) => ({
-          id: city.id,
-          name: city.name,
-          country: city.country,
-          coordinates: city.coordinates,
-          nights: city.nights ?? city.suggestedNights ?? 1,
-        }));
-
-      // Create planning route
-      const result = await startPlanning({
-        origin: {
-          id: route?.origin.id,
-          name: route?.origin.name || '',
-          country: route?.origin.country || '',
-          coordinates: route?.origin.coordinates,
-        },
-        destination: {
-          id: route?.destination.id,
-          name: route?.destination.name || '',
-          country: route?.destination.country || '',
-          coordinates: route?.destination.coordinates,
-        },
-        waypoints,
-        startDate: tripSummary?.startDate?.toISOString(),
-        endDate: tripSummary?.endDate?.toISOString(),
-        totalNights: tripSummary?.totalNights,
-        travellerType: tripSummary?.travellerType,
-        userId: user?.id,
-      }, token ? { token } : undefined);
-
-      console.log('📋 Planning route created:', result.routeId);
-
-      // Navigate to planning page
-      navigate(`/plan/${result.routeId}`);
-    } catch (error) {
-      console.error('[Discovery] Failed to start planning:', error);
-      addCompanionMessage({
-        type: 'assistant',
-        content: 'Sorry, I had trouble setting up your planning session. Please try again.',
-      });
-    } finally {
-      setIsPlanningLoading(false);
-    }
-  }, [route, tripSummary, user, token, navigate, addCompanionMessage]);
-
   // Handle confirmed generation (WI-1.7)
   const handleConfirmGenerate = useCallback(async () => {
     const store = useDiscoveryStore.getState();
@@ -819,10 +753,8 @@ export function DiscoveryPhaseContainer() {
           route={route}
           onBack={handleBack}
           onProceed={handleProceed}
-          onPlanTrip={handlePlanTrip}
           onAddCity={() => setShowAddCityModal(true)}
           isDesktop={isDesktop}
-          isPlanningLoading={isPlanningLoading}
         />
 
         {/* Map overlays for atmosphere */}

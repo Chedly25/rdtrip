@@ -15,6 +15,7 @@ import { TripActivation } from '../../trip/TripActivation';
 import { LiveTripPanel } from '../../trip/LiveTripPanel';
 import { Loader2, CalendarDays, Command, Clock, Plane } from 'lucide-react';
 import { CollaborationPanel } from '../../collaboration/CollaborationPanel';
+import { InviteCollaboratorModal } from '../../collaboration/InviteCollaboratorModal';
 import { CompanionPanel, CompanionTab, ProactiveBubble, MobileCompanionDrawer } from '../../companion/CompanionPanel';
 import { useCompanion } from '../../../contexts/CompanionProvider';
 import { useAgent } from '../../../contexts/AgentProvider';
@@ -53,6 +54,7 @@ const SpotlightV2 = ({ routeId: propRouteId, itineraryId: propItineraryId }: Spo
   }>({ isOpen: false, type: 'duration' });
   const [showTripActivation, setShowTripActivation] = useState(false);
   const [showLiveTripPanel, setShowLiveTripPanel] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
 
   // Companion state
   const {
@@ -871,7 +873,7 @@ const SpotlightV2 = ({ routeId: propRouteId, itineraryId: propItineraryId }: Spo
             <CollaborationPanel
               routeId={routeId}
               currentUserId={localStorage.getItem('userId') || ''}
-              onInviteClick={() => {/* TODO: Open invite modal */}}
+              onInviteClick={() => setShowInviteModal(true)}
               onClose={() => setShowCollaboration(false)}
             />
           </motion.div>
@@ -1037,6 +1039,18 @@ const SpotlightV2 = ({ routeId: propRouteId, itineraryId: propItineraryId }: Spo
           </kbd>
         </motion.button>
       </div>
+
+      {/* Invite Collaborator Modal */}
+      {routeId && (
+        <InviteCollaboratorModal
+          isOpen={showInviteModal}
+          onClose={() => setShowInviteModal(false)}
+          routeId={routeId}
+          onSuccess={() => {
+            setShowInviteModal(false);
+          }}
+        />
+      )}
 
     </div>
   );

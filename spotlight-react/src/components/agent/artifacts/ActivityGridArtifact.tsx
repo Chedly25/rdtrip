@@ -27,6 +27,10 @@ interface Activity {
   phoneNumber?: string;
   website?: string;
   vicinity?: string;
+  coordinates?: {
+    lat: number;
+    lng: number;
+  };
 }
 
 interface ActivityGridArtifactProps {
@@ -538,8 +542,21 @@ function getPriceLevelText(level: number): string {
 }
 
 function handleGetDirections(activity: Activity) {
-  console.log('Get directions to:', activity.name);
-  // TODO: Create directions artifact
-  // This will call the agent to get directions to this location
-  alert(`Getting directions to "${activity.name}" (feature coming soon)`);
+  // Open Google Maps directions to this location
+  if (activity.coordinates?.lat && activity.coordinates?.lng) {
+    window.open(
+      `https://www.google.com/maps/dir/?api=1&destination=${activity.coordinates.lat},${activity.coordinates.lng}`,
+      '_blank'
+    );
+  } else if (activity.address) {
+    window.open(
+      `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(activity.address)}`,
+      '_blank'
+    );
+  } else {
+    window.open(
+      `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(activity.name)}`,
+      '_blank'
+    );
+  }
 }

@@ -6,6 +6,7 @@ const express = require('express');
 const router = express.Router();
 const PlacesController = require('../../controllers/places.controller');
 const { container } = require('../../../config/services');
+const { authenticate } = require('../../../../middleware/auth');
 
 // Initialize controller with services from container
 const placesController = new PlacesController(
@@ -51,9 +52,9 @@ router.post('/distance-matrix', placesController.getDistanceMatrix);
 /**
  * @route   POST /api/v1/places/cache/clear
  * @desc    Clear expired cache entries
- * @access  Private (TODO: add auth middleware)
+ * @access  Private
  */
-router.post('/cache/clear', placesController.clearCache);
+router.post('/cache/clear', authenticate, placesController.clearCache);
 
 module.exports = router;
 

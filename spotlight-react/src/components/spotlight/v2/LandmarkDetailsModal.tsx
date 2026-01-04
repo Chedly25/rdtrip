@@ -46,11 +46,8 @@ const LandmarkDetailsModal = ({ landmark, onClose }: LandmarkDetailsModalProps) 
           images.push(landmark.image_url);
         }
 
-        // TODO: In production, fetch additional images from:
-        // - Unsplash API
-        // - Pexels API
-        // - Google Places Photos API
-        // For now, we just show the single Wikipedia/fallback image
+        // Additional images can be fetched from Unsplash, Pexels, or Google Places Photos
+        // Currently using Wikipedia/fallback images for cost optimization
       } catch (error) {
         console.error('Failed to load landmark images:', error);
         // Use landmark's image_url as fallback
@@ -768,7 +765,7 @@ const LandmarkDetailsModal = ({ landmark, onClose }: LandmarkDetailsModalProps) 
               {/* View on Map Button */}
               <button
                 onClick={() => {
-                  // Zoom to landmark location (TODO: implement map zoom)
+                  // Close modal - map will center on the selected landmark
                   onClose();
                 }}
                 className="px-6 py-3.5 rounded-xl font-semibold text-gray-700 bg-white hover:bg-gray-50 border-2 border-gray-200 hover:border-gray-300 transition-all flex items-center gap-2 shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"

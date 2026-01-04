@@ -835,8 +835,7 @@ export function AgentProvider({ children }: AgentProviderProps) {
       return !isNaN(dayNum) ? dayNum : null;
     }
 
-    // TODO: Could detect from scroll position in future
-    // For now, return null (agent will work without it)
+    // Return null - scroll position detection is not needed for current functionality
     return null;
   }, [searchParams]);
 

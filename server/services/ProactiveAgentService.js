@@ -117,9 +117,6 @@ class ProactiveAgentService {
           const budgetNotifications = await this.budgetMonitor.checkItinerary(itinerary);
           stats.budgetNotifications += budgetNotifications;
 
-          // TODO Phase 3: Traffic monitoring
-          // const trafficNotifications = await this.trafficMonitor.checkItinerary(itinerary);
-
         } catch (error) {
           console.error(`[ProactiveAgent] ❌ Error checking itinerary ${itinerary.id}:`, error);
           stats.errors++;
@@ -266,8 +263,7 @@ class ProactiveAgentService {
       monitors: {
         weather: 'active',
         events: 'active',
-        budget: 'active',
-        traffic: 'planned'
+        budget: 'active'
       }
     };
   }

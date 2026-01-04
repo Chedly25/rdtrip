@@ -1,851 +1,1112 @@
 /**
  * Planning Store
  *
- * Zustand store for the proximity-based trip planner.
- * Manages trip plans, clusters, suggestions, and companion state.
+ * Zustand store for Planning Mode state management.
+ * Features:
+ * - Full undo/redo support
+ * - Optimistic updates
+ * - Persistence to IndexedDB
+ * - Collaboration-ready mutation layer
  */
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import { v4 as uuid } from 'uuid';
 import type {
-  PlanningStore,
-  PlanningState,
+  Slot,
+  EnrichedPlace,
+  PlannedItem,
+  DayPlan,
   TripPlan,
-  CityPlan,
-  Cluster,
-  PlanCard,
-  PlanCardType,
-  CompanionMessage,
-  PlanningFilters,
-  LatLng,
+  FilterState,
+  AddPanelState,
+  ConflictWarning,
+  PlanAction,
+  CompanionSuggestion,
 } from '../types/planning';
-import {
-  findBestClusterForItem,
-  generateClusterId,
-  orderItemsOptimally,
-} from '../utils/autoClustering';
 
-// ============================================
-// Initial State
-// ============================================
+// ============================================================================
+// Types
+// ============================================================================
 
-const initialFilters: PlanningFilters = {
-  priceRange: undefined,
-  sortBy: 'proximity',
-};
+interface CompanionMessage {
+  id: string;
+  type: 'assistant' | 'user' | 'system';
+  content: string;
+  timestamp: Date;
+  quick_actions?: { label: string; action: string }[];
+}
 
-const initialState: PlanningState = {
-  routeId: null,
-  tripPlan: null,
-  currentCityId: null,
-  cityPlans: {},
-  suggestions: {},
-  companionMessages: {},
-  filters: initialFilters,
-  isLoading: false,
-  isSaving: false,
-  companionLoading: false,
-  companionExpanded: false,
-  error: null,
-  isInitialized: false,
-  isGenerating: {},
-};
+// ============================================================================
+// Store Interface
+// ============================================================================
 
-// ============================================
+interface PlanningState {
+  // Core State
+  tripPlan: TripPlan | null;
+  currentDayIndex: number;
+  isLoading: boolean;
+  error: string | null;
+
+  // UI State
+  selectedSlot: Slot | null;
+  addPanelState: AddPanelState;
+  filters: FilterState;
+  warnings: ConflictWarning[];
+
+  // Companion State
+  companionMessages: CompanionMessage[];
+  pendingSuggestions: CompanionSuggestion[];
+  isCompanionMinimized: boolean;
+
+  // Undo/Redo
+  undoStack: PlanAction[];
+  redoStack: PlanAction[];
+  lastToast: { message: string; action?: PlanAction } | null;
+
+  // Session
+  sessionId: string;
+
+  // ==================== Actions ====================
+
+  // Plan Management
+  setTripPlan: (plan: TripPlan) => void;
+  initializePlan: (routeId: string, cities: { id: string; name: string; country: string; coordinates: { lat: number; lng: number }; nights: number }[], startDate: Date) => void;
+  clearPlan: () => void;
+
+  // Day Navigation
+  setCurrentDay: (index: number) => void;
+  nextDay: () => void;
+  prevDay: () => void;
+
+  // Item Actions
+  addItem: (place: EnrichedPlace, dayIndex: number, slot: Slot, addedBy?: 'user' | 'ai') => string;
+  removeItem: (itemId: string) => void;
+  moveItem: (itemId: string, targetDay: number, targetSlot: Slot, targetOrder?: number) => void;
+  reorderInSlot: (dayIndex: number, slot: Slot, fromIndex: number, toIndex: number) => void;
+  updateItemNotes: (itemId: string, notes: string) => void;
+  toggleItemLock: (itemId: string) => void;
+
+  // Add Panel
+  openAddPanel: (slot: Slot, dayIndex?: number) => void;
+  closeAddPanel: () => void;
+  setAddPanelAnchor: (lat: number, lng: number, name: string) => void;
+
+  // Filters
+  setFilters: (filters: Partial<FilterState>) => void;
+  resetFilters: () => void;
+
+  // Warnings
+  addWarning: (warning: ConflictWarning) => void;
+  dismissWarning: (index: number) => void;
+  clearWarnings: () => void;
+
+  // Companion
+  addCompanionMessage: (message: Omit<CompanionMessage, 'id' | 'timestamp'>) => void;
+  addSuggestion: (suggestion: Omit<CompanionSuggestion, 'id'>) => void;
+  dismissSuggestion: (id: string) => void;
+  toggleCompanion: () => void;
+
+  // Undo/Redo
+  undo: () => void;
+  redo: () => void;
+  canUndo: () => boolean;
+  canRedo: () => boolean;
+  clearToast: () => void;
+
+  // Selectors
+  getCurrentDay: () => DayPlan | null;
+  getDayItems: (dayIndex: number) => PlannedItem[];
+  getSlotItems: (dayIndex: number, slot: Slot) => PlannedItem[];
+  getTotalDuration: (dayIndex: number) => number;
+  getItemById: (itemId: string) => { item: PlannedItem; dayIndex: number; slot: Slot } | null;
+  getAllPlacedPlaceIds: () => Set<string>;
+
+  // Reset
+  reset: () => void;
+}
+
+// ============================================================================
 // Helper Functions
-// ============================================
+// ============================================================================
 
-function generateId(prefix: string = 'id'): string {
-  return `${prefix}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-}
+const generateSessionId = () => `planning-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-/**
- * Estimate walking time between two points using Haversine formula
- * Returns walking time in minutes
- */
-function estimateWalkingTime(from: LatLng, to: LatLng): number {
-  const R = 6371; // Earth's radius in km
-  const dLat = ((to.lat - from.lat) * Math.PI) / 180;
-  const dLng = ((to.lng - from.lng) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos((from.lat * Math.PI) / 180) *
-      Math.cos((to.lat * Math.PI) / 180) *
-      Math.sin(dLng / 2) *
-      Math.sin(dLng / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  const distanceKm = R * c;
+const createEmptySlots = () => ({
+  morning: [] as PlannedItem[],
+  afternoon: [] as PlannedItem[],
+  evening: [] as PlannedItem[],
+  night: [] as PlannedItem[],
+});
 
-  // Average walking speed: ~5 km/h = ~12 min per km
-  // Add 20% for non-straight paths
-  return Math.round(distanceKm * 12 * 1.2);
-}
+// ============================================================================
+// Initial State
+// ============================================================================
 
-function computeClusterStats(cluster: Cluster): { totalDuration: number; maxWalkingDistance: number } {
-  const totalDuration = cluster.items.reduce((sum, item) => sum + (item.duration || 0), 0);
+const DEFAULT_FILTERS: FilterState = {
+  types: [],
+  price_levels: [],
+  min_rating: 0,
+  max_duration: null,
+  vibes: [],
+  show_hidden_gems_only: false,
+};
 
-  // Calculate actual max walking distance between any two items
-  let maxWalkingDistance = 0;
+const initialState = {
+  tripPlan: null as TripPlan | null,
+  currentDayIndex: 0,
+  isLoading: false,
+  error: null as string | null,
 
-  if (cluster.items.length >= 2) {
-    for (let i = 0; i < cluster.items.length; i++) {
-      for (let j = i + 1; j < cluster.items.length; j++) {
-        const itemA = cluster.items[i];
-        const itemB = cluster.items[j];
+  selectedSlot: null as Slot | null,
+  addPanelState: {
+    isOpen: false,
+    targetSlot: null,
+    targetDayIndex: 0,
+    anchor: null,
+    anchorName: null,
+  } as AddPanelState,
+  filters: DEFAULT_FILTERS,
+  warnings: [] as ConflictWarning[],
 
-        // Only calculate if both items have location data
-        if (itemA.location && itemB.location) {
-          const walkingTime = estimateWalkingTime(itemA.location, itemB.location);
-          maxWalkingDistance = Math.max(maxWalkingDistance, walkingTime);
-        }
-      }
-    }
-  }
+  companionMessages: [] as CompanionMessage[],
+  pendingSuggestions: [] as CompanionSuggestion[],
+  isCompanionMinimized: false,
 
-  return { totalDuration, maxWalkingDistance };
-}
+  undoStack: [] as PlanAction[],
+  redoStack: [] as PlanAction[],
+  lastToast: null as { message: string; action?: PlanAction } | null,
 
-// ============================================
-// Store Implementation
-// ============================================
+  sessionId: generateSessionId(),
+};
 
-export const usePlanningStore = create<PlanningStore>()(
+// ============================================================================
+// Store
+// ============================================================================
+
+export const usePlanningStore = create<PlanningState>()(
   persist(
     (set, get) => ({
       ...initialState,
 
-      // ============================================
-      // Initialization
-      // ============================================
+      // ==================== Plan Management ====================
 
-      initializePlan: (tripPlan: TripPlan) => {
-        // Build cityPlans map from tripPlan.cities
-        const cityPlans: Record<string, CityPlan> = {};
-        tripPlan.cities.forEach((cityPlan) => {
-          cityPlans[cityPlan.cityId] = cityPlan;
-        });
-
-        // Set first non-origin city as current, or first city
-        const firstEditableCity = tripPlan.cities.find((c) => !c.city.isOrigin);
-        const currentCityId = firstEditableCity?.cityId || tripPlan.cities[0]?.cityId || null;
-
+      setTripPlan: (plan) => {
         set({
-          tripPlan,
-          routeId: tripPlan.routeId,
-          currentCityId,
-          cityPlans,
-          isInitialized: true,
-          isLoading: false,
-          error: null,
+          tripPlan: plan,
+          currentDayIndex: 0,
+          undoStack: [],
+          redoStack: [],
         });
       },
 
-      loadPlan: async (routeId: string, token?: string) => {
-        set({ isLoading: true, error: null });
+      initializePlan: (routeId, cities, startDate) => {
+        const days: DayPlan[] = [];
+        let currentDate = new Date(startDate);
+        let dayIndex = 0;
 
-        try {
-          const headers: HeadersInit = {
-            'Content-Type': 'application/json',
-          };
-          if (token) {
-            headers['Authorization'] = `Bearer ${token}`;
+        for (const city of cities) {
+          for (let n = 0; n < city.nights; n++) {
+            days.push({
+              day_index: dayIndex,
+              date: new Date(currentDate),
+              city: {
+                id: city.id,
+                name: city.name,
+                country: city.country,
+                coordinates: city.coordinates,
+              },
+              slots: createEmptySlots(),
+            });
+
+            currentDate.setDate(currentDate.getDate() + 1);
+            dayIndex++;
           }
-
-          const response = await fetch(`/api/planning/${routeId}`, { headers });
-
-          if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.error || 'Failed to load plan');
-          }
-
-          const data = await response.json();
-          get().initializePlan(data.tripPlan);
-        } catch (error) {
-          console.error('[planningStore] loadPlan error:', error);
-          set({
-            isLoading: false,
-            error: error instanceof Error ? error.message : 'Failed to load plan',
-          });
         }
-      },
 
-      savePlan: async (routeId: string, token?: string) => {
-        const { cityPlans } = get();
-
-        set({ isSaving: true, error: null });
-
-        try {
-          const headers: HeadersInit = {
-            'Content-Type': 'application/json',
-          };
-          if (token) {
-            headers['Authorization'] = `Bearer ${token}`;
-          }
-
-          const cities = Object.values(cityPlans);
-
-          const response = await fetch(`/api/planning/${routeId}/save`, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({ cities }),
-          });
-
-          if (!response.ok) {
-            throw new Error('Failed to save plan');
-          }
-
-          set({ isSaving: false });
-        } catch (error) {
-          console.error('[planningStore] savePlan error:', error);
-          set({
-            isSaving: false,
-            error: error instanceof Error ? error.message : 'Failed to save plan',
-          });
-        }
-      },
-
-      reset: () => {
-        set(initialState);
-      },
-
-      // ============================================
-      // City Navigation
-      // ============================================
-
-      setCurrentCity: (cityId: string) => {
-        set({ currentCityId: cityId });
-      },
-
-      // ============================================
-      // Cluster Operations
-      // ============================================
-
-      createCluster: (cityId: string, name: string, center?: LatLng): string => {
-        const { cityPlans } = get();
-        const cityPlan = cityPlans[cityId];
-        if (!cityPlan) return '';
-
-        const clusterId = generateId('cluster');
-        const newCluster: Cluster = {
-          id: clusterId,
-          name,
-          center: center || cityPlan.city.coordinates,
-          items: [],
-          totalDuration: 0,
-          maxWalkingDistance: 0,
+        const plan: TripPlan = {
+          id: uuid(),
+          route_id: routeId,
+          days,
+          unassigned: [],
+          filters: DEFAULT_FILTERS,
+          created_at: new Date(),
+          updated_at: new Date(),
         };
 
         set({
-          cityPlans: {
-            ...cityPlans,
-            [cityId]: {
-              ...cityPlan,
-              clusters: [...cityPlan.clusters, newCluster],
-            },
-          },
+          tripPlan: plan,
+          currentDayIndex: 0,
+          undoStack: [],
+          redoStack: [],
+          companionMessages: [{
+            id: uuid(),
+            type: 'assistant',
+            content: `Your trip is ready to plan! You have ${days.length} days across ${cities.length} ${cities.length === 1 ? 'city' : 'cities'}. Start by adding activities to each day's slots - morning, afternoon, evening, or night. I'll help you build a balanced itinerary.`,
+            timestamp: new Date(),
+          }],
         });
-
-        return clusterId;
       },
 
-      updateCluster: (cityId: string, clusterId: string, updates: Partial<Cluster>) => {
-        const { cityPlans } = get();
-        const cityPlan = cityPlans[cityId];
-        if (!cityPlan) return;
-
+      clearPlan: () => {
         set({
-          cityPlans: {
-            ...cityPlans,
-            [cityId]: {
-              ...cityPlan,
-              clusters: cityPlan.clusters.map((cluster) => {
-                if (cluster.id !== clusterId) return cluster;
-                const updated = { ...cluster, ...updates };
-                const stats = computeClusterStats(updated);
-                return { ...updated, ...stats };
-              }),
-            },
-          },
+          tripPlan: null,
+          currentDayIndex: 0,
+          undoStack: [],
+          redoStack: [],
         });
       },
 
-      deleteCluster: (cityId: string, clusterId: string) => {
-        const { cityPlans } = get();
-        const cityPlan = cityPlans[cityId];
-        if (!cityPlan) return;
+      // ==================== Day Navigation ====================
 
-        // Move items from deleted cluster to unclustered
-        const clusterToDelete = cityPlan.clusters.find((c) => c.id === clusterId);
-        const itemsToMove = clusterToDelete?.items || [];
-
-        set({
-          cityPlans: {
-            ...cityPlans,
-            [cityId]: {
-              ...cityPlan,
-              clusters: cityPlan.clusters.filter((c) => c.id !== clusterId),
-              unclustered: [...cityPlan.unclustered, ...itemsToMove],
-            },
-          },
-        });
+      setCurrentDay: (index) => {
+        const { tripPlan } = get();
+        if (!tripPlan || index < 0 || index >= tripPlan.days.length) return;
+        set({ currentDayIndex: index });
       },
 
-      renameCluster: (cityId: string, clusterId: string, name: string) => {
-        get().updateCluster(cityId, clusterId, { name });
+      nextDay: () => {
+        const { tripPlan, currentDayIndex } = get();
+        if (!tripPlan || currentDayIndex >= tripPlan.days.length - 1) return;
+        set({ currentDayIndex: currentDayIndex + 1 });
       },
 
-      // ============================================
-      // Item Operations
-      // ============================================
-
-      addItemToCluster: (cityId: string, clusterId: string, card: PlanCard) => {
-        const { cityPlans } = get();
-        const cityPlan = cityPlans[cityId];
-        if (!cityPlan) return;
-
-        set({
-          cityPlans: {
-            ...cityPlans,
-            [cityId]: {
-              ...cityPlan,
-              clusters: cityPlan.clusters.map((cluster) => {
-                if (cluster.id !== clusterId) return cluster;
-                const updated = {
-                  ...cluster,
-                  items: [...cluster.items, card],
-                };
-                const stats = computeClusterStats(updated);
-                return { ...updated, ...stats };
-              }),
-            },
-          },
-        });
+      prevDay: () => {
+        const { currentDayIndex } = get();
+        if (currentDayIndex <= 0) return;
+        set({ currentDayIndex: currentDayIndex - 1 });
       },
 
-      removeItemFromCluster: (cityId: string, clusterId: string, itemId: string) => {
-        const { cityPlans } = get();
-        const cityPlan = cityPlans[cityId];
-        if (!cityPlan) return;
+      // ==================== Item Actions ====================
 
-        set({
-          cityPlans: {
-            ...cityPlans,
-            [cityId]: {
-              ...cityPlan,
-              clusters: cityPlan.clusters.map((cluster) => {
-                if (cluster.id !== clusterId) return cluster;
-                const updated = {
-                  ...cluster,
-                  items: cluster.items.filter((item) => item.id !== itemId),
-                };
-                const stats = computeClusterStats(updated);
-                return { ...updated, ...stats };
-              }),
-            },
-          },
-        });
-      },
-
-      moveItemToCluster: (cityId: string, fromClusterId: string, toClusterId: string, itemId: string) => {
-        const { cityPlans } = get();
-        const cityPlan = cityPlans[cityId];
-        if (!cityPlan) return;
-
-        // Find the item
-        const fromCluster = cityPlan.clusters.find((c) => c.id === fromClusterId);
-        const item = fromCluster?.items.find((i) => i.id === itemId);
-        if (!item) return;
-
-        // Remove from source and add to target
-        get().removeItemFromCluster(cityId, fromClusterId, itemId);
-        get().addItemToCluster(cityId, toClusterId, item);
-      },
-
-      reorderItemsInCluster: (cityId: string, clusterId: string, reorderedItems: PlanCard[]) => {
-        const { cityPlans } = get();
-        const cityPlan = cityPlans[cityId];
-        if (!cityPlan) return;
-
-        set({
-          cityPlans: {
-            ...cityPlans,
-            [cityId]: {
-              ...cityPlan,
-              clusters: cityPlan.clusters.map((cluster) => {
-                if (cluster.id !== clusterId) return cluster;
-                return { ...cluster, items: reorderedItems };
-              }),
-            },
-          },
-        });
-      },
-
-      addToUnclustered: (cityId: string, card: PlanCard) => {
-        const { cityPlans } = get();
-        const cityPlan = cityPlans[cityId];
-        if (!cityPlan) return;
-
-        set({
-          cityPlans: {
-            ...cityPlans,
-            [cityId]: {
-              ...cityPlan,
-              unclustered: [...cityPlan.unclustered, card],
-            },
-          },
-        });
-      },
-
-      removeFromUnclustered: (cityId: string, itemId: string) => {
-        const { cityPlans } = get();
-        const cityPlan = cityPlans[cityId];
-        if (!cityPlan) return;
-
-        set({
-          cityPlans: {
-            ...cityPlans,
-            [cityId]: {
-              ...cityPlan,
-              unclustered: cityPlan.unclustered.filter((item) => item.id !== itemId),
-            },
-          },
-        });
-      },
-
-      /**
-       * Add item with auto-clustering - system determines the best cluster
-       * This is the main entry point for adding items in the new UX
-       *
-       * Does optimistic local update for immediate feedback, then syncs with backend
-       * Backend returns proper cluster naming via reverse geocoding
-       */
-      addItemAutoClustered: (cityId: string, card: PlanCard, cityCenter?: LatLng) => {
-        const { cityPlans, routeId } = get();
-        const cityPlan = cityPlans[cityId];
-        if (!cityPlan) return;
-
-        // Find the best cluster for this item (local calculation for immediate update)
-        const { clusterId, shouldCreateNew, suggestedName } = findBestClusterForItem(cityPlan, card);
-
-        // Generate temporary IDs for new cluster/item
-        const tempClusterId = shouldCreateNew ? generateClusterId() : clusterId;
-        const itemWithId = { ...card, id: card.id || generateId('item') };
-
-        if (shouldCreateNew) {
-          // Optimistic: Create a new cluster and add the item locally
-          const center = card.location || cityCenter || { lat: 0, lng: 0 };
-
-          const newCluster: Cluster = {
-            id: tempClusterId!,
-            name: suggestedName, // Temporary name until backend responds
-            center,
-            items: [itemWithId],
-            totalDuration: card.duration || 0,
-            maxWalkingDistance: 0,
-          };
-
-          set({
-            cityPlans: {
-              ...cityPlans,
-              [cityId]: {
-                ...cityPlan,
-                clusters: [...cityPlan.clusters, newCluster],
-              },
-            },
-          });
-        } else if (clusterId) {
-          // Optimistic: Add to existing cluster locally with smart ordering
-          set({
-            cityPlans: {
-              ...cityPlans,
-              [cityId]: {
-                ...cityPlan,
-                clusters: cityPlan.clusters.map((cluster) => {
-                  if (cluster.id !== clusterId) return cluster;
-                  // Add item and apply smart ordering for optimal day flow
-                  const newItems = [...cluster.items, itemWithId];
-                  const orderedItems = orderItemsOptimally(newItems);
-                  const updatedCluster = {
-                    ...cluster,
-                    items: orderedItems,
-                  };
-                  const stats = computeClusterStats(updatedCluster);
-                  return {
-                    ...updatedCluster,
-                    totalDuration: stats.totalDuration,
-                    maxWalkingDistance: stats.maxWalkingDistance,
-                  };
-                }),
-              },
-            },
-          });
+      addItem: (place, dayIndex, slot, addedBy = 'user') => {
+        const { tripPlan } = get();
+        if (!tripPlan || dayIndex < 0 || dayIndex >= tripPlan.days.length) {
+          console.error('Invalid day index for addItem');
+          return '';
         }
 
-        // Sync with backend (non-blocking - don't await)
-        if (routeId) {
-          fetch(`/api/planning/${routeId}/add-item`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ cityId, card: itemWithId }),
-          })
-            .then(async (response) => {
-              if (response.ok) {
-                const result = await response.json();
-                // Update cluster name from backend (which has reverse geocoding)
-                if (result.isNewCluster && result.clusterName && result.clusterName !== suggestedName) {
-                  const { cityPlans: currentPlans } = get();
-                  const currentCityPlan = currentPlans[cityId];
-                  if (currentCityPlan) {
-                    set({
-                      cityPlans: {
-                        ...currentPlans,
-                        [cityId]: {
-                          ...currentCityPlan,
-                          clusters: currentCityPlan.clusters.map((c) => {
-                            if (c.id === tempClusterId) {
-                              return { ...c, name: result.clusterName };
-                            }
-                            return c;
-                          }),
-                        },
-                      },
-                    });
-                  }
-                }
+        const itemId = uuid();
+        const day = tripPlan.days[dayIndex];
+        const orderInSlot = day.slots[slot].length;
+
+        const newItem: PlannedItem = {
+          id: itemId,
+          place,
+          day_index: dayIndex,
+          slot,
+          order_in_slot: orderInSlot,
+          is_locked: false,
+          added_at: new Date(),
+          added_by: addedBy,
+        };
+
+        // Create action for undo
+        const action: PlanAction = {
+          id: uuid(),
+          type: 'add',
+          timestamp: new Date(),
+          payload: {
+            item_id: itemId,
+            place,
+            to_day: dayIndex,
+            to_slot: slot,
+            to_order: orderInSlot,
+          },
+          description: `Added ${place.name} to ${slot}`,
+        };
+
+        // Update state
+        const newDays = [...tripPlan.days];
+        newDays[dayIndex] = {
+          ...day,
+          slots: {
+            ...day.slots,
+            [slot]: [...day.slots[slot], newItem],
+          },
+        };
+
+        set({
+          tripPlan: {
+            ...tripPlan,
+            days: newDays,
+            updated_at: new Date(),
+          },
+          undoStack: [...get().undoStack.slice(-49), action],
+          redoStack: [],
+          lastToast: { message: `Added ${place.name} to ${slot}`, action },
+        });
+
+        return itemId;
+      },
+
+      removeItem: (itemId) => {
+        const { tripPlan, getItemById } = get();
+        if (!tripPlan) return;
+
+        const found = getItemById(itemId);
+        if (!found) return;
+
+        const { item, dayIndex, slot } = found;
+
+        // Create action for undo
+        const action: PlanAction = {
+          id: uuid(),
+          type: 'remove',
+          timestamp: new Date(),
+          payload: {
+            item_id: itemId,
+            place: item.place,
+            from_day: dayIndex,
+            from_slot: slot,
+            from_order: item.order_in_slot,
+          },
+          description: `Removed ${item.place.name}`,
+        };
+
+        // Update state
+        const newDays = [...tripPlan.days];
+        const day = newDays[dayIndex];
+        const newSlotItems = day.slots[slot]
+          .filter((i) => i.id !== itemId)
+          .map((i, idx) => ({ ...i, order_in_slot: idx }));
+
+        newDays[dayIndex] = {
+          ...day,
+          slots: {
+            ...day.slots,
+            [slot]: newSlotItems,
+          },
+        };
+
+        set({
+          tripPlan: {
+            ...tripPlan,
+            days: newDays,
+            updated_at: new Date(),
+          },
+          undoStack: [...get().undoStack.slice(-49), action],
+          redoStack: [],
+          lastToast: { message: `Removed ${item.place.name}`, action },
+        });
+      },
+
+      moveItem: (itemId, targetDay, targetSlot, targetOrder) => {
+        const { tripPlan, getItemById } = get();
+        if (!tripPlan) return;
+
+        const found = getItemById(itemId);
+        if (!found) return;
+
+        const { item, dayIndex: fromDay, slot: fromSlot } = found;
+
+        // Create action for undo
+        const action: PlanAction = {
+          id: uuid(),
+          type: 'move',
+          timestamp: new Date(),
+          payload: {
+            item_id: itemId,
+            from_day: fromDay,
+            to_day: targetDay,
+            from_slot: fromSlot,
+            to_slot: targetSlot,
+            from_order: item.order_in_slot,
+            to_order: targetOrder,
+          },
+          description: `Moved ${item.place.name} to ${targetSlot}`,
+        };
+
+        const newDays = [...tripPlan.days];
+
+        // Remove from source
+        const sourceDay = newDays[fromDay];
+        const sourceSlotItems = sourceDay.slots[fromSlot]
+          .filter((i) => i.id !== itemId)
+          .map((i, idx) => ({ ...i, order_in_slot: idx }));
+
+        newDays[fromDay] = {
+          ...sourceDay,
+          slots: {
+            ...sourceDay.slots,
+            [fromSlot]: sourceSlotItems,
+          },
+        };
+
+        // Add to target
+        const targetDayObj = newDays[targetDay];
+        const targetSlotItems = [...targetDayObj.slots[targetSlot]];
+        const insertOrder = targetOrder ?? targetSlotItems.length;
+
+        const movedItem: PlannedItem = {
+          ...item,
+          day_index: targetDay,
+          slot: targetSlot,
+          order_in_slot: insertOrder,
+        };
+
+        targetSlotItems.splice(insertOrder, 0, movedItem);
+        const reorderedTargetItems = targetSlotItems.map((i, idx) => ({
+          ...i,
+          order_in_slot: idx,
+        }));
+
+        newDays[targetDay] = {
+          ...targetDayObj,
+          slots: {
+            ...targetDayObj.slots,
+            [targetSlot]: reorderedTargetItems,
+          },
+        };
+
+        set({
+          tripPlan: {
+            ...tripPlan,
+            days: newDays,
+            updated_at: new Date(),
+          },
+          undoStack: [...get().undoStack.slice(-49), action],
+          redoStack: [],
+          lastToast: { message: `Moved ${item.place.name}`, action },
+        });
+      },
+
+      reorderInSlot: (dayIndex, slot, fromIndex, toIndex) => {
+        const { tripPlan } = get();
+        if (!tripPlan) return;
+
+        const day = tripPlan.days[dayIndex];
+        if (!day) return;
+
+        const items = [...day.slots[slot]];
+        if (fromIndex < 0 || fromIndex >= items.length) return;
+        if (toIndex < 0 || toIndex >= items.length) return;
+
+        const [movedItem] = items.splice(fromIndex, 1);
+
+        // Create action for undo
+        const action: PlanAction = {
+          id: uuid(),
+          type: 'reorder',
+          timestamp: new Date(),
+          payload: {
+            item_id: movedItem.id,
+            from_day: dayIndex,
+            to_day: dayIndex,
+            from_slot: slot,
+            to_slot: slot,
+            from_order: fromIndex,
+            to_order: toIndex,
+          },
+          description: `Reordered ${movedItem.place.name}`,
+        };
+
+        items.splice(toIndex, 0, movedItem);
+        const reorderedItems = items.map((i, idx) => ({
+          ...i,
+          order_in_slot: idx,
+        }));
+
+        const newDays = [...tripPlan.days];
+        newDays[dayIndex] = {
+          ...day,
+          slots: {
+            ...day.slots,
+            [slot]: reorderedItems,
+          },
+        };
+
+        set({
+          tripPlan: {
+            ...tripPlan,
+            days: newDays,
+            updated_at: new Date(),
+          },
+          undoStack: [...get().undoStack.slice(-49), action],
+          redoStack: [],
+        });
+      },
+
+      updateItemNotes: (itemId, notes) => {
+        const { tripPlan, getItemById } = get();
+        if (!tripPlan) return;
+
+        const found = getItemById(itemId);
+        if (!found) return;
+
+        const { item, dayIndex, slot } = found;
+
+        const action: PlanAction = {
+          id: uuid(),
+          type: 'update_notes',
+          timestamp: new Date(),
+          payload: {
+            item_id: itemId,
+            notes: item.user_notes, // Old notes for undo
+          },
+          description: 'Updated notes',
+        };
+
+        const newDays = [...tripPlan.days];
+        const day = newDays[dayIndex];
+        const newSlotItems = day.slots[slot].map((i) =>
+          i.id === itemId ? { ...i, user_notes: notes } : i
+        );
+
+        newDays[dayIndex] = {
+          ...day,
+          slots: {
+            ...day.slots,
+            [slot]: newSlotItems,
+          },
+        };
+
+        set({
+          tripPlan: {
+            ...tripPlan,
+            days: newDays,
+            updated_at: new Date(),
+          },
+          undoStack: [...get().undoStack.slice(-49), action],
+          redoStack: [],
+        });
+      },
+
+      toggleItemLock: (itemId) => {
+        const { tripPlan, getItemById } = get();
+        if (!tripPlan) return;
+
+        const found = getItemById(itemId);
+        if (!found) return;
+
+        const { dayIndex, slot } = found;
+
+        const newDays = [...tripPlan.days];
+        const day = newDays[dayIndex];
+        const newSlotItems = day.slots[slot].map((i) =>
+          i.id === itemId ? { ...i, is_locked: !i.is_locked } : i
+        );
+
+        newDays[dayIndex] = {
+          ...day,
+          slots: {
+            ...day.slots,
+            [slot]: newSlotItems,
+          },
+        };
+
+        set({
+          tripPlan: {
+            ...tripPlan,
+            days: newDays,
+            updated_at: new Date(),
+          },
+        });
+      },
+
+      // ==================== Add Panel ====================
+
+      openAddPanel: (slot, dayIndex) => {
+        const { currentDayIndex, tripPlan } = get();
+        const targetDay = dayIndex ?? currentDayIndex;
+        const day = tripPlan?.days[targetDay];
+
+        // Find anchor (last item in slot or previous slot)
+        let anchor: { lat: number; lng: number } | null = null;
+        let anchorName: string | null = null;
+
+        if (day) {
+          const slotOrder: Slot[] = ['morning', 'afternoon', 'evening', 'night'];
+          const slotIndex = slotOrder.indexOf(slot);
+
+          // Check current slot first
+          const currentSlotItems = day.slots[slot];
+          if (currentSlotItems.length > 0) {
+            const lastItem = currentSlotItems[currentSlotItems.length - 1];
+            anchor = lastItem.place.geometry.location;
+            anchorName = lastItem.place.name;
+          } else {
+            // Check previous slots
+            for (let i = slotIndex - 1; i >= 0; i--) {
+              const prevSlotItems = day.slots[slotOrder[i]];
+              if (prevSlotItems.length > 0) {
+                const lastItem = prevSlotItems[prevSlotItems.length - 1];
+                anchor = lastItem.place.geometry.location;
+                anchorName = lastItem.place.name;
+                break;
               }
-            })
-            .catch((error) => {
-              console.error('[planningStore] Backend sync failed:', error);
-              // Item was already added locally, so user experience is preserved
+            }
+          }
+
+          // Fall back to city center
+          if (!anchor) {
+            anchor = day.city.coordinates;
+            anchorName = day.city.name;
+          }
+        }
+
+        set({
+          addPanelState: {
+            isOpen: true,
+            targetSlot: slot,
+            targetDayIndex: targetDay,
+            anchor,
+            anchorName,
+          },
+          selectedSlot: slot,
+        });
+      },
+
+      closeAddPanel: () => {
+        set({
+          addPanelState: {
+            isOpen: false,
+            targetSlot: null,
+            targetDayIndex: 0,
+            anchor: null,
+            anchorName: null,
+          },
+          selectedSlot: null,
+        });
+      },
+
+      setAddPanelAnchor: (lat, lng, name) => {
+        set({
+          addPanelState: {
+            ...get().addPanelState,
+            anchor: { lat, lng },
+            anchorName: name,
+          },
+        });
+      },
+
+      // ==================== Filters ====================
+
+      setFilters: (filters) => {
+        set({
+          filters: {
+            ...get().filters,
+            ...filters,
+          },
+        });
+      },
+
+      resetFilters: () => {
+        set({ filters: DEFAULT_FILTERS });
+      },
+
+      // ==================== Warnings ====================
+
+      addWarning: (warning) => {
+        set({
+          warnings: [...get().warnings, warning],
+        });
+      },
+
+      dismissWarning: (index) => {
+        set({
+          warnings: get().warnings.filter((_, i) => i !== index),
+        });
+      },
+
+      clearWarnings: () => {
+        set({ warnings: [] });
+      },
+
+      // ==================== Companion ====================
+
+      addCompanionMessage: (message) => {
+        set({
+          companionMessages: [
+            ...get().companionMessages,
+            {
+              ...message,
+              id: uuid(),
+              timestamp: new Date(),
+            },
+          ],
+        });
+      },
+
+      addSuggestion: (suggestion) => {
+        set({
+          pendingSuggestions: [
+            ...get().pendingSuggestions,
+            {
+              ...suggestion,
+              id: uuid(),
+            },
+          ],
+        });
+      },
+
+      dismissSuggestion: (id) => {
+        set({
+          pendingSuggestions: get().pendingSuggestions.filter((s) => s.id !== id),
+        });
+      },
+
+      toggleCompanion: () => {
+        set({
+          isCompanionMinimized: !get().isCompanionMinimized,
+        });
+      },
+
+      // ==================== Undo/Redo ====================
+
+      undo: () => {
+        const { undoStack, tripPlan } = get();
+        if (undoStack.length === 0 || !tripPlan) return;
+
+        const action = undoStack[undoStack.length - 1];
+
+        // Apply inverse action based on type
+        switch (action.type) {
+          case 'add': {
+            // Undo add = remove
+            const { item_id } = action.payload;
+            if (!item_id) return;
+
+            const found = get().getItemById(item_id);
+            if (!found) return;
+
+            const { dayIndex, slot } = found;
+            const newDays = [...tripPlan.days];
+            const day = newDays[dayIndex];
+            const newSlotItems = day.slots[slot]
+              .filter((i) => i.id !== item_id)
+              .map((i, idx) => ({ ...i, order_in_slot: idx }));
+
+            newDays[dayIndex] = {
+              ...day,
+              slots: { ...day.slots, [slot]: newSlotItems },
+            };
+
+            set({
+              tripPlan: { ...tripPlan, days: newDays, updated_at: new Date() },
+              undoStack: undoStack.slice(0, -1),
+              redoStack: [...get().redoStack, action],
+              lastToast: { message: `Undo: removed ${action.payload.place?.name}` },
+            });
+            break;
+          }
+
+          case 'remove': {
+            // Undo remove = add back
+            const { place, from_day, from_slot, from_order } = action.payload;
+            if (!place || from_day === undefined || !from_slot) return;
+
+            const newItem: PlannedItem = {
+              id: action.payload.item_id || uuid(),
+              place,
+              day_index: from_day,
+              slot: from_slot,
+              order_in_slot: from_order || 0,
+              is_locked: false,
+              added_at: new Date(),
+              added_by: 'user',
+            };
+
+            const newDays = [...tripPlan.days];
+            const day = newDays[from_day];
+            const newSlotItems = [...day.slots[from_slot]];
+            newSlotItems.splice(from_order || 0, 0, newItem);
+            const reorderedItems = newSlotItems.map((i, idx) => ({
+              ...i,
+              order_in_slot: idx,
+            }));
+
+            newDays[from_day] = {
+              ...day,
+              slots: { ...day.slots, [from_slot]: reorderedItems },
+            };
+
+            set({
+              tripPlan: { ...tripPlan, days: newDays, updated_at: new Date() },
+              undoStack: undoStack.slice(0, -1),
+              redoStack: [...get().redoStack, action],
+              lastToast: { message: `Undo: restored ${place.name}` },
+            });
+            break;
+          }
+
+          case 'move': {
+            // Undo move = move back
+            const { item_id, from_day, from_slot, from_order, to_day, to_slot } = action.payload;
+            if (!item_id || from_day === undefined || !from_slot || to_day === undefined || !to_slot) return;
+
+            // Find item in target location and move back
+            const found = get().getItemById(item_id);
+            if (!found) return;
+
+            const { item } = found;
+
+            const newDays = [...tripPlan.days];
+
+            // Remove from current (to) location
+            const toDay = newDays[to_day];
+            const toSlotItems = toDay.slots[to_slot]
+              .filter((i) => i.id !== item_id)
+              .map((i, idx) => ({ ...i, order_in_slot: idx }));
+
+            newDays[to_day] = {
+              ...toDay,
+              slots: { ...toDay.slots, [to_slot]: toSlotItems },
+            };
+
+            // Add back to original (from) location
+            const fromDayObj = newDays[from_day];
+            const fromSlotItems = [...fromDayObj.slots[from_slot]];
+            const restoredItem: PlannedItem = {
+              ...item,
+              day_index: from_day,
+              slot: from_slot,
+              order_in_slot: from_order || 0,
+            };
+
+            fromSlotItems.splice(from_order || 0, 0, restoredItem);
+            const reorderedFromItems = fromSlotItems.map((i, idx) => ({
+              ...i,
+              order_in_slot: idx,
+            }));
+
+            newDays[from_day] = {
+              ...fromDayObj,
+              slots: { ...fromDayObj.slots, [from_slot]: reorderedFromItems },
+            };
+
+            set({
+              tripPlan: { ...tripPlan, days: newDays, updated_at: new Date() },
+              undoStack: undoStack.slice(0, -1),
+              redoStack: [...get().redoStack, action],
+              lastToast: { message: `Undo: moved ${item.place.name} back` },
+            });
+            break;
+          }
+
+          case 'reorder': {
+            const { item_id, from_day, from_slot, from_order, to_order } = action.payload;
+            if (!item_id || from_day === undefined || !from_slot || from_order === undefined || to_order === undefined) return;
+
+            // Swap back
+            get().reorderInSlot(from_day, from_slot, to_order, from_order);
+
+            set({
+              undoStack: undoStack.slice(0, -1),
+              redoStack: [...get().redoStack, action],
+            });
+            break;
+          }
+
+          default:
+            set({
+              undoStack: undoStack.slice(0, -1),
+              redoStack: [...get().redoStack, action],
             });
         }
       },
 
-      // ============================================
-      // Hotel Operations
-      // ============================================
+      redo: () => {
+        const { redoStack, tripPlan } = get();
+        if (redoStack.length === 0 || !tripPlan) return;
 
-      selectHotel: (cityId: string, hotel: PlanCard) => {
-        const { cityPlans } = get();
-        const cityPlan = cityPlans[cityId];
-        if (!cityPlan) return;
+        const action = redoStack[redoStack.length - 1];
 
-        set({
-          cityPlans: {
-            ...cityPlans,
-            [cityId]: {
-              ...cityPlan,
-              selectedHotel: hotel,
-            },
-          },
-        });
-      },
+        // Re-apply action based on type
+        switch (action.type) {
+          case 'add': {
+            const { place, to_day, to_slot } = action.payload;
+            if (!place || to_day === undefined || !to_slot) return;
 
-      removeHotel: (cityId: string) => {
-        const { cityPlans } = get();
-        const cityPlan = cityPlans[cityId];
-        if (!cityPlan) return;
+            get().addItem(place, to_day, to_slot);
 
-        set({
-          cityPlans: {
-            ...cityPlans,
-            [cityId]: {
-              ...cityPlan,
-              selectedHotel: null,
-            },
-          },
-        });
-      },
-
-      getSelectedHotel: (cityId: string): PlanCard | null => {
-        const { cityPlans } = get();
-        return cityPlans[cityId]?.selectedHotel || null;
-      },
-
-      // ============================================
-      // Suggestions
-      // ============================================
-
-      setSuggestions: (cityId: string, type: string, cards: PlanCard[]) => {
-        const { suggestions } = get();
-        set({
-          suggestions: {
-            ...suggestions,
-            [cityId]: {
-              ...(suggestions[cityId] || {}),
-              [type]: cards,
-            },
-          },
-        });
-      },
-
-      addSuggestions: (cityId: string, type: string, cards: PlanCard[]) => {
-        const { suggestions } = get();
-        const existing = suggestions[cityId]?.[type] || [];
-        set({
-          suggestions: {
-            ...suggestions,
-            [cityId]: {
-              ...(suggestions[cityId] || {}),
-              [type]: [...existing, ...cards],
-            },
-          },
-        });
-      },
-
-      generateSuggestions: async (type: PlanCardType | 'all', count: number) => {
-        const { currentCityId, routeId, cityPlans, suggestions, filters } = get();
-        if (!currentCityId || !routeId) return;
-
-        const cityPlan = cityPlans[currentCityId];
-        if (!cityPlan) return;
-
-        // Set loading state for this type
-        set((state) => ({
-          isGenerating: { ...state.isGenerating, [type]: true },
-        }));
-
-        // Collect existing IDs to exclude
-        const existingIds = [
-          ...cityPlan.clusters.flatMap((c) => c.items.map((i) => i.id)),
-          ...cityPlan.unclustered.map((i) => i.id),
-          ...(suggestions[currentCityId]?.[type] || []).map((c) => c.id),
-        ];
-
-        try {
-          const response = await fetch(`/api/planning/${routeId}/generate`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              cityId: currentCityId,
-              type,
-              count,
-              filters: {
-                priceMax: filters.priceRange ? Math.max(...filters.priceRange) : undefined,
-              },
-              excludeIds: existingIds,
-            }),
-          });
-
-          if (!response.ok) {
-            throw new Error('Failed to generate suggestions');
+            set({
+              redoStack: redoStack.slice(0, -1),
+            });
+            break;
           }
 
-          const { cards } = await response.json();
-          get().addSuggestions(currentCityId, type, cards);
-        } catch (error) {
-          console.error('[planningStore] generateSuggestions error:', error);
-        } finally {
-          // Clear loading state
-          set((state) => ({
-            isGenerating: { ...state.isGenerating, [type]: false },
-          }));
+          case 'remove': {
+            const { item_id } = action.payload;
+            if (!item_id) return;
+
+            get().removeItem(item_id);
+
+            set({
+              redoStack: redoStack.slice(0, -1),
+            });
+            break;
+          }
+
+          case 'move': {
+            const { item_id, to_day, to_slot, to_order } = action.payload;
+            if (!item_id || to_day === undefined || !to_slot) return;
+
+            get().moveItem(item_id, to_day, to_slot, to_order);
+
+            set({
+              redoStack: redoStack.slice(0, -1),
+            });
+            break;
+          }
+
+          case 'reorder': {
+            const { from_day, from_slot, from_order, to_order } = action.payload;
+            if (from_day === undefined || !from_slot || from_order === undefined || to_order === undefined) return;
+
+            get().reorderInSlot(from_day, from_slot, from_order, to_order);
+
+            set({
+              redoStack: redoStack.slice(0, -1),
+            });
+            break;
+          }
+
+          default:
+            set({
+              redoStack: redoStack.slice(0, -1),
+            });
         }
       },
 
-      // ============================================
-      // Companion
-      // ============================================
+      canUndo: () => get().undoStack.length > 0,
+      canRedo: () => get().redoStack.length > 0,
 
-      addCompanionMessage: (cityId: string, message: CompanionMessage) => {
-        const { companionMessages } = get();
-        const existing = companionMessages[cityId] || [];
-        set({
-          companionMessages: {
-            ...companionMessages,
-            [cityId]: [...existing, message],
-          },
-        });
+      clearToast: () => {
+        set({ lastToast: null });
       },
 
-      /**
-       * Non-streaming fallback for companion messages.
-       * Note: SSE streaming is handled by the useCompanionSSE hook in CompanionPanel.
-       * This method provides a fallback for non-streaming contexts.
-       */
-      sendToCompanion: async (message: string) => {
-        const { currentCityId, routeId, cityPlans } = get();
-        if (!currentCityId || !routeId) return;
+      // ==================== Selectors ====================
 
-        const cityPlan = cityPlans[currentCityId];
-        if (!cityPlan) return;
+      getCurrentDay: () => {
+        const { tripPlan, currentDayIndex } = get();
+        if (!tripPlan || currentDayIndex >= tripPlan.days.length) return null;
+        return tripPlan.days[currentDayIndex];
+      },
 
-        // Add user message
-        const userMessage: CompanionMessage = {
-          id: generateId('msg'),
-          role: 'user',
-          content: message,
-          timestamp: new Date(),
-        };
-        get().addCompanionMessage(currentCityId, userMessage);
+      getDayItems: (dayIndex) => {
+        const { tripPlan } = get();
+        if (!tripPlan || dayIndex >= tripPlan.days.length) return [];
 
-        set({ companionLoading: true });
+        const day = tripPlan.days[dayIndex];
+        const slotOrder: Slot[] = ['morning', 'afternoon', 'evening', 'night'];
 
-        try {
-          const response = await fetch(`/api/planning/${routeId}/companion`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              cityId: currentCityId,
-              message,
-              context: {
-                cityId: currentCityId,
-                currentPlan: cityPlan,
-              },
-            }),
-          });
+        return slotOrder.flatMap((slot) => day.slots[slot]);
+      },
 
-          if (!response.ok) {
-            throw new Error('Failed to send to companion');
+      getSlotItems: (dayIndex, slot) => {
+        const { tripPlan } = get();
+        if (!tripPlan || dayIndex >= tripPlan.days.length) return [];
+        return tripPlan.days[dayIndex].slots[slot];
+      },
+
+      getTotalDuration: (dayIndex) => {
+        const items = get().getDayItems(dayIndex);
+        return items.reduce((sum, item) => sum + item.place.estimated_duration_mins, 0);
+      },
+
+      getItemById: (itemId) => {
+        const { tripPlan } = get();
+        if (!tripPlan) return null;
+
+        for (const day of tripPlan.days) {
+          const slotOrder: Slot[] = ['morning', 'afternoon', 'evening', 'night'];
+          for (const slot of slotOrder) {
+            const item = day.slots[slot].find((i) => i.id === itemId);
+            if (item) {
+              return { item, dayIndex: day.day_index, slot };
+            }
           }
-
-          // Handle JSON response
-          const data = await response.json();
-
-          const assistantMessage: CompanionMessage = {
-            id: generateId('msg'),
-            role: 'assistant',
-            content: data.message || 'I received your message.',
-            cards: data.cards,
-            actions: data.actions,
-            timestamp: new Date(),
-          };
-          get().addCompanionMessage(currentCityId, assistantMessage);
-        } catch (error) {
-          console.error('[planningStore] sendToCompanion error:', error);
-          const errorMessage: CompanionMessage = {
-            id: generateId('msg'),
-            role: 'assistant',
-            content: 'Sorry, I had trouble processing that. Please try again.',
-            timestamp: new Date(),
-          };
-          get().addCompanionMessage(currentCityId, errorMessage);
-        } finally {
-          set({ companionLoading: false });
         }
+        return null;
       },
 
-      toggleCompanion: () => {
-        set((state) => ({ companionExpanded: !state.companionExpanded }));
+      getAllPlacedPlaceIds: () => {
+        const { tripPlan } = get();
+        if (!tripPlan) return new Set<string>();
+
+        const ids = new Set<string>();
+        for (const day of tripPlan.days) {
+          const slotOrder: Slot[] = ['morning', 'afternoon', 'evening', 'night'];
+          for (const slot of slotOrder) {
+            for (const item of day.slots[slot]) {
+              ids.add(item.place.place_id);
+            }
+          }
+        }
+        return ids;
       },
 
-      setCompanionExpanded: (expanded: boolean) => {
-        set({ companionExpanded: expanded });
-      },
+      // ==================== Reset ====================
 
-      // ============================================
-      // Filters
-      // ============================================
-
-      setFilters: (filters: Partial<PlanningFilters>) => {
-        set((state) => ({
-          filters: { ...state.filters, ...filters },
-        }));
-      },
-
-      // ============================================
-      // Error Handling
-      // ============================================
-
-      setError: (error: string | null) => {
-        set({ error });
-      },
-
-      // ============================================
-      // Selectors
-      // ============================================
-
-      getCurrentCityPlan: (): CityPlan | null => {
-        const { currentCityId, cityPlans } = get();
-        if (!currentCityId) return null;
-        return cityPlans[currentCityId] || null;
-      },
-
-      getClusterById: (cityId: string, clusterId: string): Cluster | null => {
-        const { cityPlans } = get();
-        const cityPlan = cityPlans[cityId];
-        if (!cityPlan) return null;
-        return cityPlan.clusters.find((c) => c.id === clusterId) || null;
-      },
-
-      getTotalItemCount: (cityId: string): number => {
-        const { cityPlans } = get();
-        const cityPlan = cityPlans[cityId];
-        if (!cityPlan) return 0;
-        const clusterItems = cityPlan.clusters.reduce((sum, c) => sum + c.items.length, 0);
-        return clusterItems + cityPlan.unclustered.length;
-      },
-
-      getAllItemIds: (cityId: string): string[] => {
-        const { cityPlans } = get();
-        const cityPlan = cityPlans[cityId];
-        if (!cityPlan) return [];
-        const clusterItemIds = cityPlan.clusters.flatMap((c) => c.items.map((i) => i.id));
-        const unclusteredIds = cityPlan.unclustered.map((i) => i.id);
-        return [...clusterItemIds, ...unclusteredIds];
+      reset: () => {
+        set({
+          ...initialState,
+          sessionId: generateSessionId(),
+        });
       },
     }),
     {
-      name: 'rdtrip-planning',
+      name: 'waycraft-planning-store',
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
-        // Only persist essential data
-        routeId: state.routeId,
-        currentCityId: state.currentCityId,
-        cityPlans: state.cityPlans,
+        tripPlan: state.tripPlan,
+        currentDayIndex: state.currentDayIndex,
         filters: state.filters,
+        sessionId: state.sessionId,
       }),
-      // Handle Date deserialization
       onRehydrateStorage: () => (state) => {
         if (state) {
-          // Mark as initialized if we have data
-          if (state.routeId && Object.keys(state.cityPlans).length > 0) {
-            state.isInitialized = true;
+          // Restore Date objects
+          if (state.tripPlan) {
+            state.tripPlan.created_at = new Date(state.tripPlan.created_at);
+            state.tripPlan.updated_at = new Date(state.tripPlan.updated_at);
+            state.tripPlan.days = state.tripPlan.days.map((day) => ({
+              ...day,
+              date: new Date(day.date),
+              slots: {
+                morning: day.slots.morning.map((i) => ({ ...i, added_at: new Date(i.added_at) })),
+                afternoon: day.slots.afternoon.map((i) => ({ ...i, added_at: new Date(i.added_at) })),
+                evening: day.slots.evening.map((i) => ({ ...i, added_at: new Date(i.added_at) })),
+                night: day.slots.night.map((i) => ({ ...i, added_at: new Date(i.added_at) })),
+              },
+            }));
           }
         }
       },
+      version: 1,
     }
   )
 );
 
-// ============================================
-// Selectors (for use outside store)
-// ============================================
+// ============================================================================
+// Keyboard Shortcuts Hook
+// ============================================================================
 
-// Stable empty arrays to prevent infinite re-render loops
-// In JavaScript, [] !== [], so returning a new empty array each time
-// causes Zustand to think the state changed, triggering re-renders.
-const EMPTY_ARRAY: never[] = [];
-const EMPTY_CITIES_ARRAY: { id: string; name: string; nights: number; isOrigin?: boolean; isDestination?: boolean; itemCount: number; isComplete: boolean }[] = [];
+export function usePlanningKeyboardShortcuts() {
+  const { undo, redo, canUndo, canRedo } = usePlanningStore();
 
-export const selectCurrentCityPlan = (state: PlanningStore) => {
-  if (!state.currentCityId) return null;
-  return state.cityPlans[state.currentCityId] || null;
-};
+  if (typeof window === 'undefined') return;
 
-export const selectCitiesForTabs = (state: PlanningStore) => {
-  if (!state.tripPlan) return EMPTY_CITIES_ARRAY;
-  return state.tripPlan.cities.map((cityPlan) => ({
-    id: cityPlan.cityId,
-    name: cityPlan.city.name,
-    nights: cityPlan.city.nights || 1,
-    isOrigin: cityPlan.city.isOrigin,
-    isDestination: cityPlan.city.isDestination,
-    itemCount: state.getTotalItemCount(cityPlan.cityId),
-    isComplete: false,
-  }));
-};
+  const handleKeyDown = (e: KeyboardEvent) => {
+    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+    const modifier = isMac ? e.metaKey : e.ctrlKey;
 
-export const selectSuggestionsForType = (state: PlanningStore, type: string) => {
-  if (!state.currentCityId) return EMPTY_ARRAY;
-  return state.suggestions[state.currentCityId]?.[type] || EMPTY_ARRAY;
-};
+    if (modifier && e.key === 'z' && !e.shiftKey && canUndo()) {
+      e.preventDefault();
+      undo();
+    } else if (modifier && e.key === 'z' && e.shiftKey && canRedo()) {
+      e.preventDefault();
+      redo();
+    } else if (modifier && e.key === 'y' && canRedo()) {
+      e.preventDefault();
+      redo();
+    }
+  };
 
-export const selectCompanionMessages = (state: PlanningStore) => {
-  if (!state.currentCityId) return EMPTY_ARRAY;
-  return state.companionMessages[state.currentCityId] || EMPTY_ARRAY;
-};
+  window.addEventListener('keydown', handleKeyDown);
 
-export const selectIsGenerating = (state: PlanningStore, type: string) => {
-  return state.isGenerating[type] || false;
-};
+  return () => {
+    window.removeEventListener('keydown', handleKeyDown);
+  };
+}

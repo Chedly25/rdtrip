@@ -27,7 +27,27 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useDiscoveryStore, type DiscoveryAction } from '../stores/discoveryStore';
-import type { CompanionSuggestion } from '../services/planningCompanion';
+
+// Local type definition for proactive suggestions
+// This hook manages its own suggestion types independently of the planning companion
+type SuggestionType =
+  | 'tip'
+  | 'warning'
+  | 'suggestion'
+  | 'explore_places'
+  | 'compare_cities'
+  | 'proceed_prompt';
+
+interface CompanionSuggestion {
+  type: SuggestionType;
+  message: string;
+  action?: {
+    label: string;
+    handler?: string;
+    data?: Record<string, unknown>;
+  };
+  priority?: 'low' | 'medium' | 'high';
+}
 
 // ============================================================================
 // Types

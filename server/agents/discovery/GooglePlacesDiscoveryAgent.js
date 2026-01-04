@@ -242,14 +242,26 @@ class GooglePlacesDiscoveryAgent {
   filterAndRank(candidates, timeWindow, preferences) {
     const agentType = preferences?.agentType || preferences?.travelStyle || 'best-overall';
 
-    // 1. Filter by opening hours (if scheduled time provided)
+    // 1. Filter by opening hours (check if open during timeWindow)
     let filtered = candidates.filter(candidate => {
       if (candidate.openingHours && candidate.openingHours.periods) {
-        // TODO: Check if open during timeWindow
-        // For now, just check if open_now
-        return candidate.isOpenNow !== false;
+        // Parse time window to check if place is open during requested time
+        const startHour = parseInt(timeWindow.start?.split(':')[0] || '9', 10);
+        const endHour = parseInt(timeWindow.end?.split(':')[0] || '18', 10);
+
+        // Check each period to see if the place is open during our window
+        const isOpenDuringWindow = candidate.openingHours.periods.some(period => {
+          if (!period.open) return false;
+          const openHour = Math.floor(period.open.time / 100);
+          const closeHour = period.close ? Math.floor(period.close.time / 100) : 24;
+          // Check if our time window overlaps with this opening period
+          return openHour <= endHour && closeHour >= startHour;
+        });
+
+        return isOpenDuringWindow;
       }
-      return true; // Accept if no hours data
+      // Accept if no hours data (assume open)
+      return true;
     });
 
     // 2. QUALITY FILTERING: Exclude vague/generic/poor quality places

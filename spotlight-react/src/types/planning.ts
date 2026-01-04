@@ -1,436 +1,345 @@
 /**
- * Planning Feature Types
+ * Planning Mode Types
  *
- * Type definitions for the proximity-based trip planner.
- * Users build geographic clusters of activities with an AI companion.
+ * Slot-based planning system: Morning, Afternoon, Evening, Night
+ * Philosophy: "Chill over precise" - users shouldn't feel like building a train schedule
  */
 
-// ============================================
-// Location Types
-// ============================================
-
-export interface LatLng {
-  lat: number;
-  lng: number;
-}
-
-export interface Location extends LatLng {
-  address: string;
-  area: string; // "Le Panier", "Vieux Port"
-}
-
-// ============================================
+// ============================================================================
 // Core Types
-// ============================================
+// ============================================================================
 
-export type PlanCardType =
-  | 'restaurant'
-  | 'activity'
-  | 'photo_spot'
-  | 'hotel'
-  | 'bar'
+export type Slot = 'morning' | 'afternoon' | 'evening' | 'night';
+
+export type PlaceCategory =
   | 'cafe'
-  | 'experience';
+  | 'restaurant'
+  | 'bar'
+  | 'museum'
+  | 'gallery'
+  | 'landmark'
+  | 'park'
+  | 'beach'
+  | 'viewpoint'
+  | 'shopping'
+  | 'activity'
+  | 'nightlife'
+  | 'accommodation'
+  | 'market'
+  | 'church'
+  | 'other';
 
-// Type groupings for UI tab organization
-export const ACTIVITY_TYPES: PlanCardType[] = ['activity', 'photo_spot', 'experience'];
-export const RESTAURANT_TYPES: PlanCardType[] = ['restaurant', 'bar', 'cafe'];
-export const HOTEL_TYPES: PlanCardType[] = ['hotel'];
+export type VibeTags =
+  | 'romantic'
+  | 'chill'
+  | 'lively'
+  | 'family-friendly'
+  | 'local-favourite'
+  | 'instagrammable'
+  | 'off-beaten-path'
+  | 'historic'
+  | 'scenic'
+  | 'foodie';
 
-// Browse tab definitions
-export type BrowseTabId = 'activities' | 'restaurants' | 'hotels';
+// ============================================================================
+// Slot Definitions
+// ============================================================================
 
-export interface BrowseTab {
-  id: BrowseTabId;
+export const SLOT_CONFIG: Record<Slot, {
   label: string;
-  types: PlanCardType[];
+  icon: string;
+  roughHours: string;
+  typicalActivities: string[];
+  colorClass: string;
+  bgClass: string;
+  borderClass: string;
+}> = {
+  morning: {
+    label: 'Morning',
+    icon: '☀️',
+    roughHours: '08:00 - 12:00',
+    typicalActivities: ['Cafe', 'Museum', 'Market', 'Church', 'Park', 'Walking tour'],
+    colorClass: 'text-amber-700',
+    bgClass: 'bg-amber-50/60',
+    borderClass: 'border-amber-200/60',
+  },
+  afternoon: {
+    label: 'Afternoon',
+    icon: '🌤️',
+    roughHours: '12:00 - 18:00',
+    typicalActivities: ['Restaurant (lunch)', 'Activity', 'Beach', 'Shopping', 'Gallery'],
+    colorClass: 'text-orange-700',
+    bgClass: 'bg-orange-50/50',
+    borderClass: 'border-orange-200/50',
+  },
+  evening: {
+    label: 'Evening',
+    icon: '🌅',
+    roughHours: '18:00 - 22:00',
+    typicalActivities: ['Restaurant (dinner)', 'Bar', 'Viewpoint', 'Sunset spot', 'Show'],
+    colorClass: 'text-rose-700',
+    bgClass: 'bg-rose-50/40',
+    borderClass: 'border-rose-200/40',
+  },
+  night: {
+    label: 'Night',
+    icon: '🌙',
+    roughHours: '22:00 - 02:00',
+    typicalActivities: ['Bar', 'Club', 'Late-night restaurant', 'Concert'],
+    colorClass: 'text-indigo-700',
+    bgClass: 'bg-indigo-50/30',
+    borderClass: 'border-indigo-200/30',
+  },
+};
+
+export const SLOT_ORDER: Slot[] = ['morning', 'afternoon', 'evening', 'night'];
+
+// ============================================================================
+// Place Types
+// ============================================================================
+
+export interface OpeningPeriod {
+  open: { day: number; time: string };
+  close: { day: number; time: string };
 }
 
-export type PlanCardSource =
-  | 'ai_generated'
-  | 'companion'
-  | 'user_search'
-  | 'city_intelligence';
-
-export type PriceLevel = 1 | 2 | 3 | 4;
-
-export interface PlanCard {
-  id: string;
-  type: PlanCardType;
-  name: string;
-  description: string; // 1-2 sentences max
-  whyGreat: string; // Why this matches their trip
-
-  location: Location;
-
-  duration: number; // Minutes
-  priceLevel: PriceLevel;
-  priceEstimate?: string; // "€25-40 per person"
-  bestTime?: string; // "sunset", "morning", "lunch"
-  tags: string[]; // ["romantic", "outdoor", "local-favorite"]
-
-  // Optional enrichment
-  imageUrl?: string;
-  rating?: number; // 1-5
-  reviewCount?: number;
-  bookingRequired?: boolean;
-  bookingUrl?: string;
-  openingHours?: string;
-
-  // Source tracking
-  source: PlanCardSource;
-  generatedAt: Date;
+export interface PlacePhoto {
+  url: string;
+  width?: number;
+  height?: number;
+  attributions?: string[];
 }
 
-export interface Cluster {
-  id: string;
+/**
+ * Enriched Place - Google Places data + computed enrichments
+ */
+export interface EnrichedPlace {
+  // From Google Places
+  place_id: string;
   name: string;
+  types: string[];
+  geometry: {
+    location: { lat: number; lng: number };
+  };
+  rating?: number;
+  user_ratings_total?: number;
+  price_level?: number; // 0-4
+  opening_hours?: {
+    periods?: OpeningPeriod[];
+    weekday_text?: string[];
+    open_now?: boolean;
+  };
+  formatted_address?: string;
+  formatted_phone_number?: string;
+  website?: string;
+  photos?: PlacePhoto[];
+
+  // Enriched fields (computed at fetch time)
+  cluster_id: string | null;
+  valid_slots: Slot[];           // ['morning', 'afternoon']
+  best_slot: Slot | null;        // 'morning' if it's optimal
+  estimated_duration_mins: number;
+  category: PlaceCategory;
+  vibe_tags: VibeTags[];
+  is_hidden_gem: boolean;        // high rating + low review count
+
+  // Optional editorial content
   description?: string;
-  center: LatLng;
-  items: PlanCard[];
-
-  // Computed (calculated on frontend)
-  totalDuration: number; // Sum of item durations
-  maxWalkingDistance: number; // Max walk between any two items
+  tip?: string;
 }
 
-export interface SuggestedCluster {
-  id: string;
-  name: string;
-  description: string;
-  center: LatLng;
-  // These are suggestions, not started by user yet
+// ============================================================================
+// Planned Item Types
+// ============================================================================
+
+/**
+ * Planned Item - A place added to the trip plan
+ */
+export interface PlannedItem {
+  id: string;                    // UUID
+  place: EnrichedPlace;
+  day_index: number;             // 0, 1, 2...
+  slot: Slot;
+  order_in_slot: number;         // For ordering within slot
+  user_notes?: string;
+  is_locked: boolean;            // User explicitly placed, don't auto-move
+  added_at: Date;
+  added_by: 'user' | 'ai';
+
+  // Collaboration-ready fields
+  created_by?: string;
+  updated_by?: string;
+  version?: number;
 }
 
-// ============================================
-// City & Trip Types
-// ============================================
+// ============================================================================
+// Day Plan Types
+// ============================================================================
 
-export interface CityData {
-  id: string;
-  name: string;
-  country: string;
-  coordinates: LatLng;
-  nights?: number;
-  isOrigin?: boolean;
-  isDestination?: boolean;
-  imageUrl?: string;
+export interface FlowScore {
+  total_travel_mins: number;
+  total_walking_km: number;
+  pacing: 'relaxed' | 'balanced' | 'packed';
+  warnings: string[];
 }
 
-export interface CityPlan {
-  id: string;
-  cityId: string;
-  city: CityData;
-  clusters: Cluster[];
-  unclustered: PlanCard[]; // Saved but not in a cluster
-  suggestedClusters: SuggestedCluster[]; // AI-suggested areas
-  selectedHotel?: PlanCard | null; // Selected hotel for this city
+export interface DayPlan {
+  day_index: number;
+  date: Date;
+  city: {
+    id: string;
+    name: string;
+    country: string;
+    coordinates: { lat: number; lng: number };
+  };
+  slots: {
+    morning: PlannedItem[];
+    afternoon: PlannedItem[];
+    evening: PlannedItem[];
+    night: PlannedItem[];
+  };
+  flow_score?: FlowScore;
+  accommodation?: EnrichedPlace;
 }
 
-export type TripPlanStatus = 'planning' | 'ready' | 'active' | 'completed';
+// ============================================================================
+// Trip Plan Types
+// ============================================================================
 
 export interface TripPlan {
   id: string;
-  routeId: string;
-  userId: string;
-  status: TripPlanStatus;
-  cities: CityPlan[];
-  createdAt: Date;
-  updatedAt: Date;
+  route_id: string;
+  days: DayPlan[];
+  unassigned: EnrichedPlace[];   // Saved but not yet placed
+  filters: FilterState;          // Persisted filter preferences
+  created_at: Date;
+  updated_at: Date;
 }
 
-// ============================================
-// Companion Types
-// ============================================
+// ============================================================================
+// Filter Types
+// ============================================================================
 
-export type CompanionActionType =
-  | 'add_card'
-  | 'show_more'
-  | 'navigate'
-  | 'dismiss'
-  | 'custom';
-
-export interface CompanionAction {
-  id: string;
-  label: string;
-  type: CompanionActionType;
-  payload?: {
-    card?: PlanCard;
-    cardType?: PlanCardType;
-    clusterId?: string;
-    query?: string;
-  };
+export interface FilterState {
+  types: PlaceCategory[];
+  price_levels: number[];        // [0, 1, 2, 3, 4]
+  min_rating: number;
+  max_duration: number | null;
+  vibes: VibeTags[];
+  show_hidden_gems_only: boolean;
 }
 
-export interface CompanionMessage {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  cards?: PlanCard[];
-  actions?: CompanionAction[];
-  timestamp: Date;
+export const DEFAULT_FILTER_STATE: FilterState = {
+  types: [],
+  price_levels: [],
+  min_rating: 0,
+  max_duration: null,
+  vibes: [],
+  show_hidden_gems_only: false,
+};
+
+// ============================================================================
+// UI State Types
+// ============================================================================
+
+export interface AddPanelState {
+  isOpen: boolean;
+  targetSlot: Slot | null;
+  targetDayIndex: number;
+  anchor: { lat: number; lng: number } | null;
+  anchorName: string | null;
 }
 
-export interface CompanionContext {
-  cityId: string;
-  currentPlan: CityPlan;
-  preferences: UserPreferences;
-  history?: CompanionMessage[];
-  recentAction?: {
-    type: 'added_item' | 'removed_item' | 'created_cluster' | 'generated_more';
-    item?: PlanCard;
-    cluster?: Cluster;
-    timestamp: Date;
-  };
-}
-
-// ============================================
-// User Preferences Types
-// ============================================
-
-export interface UserPreferences {
-  travelerType: 'solo' | 'couple' | 'family' | 'friends' | 'business';
-  interests?: string[];
-  budget?: 'budget' | 'moderate' | 'luxury';
-  pace?: 'relaxed' | 'moderate' | 'packed';
-  dietary?: string[];
-}
-
-// ============================================
-// API Request/Response Types
-// ============================================
-
-export interface GenerateCardsRequest {
-  cityId: string;
-  type: PlanCardType | 'all';
-  count: number;
-  filters?: {
-    priceMax?: PriceLevel;
-    nearClusterId?: string;
-    tags?: string[];
-    cuisine?: string;
-    duration?: { min?: number; max?: number };
-  };
-  excludeIds?: string[];
-  preferences?: UserPreferences;
-}
-
-export interface GenerateCardsResponse {
-  cards: PlanCard[];
-  hasMore: boolean;
-}
-
-export interface GetPlanResponse {
-  tripPlan: TripPlan;
-}
-
-export interface SavePlanRequest {
-  cities: CityPlan[];
-}
-
-export interface SavePlanResponse {
-  success: boolean;
-  updatedAt: Date;
-}
-
-export interface CreateClusterRequest {
-  cityId: string;
-  name: string;
-  center?: LatLng;
-  initialItems?: PlanCard[];
-}
-
-export interface CreateClusterResponse {
-  cluster: Cluster;
-}
-
-export interface UpdateClusterRequest {
-  name?: string;
-  addItems?: PlanCard[];
-  removeItemIds?: string[];
-  reorderItems?: string[]; // Item IDs in new order
-}
-
-export interface CompanionRequest {
-  cityId: string;
+export interface ConflictWarning {
+  type: 'opening_hours' | 'distance' | 'overpacked' | 'duplicate';
   message: string;
-  context: CompanionContext;
+  severity: 'info' | 'warning' | 'error';
+  place_id?: string;
+  suggested_action?: {
+    label: string;
+    action: () => void;
+  };
 }
 
-// SSE event types
-export type CompanionStreamEvent =
-  | { type: 'thinking'; content: string }
-  | { type: 'message'; content: string }
-  | { type: 'cards'; cards: PlanCard[] }
-  | { type: 'actions'; actions: CompanionAction[] }
-  | { type: 'tool_call'; tool: string; args: Record<string, unknown> }
-  | { type: 'tool_result'; tool: string; result: unknown }
-  | { type: 'done' }
-  | { type: 'error'; error: string };
+// ============================================================================
+// Action Types for Undo/Redo
+// ============================================================================
 
-// ============================================
-// Component Props Types
-// ============================================
+export type PlanActionType = 'add' | 'remove' | 'move' | 'reorder' | 'update_notes';
 
-export interface CityTabData {
+export interface PlanAction {
   id: string;
-  name: string;
-  nights: number;
-  isOrigin?: boolean;
-  isDestination?: boolean;
-  itemCount: number;
-  isComplete?: boolean;
+  type: PlanActionType;
+  timestamp: Date;
+  payload: {
+    item_id?: string;
+    place?: EnrichedPlace;
+    from_day?: number;
+    to_day?: number;
+    from_slot?: Slot;
+    to_slot?: Slot;
+    from_order?: number;
+    to_order?: number;
+    notes?: string;
+  };
+  description: string; // Human readable description for toast
 }
 
-export interface CityTabsProps {
-  cities: CityTabData[];
-  currentCityId: string;
-  onCityChange: (cityId: string) => void;
+// ============================================================================
+// Companion Types
+// ============================================================================
+
+export interface CompanionSuggestion {
+  id: string;
+  trigger: string;
+  message: string;
+  quick_actions?: QuickAction[];
+  dismissed?: boolean;
 }
 
-export interface PlanningLayoutProps {
-  leftPanel: React.ReactNode;
-  rightPanel: React.ReactNode;
-  companionPanel?: React.ReactNode; // Now optional (replaced by inline tips)
-  showCompanion?: boolean; // Control visibility, defaults to false
+export interface QuickAction {
+  label: string;
+  action: string;
+  data?: Record<string, unknown>;
 }
 
-export interface YourPlanProps {
-  cityId: string;
-  clusters: Cluster[];
-  unclustered: PlanCard[];
-  suggestedClusters?: SuggestedCluster[];
-  onCreateCluster?: (name: string, center?: LatLng) => void;
+// ============================================================================
+// AI Pick Types
+// ============================================================================
+
+export interface AIPick {
+  place: EnrichedPlace;
+  reason: string;
+  caveat?: string;
 }
 
-export interface ClusterCardProps {
-  cluster: Cluster;
-  onAddItem?: (card: PlanCard) => void;
-  onRemoveItem?: (itemId: string) => void;
-  onRename?: (name: string) => void;
-  onDelete?: () => void;
-  isExpanded?: boolean;
+// ============================================================================
+// Travel Indicator Types
+// ============================================================================
+
+export interface TravelInfo {
+  duration_mins: number;
+  distance_km: number;
+  mode: 'walk' | 'drive' | 'transit';
+  has_parking?: boolean;
 }
 
-export interface PlanItemProps {
-  item: PlanCard;
-  onRemove?: () => void;
-  onMove?: (targetClusterId: string) => void;
-}
+// ============================================================================
+// Analytics Event Types
+// ============================================================================
 
-export interface EmptyClusterSuggestionProps {
-  area: SuggestedCluster;
-  onStart: () => void;
-  onDismiss?: () => void;
-}
-
-// ============================================
-// Store Types
-// ============================================
-
-export interface PlanningFilters {
-  priceRange?: PriceLevel[];
-  sortBy: 'proximity' | 'rating' | 'price';
-}
-
-export interface PlanningState {
-  // Core data
-  routeId: string | null;
-  tripPlan: TripPlan | null;
-  currentCityId: string | null;
-
-  // City plans indexed by cityId
-  cityPlans: Record<string, CityPlan>;
-
-  // Suggestions indexed by cityId, then by type
-  suggestions: Record<string, Record<string, PlanCard[]>>;
-
-  // Companion messages indexed by cityId
-  companionMessages: Record<string, CompanionMessage[]>;
-
-  // UI state
-  filters: PlanningFilters;
-  isLoading: boolean;
-  isSaving: boolean;
-  companionLoading: boolean;
-  companionExpanded: boolean;
-  error: string | null;
-
-  // Generation loading state by type
-  isGenerating: Record<string, boolean>;
-
-  // Initialization flag
-  isInitialized: boolean;
-}
-
-export interface PlanningActions {
-  // Initialization
-  initializePlan: (tripPlan: TripPlan) => void;
-  loadPlan: (routeId: string, token?: string) => Promise<void>;
-  savePlan: (routeId: string, token?: string) => Promise<void>;
-  reset: () => void;
-
-  // City navigation
-  setCurrentCity: (cityId: string) => void;
-
-  // Cluster operations
-  createCluster: (cityId: string, name: string, center?: LatLng) => string;
-  updateCluster: (cityId: string, clusterId: string, updates: Partial<Cluster>) => void;
-  deleteCluster: (cityId: string, clusterId: string) => void;
-  renameCluster: (cityId: string, clusterId: string, name: string) => void;
-
-  // Item operations
-  addItemToCluster: (cityId: string, clusterId: string, card: PlanCard) => void;
-  removeItemFromCluster: (cityId: string, clusterId: string, itemId: string) => void;
-  moveItemToCluster: (cityId: string, fromClusterId: string, toClusterId: string, itemId: string) => void;
-  reorderItemsInCluster: (cityId: string, clusterId: string, reorderedItems: PlanCard[]) => void;
-  addToUnclustered: (cityId: string, card: PlanCard) => void;
-  removeFromUnclustered: (cityId: string, itemId: string) => void;
-  addItemAutoClustered: (cityId: string, card: PlanCard, cityCenter?: LatLng) => void;
-
-  // Hotel operations
-  selectHotel: (cityId: string, hotel: PlanCard) => void;
-  removeHotel: (cityId: string) => void;
-  getSelectedHotel: (cityId: string) => PlanCard | null;
-
-  // Suggestions
-  setSuggestions: (cityId: string, type: string, cards: PlanCard[]) => void;
-  addSuggestions: (cityId: string, type: string, cards: PlanCard[]) => void;
-  generateSuggestions: (type: PlanCardType | 'all', count: number) => Promise<void>;
-
-  // Companion
-  addCompanionMessage: (cityId: string, message: CompanionMessage) => void;
-  sendToCompanion: (message: string) => Promise<void>;
-  toggleCompanion: () => void;
-  setCompanionExpanded: (expanded: boolean) => void;
-
-  // Filters
-  setFilters: (filters: Partial<PlanningFilters>) => void;
-
-  // Error handling
-  setError: (error: string | null) => void;
-
-  // Selectors
-  getCurrentCityPlan: () => CityPlan | null;
-  getClusterById: (cityId: string, clusterId: string) => Cluster | null;
-  getTotalItemCount: (cityId: string) => number;
-  getAllItemIds: (cityId: string) => string[];
-}
-
-export type PlanningStore = PlanningState & PlanningActions;
-
-// ============================================
-// Utility Types
-// ============================================
-
-export interface ProximityInfo {
-  clusterName: string;
-  walkingMinutes: number;
-  isNear: boolean; // < 10 minutes
-}
-
-export interface CardWithProximity {
-  card: PlanCard;
-  nearestCluster: ProximityInfo | null;
-  isNearPlan: boolean;
-}
+export type PlanningEvent =
+  | 'planning_mode_entered'
+  | 'item_added'
+  | 'item_removed'
+  | 'item_moved'
+  | 'filter_applied'
+  | 'ai_pick_shown'
+  | 'ai_pick_accepted'
+  | 'ai_pick_rejected'
+  | 'conflict_warning_shown'
+  | 'conflict_resolved'
+  | 'companion_message_sent'
+  | 'companion_action_taken'
+  | 'undo_used'
+  | 'plan_completed';

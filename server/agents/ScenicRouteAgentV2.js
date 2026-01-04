@@ -181,8 +181,8 @@ class ScenicRouteAgentV2 {
   }
 
   extractLocationFromSegment(segment, position) {
-    // For now, use midpoint between cities
-    // TODO: Could use actual route geometry if available
+    // Use nearest city based on position along route
+    // Position < 0.5 means closer to origin, >= 0.5 means closer to destination
     return position < 0.5 ? segment.from : segment.to;
   }
 

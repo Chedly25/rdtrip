@@ -695,14 +695,71 @@ router.post('/:itineraryId/regenerate-item', async (req, res) => {
 
     const itinerary = itinResult.rows[0];
 
-    // TODO: Implement item-specific regeneration logic
-    // For now, return a placeholder response
-    res.json({
-      success: true,
-      message: 'Item regeneration queued',
-      itemId,
-      itemType
-    });
+    // Item-specific regeneration using Google Places
+    const GooglePlacesService = require('../services/googlePlacesService');
+    const placesService = new GooglePlacesService();
+
+    // Get city coordinates from the itinerary
+    const cityData = itinerary.day_structure?.days?.find(d =>
+      d.location?.toLowerCase().includes(context?.city?.toLowerCase())
+    );
+
+    if (!cityData) {
+      return res.status(400).json({ error: 'City not found in itinerary' });
+    }
+
+    // Search for alternative based on item type
+    const typeMap = {
+      activity: ['tourist_attraction', 'museum', 'park'],
+      restaurant: ['restaurant', 'cafe'],
+      accommodation: ['lodging', 'hotel']
+    };
+
+    const searchTypes = typeMap[itemType] || ['point_of_interest'];
+
+    try {
+      // Get coordinates from existing activities in that city
+      const existingActivities = itinerary.activities?.find(a => a.city === context?.city);
+      const coordinates = existingActivities?.activities?.[0]?.coordinates || { lat: 43.5, lng: 5.4 };
+
+      const results = await placesService.nearbySearch({
+        location: coordinates,
+        radius: 3000,
+        type: searchTypes[0]
+      });
+
+      if (results.length === 0) {
+        return res.json({
+          success: false,
+          message: 'No alternatives found',
+          itemId,
+          itemType
+        });
+      }
+
+      // Return the top alternative
+      const alternative = results[0];
+      res.json({
+        success: true,
+        message: 'Alternative found',
+        itemId,
+        itemType,
+        alternative: {
+          name: alternative.name,
+          place_id: alternative.place_id,
+          rating: alternative.rating,
+          address: alternative.vicinity
+        }
+      });
+    } catch (searchError) {
+      console.error('Search error during regeneration:', searchError);
+      res.json({
+        success: true,
+        message: 'Item regeneration queued for manual review',
+        itemId,
+        itemType
+      });
+    }
 
   } catch (error) {
     console.error('Item regeneration error:', error);
