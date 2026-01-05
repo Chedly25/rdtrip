@@ -106,7 +106,24 @@ export function PlanningMode() {
         }));
 
         const routeId = searchParams.get('routeId') || `plan-${Date.now()}`;
-        initializePlan(routeId, cities, tripSummary.startDate);
+        
+        // Ensure startDate is a proper Date object (may be string from localStorage)
+        let startDate: Date;
+        if (tripSummary.startDate instanceof Date) {
+          startDate = tripSummary.startDate;
+        } else if (typeof tripSummary.startDate === 'string') {
+          startDate = new Date(tripSummary.startDate);
+        } else {
+          startDate = new Date(); // Fallback to today
+        }
+        
+        // Only initialize if we have a valid date
+        if (!isNaN(startDate.getTime())) {
+          initializePlan(routeId, cities, startDate);
+        } else {
+          console.error('[PlanningMode] Invalid start date, using today');
+          initializePlan(routeId, cities, new Date());
+        }
       }
     }
   }, [route, tripSummary, tripPlan, getSelectedCities, initializePlan, searchParams]);
@@ -123,6 +140,15 @@ export function PlanningMode() {
       return () => clearTimeout(timer);
     }
   }, [lastToast, clearToast]);
+
+  // If no trip plan and no discovery data to build from, redirect to discover
+  useEffect(() => {
+    if (!tripPlan && !route) {
+      // No plan and no discovery data - redirect back to discover
+      console.warn('[PlanningMode] No plan or discovery data, redirecting to /discover');
+      navigate('/discover');
+    }
+  }, [tripPlan, route, navigate]);
 
   // Loading state
   if (!tripPlan) {

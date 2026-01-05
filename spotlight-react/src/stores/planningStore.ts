@@ -202,7 +202,12 @@ export const usePlanningStore = create<PlanningState>()(
 
       initializePlan: (routeId, cities, startDate) => {
         const days: DayPlan[] = [];
-        let currentDate = new Date(startDate);
+        // Ensure startDate is a valid Date object
+        let currentDate = startDate instanceof Date ? new Date(startDate) : new Date(startDate);
+        if (isNaN(currentDate.getTime())) {
+          console.error('[PlanningStore] Invalid startDate, using today');
+          currentDate = new Date();
+        }
         let dayIndex = 0;
 
         for (const city of cities) {
