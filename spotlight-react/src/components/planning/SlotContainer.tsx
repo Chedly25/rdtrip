@@ -1,78 +1,81 @@
 /**
- * SlotContainer
+ * SlotContainer - Premium Travel Journal Edition
  *
- * Container for a single time slot (Morning, Afternoon, Evening, Night).
- * Displays items with drag-and-drop reordering.
- *
- * Features:
- * - Distinct visual style per slot
- * - Empty state with add button
- * - Drag-and-drop reordering
- * - Travel time indicators between items
- * - Collapsed/expanded state for empty slots
+ * Each time slot feels like a page in a vintage travel notebook.
+ * Tactile, warm, with elegant borders and refined typography.
  */
 
 import { useMemo, useCallback } from 'react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
-import { Plus, Sun, CloudSun, Sunset, Moon } from 'lucide-react';
+import { Plus, Sun, CloudSun, Sunset, Moon, Coffee, UtensilsCrossed, Wine, Music } from 'lucide-react';
 import { usePlanningStore } from '../../stores/planningStore';
 import { PlannedItemCard } from './PlannedItemCard';
 import { estimateWalkingTime, haversineDistance } from '../../utils/planningEnrichment';
 import type { Slot, PlannedItem } from '../../types/planning';
 
 // ============================================================================
-// Slot Configuration
+// Slot Configuration - Premium Travel Journal Theme
 // ============================================================================
 
 const SLOT_STYLES: Record<Slot, {
   label: string;
   icon: React.ReactNode;
+  accentIcon: React.ReactNode;
   hours: string;
-  bgClass: string;
-  borderClass: string;
-  textClass: string;
-  accentClass: string;
-  emptyBgClass: string;
+  bgGradient: string;
+  borderColor: string;
+  accentColor: string;
+  textColor: string;
+  iconColor: string;
+  stampColor: string;
 }> = {
   morning: {
     label: 'Morning',
-    icon: <Sun className="w-4 h-4" />,
-    hours: '8am - 12pm',
-    bgClass: 'bg-amber-50/40',
-    borderClass: 'border-amber-200/50',
-    textClass: 'text-amber-700',
-    accentClass: 'bg-amber-500',
-    emptyBgClass: 'bg-amber-50/20',
+    icon: <Sun className="w-5 h-5" strokeWidth={2} />,
+    accentIcon: <Coffee className="w-4 h-4" />,
+    hours: '08:00 — 12:00',
+    bgGradient: 'from-amber-50/90 via-orange-50/60 to-amber-50/40',
+    borderColor: 'border-amber-300/40',
+    accentColor: 'bg-gradient-to-br from-amber-500 to-orange-500',
+    textColor: 'text-amber-900',
+    iconColor: 'text-amber-600',
+    stampColor: 'text-amber-400/30',
   },
   afternoon: {
     label: 'Afternoon',
-    icon: <CloudSun className="w-4 h-4" />,
-    hours: '12pm - 6pm',
-    bgClass: 'bg-orange-50/35',
-    borderClass: 'border-orange-200/45',
-    textClass: 'text-orange-700',
-    accentClass: 'bg-orange-500',
-    emptyBgClass: 'bg-orange-50/15',
+    icon: <CloudSun className="w-5 h-5" strokeWidth={2} />,
+    accentIcon: <UtensilsCrossed className="w-4 h-4" />,
+    hours: '12:00 — 18:00',
+    bgGradient: 'from-orange-50/90 via-rose-50/60 to-orange-50/40',
+    borderColor: 'border-orange-300/40',
+    accentColor: 'bg-gradient-to-br from-orange-500 to-rose-500',
+    textColor: 'text-orange-900',
+    iconColor: 'text-orange-600',
+    stampColor: 'text-orange-400/30',
   },
   evening: {
     label: 'Evening',
-    icon: <Sunset className="w-4 h-4" />,
-    hours: '6pm - 10pm',
-    bgClass: 'bg-rose-50/30',
-    borderClass: 'border-rose-200/40',
-    textClass: 'text-rose-700',
-    accentClass: 'bg-rose-500',
-    emptyBgClass: 'bg-rose-50/10',
+    icon: <Sunset className="w-5 h-5" strokeWidth={2} />,
+    accentIcon: <Wine className="w-4 h-4" />,
+    hours: '18:00 — 22:00',
+    bgGradient: 'from-rose-50/90 via-pink-50/60 to-rose-50/40',
+    borderColor: 'border-rose-300/40',
+    accentColor: 'bg-gradient-to-br from-rose-500 to-pink-500',
+    textColor: 'text-rose-900',
+    iconColor: 'text-rose-600',
+    stampColor: 'text-rose-400/30',
   },
   night: {
     label: 'Night',
-    icon: <Moon className="w-4 h-4" />,
-    hours: '10pm - 2am',
-    bgClass: 'bg-indigo-50/25',
-    borderClass: 'border-indigo-200/35',
-    textClass: 'text-indigo-700',
-    accentClass: 'bg-indigo-500',
-    emptyBgClass: 'bg-indigo-50/10',
+    icon: <Moon className="w-5 h-5" strokeWidth={2} />,
+    accentIcon: <Music className="w-4 h-4" />,
+    hours: '22:00 — 02:00',
+    bgGradient: 'from-indigo-50/90 via-purple-50/60 to-indigo-50/40',
+    borderColor: 'border-indigo-300/40',
+    accentColor: 'bg-gradient-to-br from-indigo-500 to-purple-500',
+    textColor: 'text-indigo-900',
+    iconColor: 'text-indigo-600',
+    stampColor: 'text-indigo-400/30',
   },
 };
 
@@ -97,16 +100,13 @@ export function SlotContainer({ slot, dayIndex, previousSlotLastItem }: SlotCont
   const style = SLOT_STYLES[slot];
   const isEmpty = items.length === 0;
 
-  // Calculate total duration for this slot
   const totalDuration = useMemo(() => {
     return items.reduce((sum, item) => sum + item.place.estimated_duration_mins, 0);
   }, [items]);
 
-  // Calculate travel times between items
   const travelTimes = useMemo(() => {
     const times: { mins: number; km: number }[] = [];
 
-    // First item - travel from previous slot's last item
     if (items.length > 0 && previousSlotLastItem) {
       const from = previousSlotLastItem.place.geometry.location;
       const to = items[0].place.geometry.location;
@@ -117,7 +117,6 @@ export function SlotContainer({ slot, dayIndex, previousSlotLastItem }: SlotCont
       times.push({ mins: 0, km: 0 });
     }
 
-    // Between items
     for (let i = 1; i < items.length; i++) {
       const from = items[i - 1].place.geometry.location;
       const to = items[i].place.geometry.location;
@@ -129,14 +128,11 @@ export function SlotContainer({ slot, dayIndex, previousSlotLastItem }: SlotCont
     return times;
   }, [items, previousSlotLastItem]);
 
-  // Handle reorder
   const handleReorder = useCallback(
     (reorderedItems: PlannedItem[]) => {
-      // Find what moved
       const oldOrder = items.map((i) => i.id);
       const newOrder = reorderedItems.map((i) => i.id);
 
-      // Find the item that moved
       for (let i = 0; i < newOrder.length; i++) {
         if (newOrder[i] !== oldOrder[i]) {
           const movedId = newOrder[i];
@@ -153,90 +149,138 @@ export function SlotContainer({ slot, dayIndex, previousSlotLastItem }: SlotCont
   );
 
   return (
-    <div
-      className={`
-        rounded-2xl border transition-all duration-300
-        ${isEmpty ? style.emptyBgClass : style.bgClass}
-        ${style.borderClass}
-      `}
+    <motion.div
+      className="relative"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, delay: 0.05 }}
     >
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-inherit">
-        <div className="flex items-center gap-2">
-          <span className={`${style.textClass}`}>{style.icon}</span>
-          <h3 className={`font-display text-lg font-medium ${style.textClass}`}>
-            {style.label}
-          </h3>
-          <span className="text-body-3 text-rui-grey-40 ml-1">
-            {style.hours}
-          </span>
+      {/* Decorative journal corner */}
+      <div className="absolute -top-1 -right-1 w-8 h-8 pointer-events-none">
+        <svg viewBox="0 0 32 32" className={style.stampColor} fill="currentColor">
+          <path d="M0 0 L32 0 L0 32 Z" />
+        </svg>
+      </div>
+
+      <div
+        className={`
+          relative overflow-hidden
+          rounded-2xl border-2 ${style.borderColor}
+          bg-gradient-to-br ${style.bgGradient}
+          shadow-rui-2
+          transition-all duration-500
+          hover:shadow-rui-3
+        `}
+      >
+        {/* Subtle paper texture */}
+        <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZmlsdGVyIGlkPSJub2lzZSI+PGZlVHVyYnVsZW5jZSB0eXBlPSJmcmFjdGFsTm9pc2UiIGJhc2VGcmVxdWVuY3k9IjAuOSIgbnVtT2N0YXZlcz0iNCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNub2lzZSkiIG9wYWNpdHk9IjAuNSIvPjwvc3ZnPg==')]" />
+
+        {/* Header - Journal page header style */}
+        <div className="relative px-5 py-4 bg-white/40 backdrop-blur-sm border-b-2 border-inherit">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {/* Icon Badge */}
+              <div className={`
+                flex items-center justify-center w-10 h-10 rounded-xl
+                ${style.accentColor} shadow-md
+              `}>
+                <span className="text-white">
+                  {style.icon}
+                </span>
+              </div>
+
+              {/* Label & Time */}
+              <div>
+                <h3 className={`font-display text-lg font-semibold ${style.textColor} tracking-tight`}>
+                  {style.label}
+                </h3>
+                <p className="text-[11px] uppercase tracking-widest text-rui-grey-50 font-medium">
+                  {style.hours}
+                </p>
+              </div>
+            </div>
+
+            {/* Duration Badge */}
+            {totalDuration > 0 && (
+              <motion.div
+                className={`
+                  px-3 py-1.5 rounded-lg
+                  bg-white/60 backdrop-blur-sm
+                  border ${style.borderColor}
+                  ${style.textColor}
+                `}
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.2 }}
+              >
+                <span className="text-[11px] font-semibold uppercase tracking-wider">
+                  {formatDuration(totalDuration)}
+                </span>
+              </motion.div>
+            )}
+          </div>
         </div>
 
-        {/* Duration Summary */}
-        {totalDuration > 0 && (
-          <span className="text-body-3 text-rui-grey-50">
-            ~{formatDuration(totalDuration)}
-          </span>
-        )}
-      </div>
+        {/* Content */}
+        <div className="relative p-4">
+          {isEmpty ? (
+            <EmptySlotState
+              slot={slot}
+              style={style}
+              onAdd={() => openAddPanel(slot, dayIndex)}
+            />
+          ) : (
+            <Reorder.Group
+              axis="y"
+              values={items}
+              onReorder={handleReorder}
+              className="space-y-3"
+            >
+              <AnimatePresence initial={false}>
+                {items.map((item, index) => (
+                  <Reorder.Item
+                    key={item.id}
+                    value={item}
+                    className="cursor-default"
+                  >
+                    <PlannedItemCard
+                      item={item}
+                      showTravelIndicator={index > 0 && travelTimes[index]?.mins > 0}
+                      travelMins={travelTimes[index]?.mins}
+                      travelKm={travelTimes[index]?.km}
+                      dragHandleProps={{}}
+                    />
+                  </Reorder.Item>
+                ))}
+              </AnimatePresence>
+            </Reorder.Group>
+          )}
 
-      {/* Content */}
-      <div className="p-3">
-        {isEmpty ? (
-          // Empty State
-          <EmptySlotState
-            slot={slot}
-            onAdd={() => openAddPanel(slot, dayIndex)}
-          />
-        ) : (
-          // Items with Drag-and-Drop
-          <Reorder.Group
-            axis="y"
-            values={items}
-            onReorder={handleReorder}
-            className="space-y-1"
-          >
-            <AnimatePresence initial={false}>
-              {items.map((item, index) => (
-                <Reorder.Item
-                  key={item.id}
-                  value={item}
-                  className="cursor-default"
-                >
-                  <PlannedItemCard
-                    item={item}
-                    showTravelIndicator={index > 0 && travelTimes[index]?.mins > 0}
-                    travelMins={travelTimes[index]?.mins}
-                    travelKm={travelTimes[index]?.km}
-                    dragHandleProps={{}}
-                  />
-                </Reorder.Item>
-              ))}
-            </AnimatePresence>
-          </Reorder.Group>
-        )}
-
-        {/* Add Button */}
-        {!isEmpty && (
-          <motion.button
-            onClick={() => openAddPanel(slot, dayIndex)}
-            className={`
-              w-full mt-3 py-3 rounded-xl border-2 border-dashed
-              flex items-center justify-center gap-2
-              text-body-2 font-medium
-              transition-all duration-200
-              ${style.borderClass} ${style.textClass}
-              hover:bg-white/50 hover:border-solid
-            `}
-            whileHover={{ scale: 1.01 }}
-            whileTap={{ scale: 0.99 }}
-          >
-            <Plus className="w-4 h-4" />
-            Add to {style.label.toLowerCase()}
-          </motion.button>
-        )}
+          {/* Add Another Button */}
+          {!isEmpty && (
+            <motion.button
+              onClick={() => openAddPanel(slot, dayIndex)}
+              className={`
+                w-full mt-4 py-3.5 rounded-xl
+                bg-white/50 backdrop-blur-sm
+                border-2 border-dashed ${style.borderColor}
+                flex items-center justify-center gap-2
+                ${style.textColor}
+                text-body-2 font-semibold
+                transition-all duration-300
+                hover:bg-white/80 hover:border-solid hover:shadow-md
+                hover:scale-[1.02]
+              `}
+              whileHover={{ y: -1 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <Plus className="w-4 h-4" strokeWidth={2.5} />
+              Add more to {style.label.toLowerCase()}
+            </motion.button>
+          )}
+        </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -246,60 +290,109 @@ export function SlotContainer({ slot, dayIndex, previousSlotLastItem }: SlotCont
 
 interface EmptySlotStateProps {
   slot: Slot;
+  style: typeof SLOT_STYLES[Slot];
   onAdd: () => void;
 }
 
-function EmptySlotState({ slot, onAdd }: EmptySlotStateProps) {
-  const style = SLOT_STYLES[slot];
-
-  const suggestions: Record<Slot, string[]> = {
-    morning: ['Grab a coffee', 'Visit a museum', 'Explore a market'],
-    afternoon: ['Have lunch', 'Go shopping', 'See a landmark'],
-    evening: ['Watch the sunset', 'Have dinner', 'Find a viewpoint'],
-    night: ['Try a local bar', 'Late-night food', 'Live music'],
+function EmptySlotState({ slot, style, onAdd }: EmptySlotStateProps) {
+  const suggestions: Record<Slot, { icon: React.ReactNode; label: string }[]> = {
+    morning: [
+      { icon: <Coffee className="w-3.5 h-3.5" />, label: 'Coffee & pastries' },
+      { icon: <Sun className="w-3.5 h-3.5" />, label: 'Museum visit' },
+      { icon: '🏛️', label: 'Historic site' },
+    ],
+    afternoon: [
+      { icon: <UtensilsCrossed className="w-3.5 h-3.5" />, label: 'Lunch spot' },
+      { icon: '🛍️', label: 'Local shopping' },
+      { icon: '🏖️', label: 'Beach time' },
+    ],
+    evening: [
+      { icon: <Sunset className="w-3.5 h-3.5" />, label: 'Sunset view' },
+      { icon: <Wine className="w-3.5 h-3.5" />, label: 'Dinner reservation' },
+      { icon: '🌆', label: 'City overlook' },
+    ],
+    night: [
+      { icon: <Music className="w-3.5 h-3.5" />, label: 'Live music' },
+      { icon: '🍸', label: 'Cocktail bar' },
+      { icon: '🌙', label: 'Night walk' },
+    ],
   };
 
   return (
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="py-6 text-center"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+      className="py-8 text-center"
     >
-      <p className="text-body-2 text-rui-grey-50 mb-3">
-        No plans yet for {style.label.toLowerCase()}
+      {/* Large decorative icon */}
+      <motion.div
+        className={`
+          inline-flex items-center justify-center
+          w-16 h-16 rounded-2xl
+          bg-white/60 backdrop-blur-sm
+          ${style.iconColor}
+          mb-4 shadow-md
+        `}
+        initial={{ scale: 0.8, rotate: -10 }}
+        animate={{ scale: 1, rotate: 0 }}
+        transition={{ delay: 0.1, type: 'spring', stiffness: 200 }}
+      >
+        {style.icon}
+      </motion.div>
+
+      <p className="text-body-2 text-rui-grey-50 font-medium mb-5">
+        Your {style.label.toLowerCase()} is wide open
       </p>
 
       {/* Suggestion chips */}
-      <div className="flex flex-wrap justify-center gap-2 mb-4">
-        {suggestions[slot].map((suggestion) => (
-          <span
-            key={suggestion}
+      <div className="flex flex-wrap justify-center gap-2 mb-6">
+        {suggestions[slot].map((suggestion, index) => (
+          <motion.span
+            key={index}
             className={`
-              px-3 py-1 rounded-full text-body-3
-              ${style.emptyBgClass} ${style.textClass}
-              border ${style.borderClass}
+              inline-flex items-center gap-1.5
+              px-3 py-2 rounded-full
+              bg-white/70 backdrop-blur-sm
+              border ${style.borderColor}
+              ${style.textColor}
+              text-[11px] font-medium
+              shadow-sm
             `}
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.15 + index * 0.05 }}
           >
-            {suggestion}
-          </span>
+            {typeof suggestion.icon === 'string' ? (
+              <span>{suggestion.icon}</span>
+            ) : (
+              suggestion.icon
+            )}
+            {suggestion.label}
+          </motion.span>
         ))}
       </div>
 
+      {/* Add button */}
       <motion.button
         onClick={onAdd}
         className={`
-          inline-flex items-center gap-2 px-5 py-2.5
-          rounded-xl border-2 border-dashed
-          ${style.borderClass} ${style.textClass}
-          text-body-2 font-medium
-          transition-all duration-200
-          hover:bg-white/50 hover:border-solid hover:shadow-sm
+          inline-flex items-center gap-2 px-6 py-3
+          rounded-xl
+          ${style.accentColor} text-white
+          text-body-2 font-semibold
+          shadow-md
+          transition-all duration-300
+          hover:shadow-lg hover:scale-105
         `}
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
+        whileHover={{ y: -2 }}
+        whileTap={{ scale: 0.95 }}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
       >
-        <Plus className="w-4 h-4" />
-        Add to {style.label.toLowerCase()}
+        <Plus className="w-4 h-4" strokeWidth={2.5} />
+        Start planning {style.label.toLowerCase()}
       </motion.button>
     </motion.div>
   );
@@ -319,7 +412,6 @@ export function DaySummary({ dayIndex }: DaySummaryProps) {
   const items = getDayItems(dayIndex);
   const totalDuration = getTotalDuration(dayIndex);
 
-  // Calculate total walking distance
   const totalWalkingKm = useMemo(() => {
     let total = 0;
     for (let i = 1; i < items.length; i++) {
@@ -330,35 +422,55 @@ export function DaySummary({ dayIndex }: DaySummaryProps) {
     return total;
   }, [items]);
 
-  // Determine pacing
   const pacing = totalDuration < 240 ? 'relaxed' : totalDuration < 420 ? 'balanced' : 'packed';
 
   const pacingConfig = {
-    relaxed: { label: 'Relaxed', color: 'text-emerald-600', bg: 'bg-emerald-100' },
-    balanced: { label: 'Balanced', color: 'text-amber-600', bg: 'bg-amber-100' },
-    packed: { label: 'Packed', color: 'text-rose-600', bg: 'bg-rose-100' },
+    relaxed: { label: 'Relaxed Pace', color: 'text-emerald-700', bg: 'bg-emerald-100/80', border: 'border-emerald-300' },
+    balanced: { label: 'Balanced', color: 'text-amber-700', bg: 'bg-amber-100/80', border: 'border-amber-300' },
+    packed: { label: 'Action-Packed', color: 'text-rose-700', bg: 'bg-rose-100/80', border: 'border-rose-300' },
   };
 
   if (items.length === 0) return null;
 
   return (
-    <div className="flex items-center justify-center gap-4 py-4 text-body-3 text-rui-grey-50">
-      <span className="flex items-center gap-1">
-        <span className="text-sm">⏱</span>
-        ~{formatDuration(totalDuration)} activities
-      </span>
-      <span className="w-1 h-1 rounded-full bg-rui-grey-30" />
-      <span className="flex items-center gap-1">
-        <span className="text-sm">🚶</span>
-        {totalWalkingKm.toFixed(1)} km walking
-      </span>
-      <span className="w-1 h-1 rounded-full bg-rui-grey-30" />
-      <span
-        className={`px-2 py-0.5 rounded-full text-[11px] font-medium uppercase tracking-wide ${pacingConfig[pacing].bg} ${pacingConfig[pacing].color}`}
-      >
-        {pacingConfig[pacing].label}
-      </span>
-    </div>
+    <motion.div
+      className="mt-6 p-5 rounded-2xl bg-gradient-to-br from-rui-white/80 to-rui-grey-2/60 backdrop-blur-sm border-2 border-rui-grey-10 shadow-rui-2"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.2 }}
+    >
+      <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-body-3">
+        <div className="flex items-center gap-2 text-rui-grey-60">
+          <span className="text-base">⏱</span>
+          <span className="font-medium">{formatDuration(totalDuration)}</span>
+          <span className="text-rui-grey-40">of activities</span>
+        </div>
+
+        <div className="w-px h-4 bg-rui-grey-20" />
+
+        <div className="flex items-center gap-2 text-rui-grey-60">
+          <span className="text-base">🚶</span>
+          <span className="font-medium">{totalWalkingKm.toFixed(1)} km</span>
+          <span className="text-rui-grey-40">walking</span>
+        </div>
+
+        <div className="w-px h-4 bg-rui-grey-20" />
+
+        <span
+          className={`
+            inline-flex items-center gap-1.5
+            px-3 py-1.5 rounded-full
+            ${pacingConfig[pacing].bg} ${pacingConfig[pacing].color}
+            border ${pacingConfig[pacing].border}
+            text-[11px] font-semibold uppercase tracking-wide
+            shadow-sm
+          `}
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-current" />
+          {pacingConfig[pacing].label}
+        </span>
+      </div>
+    </motion.div>
   );
 }
 
@@ -367,10 +479,10 @@ export function DaySummary({ dayIndex }: DaySummaryProps) {
 // ============================================================================
 
 function formatDuration(mins: number): string {
-  if (mins < 60) return `${mins} min`;
+  if (mins < 60) return `${mins}min`;
   const hours = Math.floor(mins / 60);
   const remainder = mins % 60;
-  if (remainder === 0) return `${hours} hr${hours > 1 ? 's' : ''}`;
+  if (remainder === 0) return `${hours}h`;
   return `${hours}h ${remainder}m`;
 }
 
