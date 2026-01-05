@@ -234,9 +234,10 @@ function DesktopSidebar({
   onToggleCity,
   onReorderCities,
   onSelectCity,
-  onProceed,
+  onProceed: _onProceed,
 }: DesktopSidebarProps) {
   void _tripSummary;
+  void _onProceed;
   const navigate = useNavigate();
   const scrollRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -559,7 +560,7 @@ function MobileBottomSheet({
   onToggleCity,
   onReorderCities,
   onSelectCity,
-  onProceed,
+  onProceed: _onProceed,
   y,
   height,
   isExpanded,

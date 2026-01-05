@@ -51,9 +51,11 @@ export interface RouteActionEvent {
     name: string;
     nights?: number;
     coordinates?: { lat: number; lng: number };
+    country?: string;
+    description?: string;
   };
   oldCity?: { name: string };
-  newCity?: { name: string };
+  newCity?: { name: string; country?: string; description?: string; coordinates?: { lat: number; lng: number } };
   index?: number;
   waypoints?: unknown[];
 }

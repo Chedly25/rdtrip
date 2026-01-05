@@ -172,16 +172,15 @@ export function useDiscoveryCompanion(
 
       case 'replace_city':
         if (action.oldCity?.name && action.newCity?.name) {
-          const newCityData = action as RouteActionEvent & { newCity: { coordinates?: { lat: number; lng: number }; country?: string; description?: string } };
-          const coordinates = newCityData.newCity?.coordinates;
+          const coordinates = action.newCity.coordinates;
           // Only replace if we have valid coordinates
           if (coordinates && (coordinates.lat !== 0 || coordinates.lng !== 0)) {
             replaceCity(action.oldCity.name, {
               name: action.newCity.name,
-              country: newCityData.newCity?.country || 'Unknown',
+              country: action.newCity.country || 'Unknown',
               coordinates: coordinates,
               isSelected: true,
-              description: newCityData.newCity?.description || `Replaced ${action.oldCity.name}`,
+              description: action.newCity.description || `Replaced ${action.oldCity.name}`,
             });
           } else {
             console.warn(`⚠️ [Discovery] Skipping city replacement - invalid coordinates for ${action.newCity.name}`);
