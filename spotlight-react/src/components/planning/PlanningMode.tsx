@@ -76,10 +76,7 @@ export function PlanningMode() {
   const [crossDayMoveItem, setCrossDayMoveItem] = useState<PlannedItem | null>(null);
 
   // Initialize keyboard shortcuts
-  useEffect(() => {
-    const cleanup = usePlanningKeyboardShortcuts();
-    return cleanup;
-  }, []);
+  usePlanningKeyboardShortcuts();
 
   // Check viewport size
   useEffect(() => {

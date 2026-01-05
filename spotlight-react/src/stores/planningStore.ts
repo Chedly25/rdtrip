@@ -12,6 +12,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { v4 as uuid } from 'uuid';
+import { useEffect } from 'react';
 import type {
   Slot,
   EnrichedPlace,
@@ -1091,27 +1092,29 @@ export const usePlanningStore = create<PlanningState>()(
 export function usePlanningKeyboardShortcuts() {
   const { undo, redo, canUndo, canRedo } = usePlanningStore();
 
-  if (typeof window === 'undefined') return;
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
 
-  const handleKeyDown = (e: KeyboardEvent) => {
-    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-    const modifier = isMac ? e.metaKey : e.ctrlKey;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+      const modifier = isMac ? e.metaKey : e.ctrlKey;
 
-    if (modifier && e.key === 'z' && !e.shiftKey && canUndo()) {
-      e.preventDefault();
-      undo();
-    } else if (modifier && e.key === 'z' && e.shiftKey && canRedo()) {
-      e.preventDefault();
-      redo();
-    } else if (modifier && e.key === 'y' && canRedo()) {
-      e.preventDefault();
-      redo();
-    }
-  };
+      if (modifier && e.key === 'z' && !e.shiftKey && canUndo()) {
+        e.preventDefault();
+        undo();
+      } else if (modifier && e.key === 'z' && e.shiftKey && canRedo()) {
+        e.preventDefault();
+        redo();
+      } else if (modifier && e.key === 'y' && canRedo()) {
+        e.preventDefault();
+        redo();
+      }
+    };
 
-  window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keydown', handleKeyDown);
 
-  return () => {
-    window.removeEventListener('keydown', handleKeyDown);
-  };
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [undo, redo, canUndo, canRedo]);
 }
