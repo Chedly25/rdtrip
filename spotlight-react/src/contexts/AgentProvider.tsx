@@ -1179,7 +1179,10 @@ export function AgentProvider({ children }: AgentProviderProps) {
                 }
 
                 // Check if addCityToRoute tools were used successfully (handle MULTIPLE cities)
-                const addCityTools = event.tools.filter((tool: any) => tool.name === 'addCityToRoute');
+                // Support both camelCase (main agent) and snake_case (Voyager agent) tool names
+                const addCityTools = event.tools.filter((tool: any) => 
+                  tool.name === 'addCityToRoute' || tool.name === 'add_city_to_route'
+                );
                 for (const addCityTool of addCityTools) {
                   try {
                     const content = typeof addCityTool.content === 'string'
@@ -1203,7 +1206,10 @@ export function AgentProvider({ children }: AgentProviderProps) {
                 }
 
                 // Check if removeCityFromRoute tools were used successfully
-                const removeCityTools = event.tools.filter((tool: any) => tool.name === 'removeCityFromRoute');
+                // Support both camelCase (main agent) and snake_case (Voyager agent) tool names
+                const removeCityTools = event.tools.filter((tool: any) => 
+                  tool.name === 'removeCityFromRoute' || tool.name === 'remove_city_from_route'
+                );
                 for (const removeCityTool of removeCityTools) {
                   try {
                     const content = typeof removeCityTool.content === 'string'
@@ -1226,7 +1232,10 @@ export function AgentProvider({ children }: AgentProviderProps) {
                 }
 
                 // Check if replaceCityInRoute tools were used successfully
-                const replaceCityTools = event.tools.filter((tool: any) => tool.name === 'replaceCityInRoute');
+                // Support both camelCase (main agent) and snake_case (Voyager agent) tool names
+                const replaceCityTools = event.tools.filter((tool: any) => 
+                  tool.name === 'replaceCityInRoute' || tool.name === 'replace_city' || tool.name === 'replace_city_in_route'
+                );
                 for (const replaceCityTool of replaceCityTools) {
                   try {
                     const content = typeof replaceCityTool.content === 'string'

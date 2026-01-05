@@ -556,13 +556,28 @@ Use this when the user asks about specific venues or you want to suggest places 
    * Add a city to the route
    */
   async handleAddCity(input, context) {
-    const { city_name, nights = 1, insert_after, coordinates } = input;
+    const { city_name, nights = 1, insert_after, coordinates, reason } = input;
     const { sessionId, routeData, onRouteUpdate } = context;
 
     // Get or geocode coordinates
     let cityCoords = coordinates;
+    let resolvedCountry = 'Unknown';
+    
     if (!cityCoords) {
-      cityCoords = await this.geocodeCity(city_name);
+      const geocodeResult = await this.geocodeCityWithDetails(city_name);
+      if (geocodeResult) {
+        cityCoords = geocodeResult.coordinates;
+        resolvedCountry = geocodeResult.country || 'Unknown';
+      }
+    }
+
+    // Validate coordinates
+    if (!cityCoords || (cityCoords.lat === 0 && cityCoords.lng === 0)) {
+      console.warn(`⚠️ [VoyagerToolRegistry] Could not geocode city: ${city_name}`);
+      return {
+        success: false,
+        error: `Could not find location for ${city_name}`
+      };
     }
 
     // Determine insertion position
@@ -581,7 +596,21 @@ Use this when the user asks about specific venues or you want to suggest places 
       insertIndex = this.findOptimalInsertPosition(waypoints, cityCoords);
     }
 
-    // Build new waypoint
+    // Build full city data object matching DiscoveryCity interface for frontend
+    const cityData = {
+      name: city_name,
+      country: resolvedCountry,
+      coordinates: {
+        lat: cityCoords.lat,
+        lng: cityCoords.lng
+      },
+      suggestedNights: nights,
+      nights: nights,
+      isSelected: true,
+      description: reason || `Added by your travel companion`
+    };
+
+    // Build new waypoint (for internal tracking)
     const newWaypoint = {
       city: city_name,
       name: city_name,
@@ -614,15 +643,53 @@ Use this when the user asks about specific venues or you want to suggest places 
       });
     }
 
+    console.log(`✅ [VoyagerToolRegistry] City added: ${city_name}, ${resolvedCountry} at index ${insertIndex}`);
+
+    // Return in the format expected by AgentProvider frontend handler
     return {
       success: true,
-      action: 'added',
-      city: city_name,
-      nights,
-      position: insertIndex + 1,
-      total_stops: updatedWaypoints.length,
+      action: 'add_city_to_route',
+      city: cityData,  // Full city object for frontend
+      insertAfterIndex: insertIndex > 0 ? insertIndex - 1 : undefined,
+      reason: reason,
       message: `Added ${city_name} (${nights} night${nights > 1 ? 's' : ''}) at position ${insertIndex + 1}`
     };
+  }
+
+  /**
+   * Geocode a city and return full details including country
+   */
+  async geocodeCityWithDetails(cityName) {
+    try {
+      const GOOGLE_PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY;
+      if (!GOOGLE_PLACES_API_KEY) {
+        console.warn('[VoyagerToolRegistry] No Google Places API key');
+        return null;
+      }
+
+      const axios = require('axios');
+      const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(cityName)}&key=${GOOGLE_PLACES_API_KEY}`;
+      const response = await axios.get(geocodeUrl, { timeout: 10000 });
+
+      if (response.data.status !== 'OK' || !response.data.results[0]) {
+        return null;
+      }
+
+      const result = response.data.results[0];
+      const location = result.geometry.location;
+      
+      // Extract country from address components
+      const addressComponents = result.address_components || [];
+      const countryComponent = addressComponents.find(c => c.types.includes('country'));
+
+      return {
+        coordinates: { lat: location.lat, lng: location.lng },
+        country: countryComponent?.long_name || 'Unknown'
+      };
+    } catch (error) {
+      console.error('[VoyagerToolRegistry] Geocoding error:', error.message);
+      return null;
+    }
   }
 
   /**
