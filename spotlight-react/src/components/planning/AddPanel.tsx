@@ -1,14 +1,8 @@
 /**
- * AddPanel
+ * AddPanel - Premium Travel Journal Edition
  *
- * Slide-out panel for adding activities to a slot.
- * Triggered when user clicks "[+ Add to {slot}]".
- *
- * Features:
- * - AI Pick recommendation with contextual explanation
- * - Search input with filters
- * - Proximity-sorted results from anchor point
- * - Filter by type, price, duration, rating, vibe
+ * Refined sidebar for adding activities with proper contrast and premium styling.
+ * Warm tones, elegant typography, tactile interactions.
  */
 
 import { useState, useMemo, useCallback } from 'react';
@@ -103,11 +97,8 @@ export function AddPanel() {
     if (!targetSlot) return [];
 
     let places = availablePlaces
-      // Filter out already placed
       .filter((p) => !placedIds.has(p.place_id))
-      // Filter by slot validity
       .filter((p) => p.valid_slots.includes(targetSlot))
-      // Apply search query
       .filter((p) => {
         if (!searchQuery) return true;
         const q = searchQuery.toLowerCase();
@@ -115,7 +106,6 @@ export function AddPanel() {
                p.category.toLowerCase().includes(q) ||
                p.vibe_tags.some((t) => t.toLowerCase().includes(q));
       })
-      // Apply filters
       .filter((p) => {
         if (filters.types.length > 0 && !filters.types.includes(p.category)) {
           return false;
@@ -138,14 +128,11 @@ export function AddPanel() {
         return true;
       });
 
-    // Sort by: best_slot match → proximity → rating
     places.sort((a, b) => {
-      // Prioritize best_slot match
       const aOptimal = a.best_slot === targetSlot ? 1 : 0;
       const bOptimal = b.best_slot === targetSlot ? 1 : 0;
       if (aOptimal !== bOptimal) return bOptimal - aOptimal;
 
-      // Then proximity (if we have an anchor)
       if (anchor) {
         const aDist = haversineDistance(
           anchor.lat, anchor.lng,
@@ -158,14 +145,13 @@ export function AddPanel() {
         if (Math.abs(aDist - bDist) > 0.3) return aDist - bDist;
       }
 
-      // Then rating
       return (b.rating || 0) - (a.rating || 0);
     });
 
     return places;
   }, [availablePlaces, targetSlot, searchQuery, filters, placedIds, anchor]);
 
-  // AI Pick - top recommendation
+  // AI Pick
   const aiPick = useMemo(() => {
     if (filteredPlaces.length === 0) return null;
 
@@ -198,14 +184,11 @@ export function AddPanel() {
     return { place: pick, reason };
   }, [filteredPlaces, targetSlot, anchor, anchorName]);
 
-  // Handle add
   const handleAdd = useCallback((place: EnrichedPlace) => {
     if (!targetSlot) return;
     addItem(place, targetDayIndex, targetSlot, 'user');
-    // Don't close panel - user might want to add more
   }, [addItem, targetDayIndex, targetSlot]);
 
-  // Handle add AI pick
   const handleAddAIPick = useCallback(() => {
     if (!aiPick || !targetSlot) return;
     addItem(aiPick.place, targetDayIndex, targetSlot, 'ai');
@@ -220,7 +203,7 @@ export function AddPanel() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-rui-black/30 backdrop-blur-sm z-40"
+        className="fixed inset-0 bg-rui-black/40 backdrop-blur-sm z-40"
         onClick={closeAddPanel}
       />
 
@@ -230,73 +213,80 @@ export function AddPanel() {
         animate={{ x: 0 }}
         exit={{ x: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-        className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-rui-white shadow-rui-4 z-50 flex flex-col"
+        className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-gradient-to-br from-rui-white via-rui-cream to-rui-white shadow-rui-4 z-50 flex flex-col border-l-2 border-rui-accent/20"
       >
+        {/* Subtle texture overlay */}
+        <div className="absolute inset-0 opacity-[0.02] pointer-events-none bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZmlsdGVyIGlkPSJub2lzZSI+PGZlVHVyYnVsZW5jZSB0eXBlPSJmcmFjdGFsTm9pc2UiIGJhc2VGcmVxdWVuY3k9IjAuOSIgbnVtT2N0YXZlcz0iNCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNub2lzZSkiIG9wYWNpdHk9IjAuNSIvPjwvc3ZnPg==')]" />
+
         {/* Header */}
-        <div className="flex-shrink-0 border-b border-rui-grey-10">
-          <div className="flex items-center justify-between px-4 py-4">
+        <div className="relative flex-shrink-0 border-b-2 border-rui-accent/20 bg-gradient-to-b from-rui-white/80 to-transparent backdrop-blur-sm">
+          <div className="flex items-center justify-between px-5 py-5">
             <div>
-              <h2 className="font-display text-xl text-rui-black">
+              <h2 className="font-display text-2xl text-rui-black font-semibold tracking-tight">
                 Add to {SLOT_LABELS[targetSlot]}
               </h2>
-              <p className="text-body-3 text-rui-grey-50 mt-0.5">
+              <p className="text-body-2 text-rui-grey-60 mt-1 font-medium">
                 {formatDate(currentDay?.date)} · {cityName}
               </p>
             </div>
-            <button
+            <motion.button
               onClick={closeAddPanel}
-              className="touch-target flex items-center justify-center text-rui-grey-50 hover:text-rui-black transition-colors"
+              className="flex items-center justify-center w-10 h-10 rounded-xl bg-rui-grey-5 border border-rui-grey-10 text-rui-grey-60 hover:bg-rui-accent/10 hover:border-rui-accent/30 hover:text-rui-accent transition-all"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
             >
               <X className="w-5 h-5" />
-            </button>
+            </motion.button>
           </div>
 
           {/* Anchor */}
           {anchor && anchorName && (
-            <div className="px-4 pb-3 flex items-center gap-2 text-body-3 text-rui-grey-50">
-              <MapPin className="w-3.5 h-3.5 text-rui-accent" />
-              <span>Near: <strong className="text-rui-grey-70">{anchorName}</strong></span>
+            <div className="px-5 pb-4 flex items-center gap-2 text-body-2 text-rui-grey-70">
+              <MapPin className="w-4 h-4 text-rui-accent" />
+              <span>Near: <strong className="text-rui-black font-semibold">{anchorName}</strong></span>
             </div>
           )}
 
           {/* Search */}
-          <div className="px-4 pb-3">
+          <div className="px-5 pb-4">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-rui-grey-40" />
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-rui-grey-50" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search places..."
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-rui-grey-20 bg-rui-grey-2 text-body-2 text-rui-black placeholder:text-rui-grey-40 focus:outline-none focus:ring-2 focus:ring-rui-accent/30 focus:border-rui-accent"
+                className="w-full pl-11 pr-4 py-3 rounded-xl border-2 border-rui-grey-10 bg-white text-body-2 text-rui-black placeholder:text-rui-grey-40 focus:outline-none focus:ring-2 focus:ring-rui-accent/30 focus:border-rui-accent transition-all shadow-sm"
               />
             </div>
           </div>
 
           {/* Filter Toggle */}
-          <div className="px-4 pb-3 flex items-center justify-between">
-            <button
+          <div className="px-5 pb-4 flex items-center justify-between">
+            <motion.button
               onClick={() => setShowFilters(!showFilters)}
               className={`
-                flex items-center gap-2 px-3 py-1.5 rounded-lg text-body-3 font-medium
-                transition-colors
+                flex items-center gap-2 px-4 py-2 rounded-xl text-body-2 font-semibold
+                border-2 transition-all
                 ${showFilters
-                  ? 'bg-rui-accent/10 text-rui-accent'
-                  : 'bg-rui-grey-5 text-rui-grey-60 hover:bg-rui-grey-10'
+                  ? 'bg-rui-accent/10 border-rui-accent/30 text-rui-accent shadow-accent/10 shadow-md'
+                  : 'bg-white border-rui-grey-10 text-rui-grey-70 hover:border-rui-accent/20 hover:bg-rui-grey-2 shadow-sm'
                 }
               `}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
             >
-              <Filter className="w-3.5 h-3.5" />
+              <Filter className="w-4 h-4" />
               Filters
               {hasActiveFilters(filters) && (
-                <span className="w-1.5 h-1.5 rounded-full bg-rui-accent" />
+                <span className="w-2 h-2 rounded-full bg-rui-accent" />
               )}
-            </button>
+            </motion.button>
 
             {hasActiveFilters(filters) && (
               <button
                 onClick={resetFilters}
-                className="text-body-3 text-rui-grey-50 hover:text-rui-accent transition-colors"
+                className="text-body-2 font-medium text-rui-grey-60 hover:text-rui-accent transition-colors"
               >
                 Clear all
               </button>
@@ -310,7 +300,7 @@ export function AddPanel() {
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: 'auto', opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden border-t border-rui-grey-10"
+                className="overflow-hidden border-t-2 border-rui-grey-10"
               >
                 <FilterPanel filters={filters} setFilters={setFilters} />
               </motion.div>
@@ -319,13 +309,13 @@ export function AddPanel() {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="relative flex-1 overflow-y-auto">
           {/* AI Pick */}
           {aiPick && (
-            <div className="p-4 border-b border-rui-grey-10">
+            <div className="p-5 border-b-2 border-rui-grey-10">
               <div className="flex items-center gap-2 mb-3">
-                <Sparkles className="w-4 h-4 text-amber-500" />
-                <span className="text-emphasis-2 text-rui-black">AI Pick</span>
+                <Sparkles className="w-5 h-5 text-amber-500" />
+                <span className="text-emphasis-1 text-rui-black font-semibold">AI Pick</span>
               </div>
               <AIPickCard
                 place={aiPick.place}
@@ -336,15 +326,15 @@ export function AddPanel() {
           )}
 
           {/* Results */}
-          <div className="p-4">
-            <p className="text-body-3 text-rui-grey-50 mb-3">
+          <div className="p-5">
+            <p className="text-body-2 text-rui-grey-70 font-medium mb-4">
               {filteredPlaces.length > 0
-                ? `${filteredPlaces.length} options`
+                ? `${filteredPlaces.length} ${filteredPlaces.length === 1 ? 'option' : 'options'}`
                 : 'No places match your filters'
               }
             </p>
 
-            <div className="space-y-2">
+            <div className="space-y-3">
               {filteredPlaces.slice(aiPick ? 1 : 0).map((place) => (
                 <PlaceCard
                   key={place.place_id}
@@ -356,15 +346,18 @@ export function AddPanel() {
             </div>
 
             {filteredPlaces.length === 0 && (
-              <div className="text-center py-8">
-                <p className="text-body-2 text-rui-grey-50 mb-2">
+              <div className="text-center py-12">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-rui-grey-5 flex items-center justify-center">
+                  <Search className="w-8 h-8 text-rui-grey-40" />
+                </div>
+                <p className="text-body-1 text-rui-grey-70 font-medium mb-2">
                   No matching places
                 </p>
                 <button
                   onClick={resetFilters}
-                  className="text-body-2 text-rui-accent hover:underline"
+                  className="text-body-2 text-rui-accent font-semibold hover:underline"
                 >
-                  Clear filters
+                  Clear filters to see all
                 </button>
               </div>
             )}
@@ -390,40 +383,47 @@ function AIPickCard({ place, reason, onAdd }: AIPickCardProps) {
   const priceDisplay = formatPriceLevel(place.price_level);
 
   return (
-    <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-4 border border-amber-200/50">
-      <div className="flex items-start gap-3">
-        <span className="text-2xl flex-shrink-0">{icon}</span>
+    <motion.div
+      className="bg-gradient-to-br from-amber-50 via-orange-50 to-amber-50 rounded-2xl p-5 border-2 border-amber-300/50 shadow-md"
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ delay: 0.1 }}
+    >
+      <div className="flex items-start gap-3 mb-4">
+        <span className="text-3xl flex-shrink-0">{icon}</span>
         <div className="flex-1 min-w-0">
-          <h4 className="font-display text-lg text-rui-black font-medium">
+          <h4 className="font-display text-xl text-rui-black font-semibold leading-tight">
             {place.name}
           </h4>
-          <div className="flex items-center flex-wrap gap-x-2 gap-y-1 mt-1 text-body-3 text-rui-grey-60">
+          <div className="flex items-center flex-wrap gap-x-3 gap-y-1 mt-2 text-body-2 text-rui-grey-70 font-medium">
             {place.rating && (
-              <span className="flex items-center gap-0.5">
-                <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
+              <span className="flex items-center gap-1">
+                <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
                 {place.rating.toFixed(1)}
               </span>
             )}
-            {priceDisplay && <span>{priceDisplay}</span>}
-            <span className="flex items-center gap-0.5">
-              <Clock className="w-3 h-3" />
+            {priceDisplay && <span className="text-rui-grey-60">{priceDisplay}</span>}
+            <span className="flex items-center gap-1 text-rui-grey-60">
+              <Clock className="w-3.5 h-3.5" />
               ~{place.estimated_duration_mins} min
             </span>
           </div>
-          <p className="mt-2 text-body-2 text-rui-grey-60 italic">
+          <p className="mt-3 text-body-2 text-amber-900 font-medium italic leading-relaxed">
             "{reason}"
           </p>
         </div>
       </div>
 
-      <button
+      <motion.button
         onClick={onAdd}
-        className="mt-3 w-full py-2.5 rounded-lg bg-rui-accent text-white text-body-2 font-medium hover:bg-rui-accent/90 transition-colors flex items-center justify-center gap-2"
+        className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-body-1 font-semibold hover:from-amber-600 hover:to-orange-600 transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
+        whileHover={{ scale: 1.02, y: -1 }}
+        whileTap={{ scale: 0.98 }}
       >
-        <Plus className="w-4 h-4" />
+        <Plus className="w-5 h-5" strokeWidth={2.5} />
         Add to plan
-      </button>
-    </div>
+      </motion.button>
+    </motion.div>
   );
 }
 
@@ -441,7 +441,6 @@ function PlaceCard({ place, anchor, onAdd }: PlaceCardProps) {
   const icon = CATEGORY_ICONS[place.category] || '📍';
   const priceDisplay = formatPriceLevel(place.price_level);
 
-  // Calculate distance from anchor
   let distanceDisplay = '';
   if (anchor) {
     const distKm = haversineDistance(
@@ -453,21 +452,26 @@ function PlaceCard({ place, anchor, onAdd }: PlaceCardProps) {
   }
 
   return (
-    <div className="flex items-center gap-3 p-3 rounded-xl border border-rui-grey-10 bg-rui-white hover:border-rui-grey-20 hover:shadow-rui-1 transition-all">
-      <span className="text-xl flex-shrink-0">{icon}</span>
+    <motion.div
+      className="flex items-center gap-3 p-4 rounded-xl border-2 border-rui-grey-10 bg-white hover:border-rui-accent/30 hover:shadow-md transition-all"
+      whileHover={{ scale: 1.01 }}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+    >
+      <span className="text-2xl flex-shrink-0">{icon}</span>
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <h4 className="text-body-1 text-rui-black font-medium truncate">
+          <h4 className="text-body-1 text-rui-black font-semibold truncate">
             {place.name}
           </h4>
           {place.is_hidden_gem && (
-            <span className="flex-shrink-0 w-4 h-4 rounded-full bg-amber-100 flex items-center justify-center">
-              <Sparkles className="w-2.5 h-2.5 text-amber-600" />
+            <span className="flex-shrink-0 w-5 h-5 rounded-full bg-amber-100 flex items-center justify-center">
+              <Sparkles className="w-3 h-3 text-amber-600" />
             </span>
           )}
         </div>
-        <div className="flex items-center flex-wrap gap-x-2 gap-y-0.5 mt-0.5 text-body-3 text-rui-grey-50">
+        <div className="flex items-center flex-wrap gap-x-3 gap-y-0.5 mt-1 text-body-3 text-rui-grey-60 font-medium">
           {place.rating && (
             <span className="flex items-center gap-0.5">
               <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
@@ -479,13 +483,15 @@ function PlaceCard({ place, anchor, onAdd }: PlaceCardProps) {
         </div>
       </div>
 
-      <button
+      <motion.button
         onClick={onAdd}
-        className="flex-shrink-0 w-8 h-8 rounded-lg bg-rui-grey-5 text-rui-grey-60 hover:bg-rui-accent hover:text-white transition-colors flex items-center justify-center"
+        className="flex-shrink-0 w-10 h-10 rounded-xl bg-rui-grey-5 border-2 border-rui-grey-10 text-rui-grey-60 hover:bg-rui-accent hover:border-rui-accent hover:text-white transition-all flex items-center justify-center shadow-sm"
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.9 }}
       >
-        <Plus className="w-4 h-4" />
-      </button>
-    </div>
+        <Plus className="w-5 h-5" strokeWidth={2.5} />
+      </motion.button>
+    </motion.div>
   );
 }
 
@@ -537,10 +543,10 @@ function FilterPanel({ filters, setFilters }: FilterPanelProps) {
   };
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="p-5 space-y-5 bg-rui-grey-2/30">
       {/* Type */}
       <div>
-        <label className="text-body-3 text-rui-grey-50 mb-2 block">Type</label>
+        <label className="text-body-2 text-rui-black font-semibold mb-3 block">Type</label>
         <div className="flex flex-wrap gap-2">
           {typeOptions.map(({ value, label }) => (
             <FilterChip
@@ -555,7 +561,7 @@ function FilterPanel({ filters, setFilters }: FilterPanelProps) {
 
       {/* Price */}
       <div>
-        <label className="text-body-3 text-rui-grey-50 mb-2 block">Price</label>
+        <label className="text-body-2 text-rui-black font-semibold mb-3 block">Price</label>
         <div className="flex gap-2">
           <FilterChip
             label="Free"
@@ -575,7 +581,7 @@ function FilterPanel({ filters, setFilters }: FilterPanelProps) {
 
       {/* Rating */}
       <div>
-        <label className="text-body-3 text-rui-grey-50 mb-2 block">
+        <label className="text-body-2 text-rui-black font-semibold mb-3 block">
           Minimum Rating: {filters.min_rating > 0 ? `${filters.min_rating}+` : 'Any'}
         </label>
         <input
@@ -585,13 +591,13 @@ function FilterPanel({ filters, setFilters }: FilterPanelProps) {
           step="0.5"
           value={filters.min_rating}
           onChange={(e) => setFilters({ min_rating: parseFloat(e.target.value) })}
-          className="w-full accent-rui-accent"
+          className="w-full h-2 bg-rui-grey-10 rounded-lg accent-rui-accent cursor-pointer"
         />
       </div>
 
       {/* Vibe */}
       <div>
-        <label className="text-body-3 text-rui-grey-50 mb-2 block">Vibe</label>
+        <label className="text-body-2 text-rui-black font-semibold mb-3 block">Vibe</label>
         <div className="flex flex-wrap gap-2">
           {vibeOptions.map((vibe) => (
             <FilterChip
@@ -605,15 +611,15 @@ function FilterPanel({ filters, setFilters }: FilterPanelProps) {
       </div>
 
       {/* Hidden Gems Only */}
-      <label className="flex items-center gap-2 cursor-pointer">
+      <label className="flex items-center gap-3 cursor-pointer bg-white rounded-xl p-3 border-2 border-rui-grey-10 hover:border-amber-300/50 transition-all">
         <input
           type="checkbox"
           checked={filters.show_hidden_gems_only}
           onChange={(e) => setFilters({ show_hidden_gems_only: e.target.checked })}
-          className="w-4 h-4 rounded border-rui-grey-30 text-rui-accent focus:ring-rui-accent"
+          className="w-5 h-5 rounded border-2 border-rui-grey-30 text-amber-500 focus:ring-amber-500 cursor-pointer"
         />
-        <span className="text-body-2 text-rui-grey-60">Hidden gems only</span>
-        <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+        <span className="text-body-2 text-rui-black font-semibold">Hidden gems only</span>
+        <Sparkles className="w-4 h-4 text-amber-500 ml-auto" />
       </label>
     </div>
   );
@@ -631,19 +637,21 @@ interface FilterChipProps {
 
 function FilterChip({ label, isActive, onClick }: FilterChipProps) {
   return (
-    <button
+    <motion.button
       onClick={onClick}
       className={`
-        px-3 py-1.5 rounded-lg text-body-3 font-medium
-        transition-all duration-150
+        px-3 py-1.5 rounded-lg text-body-3 font-semibold border-2
+        transition-all duration-200
         ${isActive
-          ? 'bg-rui-accent text-white'
-          : 'bg-rui-grey-5 text-rui-grey-60 hover:bg-rui-grey-10'
+          ? 'bg-rui-accent text-white border-rui-accent shadow-md'
+          : 'bg-white text-rui-grey-70 border-rui-grey-10 hover:border-rui-accent/30 hover:bg-rui-grey-2'
         }
       `}
+      whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.95 }}
     >
       {label}
-    </button>
+    </motion.button>
   );
 }
 

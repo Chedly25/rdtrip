@@ -1,15 +1,8 @@
 /**
- * PlanningMap
+ * PlanningMap - Premium Vintage Travel Map Edition
  *
- * Integrated map view for Planning Mode.
- * Shows all planned activities for the current day with visual connections.
- *
- * Features:
- * - Color-coded markers by slot (morning/afternoon/evening/night)
- * - Route lines connecting activities
- * - Click-to-add functionality
- * - Sync with day/slot selection
- * - City center reference
+ * A beautiful, vintage-inspired map that feels like a cartographer's masterpiece.
+ * Warm parchment tones, elegant markers, and refined details.
  */
 
 import { useMemo, useState, useCallback } from 'react';
@@ -22,13 +15,14 @@ import {
   ZoomIn,
   ZoomOut,
   Crosshair,
+  Compass,
 } from 'lucide-react';
 import { usePlanningStore } from '../../stores/planningStore';
 import { CATEGORY_ICONS } from '../../utils/planningEnrichment';
 import type { Slot, PlannedItem } from '../../types/planning';
 
 // ============================================================================
-// Slot Colors for Markers
+// Slot Colors for Markers - Vintage Travel Palette
 // ============================================================================
 
 const SLOT_MARKER_COLORS: Record<Slot, {
@@ -36,42 +30,40 @@ const SLOT_MARKER_COLORS: Record<Slot, {
   border: string;
   text: string;
   glow: string;
+  line: string;
 }> = {
   morning: {
-    bg: 'bg-amber-500',
-    border: 'border-amber-600',
+    bg: 'bg-gradient-to-br from-amber-500 to-orange-500',
+    border: 'border-amber-700',
     text: 'text-white',
     glow: 'shadow-amber-500/40',
+    line: '#f59e0b',
   },
   afternoon: {
-    bg: 'bg-orange-500',
-    border: 'border-orange-600',
+    bg: 'bg-gradient-to-br from-orange-500 to-rose-500',
+    border: 'border-orange-700',
     text: 'text-white',
     glow: 'shadow-orange-500/40',
+    line: '#f97316',
   },
   evening: {
-    bg: 'bg-rose-500',
-    border: 'border-rose-600',
+    bg: 'bg-gradient-to-br from-rose-500 to-pink-600',
+    border: 'border-rose-700',
     text: 'text-white',
     glow: 'shadow-rose-500/40',
+    line: '#f43f5e',
   },
   night: {
-    bg: 'bg-indigo-500',
-    border: 'border-indigo-600',
+    bg: 'bg-gradient-to-br from-indigo-500 to-purple-600',
+    border: 'border-indigo-700',
     text: 'text-white',
     glow: 'shadow-indigo-500/40',
+    line: '#6366f1',
   },
-};
-
-const SLOT_LINE_COLORS: Record<Slot, string> = {
-  morning: '#f59e0b',
-  afternoon: '#f97316',
-  evening: '#f43f5e',
-  night: '#6366f1',
 };
 
 // ============================================================================
-// Map Placeholder (for when actual map library isn't available)
+// Map Component
 // ============================================================================
 
 export function PlanningMap() {
@@ -89,7 +81,7 @@ export function PlanningMap() {
   const currentDay = getCurrentDay();
   const dayItems = getDayItems(currentDayIndex);
 
-  // Group items by slot for rendering
+  // Group items by slot
   const itemsBySlot = useMemo(() => {
     if (!currentDay) return {};
 
@@ -101,107 +93,114 @@ export function PlanningMap() {
     };
   }, [currentDay]);
 
-  // Calculate bounds for map viewport (for future map library integration)
-  const _bounds = useMemo(() => {
-    if (!currentDay || dayItems.length === 0) {
-      return {
-        center: currentDay?.city.coordinates || { lat: 0, lng: 0 },
-        zoom: 13,
-      };
-    }
-
-    const lats = dayItems.map((i) => i.place.geometry.location.lat);
-    const lngs = dayItems.map((i) => i.place.geometry.location.lng);
-
-    const minLat = Math.min(...lats);
-    const maxLat = Math.max(...lats);
-    const minLng = Math.min(...lngs);
-    const maxLng = Math.max(...lngs);
-
-    return {
-      center: {
-        lat: (minLat + maxLat) / 2,
-        lng: (minLng + maxLng) / 2,
-      },
-      zoom: calculateZoom(maxLat - minLat, maxLng - minLng),
-    };
-  }, [currentDay, dayItems]);
-  void _bounds; // Suppress unused variable warning - for future map integration
-
-  // Handle marker click
   const handleMarkerClick = useCallback((itemId: string) => {
     setSelectedMarker(selectedMarker === itemId ? null : itemId);
   }, [selectedMarker]);
 
   if (!tripPlan || !currentDay) {
     return (
-      <div className="h-full flex items-center justify-center bg-rui-grey-5">
-        <p className="text-body-2 text-rui-grey-50">No day selected</p>
+      <div className="h-full flex items-center justify-center bg-gradient-to-br from-[#F5EFE0] to-[#E8DCC5]">
+        <p className="text-body-1 text-rui-grey-60 font-medium">No day selected</p>
       </div>
     );
   }
 
   return (
-    <div className="relative h-full bg-gradient-to-br from-slate-100 to-slate-200 overflow-hidden">
-      {/* Map Background Pattern */}
-      <div
-        className="absolute inset-0 opacity-30"
-        style={{
-          backgroundImage: `
-            radial-gradient(circle at 25% 25%, rgba(196, 88, 48, 0.05) 0%, transparent 50%),
-            radial-gradient(circle at 75% 75%, rgba(74, 144, 164, 0.05) 0%, transparent 50%)
-          `,
-        }}
-      />
+    <div className="relative h-full overflow-hidden bg-gradient-to-br from-[#F5EFE0] via-[#EDE4D3] to-[#E8DCC5]">
+      {/* Vintage Paper Texture */}
+      <div className="absolute inset-0 opacity-[0.04] pointer-events-none bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZmlsdGVyIGlkPSJub2lzZSI+PGZlVHVyYnVsZW5jZSB0eXBlPSJmcmFjdGFsTm9pc2UiIGJhc2VGcmVxdWVuY3k9IjAuOSIgbnVtT2N0YXZlcz0iNCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNub2lzZSkiIG9wYWNpdHk9IjAuNSIvPjwvc3ZnPg==')]" />
 
-      {/* Grid Pattern (simulated map) */}
-      <div
-        className="absolute inset-0 opacity-10"
-        style={{
-          backgroundImage: `
-            linear-gradient(rgba(0,0,0,0.1) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(0,0,0,0.1) 1px, transparent 1px)
-          `,
-          backgroundSize: '40px 40px',
-        }}
-      />
+      {/* Vintage Map Grid */}
+      <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-20">
+        <defs>
+          <pattern id="map-grid" width="60" height="60" patternUnits="userSpaceOnUse">
+            <path
+              d="M 60 0 L 0 0 0 60"
+              fill="none"
+              stroke="#8B7355"
+              strokeWidth="0.5"
+              opacity="0.3"
+            />
+          </pattern>
+          <pattern id="map-dots" width="30" height="30" patternUnits="userSpaceOnUse">
+            <circle cx="15" cy="15" r="1" fill="#8B7355" opacity="0.15" />
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#map-grid)" />
+        <rect width="100%" height="100%" fill="url(#map-dots)" />
+      </svg>
 
-      {/* City Label */}
-      <div className="absolute top-4 left-4 z-10">
-        <div className="bg-rui-white/90 backdrop-blur-sm rounded-xl px-4 py-2 shadow-rui-2 border border-rui-grey-10">
-          <p className="text-body-3 text-rui-grey-50">Planning in</p>
-          <p className="font-display text-lg text-rui-black">{currentDay.city.name}</p>
+      {/* Decorative Compass Rose */}
+      <motion.div
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none opacity-5"
+        animate={{ rotate: 360 }}
+        transition={{ duration: 120, repeat: Infinity, ease: 'linear' }}
+      >
+        <Compass className="w-64 h-64 text-rui-accent" strokeWidth={0.5} />
+      </motion.div>
+
+      {/* Decorative Border */}
+      <div className="absolute inset-0 pointer-events-none border-8 border-double border-[#C4A57B]/20" />
+
+      {/* City Label - Vintage Style */}
+      <motion.div
+        className="absolute top-6 left-6 z-10"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
+        <div className="relative bg-gradient-to-br from-rui-white/95 to-rui-cream/95 backdrop-blur-sm rounded-2xl px-6 py-4 shadow-rui-3 border-2 border-rui-accent/30">
+          {/* Decorative corner */}
+          <div className="absolute -top-2 -left-2 w-6 h-6">
+            <svg viewBox="0 0 24 24" className="text-rui-accent/30" fill="currentColor">
+              <path d="M0 0 L24 0 L0 24 Z" />
+            </svg>
+          </div>
+
+          <div className="flex items-center gap-2 mb-1">
+            <MapPin className="w-4 h-4 text-rui-accent" />
+            <span className="text-[10px] uppercase tracking-widest text-rui-grey-50 font-semibold">
+              Planning in
+            </span>
+          </div>
+          <p className="font-display text-2xl text-rui-black font-semibold tracking-tight">
+            {currentDay.city.name}
+          </p>
         </div>
-      </div>
+      </motion.div>
 
-      {/* Slot Legend */}
+      {/* Slot Legend - Vintage Card Style */}
       <AnimatePresence>
         {showLegend && (
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 20 }}
-            className="absolute top-4 right-4 z-10"
+            className="absolute top-6 right-6 z-10"
           >
-            <div className="bg-rui-white/90 backdrop-blur-sm rounded-xl p-3 shadow-rui-2 border border-rui-grey-10">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-body-3 text-rui-grey-50">Legend</p>
+            <div className="relative bg-gradient-to-br from-rui-white/95 to-rui-cream/95 backdrop-blur-sm rounded-2xl p-4 shadow-rui-3 border-2 border-rui-accent/30">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-rui-accent" />
+                  <span className="font-display text-base text-rui-black font-semibold">
+                    Timeline
+                  </span>
+                </div>
                 <button
                   onClick={() => setShowLegend(false)}
-                  className="p-1 rounded hover:bg-rui-grey-10 transition-colors"
+                  className="p-1 rounded-lg hover:bg-rui-grey-10 transition-colors"
                 >
-                  <X className="w-3 h-3 text-rui-grey-40" />
+                  <X className="w-4 h-4 text-rui-grey-50" />
                 </button>
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 {(['morning', 'afternoon', 'evening', 'night'] as Slot[]).map((slot) => (
-                  <div key={slot} className="flex items-center gap-2">
-                    <div
-                      className={`w-3 h-3 rounded-full ${SLOT_MARKER_COLORS[slot].bg}`}
-                    />
-                    <span className="text-body-3 text-rui-grey-60 capitalize">{slot}</span>
-                    <span className="text-body-3 text-rui-grey-40">
-                      ({itemsBySlot[slot]?.length || 0})
+                  <div key={slot} className="flex items-center gap-3">
+                    <div className={`w-4 h-4 rounded-full ${SLOT_MARKER_COLORS[slot].bg} shadow-md`} />
+                    <span className="text-body-2 text-rui-grey-70 font-medium capitalize flex-1">
+                      {slot}
+                    </span>
+                    <span className="text-body-3 text-rui-grey-50 font-semibold bg-rui-grey-5 px-2 py-0.5 rounded-md">
+                      {itemsBySlot[slot]?.length || 0}
                     </span>
                   </div>
                 ))}
@@ -211,28 +210,44 @@ export function PlanningMap() {
         )}
       </AnimatePresence>
 
-      {/* Map Controls */}
-      <div className="absolute bottom-4 right-4 z-10 flex flex-col gap-2">
-        <button className="w-10 h-10 bg-rui-white rounded-xl shadow-rui-2 flex items-center justify-center text-rui-grey-60 hover:text-rui-black transition-colors">
-          <ZoomIn className="w-4 h-4" />
-        </button>
-        <button className="w-10 h-10 bg-rui-white rounded-xl shadow-rui-2 flex items-center justify-center text-rui-grey-60 hover:text-rui-black transition-colors">
-          <ZoomOut className="w-4 h-4" />
-        </button>
-        <button className="w-10 h-10 bg-rui-white rounded-xl shadow-rui-2 flex items-center justify-center text-rui-grey-60 hover:text-rui-black transition-colors">
-          <Crosshair className="w-4 h-4" />
-        </button>
+      {/* Map Controls - Vintage Brass Style */}
+      <div className="absolute bottom-6 right-6 z-10 flex flex-col gap-2">
+        <motion.button
+          className="w-12 h-12 bg-gradient-to-br from-[#D4A574] to-[#C4A57B] rounded-xl shadow-rui-3 flex items-center justify-center text-rui-white border-2 border-[#B8975E] hover:shadow-rui-4 transition-all"
+          whileHover={{ scale: 1.05, rotate: 90 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          <ZoomIn className="w-5 h-5" strokeWidth={2.5} />
+        </motion.button>
+        <motion.button
+          className="w-12 h-12 bg-gradient-to-br from-[#D4A574] to-[#C4A57B] rounded-xl shadow-rui-3 flex items-center justify-center text-rui-white border-2 border-[#B8975E] hover:shadow-rui-4 transition-all"
+          whileHover={{ scale: 1.05, rotate: -90 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          <ZoomOut className="w-5 h-5" strokeWidth={2.5} />
+        </motion.button>
+        <motion.button
+          className="w-12 h-12 bg-gradient-to-br from-[#D4A574] to-[#C4A57B] rounded-xl shadow-rui-3 flex items-center justify-center text-rui-white border-2 border-[#B8975E] hover:shadow-rui-4 transition-all"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          <Crosshair className="w-5 h-5" strokeWidth={2.5} />
+        </motion.button>
         {!showLegend && (
-          <button
+          <motion.button
             onClick={() => setShowLegend(true)}
-            className="w-10 h-10 bg-rui-white rounded-xl shadow-rui-2 flex items-center justify-center text-rui-grey-60 hover:text-rui-black transition-colors"
+            className="w-12 h-12 bg-gradient-to-br from-[#D4A574] to-[#C4A57B] rounded-xl shadow-rui-3 flex items-center justify-center text-rui-white border-2 border-[#B8975E] hover:shadow-rui-4 transition-all"
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
           >
-            <Layers className="w-4 h-4" />
-          </button>
+            <Layers className="w-5 h-5" strokeWidth={2.5} />
+          </motion.button>
         )}
       </div>
 
-      {/* SVG Route Lines (simulated positions) */}
+      {/* SVG Route Lines */}
       <svg className="absolute inset-0 w-full h-full pointer-events-none">
         {dayItems.length > 1 && dayItems.map((item, index) => {
           if (index === 0) return null;
@@ -244,16 +259,17 @@ export function PlanningMap() {
             <motion.line
               key={`line-${item.id}`}
               initial={{ pathLength: 0, opacity: 0 }}
-              animate={{ pathLength: 1, opacity: 0.6 }}
-              transition={{ duration: 0.5, delay: index * 0.1 }}
+              animate={{ pathLength: 1, opacity: 0.4 }}
+              transition={{ duration: 0.8, delay: index * 0.15, ease: 'easeOut' }}
               x1={`${fromPos.x}%`}
               y1={`${fromPos.y}%`}
               x2={`${toPos.x}%`}
               y2={`${toPos.y}%`}
-              stroke={SLOT_LINE_COLORS[item.slot]}
-              strokeWidth="3"
+              stroke={SLOT_MARKER_COLORS[item.slot].line}
+              strokeWidth="4"
               strokeLinecap="round"
-              strokeDasharray="8 4"
+              strokeDasharray="12 6"
+              style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))' }}
             />
           );
         })}
@@ -272,36 +288,50 @@ export function PlanningMap() {
           />
         ))}
 
-        {/* City Center Marker */}
+        {/* City Center Marker - Vintage Style */}
         <div
           className="absolute transform -translate-x-1/2 -translate-y-1/2"
           style={{ left: '50%', top: '50%' }}
         >
-          <div className="w-3 h-3 rounded-full bg-rui-grey-30 border-2 border-white shadow-sm" />
+          <div className="relative">
+            <div className="w-4 h-4 rounded-full bg-gradient-to-br from-[#8B7355] to-[#6B5A45] border-2 border-rui-white shadow-md" />
+            <motion.div
+              className="absolute inset-0 w-4 h-4 rounded-full bg-[#8B7355]/30"
+              animate={{ scale: [1, 1.8, 1], opacity: [0.5, 0, 0.5] }}
+              transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+            />
+          </div>
         </div>
       </div>
 
-      {/* Empty State / Add Prompt */}
+      {/* Empty State */}
       {dayItems.length === 0 && (
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-center">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-rui-grey-10 flex items-center justify-center">
-              <MapPin className="w-8 h-8 text-rui-grey-40" />
+          <motion.div
+            className="text-center max-w-md"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <div className="relative w-24 h-24 mx-auto mb-6">
+              <div className="absolute inset-0 rounded-full bg-gradient-to-br from-rui-accent/10 to-rui-accent/5 border-2 border-rui-accent/20" />
+              <MapPin className="absolute inset-0 m-auto w-12 h-12 text-rui-accent/60" />
             </div>
-            <p className="text-body-1 text-rui-grey-60 mb-2">
-              Your map is empty
+            <p className="font-display text-2xl text-rui-black mb-2">
+              Your map awaits
             </p>
-            <p className="text-body-2 text-rui-grey-50 mb-4">
-              Add activities to see them on the map
+            <p className="text-body-1 text-rui-grey-60 mb-6 leading-relaxed">
+              Add activities to plot your journey across {currentDay.city.name}
             </p>
-            <button
+            <motion.button
               onClick={() => openAddPanel('morning')}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-rui-accent text-white rounded-xl hover:bg-rui-accent/90 transition-colors"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-rui-accent to-orange-500 text-white rounded-xl hover:shadow-lg transition-all font-semibold text-body-1 shadow-md border-2 border-rui-accent"
+              whileHover={{ scale: 1.05, y: -2 }}
+              whileTap={{ scale: 0.95 }}
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-5 h-5" strokeWidth={2.5} />
               Add your first stop
-            </button>
-          </div>
+            </motion.button>
+          </motion.div>
         </div>
       )}
 
@@ -319,7 +349,7 @@ export function PlanningMap() {
 }
 
 // ============================================================================
-// Map Marker Component
+// Map Marker - Vintage Pin Style
 // ============================================================================
 
 interface MapMarkerProps {
@@ -337,80 +367,101 @@ function MapMarker({ item, index, total, isSelected, onClick }: MapMarkerProps) 
 
   return (
     <motion.button
-      initial={{ scale: 0, y: 20 }}
+      initial={{ scale: 0, y: 40 }}
       animate={{ scale: 1, y: 0 }}
-      transition={{ delay: index * 0.05, type: 'spring', stiffness: 300, damping: 20 }}
+      transition={{
+        delay: index * 0.1,
+        type: 'spring',
+        stiffness: 300,
+        damping: 20
+      }}
       onClick={onClick}
       className="absolute transform -translate-x-1/2 -translate-y-full group"
       style={{ left: `${position.x}%`, top: `${position.y}%` }}
     >
-      {/* Marker Pin */}
-      <div
-        className={`
-          relative flex flex-col items-center
-          ${isSelected ? 'z-20' : 'z-10'}
-        `}
-      >
-        {/* Pin Body */}
+      <div className={`relative flex flex-col items-center ${isSelected ? 'z-30' : 'z-10'}`}>
+        {/* Pin Body - Vintage Rounded Rectangle */}
+        <div className="relative">
+          <motion.div
+            className={`
+              flex items-center justify-center
+              w-14 h-14 rounded-2xl
+              ${colors.bg}
+              border-3 ${colors.border}
+              shadow-xl ${isSelected ? colors.glow : ''}
+              transition-all duration-300
+            `}
+            whileHover={{ scale: 1.15, rotate: 5 }}
+            style={{
+              boxShadow: `0 8px 20px rgba(0,0,0,0.2), 0 0 0 4px rgba(255,255,255,0.8)`,
+            }}
+          >
+            <span className="text-2xl drop-shadow-md">{icon}</span>
+          </motion.div>
+
+          {/* Pin Shadow */}
+          <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-12 h-3 bg-black/20 blur-md rounded-full" />
+        </div>
+
+        {/* Pin Stem */}
         <div
           className={`
-            flex items-center justify-center
-            w-10 h-10 rounded-xl
-            ${colors.bg} ${colors.text}
-            border-2 ${colors.border}
-            shadow-lg ${isSelected ? colors.glow : ''}
-            transition-all duration-200
-            group-hover:scale-110
+            w-1.5 h-8 rounded-full
+            ${colors.bg}
+            ${colors.border}
+            shadow-md
           `}
-        >
-          <span className="text-lg">{icon}</span>
-        </div>
+          style={{
+            background: colors.line,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+          }}
+        />
 
         {/* Pin Point */}
         <div
-          className={`
-            w-0 h-0 -mt-0.5
-            border-l-[8px] border-l-transparent
-            border-r-[8px] border-r-transparent
-            border-t-[10px] ${colors.border.replace('border', 'border-t')}
-          `}
-          style={{ borderTopColor: colors.bg.includes('amber') ? '#f59e0b' :
-                   colors.bg.includes('orange') ? '#f97316' :
-                   colors.bg.includes('rose') ? '#f43f5e' : '#6366f1' }}
+          className="w-3 h-3 rounded-full -mt-1"
+          style={{
+            background: colors.line,
+            boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+          }}
         />
 
-        {/* Order Badge */}
-        <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-rui-white shadow-sm border border-rui-grey-20 flex items-center justify-center">
-          <span className="text-[10px] font-bold text-rui-grey-70">{index + 1}</span>
+        {/* Order Badge - Vintage Stamp Style */}
+        <div className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-gradient-to-br from-rui-white to-rui-grey-2 shadow-lg border-2 border-rui-accent/40 flex items-center justify-center">
+          <span className="text-xs font-bold text-rui-black">{index + 1}</span>
         </div>
 
-        {/* Pulse Animation for Selected */}
+        {/* Pulse for Selected */}
         {isSelected && (
           <motion.div
-            animate={{ scale: [1, 1.5], opacity: [0.6, 0] }}
-            transition={{ duration: 1, repeat: Infinity }}
-            className={`absolute inset-0 rounded-xl ${colors.bg} -z-10`}
+            animate={{ scale: [1, 1.6], opacity: [0.8, 0] }}
+            transition={{ duration: 1.5, repeat: Infinity }}
+            className="absolute top-0 left-0 right-0 bottom-8 rounded-2xl"
+            style={{
+              background: colors.line,
+              opacity: 0.3,
+            }}
           />
         )}
-      </div>
 
-      {/* Name Label on Hover */}
-      <div
-        className={`
-          absolute left-1/2 -translate-x-1/2 -bottom-8
-          px-2 py-1 bg-rui-black/80 text-white text-body-3 rounded-lg
-          whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity
-          pointer-events-none
-        `}
-      >
-        {item.place.name}
+        {/* Name Label on Hover */}
+        <div
+          className="
+            absolute left-1/2 -translate-x-1/2 -bottom-12
+            px-3 py-1.5 bg-rui-black/90 text-white text-body-3 rounded-lg
+            whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity
+            pointer-events-none shadow-lg font-medium
+          "
+        >
+          {item.place.name}
+        </div>
       </div>
     </motion.button>
   );
 }
 
 // ============================================================================
-// Marker Popup
+// Marker Popup - Vintage Card
 // ============================================================================
 
 interface MarkerPopupProps {
@@ -425,40 +476,44 @@ function MarkerPopup({ item, onClose }: MarkerPopupProps) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20, scale: 0.95 }}
+      initial={{ opacity: 0, y: 40, scale: 0.9 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: 20, scale: 0.95 }}
-      className="absolute bottom-4 left-4 right-4 z-30"
+      exit={{ opacity: 0, y: 40, scale: 0.9 }}
+      className="absolute bottom-6 left-6 right-6 z-40"
     >
-      <div className="bg-rui-white rounded-xl shadow-rui-4 border border-rui-grey-10 overflow-hidden">
-        <div className={`h-1 ${colors.bg}`} />
-        <div className="p-4">
-          <div className="flex items-start gap-3">
-            <span className="text-2xl">{icon}</span>
+      <div className="bg-gradient-to-br from-rui-white to-rui-cream rounded-2xl shadow-rui-4 border-2 border-rui-accent/30 overflow-hidden">
+        {/* Colored Top Bar */}
+        <div className={`h-2 ${colors.bg}`} />
+
+        <div className="p-5">
+          <div className="flex items-start gap-4">
+            <div className={`flex items-center justify-center w-14 h-14 rounded-xl ${colors.bg} shadow-md`}>
+              <span className="text-3xl">{icon}</span>
+            </div>
             <div className="flex-1 min-w-0">
-              <h4 className="font-display text-base text-rui-black font-medium truncate">
+              <h4 className="font-display text-xl text-rui-black font-semibold truncate leading-tight">
                 {place.name}
               </h4>
-              <p className="text-body-3 text-rui-grey-50 capitalize">
+              <p className="text-body-2 text-rui-grey-60 capitalize mt-1 font-medium">
                 {slot} · ~{place.estimated_duration_mins} min
               </p>
             </div>
             <button
               onClick={onClose}
-              className="p-2 rounded-lg text-rui-grey-40 hover:bg-rui-grey-5 hover:text-rui-grey-60 transition-colors"
+              className="p-2 rounded-xl text-rui-grey-50 hover:bg-rui-grey-5 hover:text-rui-grey-70 transition-colors"
             >
-              <X className="w-4 h-4" />
+              <X className="w-5 h-5" />
             </button>
           </div>
 
           {place.rating && (
-            <div className="mt-3 flex items-center gap-4 text-body-3">
-              <span className="flex items-center gap-1">
-                <span className="text-amber-500">★</span>
+            <div className="mt-4 flex items-center gap-4 text-body-2">
+              <span className="flex items-center gap-1.5 text-rui-grey-70 font-medium">
+                <span className="text-amber-500 text-lg">★</span>
                 {place.rating.toFixed(1)}
               </span>
               {place.is_hidden_gem && (
-                <span className="px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full text-[11px] font-medium">
+                <span className="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-[11px] font-semibold uppercase tracking-wide">
                   Hidden Gem
                 </span>
               )}
@@ -466,7 +521,7 @@ function MarkerPopup({ item, onClose }: MarkerPopupProps) {
           )}
 
           {item.user_notes && (
-            <p className="mt-2 text-body-3 text-rui-grey-60 italic">
+            <p className="mt-3 text-body-2 text-rui-grey-70 italic leading-relaxed bg-rui-grey-2/50 p-3 rounded-xl">
               "{item.user_notes}"
             </p>
           )}
@@ -480,27 +535,15 @@ function MarkerPopup({ item, onClose }: MarkerPopupProps) {
 // Helper Functions
 // ============================================================================
 
-// Simulate marker positions in a spread pattern (would be real coords in production)
 function getSimulatedPosition(_item: PlannedItem, index: number, total: number): { x: number; y: number } {
-  // Create a spiral/spread pattern around center
-  // _item would be used for actual coordinates in production
+  // Create an elegant spiral pattern
   const angle = (index / Math.max(total, 1)) * Math.PI * 2 - Math.PI / 2;
-  const radius = 15 + (index % 3) * 8;
+  const radius = 18 + (index % 4) * 7;
 
   return {
     x: 50 + Math.cos(angle) * radius,
     y: 50 + Math.sin(angle) * radius,
   };
-}
-
-// Calculate appropriate zoom level based on bounds
-function calculateZoom(latDiff: number, lngDiff: number): number {
-  const maxDiff = Math.max(latDiff, lngDiff);
-  if (maxDiff > 0.5) return 10;
-  if (maxDiff > 0.2) return 12;
-  if (maxDiff > 0.1) return 13;
-  if (maxDiff > 0.05) return 14;
-  return 15;
 }
 
 export default PlanningMap;
