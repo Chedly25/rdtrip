@@ -753,6 +753,7 @@ export function DiscoveryPhaseContainer() {
           route={route}
           onBack={handleBack}
           onProceed={handleProceed}
+          onPlanTrip={() => navigate('/planning')}
           onAddCity={() => setShowAddCityModal(true)}
           isDesktop={isDesktop}
         />

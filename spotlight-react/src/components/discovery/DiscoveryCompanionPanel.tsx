@@ -26,7 +26,6 @@ import {
   ChevronUp,
   Sparkles,
   MapPin,
-  ArrowRight,
   X,
   GripVertical,
   Send,
@@ -504,7 +503,7 @@ function DesktopSidebar({
       </div>
 
       {/* Footer */}
-      <div className="flex-shrink-0 p-4 border-t border-stone-100 bg-white space-y-3">
+      <div className="flex-shrink-0 p-4 border-t border-stone-100 bg-white">
         {/* View Itinerary button - shown if one exists */}
         {hasExistingItinerary && (
           <motion.button
@@ -528,26 +527,6 @@ function DesktopSidebar({
             <span>View Your Itinerary</span>
           </motion.button>
         )}
-
-        {/* Generate button */}
-        <motion.button
-          onClick={onProceed}
-          whileHover={{ scale: 1.02, y: -1 }}
-          whileTap={{ scale: 0.98 }}
-          className="
-            w-full flex items-center justify-center gap-2
-            py-4 rounded-2xl
-            bg-gradient-to-r from-teal-500 to-emerald-600 text-white
-            font-semibold tracking-tight
-            shadow-xl shadow-teal-500/30
-            hover:shadow-2xl hover:shadow-teal-500/40
-            transition-shadow duration-300
-          "
-        >
-          <Sparkles className="w-5 h-5" />
-          <span>{hasExistingItinerary ? 'Regenerate Itinerary' : 'Generate Itinerary'}</span>
-          <ArrowRight className="w-5 h-5" />
-        </motion.button>
       </div>
     </motion.aside>
   );
@@ -843,8 +822,8 @@ function MobileBottomSheet({
         </motion.div>
       </div>
 
-      {/* Footer with proceed button */}
-      <div className="flex-shrink-0 p-4 border-t border-stone-100 bg-white space-y-2">
+      {/* Footer */}
+      <div className="flex-shrink-0 p-4 border-t border-stone-100 bg-white">
         {/* View Itinerary button - shown if one exists */}
         {hasExistingItinerary && (
           <motion.button
@@ -865,22 +844,6 @@ function MobileBottomSheet({
             <span>View Your Itinerary</span>
           </motion.button>
         )}
-
-        {/* Generate button */}
-        <motion.button
-          onClick={onProceed}
-          whileTap={{ scale: 0.98 }}
-          className="
-            w-full flex items-center justify-center gap-2
-            py-4 rounded-2xl
-            bg-gradient-to-r from-teal-500 to-emerald-600 text-white
-            font-semibold
-            shadow-lg shadow-teal-500/30
-          "
-        >
-          <Sparkles className="w-5 h-5" />
-          <span>{hasExistingItinerary ? 'Regenerate' : 'Generate Itinerary'}</span>
-        </motion.button>
       </div>
     </motion.div>
   );

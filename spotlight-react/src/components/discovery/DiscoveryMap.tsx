@@ -84,6 +84,16 @@ export function DiscoveryMap({
   // Track previous route reference for bounds fitting
   const prevRouteRef = useRef<DiscoveryRoute | null>(null);
 
+  // Helper to check if coordinates are valid (not 0,0 or missing)
+  const isValidCoordinate = (coord: { lat: number; lng: number } | undefined): coord is { lat: number; lng: number } => {
+    if (!coord) return false;
+    // Filter out (0, 0) coordinates - this is in the Atlantic Ocean and indicates missing data
+    if (coord.lat === 0 && coord.lng === 0) return false;
+    // Also check for reasonable bounds
+    if (Math.abs(coord.lat) > 90 || Math.abs(coord.lng) > 180) return false;
+    return true;
+  };
+
   // Update map when route changes
   useEffect(() => {
     if (!map.current || !isMapLoaded || !route) return;
@@ -93,23 +103,26 @@ export function DiscoveryMap({
       prevRouteRef.current.suggestedCities.length !== route.suggestedCities.length;
 
     if (routeChanged) {
-      // Fit bounds to show full route
+      // Fit bounds to show full route - filter out invalid coordinates
       const allCoords = [
         route.origin.coordinates,
         ...route.suggestedCities.map((c) => c.coordinates),
         route.destination.coordinates,
-      ];
+      ].filter(isValidCoordinate);
 
-      const bounds = new mapboxgl.LngLatBounds();
-      allCoords.forEach((coord) => {
-        bounds.extend([coord.lng, coord.lat]);
-      });
+      // Only fit bounds if we have at least 2 valid coordinates
+      if (allCoords.length >= 2) {
+        const bounds = new mapboxgl.LngLatBounds();
+        allCoords.forEach((coord) => {
+          bounds.extend([coord.lng, coord.lat]);
+        });
 
-      map.current.fitBounds(bounds, {
-        padding: { top: 180, bottom: 200, left: 60, right: 60 },
-        duration: 1500,
-        easing: (t) => 1 - Math.pow(1 - t, 3), // Ease out cubic
-      });
+        map.current.fitBounds(bounds, {
+          padding: { top: 180, bottom: 200, left: 60, right: 60 },
+          duration: 1500,
+          easing: (t) => 1 - Math.pow(1 - t, 3), // Ease out cubic
+        });
+      }
     }
 
     prevRouteRef.current = route;
@@ -150,14 +163,14 @@ export function DiscoveryMap({
     // Remove existing layer/source first
     cleanupExistingRoute();
 
-    // Build coordinates for selected cities only
+    // Build coordinates for selected cities only - filter out invalid coordinates
     const waypoints = [
       route.origin.coordinates,
       ...route.suggestedCities
         .filter((c) => c.isSelected)
         .map((c) => c.coordinates),
       route.destination.coordinates,
-    ];
+    ].filter((coord) => coord && (coord.lat !== 0 || coord.lng !== 0));
 
     // Format coordinates for Mapbox Directions API: lng,lat pairs separated by ;
     const coordsString = waypoints
@@ -251,12 +264,12 @@ export function DiscoveryMap({
       markersRef.current.forEach((marker) => marker.remove());
       markersRef.current.clear();
 
-      // All cities to display
+      // All cities to display - filter out those with invalid coordinates
       const allCities = [
         route.origin,
         ...route.suggestedCities,
         route.destination,
-      ];
+      ].filter((city) => isValidCoordinate(city.coordinates));
 
       allCities.forEach((city, index) => {
         const el = document.createElement('div');

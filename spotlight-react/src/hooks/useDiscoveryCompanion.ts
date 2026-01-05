@@ -144,16 +144,23 @@ export function useDiscoveryCompanion(
     switch (action.type) {
       case 'add_city':
         if (action.city) {
-          addCity(
-            {
-              name: action.city.name,
-              country: 'Unknown', // Will be enriched
-              coordinates: action.city.coordinates || { lat: 0, lng: 0 },
-              isSelected: true,
-              nights: action.city.nights || 1,
-            },
-            action.index
-          );
+          // Only add if we have valid coordinates (non-zero)
+          const coords = action.city.coordinates;
+          if (coords && (coords.lat !== 0 || coords.lng !== 0)) {
+            addCity(
+              {
+                name: action.city.name,
+                country: action.city.country || 'Unknown',
+                coordinates: coords,
+                isSelected: true,
+                nights: action.city.nights || 1,
+                description: action.city.description || `Added to your trip`,
+              },
+              action.index
+            );
+          } else {
+            console.warn(`⚠️ [Discovery] Skipping city ${action.city.name} - invalid coordinates`);
+          }
         }
         break;
 
@@ -165,14 +172,20 @@ export function useDiscoveryCompanion(
 
       case 'replace_city':
         if (action.oldCity?.name && action.newCity?.name) {
-          const coordinates = (action as RouteActionEvent & { newCity: { coordinates?: { lat: number; lng: number } } })
-            .newCity?.coordinates;
-          replaceCity(action.oldCity.name, {
-            name: action.newCity.name,
-            country: 'Unknown',
-            coordinates: coordinates || { lat: 0, lng: 0 },
-            isSelected: true,
-          });
+          const newCityData = action as RouteActionEvent & { newCity: { coordinates?: { lat: number; lng: number }; country?: string; description?: string } };
+          const coordinates = newCityData.newCity?.coordinates;
+          // Only replace if we have valid coordinates
+          if (coordinates && (coordinates.lat !== 0 || coordinates.lng !== 0)) {
+            replaceCity(action.oldCity.name, {
+              name: action.newCity.name,
+              country: newCityData.newCity?.country || 'Unknown',
+              coordinates: coordinates,
+              isSelected: true,
+              description: newCityData.newCity?.description || `Replaced ${action.oldCity.name}`,
+            });
+          } else {
+            console.warn(`⚠️ [Discovery] Skipping city replacement - invalid coordinates for ${action.newCity.name}`);
+          }
         }
         break;
 
