@@ -8933,6 +8933,10 @@ const { getCostTracker } = require('./server/services/CostTracker');
 getCostTracker(pool); // Initialize with database
 app.use('/api/analytics', analyticsRoutes);
 
+// ==================== DISCOVERY ROUTES (Voyager Agent) ====================
+const discoveryRoutes = require('./server/routes/discovery');
+app.use('/api/discovery', discoveryRoutes.initializeRoutes(pool));
+
 // =====================================================
 // CATCH-ALL ROUTE - Serve unified React app for client-side routing
 // =====================================================

@@ -74,10 +74,22 @@ export {
 } from './usePlaces';
 
 // ============================================================================
-// Companion Hooks - REMOVED (Planning feature being rebuilt)
+// Discovery Agent SSE Hooks (Voyager)
 // ============================================================================
-// Companion hooks have been removed while the planning feature is being rebuilt.
-// See useProactiveSuggestions.ts for local stub implementations.
+export {
+  useDiscoveryAgentSSE,
+  type SSEEventType,
+  type SSEEvent,
+  type ThinkingEvent,
+  type TextEvent,
+  type ToolStartEvent,
+  type ToolCompleteEvent,
+  type RouteActionEvent,
+  type MessageEvent,
+  type CompleteEvent,
+  type ErrorEvent,
+  type SSEEventHandler,
+} from './useDiscoveryAgentSSE';
 
 // ============================================================================
 // Memory Hooks

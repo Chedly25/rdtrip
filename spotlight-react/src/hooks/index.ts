@@ -54,3 +54,21 @@ export {
   useIntelligenceConnectionStatus,
 } from './useIntelligenceSSE';
 
+// Discovery Companion (Voyager Agent)
+export {
+  useDiscoveryCompanion,
+  type CompanionMessage,
+  type ActiveTool,
+  type ThinkingState,
+  type ProactiveSuggestion,
+} from './useDiscoveryCompanion';
+
+// Discovery Triggers (Proactive Suggestions)
+export {
+  useDiscoveryTriggers,
+  reportTriggerToBackend,
+  dismissSuggestion,
+  type TriggerEvent,
+  type TriggerConfig,
+} from './useDiscoveryTriggers';
+

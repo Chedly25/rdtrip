@@ -34,63 +34,19 @@ import {
   Route,
   Map,
   Calendar,
+  Compass,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { useDiscoveryStore } from '../../stores/discoveryStore';
 import { getStoredItineraryId } from '../../hooks/useItineraryGeneration';
 import type { DiscoveryRoute, TripSummary, DiscoveryCity } from '../../stores/discoveryStore';
 import { SortableCityList } from './SortableCityList';
-
-// ============================================================================
-// Stub implementations for removed planning features
-// These provide minimal functionality while planning is being rebuilt
-// ============================================================================
-
-interface CompanionMessage {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-}
-
-interface CompanionConversation {
-  messages: CompanionMessage[];
-}
-
-/**
- * Stub hook replacing usePlanningCompanion while planning feature is being rebuilt
- */
-function useCompanionStub() {
-  const [conversation, setConversation] = useState<CompanionConversation>({ messages: [] });
-  const [isLoading, setIsLoading] = useState(false);
-
-  const sendMessage = useCallback((content: string) => {
-    // Add user message
-    const userMessage: CompanionMessage = {
-      id: `user-${Date.now()}`,
-      role: 'user',
-      content,
-    };
-    setConversation(prev => ({
-      messages: [...prev.messages, userMessage],
-    }));
-
-    // Simulate assistant response
-    setIsLoading(true);
-    setTimeout(() => {
-      const assistantMessage: CompanionMessage = {
-        id: `assistant-${Date.now()}`,
-        role: 'assistant',
-        content: `Thanks for your message! The AI companion is being rebuilt with improved features. In the meantime, you can explore the map and add cities to your trip.`,
-      };
-      setConversation(prev => ({
-        messages: [...prev.messages, assistantMessage],
-      }));
-      setIsLoading(false);
-    }, 1000);
-  }, []);
-
-  return { conversation, isLoading, sendMessage };
-}
+import { useDiscoveryCompanion } from '../../hooks/useDiscoveryCompanion';
+import {
+  VoyagerThinkingIndicator,
+  VoyagerToolBadge,
+  VoyagerProactiveSuggestion,
+} from './VoyagerStreamingUI';
 
 interface QuickChip {
   id: string;
@@ -287,7 +243,17 @@ function DesktopSidebar({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const { conversation, isLoading, sendMessage } = useCompanionStub();
+  // Use real Voyager companion hook
+  const {
+    messages: conversation,
+    sendMessage,
+    isLoading,
+    thinking,
+    activeTool,
+    proactiveSuggestion,
+    dismissProactiveSuggestion,
+    handleQuickAction,
+  } = useDiscoveryCompanion();
 
   const [inputValue, setInputValue] = useState('');
   const [showChat, setShowChat] = useState(false);
@@ -297,10 +263,10 @@ function DesktopSidebar({
   const hasExistingItinerary = !!storedItineraryId;
 
   useEffect(() => {
-    if (messagesEndRef.current && conversation.messages.length > 0) {
+    if (messagesEndRef.current && conversation.length > 0) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [conversation.messages]);
+  }, [conversation]);
 
   const handleSend = useCallback(() => {
     if (!inputValue.trim() || isLoading) return;
@@ -348,9 +314,20 @@ function DesktopSidebar({
       <div ref={scrollRef} className="flex-1 overflow-y-auto">
         {/* Chat section */}
         <div className="p-4 border-b border-stone-100">
-          {showChat && conversation.messages.length > 0 ? (
+          {/* Proactive suggestion from Voyager */}
+          {proactiveSuggestion && (
+            <div className="mb-3">
+              <VoyagerProactiveSuggestion
+                suggestion={proactiveSuggestion}
+                onAction={handleQuickAction}
+                onDismiss={dismissProactiveSuggestion}
+              />
+            </div>
+          )}
+
+          {showChat && conversation.length > 0 ? (
             <div className="space-y-3 max-h-[200px] overflow-y-auto mb-3">
-              {conversation.messages
+              {conversation
                 .filter((msg: any, idx: number, arr: any[]) =>
                   arr.findIndex((m: any) => m.id === msg.id) === idx
                 )
@@ -359,12 +336,22 @@ function DesktopSidebar({
                   key={msg.id}
                   className={`
                     ${msg.role === 'user'
-                      ? 'ml-8 bg-gradient-to-br from-teal-500 to-emerald-600 text-white'
-                      : 'mr-8 bg-stone-50 border border-stone-200'
+                      ? 'ml-8 bg-gradient-to-br from-stone-800 to-stone-900 text-white'
+                      : 'mr-8 bg-gradient-to-br from-stone-50 to-stone-100/80 border border-stone-200/60'
                     }
-                    rounded-2xl p-3 text-sm
+                    rounded-2xl ${msg.role === 'user' ? 'rounded-br-md' : 'rounded-tl-md'} p-3 text-sm
                   `}
                 >
+                  {msg.role === 'assistant' && (
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-5 h-5 rounded-full bg-gradient-to-br from-amber-100 to-orange-100 border border-amber-200/60 flex items-center justify-center">
+                        <Compass className="w-2.5 h-2.5 text-amber-700" />
+                      </div>
+                      <span className="text-xs font-medium text-stone-500 tracking-wide" style={{ fontFamily: 'Fraunces, serif' }}>
+                        Voyager
+                      </span>
+                    </div>
+                  )}
                   {msg.role === 'assistant' ? (
                     <div className="prose prose-sm max-w-none text-stone-700">
                       <ReactMarkdown
@@ -383,21 +370,26 @@ function DesktopSidebar({
                   )}
                 </div>
               ))}
-              {isLoading && (
-                <div className="mr-8 bg-stone-50 border border-stone-200 rounded-2xl p-3 flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin text-teal-600" />
-                  <span className="text-sm text-stone-500">Thinking...</span>
+
+              {/* Voyager thinking indicator */}
+              <VoyagerThinkingIndicator isThinking={thinking.isThinking} text={thinking.text} />
+
+              {/* Active tool badge */}
+              {activeTool && !thinking.isThinking && (
+                <div className="ml-10">
+                  <VoyagerToolBadge tool={activeTool} />
                 </div>
               )}
+
               <div ref={messagesEndRef} />
             </div>
           ) : companionMessages.length > 0 ? (
             <div className="bg-gradient-to-br from-stone-50 to-stone-100 rounded-2xl p-4 mb-3 border border-stone-200">
               <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center flex-shrink-0 shadow-sm">
-                  <Sparkles className="w-4 h-4 text-white" />
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-100 to-orange-100 border border-amber-200/60 flex items-center justify-center flex-shrink-0 shadow-sm">
+                  <Compass className="w-4 h-4 text-amber-700" />
                 </div>
-                <p className="text-sm text-stone-700 leading-relaxed flex-1">
+                <p className="text-sm text-stone-700 leading-relaxed flex-1" style={{ fontFamily: 'Satoshi, system-ui, sans-serif' }}>
                   {companionMessages[companionMessages.length - 1]?.content}
                 </p>
               </div>
@@ -412,35 +404,36 @@ function DesktopSidebar({
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Ask about your trip..."
-              disabled={isLoading}
+              placeholder="Ask Voyager anything..."
+              disabled={isLoading || thinking.isThinking}
               className="
                 flex-1 px-4 py-2.5
                 bg-stone-50 rounded-xl
                 text-sm text-stone-900
                 placeholder:text-stone-400
                 border border-stone-200
-                focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20
+                focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20
                 focus:outline-none focus:bg-white
                 disabled:opacity-50
                 transition-all duration-200
               "
+              style={{ fontFamily: 'Satoshi, system-ui, sans-serif' }}
             />
             <motion.button
               onClick={handleSend}
-              disabled={!inputValue.trim() || isLoading}
+              disabled={!inputValue.trim() || isLoading || thinking.isThinking}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               className="
                 w-10 h-10 rounded-xl
-                bg-gradient-to-br from-teal-500 to-emerald-600 text-white
+                bg-gradient-to-br from-amber-500 to-orange-500 text-white
                 flex items-center justify-center
-                shadow-lg shadow-teal-500/25
+                shadow-lg shadow-amber-500/25
                 disabled:from-stone-300 disabled:to-stone-400 disabled:shadow-none
                 transition-all duration-200
               "
             >
-              {isLoading ? (
+              {isLoading || thinking.isThinking ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
                 <Send className="w-5 h-5" />
@@ -464,7 +457,7 @@ function DesktopSidebar({
             </div>
           )}
 
-          {showChat && conversation.messages.length > 0 && !isLoading && (
+          {showChat && conversation.length > 0 && !isLoading && !thinking.isThinking && (
             <div className="mt-3">
               <QuickActionChips
                 options={createTextChips(['Tell me more', 'What else is nearby?', 'Show hidden gems'])}
@@ -608,20 +601,29 @@ function MobileBottomSheet({
   const tabContentRef = useRef<HTMLDivElement>(null);
   const swipeX = useMotionValue(0);
 
-  // Chat state
-  const { conversation, isLoading, sendMessage } = useCompanionStub();
+  // Chat state - use real Voyager companion hook
+  const {
+    messages: conversation,
+    sendMessage,
+    isLoading,
+    thinking,
+    activeTool,
+    proactiveSuggestion,
+    dismissProactiveSuggestion,
+    handleQuickAction,
+  } = useDiscoveryCompanion();
   const [inputValue, setInputValue] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Track unread messages when on route tab
   useEffect(() => {
-    if (activeTab === 'route' && conversation.messages.length > 0) {
-      const lastMsg = conversation.messages[conversation.messages.length - 1];
+    if (activeTab === 'route' && conversation.length > 0) {
+      const lastMsg = conversation[conversation.length - 1];
       if (lastMsg.role === 'assistant') {
         setHasUnreadChat(true);
       }
     }
-  }, [conversation.messages, activeTab]);
+  }, [conversation, activeTab]);
 
   // Clear unread when switching to chat tab
   useEffect(() => {
@@ -635,7 +637,7 @@ function MobileBottomSheet({
     if (messagesEndRef.current && activeTab === 'chat') {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [conversation.messages, activeTab]);
+  }, [conversation, activeTab]);
 
   // Handle tab swipe
   const handleSwipeEnd = (_: any, info: PanInfo) => {
@@ -822,6 +824,11 @@ function MobileBottomSheet({
                   companionMessages={companionMessages}
                   conversation={conversation}
                   isLoading={isLoading}
+                  thinking={thinking}
+                  activeTool={activeTool}
+                  proactiveSuggestion={proactiveSuggestion}
+                  dismissProactiveSuggestion={dismissProactiveSuggestion}
+                  handleQuickAction={handleQuickAction}
                   inputValue={inputValue}
                   setInputValue={setInputValue}
                   onSend={handleSend}
@@ -972,8 +979,17 @@ function RouteTabContent({
 
 interface ChatTabContentProps {
   companionMessages: any[];
-  conversation: any;
+  conversation: any[];
   isLoading: boolean;
+  thinking: { isThinking: boolean; text?: string };
+  activeTool: { name: string; displayName: string } | null;
+  proactiveSuggestion: {
+    message: string;
+    quickActions: Array<{ label: string; action: string; data?: unknown }>;
+    priority: 'high' | 'medium' | 'low';
+  } | null;
+  dismissProactiveSuggestion: () => void;
+  handleQuickAction: (action: string, data?: unknown) => void;
   inputValue: string;
   setInputValue: (v: string) => void;
   onSend: () => void;
@@ -987,6 +1003,11 @@ function ChatTabContent({
   companionMessages,
   conversation,
   isLoading,
+  thinking,
+  activeTool,
+  proactiveSuggestion,
+  dismissProactiveSuggestion,
+  handleQuickAction,
   inputValue,
   setInputValue,
   onSend,
@@ -995,20 +1016,22 @@ function ChatTabContent({
   sendMessage,
   isExpanded,
 }: ChatTabContentProps) {
-  const hasConversation = conversation.messages.length > 0;
+  const hasConversation = conversation.length > 0;
 
   if (!isExpanded) {
     // Collapsed: show latest message preview
     const latestMessage = hasConversation
-      ? conversation.messages[conversation.messages.length - 1]
+      ? conversation[conversation.length - 1]
       : companionMessages[companionMessages.length - 1];
 
     return (
       <div className="px-4 py-2">
-        <div className="bg-stone-50 rounded-xl p-3 border border-stone-100">
+        <div className="bg-gradient-to-br from-stone-50 to-stone-100/80 rounded-xl p-3 border border-stone-200/60">
           <div className="flex items-start gap-2">
-            <Sparkles className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-stone-600 line-clamp-2 leading-relaxed">
+            <div className="w-5 h-5 rounded-full bg-gradient-to-br from-amber-100 to-orange-100 border border-amber-200/60 flex items-center justify-center flex-shrink-0">
+              <Compass className="w-2.5 h-2.5 text-amber-700" />
+            </div>
+            <p className="text-sm text-stone-600 line-clamp-2 leading-relaxed" style={{ fontFamily: 'Satoshi, system-ui, sans-serif' }}>
               {latestMessage?.content || 'Ask me anything about your trip...'}
             </p>
           </div>
@@ -1022,23 +1045,38 @@ function ChatTabContent({
     <>
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+        {/* Proactive suggestion */}
+        {proactiveSuggestion && (
+          <div className="mb-2">
+            <VoyagerProactiveSuggestion
+              suggestion={proactiveSuggestion}
+              onAction={handleQuickAction}
+              onDismiss={dismissProactiveSuggestion}
+            />
+          </div>
+        )}
+
         {!hasConversation ? (
-          // Welcome state
+          // Welcome state - Voyager branded
           <div className="text-center py-6">
-            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-amber-500/20">
-              <Sparkles className="w-7 h-7 text-white" />
-            </div>
-            <h3 className="font-semibold text-stone-900 text-lg mb-1">
-              Your Travel Assistant
+            <motion.div
+              animate={{ rotate: [0, 10, -10, 0] }}
+              transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+              className="w-14 h-14 rounded-full bg-gradient-to-br from-amber-100 to-orange-100 border border-amber-200/60 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-amber-200/30"
+            >
+              <Compass className="w-7 h-7 text-amber-700" />
+            </motion.div>
+            <h3 className="font-semibold text-stone-900 text-lg mb-1" style={{ fontFamily: 'Fraunces, serif' }}>
+              Voyager
             </h3>
-            <p className="text-sm text-stone-500 leading-relaxed max-w-[260px] mx-auto">
-              Ask me anything about your journey, local tips, or hidden gems along the way.
+            <p className="text-sm text-stone-500 leading-relaxed max-w-[260px] mx-auto" style={{ fontFamily: 'Satoshi, system-ui, sans-serif' }}>
+              I'm your well-traveled companion. Ask me about hidden gems, local tips, or let me help design your route.
             </p>
 
             {/* Static companion message if exists */}
             {companionMessages.length > 0 && (
-              <div className="mt-4 bg-stone-50 rounded-2xl p-4 text-left border border-stone-100">
-                <p className="text-sm text-stone-700 leading-relaxed">
+              <div className="mt-4 bg-gradient-to-br from-stone-50 to-stone-100/80 rounded-2xl p-4 text-left border border-stone-200/60">
+                <p className="text-sm text-stone-700 leading-relaxed" style={{ fontFamily: 'Satoshi, system-ui, sans-serif' }}>
                   {companionMessages[companionMessages.length - 1]?.content}
                 </p>
               </div>
@@ -1060,7 +1098,7 @@ function ChatTabContent({
         ) : (
           // Conversation messages
           <>
-            {conversation.messages
+            {conversation
               .filter((msg: any, idx: number, arr: any[]) =>
                 arr.findIndex((m: any) => m.id === msg.id) === idx
               )
@@ -1076,12 +1114,23 @@ function ChatTabContent({
                   }
                 `}
               >
+                {/* Voyager avatar for assistant messages */}
+                {msg.role === 'assistant' && (
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <div className="w-5 h-5 rounded-full bg-gradient-to-br from-amber-100 to-orange-100 border border-amber-200/60 flex items-center justify-center">
+                      <Compass className="w-2.5 h-2.5 text-amber-700" />
+                    </div>
+                    <span className="text-xs font-medium text-stone-500 tracking-wide" style={{ fontFamily: 'Fraunces, serif' }}>
+                      Voyager
+                    </span>
+                  </div>
+                )}
                 <div
                   className={`
                     rounded-2xl p-3.5
                     ${msg.role === 'user'
-                      ? 'bg-gradient-to-br from-teal-500 to-emerald-600 text-white'
-                      : 'bg-stone-100 border border-stone-200'
+                      ? 'rounded-br-md bg-gradient-to-br from-stone-800 to-stone-900 text-white'
+                      : 'rounded-tl-md bg-gradient-to-br from-stone-50 to-stone-100/80 border border-stone-200/60'
                     }
                   `}
                 >
@@ -1089,7 +1138,7 @@ function ChatTabContent({
                     <div className="prose prose-sm max-w-none text-stone-700">
                       <ReactMarkdown
                         components={{
-                          p: ({ children }) => <p className="mb-1.5 last:mb-0 leading-relaxed text-[15px]">{children}</p>,
+                          p: ({ children }) => <p className="mb-1.5 last:mb-0 leading-relaxed text-[15px]" style={{ fontFamily: 'Satoshi, system-ui, sans-serif' }}>{children}</p>,
                           strong: ({ children }) => <strong className="font-semibold text-stone-900">{children}</strong>,
                           ul: ({ children }) => <ul className="list-disc pl-4 my-1.5">{children}</ul>,
                           li: ({ children }) => <li className="text-[15px] leading-relaxed">{children}</li>,
@@ -1105,38 +1154,18 @@ function ChatTabContent({
               </motion.div>
             ))}
 
-            {/* Loading indicator */}
-            {isLoading && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mr-6"
-              >
-                <div className="bg-stone-100 border border-stone-200 rounded-2xl p-3.5 flex items-center gap-2.5">
-                  <div className="flex gap-1">
-                    <motion.span
-                      animate={{ opacity: [0.4, 1, 0.4] }}
-                      transition={{ duration: 1, repeat: Infinity, delay: 0 }}
-                      className="w-2 h-2 rounded-full bg-teal-500"
-                    />
-                    <motion.span
-                      animate={{ opacity: [0.4, 1, 0.4] }}
-                      transition={{ duration: 1, repeat: Infinity, delay: 0.2 }}
-                      className="w-2 h-2 rounded-full bg-teal-500"
-                    />
-                    <motion.span
-                      animate={{ opacity: [0.4, 1, 0.4] }}
-                      transition={{ duration: 1, repeat: Infinity, delay: 0.4 }}
-                      className="w-2 h-2 rounded-full bg-teal-500"
-                    />
-                  </div>
-                  <span className="text-sm text-stone-500">Thinking...</span>
-                </div>
-              </motion.div>
+            {/* Voyager thinking indicator */}
+            <VoyagerThinkingIndicator isThinking={thinking.isThinking} text={thinking.text} />
+
+            {/* Active tool badge */}
+            {activeTool && !thinking.isThinking && (
+              <div className="ml-8">
+                <VoyagerToolBadge tool={activeTool} />
+              </div>
             )}
 
             {/* Quick follow-ups */}
-            {!isLoading && (
+            {!isLoading && !thinking.isThinking && (
               <div className="pt-2">
                 <QuickActionChips
                   options={createTextChips(['Tell me more', 'Hidden gems?', 'Best food?'])}
@@ -1160,34 +1189,35 @@ function ChatTabContent({
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={onKeyDown}
-            placeholder="Ask about your trip..."
-            disabled={isLoading}
+            placeholder="Ask Voyager anything..."
+            disabled={isLoading || thinking.isThinking}
             className="
               flex-1 px-4 py-3
               bg-stone-50 rounded-xl
               text-[15px] text-stone-900
               placeholder:text-stone-400
               border border-stone-200
-              focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20
+              focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20
               focus:outline-none focus:bg-white
               disabled:opacity-50
               transition-all duration-200
             "
+            style={{ fontFamily: 'Satoshi, system-ui, sans-serif' }}
           />
           <motion.button
             onClick={onSend}
-            disabled={!inputValue.trim() || isLoading}
+            disabled={!inputValue.trim() || isLoading || thinking.isThinking}
             whileTap={{ scale: 0.95 }}
             className="
               w-11 h-11 rounded-xl
-              bg-gradient-to-br from-teal-500 to-emerald-600 text-white
+              bg-gradient-to-br from-amber-500 to-orange-500 text-white
               flex items-center justify-center
-              shadow-lg shadow-teal-500/25
+              shadow-lg shadow-amber-500/25
               disabled:from-stone-300 disabled:to-stone-400 disabled:shadow-none
               transition-all duration-200
             "
           >
-            {isLoading ? (
+            {isLoading || thinking.isThinking ? (
               <Loader2 className="w-5 h-5 animate-spin" />
             ) : (
               <Send className="w-5 h-5" />
