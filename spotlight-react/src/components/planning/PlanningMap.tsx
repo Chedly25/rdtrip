@@ -121,6 +121,15 @@ export function PlanningMap() {
     console.log('🚀 Initializing Mapbox map with center:', initialCenter);
 
     try {
+      // Log container dimensions for debugging
+      const containerRect = mapContainer.current.getBoundingClientRect();
+      console.log('📐 Map container dimensions:', {
+        width: containerRect.width,
+        height: containerRect.height,
+        top: containerRect.top,
+        left: containerRect.left,
+      });
+
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
         style: 'mapbox://styles/mapbox/outdoors-v12', // Warm, vintage-friendly style
@@ -360,7 +369,11 @@ export function PlanningMap() {
   return (
     <div className="relative h-full w-full overflow-hidden">
       {/* Mapbox Container */}
-      <div ref={mapContainer} className="absolute inset-0" />
+      <div
+        ref={mapContainer}
+        className="absolute inset-0"
+        style={{ width: '100%', height: '100%' }}
+      />
 
       {/* City Label - Vintage Style */}
       <motion.div
