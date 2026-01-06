@@ -1,12 +1,14 @@
 /**
- * PlanningMap - Premium Vintage Travel Map Edition
+ * PlanningMap - Real Mapbox Integration with Vintage Travel Aesthetic
  *
- * A beautiful, vintage-inspired map that feels like a cartographer's masterpiece.
- * Warm parchment tones, elegant markers, and refined details.
+ * A beautiful, functional map showing real locations, routes, and walking distances.
+ * Vintage travel journal styling with warm tones and premium interactions.
  */
 
-import { useMemo, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import mapboxgl from 'mapbox-gl';
+import 'mapbox-gl/dist/mapbox-gl.css';
 import {
   MapPin,
   Plus,
@@ -14,59 +16,56 @@ import {
   Layers,
   ZoomIn,
   ZoomOut,
-  Crosshair,
-  Compass,
+  Maximize2,
+  Navigation,
 } from 'lucide-react';
 import { usePlanningStore } from '../../stores/planningStore';
 import { CATEGORY_ICONS } from '../../utils/planningEnrichment';
 import type { Slot, PlannedItem } from '../../types/planning';
 
+// Mapbox token
+mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN || '';
+
 // ============================================================================
-// Slot Colors for Markers - Vintage Travel Palette
+// Slot Colors - Vintage Travel Palette
 // ============================================================================
 
-const SLOT_MARKER_COLORS: Record<Slot, {
-  bg: string;
-  border: string;
-  text: string;
-  glow: string;
-  line: string;
+const SLOT_COLORS: Record<Slot, {
+  primary: string;
+  light: string;
+  rgb: string;
 }> = {
   morning: {
-    bg: 'bg-gradient-to-br from-amber-500 to-orange-500',
-    border: 'border-amber-700',
-    text: 'text-white',
-    glow: 'shadow-amber-500/40',
-    line: '#f59e0b',
+    primary: '#f59e0b',
+    light: '#fbbf24',
+    rgb: '245, 158, 11',
   },
   afternoon: {
-    bg: 'bg-gradient-to-br from-orange-500 to-rose-500',
-    border: 'border-orange-700',
-    text: 'text-white',
-    glow: 'shadow-orange-500/40',
-    line: '#f97316',
+    primary: '#f97316',
+    light: '#fb923c',
+    rgb: '249, 115, 22',
   },
   evening: {
-    bg: 'bg-gradient-to-br from-rose-500 to-pink-600',
-    border: 'border-rose-700',
-    text: 'text-white',
-    glow: 'shadow-rose-500/40',
-    line: '#f43f5e',
+    primary: '#f43f5e',
+    light: '#fb7185',
+    rgb: '244, 63, 94',
   },
   night: {
-    bg: 'bg-gradient-to-br from-indigo-500 to-purple-600',
-    border: 'border-indigo-700',
-    text: 'text-white',
-    glow: 'shadow-indigo-500/40',
-    line: '#6366f1',
+    primary: '#6366f1',
+    light: '#818cf8',
+    rgb: '99, 102, 241',
   },
 };
 
 // ============================================================================
-// Map Component
+// Main Component
 // ============================================================================
 
 export function PlanningMap() {
+  const mapContainer = useRef<HTMLDivElement>(null);
+  const map = useRef<mapboxgl.Map | null>(null);
+  const markers = useRef<mapboxgl.Marker[]>([]);
+
   const {
     tripPlan,
     currentDayIndex,
@@ -77,25 +76,207 @@ export function PlanningMap() {
 
   const [selectedMarker, setSelectedMarker] = useState<string | null>(null);
   const [showLegend, setShowLegend] = useState(true);
+  const [mapLoaded, setMapLoaded] = useState(false);
+  const [routeData, setRouteData] = useState<Array<{ distance: number; duration: number }>>([]);
 
   const currentDay = getCurrentDay();
   const dayItems = getDayItems(currentDayIndex);
 
-  // Group items by slot
-  const itemsBySlot = useMemo(() => {
-    if (!currentDay) return {};
+  // Initialize map
+  useEffect(() => {
+    if (!mapContainer.current || map.current) return;
 
-    return {
-      morning: currentDay.slots.morning,
-      afternoon: currentDay.slots.afternoon,
-      evening: currentDay.slots.evening,
-      night: currentDay.slots.night,
+    const initialCenter = currentDay?.city.coordinates
+      ? [currentDay.city.coordinates.lng, currentDay.city.coordinates.lat]
+      : [-9.1393, 38.7223]; // Lisbon default
+
+    map.current = new mapboxgl.Map({
+      container: mapContainer.current,
+      style: 'mapbox://styles/mapbox/outdoors-v12', // Warm, vintage-friendly style
+      center: initialCenter as [number, number],
+      zoom: 13,
+      attributionControl: false,
+    });
+
+    // Custom attribution
+    map.current.addControl(
+      new mapboxgl.AttributionControl({
+        compact: true,
+        customAttribution: '© Mapbox',
+      }),
+      'bottom-left'
+    );
+
+    map.current.on('load', () => {
+      setMapLoaded(true);
+    });
+
+    return () => {
+      markers.current.forEach(marker => marker.remove());
+      markers.current = [];
+      map.current?.remove();
+      map.current = null;
     };
   }, [currentDay]);
 
-  const handleMarkerClick = useCallback((itemId: string) => {
-    setSelectedMarker(selectedMarker === itemId ? null : itemId);
-  }, [selectedMarker]);
+  // Update markers and routes when items change
+  useEffect(() => {
+    if (!map.current || !mapLoaded || !dayItems.length) return;
+
+    // Clear existing markers
+    markers.current.forEach(marker => marker.remove());
+    markers.current = [];
+
+    // Add new markers
+    dayItems.forEach((item, index) => {
+      const coords = item.place.geometry.location;
+      const el = createMarkerElement(item, index, () => setSelectedMarker(item.id));
+
+      const marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
+        .setLngLat([coords.lng, coords.lat])
+        .addTo(map.current!);
+
+      markers.current.push(marker);
+    });
+
+    // Fit bounds to show all markers
+    if (dayItems.length > 0) {
+      const bounds = new mapboxgl.LngLatBounds();
+      dayItems.forEach(item => {
+        const coords = item.place.geometry.location;
+        bounds.extend([coords.lng, coords.lat]);
+      });
+
+      map.current.fitBounds(bounds, {
+        padding: { top: 100, bottom: 100, left: 100, right: 100 },
+        maxZoom: 15,
+        duration: 1000,
+      });
+    }
+
+    // Fetch and display routes
+    if (dayItems.length > 1) {
+      fetchRoutes(dayItems);
+    }
+  }, [dayItems, mapLoaded]);
+
+  // Fetch walking routes from Mapbox Directions API
+  const fetchRoutes = async (items: PlannedItem[]) => {
+    if (!map.current) return;
+
+    const coordinates = items.map(item =>
+      `${item.place.geometry.location.lng},${item.place.geometry.location.lat}`
+    ).join(';');
+
+    try {
+      const response = await fetch(
+        `https://api.mapbox.com/directions/v5/mapbox/walking/${coordinates}?` +
+        `geometries=geojson&overview=full&steps=true&access_token=${mapboxgl.accessToken}`
+      );
+      const data = await response.json();
+
+      if (data.routes && data.routes[0]) {
+        const route = data.routes[0];
+
+        // Store route data for distance/duration display
+        const legs = route.legs.map((leg: any) => ({
+          distance: leg.distance, // meters
+          duration: leg.duration, // seconds
+        }));
+        setRouteData(legs);
+
+        // Add route to map
+        const routeGeoJSON = {
+          type: 'Feature' as const,
+          properties: {},
+          geometry: route.geometry,
+        };
+
+        // Remove existing route layers
+        if (map.current!.getSource('route')) {
+          map.current!.removeLayer('route');
+          map.current!.removeLayer('route-outline');
+          map.current!.removeSource('route');
+        }
+
+        // Add route source
+        map.current!.addSource('route', {
+          type: 'geojson',
+          data: routeGeoJSON as any,
+        });
+
+        // Add route outline (darker)
+        map.current!.addLayer({
+          id: 'route-outline',
+          type: 'line',
+          source: 'route',
+          layout: {
+            'line-join': 'round',
+            'line-cap': 'round',
+          },
+          paint: {
+            'line-color': '#8B4513',
+            'line-width': 8,
+            'line-opacity': 0.3,
+          },
+        });
+
+        // Add route line (terracotta)
+        map.current!.addLayer({
+          id: 'route',
+          type: 'line',
+          source: 'route',
+          layout: {
+            'line-join': 'round',
+            'line-cap': 'round',
+          },
+          paint: {
+            'line-color': '#C45830',
+            'line-width': 5,
+            'line-opacity': 0.8,
+            'line-dasharray': [2, 2],
+          },
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching route:', error);
+    }
+  };
+
+  // Map controls
+  const handleZoomIn = useCallback(() => {
+    map.current?.zoomIn({ duration: 300 });
+  }, []);
+
+  const handleZoomOut = useCallback(() => {
+    map.current?.zoomOut({ duration: 300 });
+  }, []);
+
+  const handleFitBounds = useCallback(() => {
+    if (!map.current || dayItems.length === 0) return;
+
+    const bounds = new mapboxgl.LngLatBounds();
+    dayItems.forEach(item => {
+      const coords = item.place.geometry.location;
+      bounds.extend([coords.lng, coords.lat]);
+    });
+
+    map.current.fitBounds(bounds, {
+      padding: { top: 100, bottom: 100, left: 100, right: 100 },
+      maxZoom: 15,
+      duration: 1000,
+    });
+  }, [dayItems]);
+
+  const handleRecenter = useCallback(() => {
+    if (!map.current || !currentDay?.city.coordinates) return;
+
+    map.current.flyTo({
+      center: [currentDay.city.coordinates.lng, currentDay.city.coordinates.lat],
+      zoom: 13,
+      duration: 1000,
+    });
+  }, [currentDay]);
 
   if (!tripPlan || !currentDay) {
     return (
@@ -105,51 +286,25 @@ export function PlanningMap() {
     );
   }
 
+  const itemsBySlot = {
+    morning: currentDay.slots.morning || [],
+    afternoon: currentDay.slots.afternoon || [],
+    evening: currentDay.slots.evening || [],
+    night: currentDay.slots.night || [],
+  };
+
   return (
-    <div className="relative h-full overflow-hidden bg-gradient-to-br from-[#F5EFE0] via-[#EDE4D3] to-[#E8DCC5]">
-      {/* Vintage Paper Texture */}
-      <div className="absolute inset-0 opacity-[0.04] pointer-events-none bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZmlsdGVyIGlkPSJub2lzZSI+PGZlVHVyYnVsZW5jZSB0eXBlPSJmcmFjdGFsTm9pc2UiIGJhc2VGcmVxdWVuY3k9IjAuOSIgbnVtT2N0YXZlcz0iNCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNub2lzZSkiIG9wYWNpdHk9IjAuNSIvPjwvc3ZnPg==')]" />
-
-      {/* Vintage Map Grid */}
-      <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-20">
-        <defs>
-          <pattern id="map-grid" width="60" height="60" patternUnits="userSpaceOnUse">
-            <path
-              d="M 60 0 L 0 0 0 60"
-              fill="none"
-              stroke="#8B7355"
-              strokeWidth="0.5"
-              opacity="0.3"
-            />
-          </pattern>
-          <pattern id="map-dots" width="30" height="30" patternUnits="userSpaceOnUse">
-            <circle cx="15" cy="15" r="1" fill="#8B7355" opacity="0.15" />
-          </pattern>
-        </defs>
-        <rect width="100%" height="100%" fill="url(#map-grid)" />
-        <rect width="100%" height="100%" fill="url(#map-dots)" />
-      </svg>
-
-      {/* Decorative Compass Rose */}
-      <motion.div
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none opacity-5"
-        animate={{ rotate: 360 }}
-        transition={{ duration: 120, repeat: Infinity, ease: 'linear' }}
-      >
-        <Compass className="w-64 h-64 text-rui-accent" strokeWidth={0.5} />
-      </motion.div>
-
-      {/* Decorative Border */}
-      <div className="absolute inset-0 pointer-events-none border-8 border-double border-[#C4A57B]/20" />
+    <div className="relative h-full w-full overflow-hidden">
+      {/* Mapbox Container */}
+      <div ref={mapContainer} className="absolute inset-0" />
 
       {/* City Label - Vintage Style */}
       <motion.div
-        className="absolute top-6 left-6 z-10"
+        className="absolute top-6 left-6 z-10 pointer-events-auto"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
       >
-        <div className="relative bg-gradient-to-br from-rui-white/95 to-rui-cream/95 backdrop-blur-sm rounded-2xl px-6 py-4 shadow-rui-3 border-2 border-rui-accent/30">
-          {/* Decorative corner */}
+        <div className="relative bg-gradient-to-br from-rui-white/95 to-rui-cream/95 backdrop-blur-md rounded-2xl px-6 py-4 shadow-rui-3 border-2 border-rui-accent/30">
           <div className="absolute -top-2 -left-2 w-6 h-6">
             <svg viewBox="0 0 24 24" className="text-rui-accent/30" fill="currentColor">
               <path d="M0 0 L24 0 L0 24 Z" />
@@ -168,16 +323,16 @@ export function PlanningMap() {
         </div>
       </motion.div>
 
-      {/* Slot Legend - Vintage Card Style */}
+      {/* Slot Legend */}
       <AnimatePresence>
         {showLegend && (
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 20 }}
-            className="absolute top-6 right-6 z-10"
+            className="absolute top-6 right-6 z-10 pointer-events-auto"
           >
-            <div className="relative bg-gradient-to-br from-rui-white/95 to-rui-cream/95 backdrop-blur-sm rounded-2xl p-4 shadow-rui-3 border-2 border-rui-accent/30">
+            <div className="relative bg-gradient-to-br from-rui-white/95 to-rui-cream/95 backdrop-blur-md rounded-2xl p-4 shadow-rui-3 border-2 border-rui-accent/30">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <Layers className="w-4 h-4 text-rui-accent" />
@@ -195,43 +350,81 @@ export function PlanningMap() {
               <div className="space-y-2">
                 {(['morning', 'afternoon', 'evening', 'night'] as Slot[]).map((slot) => (
                   <div key={slot} className="flex items-center gap-3">
-                    <div className={`w-4 h-4 rounded-full ${SLOT_MARKER_COLORS[slot].bg} shadow-md`} />
+                    <div
+                      className="w-4 h-4 rounded-full shadow-md"
+                      style={{ background: SLOT_COLORS[slot].primary }}
+                    />
                     <span className="text-body-2 text-rui-grey-70 font-medium capitalize flex-1">
                       {slot}
                     </span>
                     <span className="text-body-3 text-rui-grey-50 font-semibold bg-rui-grey-5 px-2 py-0.5 rounded-md">
-                      {itemsBySlot[slot]?.length || 0}
+                      {itemsBySlot[slot].length}
                     </span>
                   </div>
                 ))}
               </div>
+
+              {/* Total Walking Distance */}
+              {routeData.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-rui-grey-10">
+                  <div className="text-body-3 text-rui-grey-60">
+                    <div className="flex items-center justify-between">
+                      <span>Total walking:</span>
+                      <span className="font-semibold text-rui-black">
+                        {formatDistance(routeData.reduce((sum, leg) => sum + leg.distance, 0))}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between mt-1">
+                      <span>Estimated time:</span>
+                      <span className="font-semibold text-rui-black">
+                        {formatDuration(routeData.reduce((sum, leg) => sum + leg.duration, 0))}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
       {/* Map Controls - Vintage Brass Style */}
-      <div className="absolute bottom-6 right-6 z-10 flex flex-col gap-2">
+      <div className="absolute bottom-6 right-6 z-10 flex flex-col gap-2 pointer-events-auto">
         <motion.button
+          onClick={handleZoomIn}
           className="w-12 h-12 bg-gradient-to-br from-[#D4A574] to-[#C4A57B] rounded-xl shadow-rui-3 flex items-center justify-center text-rui-white border-2 border-[#B8975E] hover:shadow-rui-4 transition-all"
-          whileHover={{ scale: 1.05, rotate: 90 }}
+          whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
+          title="Zoom in"
         >
           <ZoomIn className="w-5 h-5" strokeWidth={2.5} />
         </motion.button>
         <motion.button
+          onClick={handleZoomOut}
           className="w-12 h-12 bg-gradient-to-br from-[#D4A574] to-[#C4A57B] rounded-xl shadow-rui-3 flex items-center justify-center text-rui-white border-2 border-[#B8975E] hover:shadow-rui-4 transition-all"
-          whileHover={{ scale: 1.05, rotate: -90 }}
+          whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
+          title="Zoom out"
         >
           <ZoomOut className="w-5 h-5" strokeWidth={2.5} />
         </motion.button>
         <motion.button
+          onClick={handleFitBounds}
           className="w-12 h-12 bg-gradient-to-br from-[#D4A574] to-[#C4A57B] rounded-xl shadow-rui-3 flex items-center justify-center text-rui-white border-2 border-[#B8975E] hover:shadow-rui-4 transition-all"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
+          title="Fit to view"
         >
-          <Crosshair className="w-5 h-5" strokeWidth={2.5} />
+          <Maximize2 className="w-5 h-5" strokeWidth={2.5} />
+        </motion.button>
+        <motion.button
+          onClick={handleRecenter}
+          className="w-12 h-12 bg-gradient-to-br from-[#D4A574] to-[#C4A57B] rounded-xl shadow-rui-3 flex items-center justify-center text-rui-white border-2 border-[#B8975E] hover:shadow-rui-4 transition-all"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          title="Recenter"
+        >
+          <Navigation className="w-5 h-5" strokeWidth={2.5} />
         </motion.button>
         {!showLegend && (
           <motion.button
@@ -241,74 +434,18 @@ export function PlanningMap() {
             animate={{ scale: 1 }}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
+            title="Show legend"
           >
             <Layers className="w-5 h-5" strokeWidth={2.5} />
           </motion.button>
         )}
       </div>
 
-      {/* SVG Route Lines */}
-      <svg className="absolute inset-0 w-full h-full pointer-events-none">
-        {dayItems.length > 1 && dayItems.map((item, index) => {
-          if (index === 0) return null;
-          const prev = dayItems[index - 1];
-          const fromPos = getSimulatedPosition(prev, index - 1, dayItems.length);
-          const toPos = getSimulatedPosition(item, index, dayItems.length);
-
-          return (
-            <motion.line
-              key={`line-${item.id}`}
-              initial={{ pathLength: 0, opacity: 0 }}
-              animate={{ pathLength: 1, opacity: 0.4 }}
-              transition={{ duration: 0.8, delay: index * 0.15, ease: 'easeOut' }}
-              x1={`${fromPos.x}%`}
-              y1={`${fromPos.y}%`}
-              x2={`${toPos.x}%`}
-              y2={`${toPos.y}%`}
-              stroke={SLOT_MARKER_COLORS[item.slot].line}
-              strokeWidth="4"
-              strokeLinecap="round"
-              strokeDasharray="12 6"
-              style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))' }}
-            />
-          );
-        })}
-      </svg>
-
-      {/* Markers */}
-      <div className="absolute inset-0">
-        {dayItems.map((item, index) => (
-          <MapMarker
-            key={item.id}
-            item={item}
-            index={index}
-            total={dayItems.length}
-            isSelected={selectedMarker === item.id}
-            onClick={() => handleMarkerClick(item.id)}
-          />
-        ))}
-
-        {/* City Center Marker - Vintage Style */}
-        <div
-          className="absolute transform -translate-x-1/2 -translate-y-1/2"
-          style={{ left: '50%', top: '50%' }}
-        >
-          <div className="relative">
-            <div className="w-4 h-4 rounded-full bg-gradient-to-br from-[#8B7355] to-[#6B5A45] border-2 border-rui-white shadow-md" />
-            <motion.div
-              className="absolute inset-0 w-4 h-4 rounded-full bg-[#8B7355]/30"
-              animate={{ scale: [1, 1.8, 1], opacity: [0.5, 0, 0.5] }}
-              transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-            />
-          </div>
-        </div>
-      </div>
-
       {/* Empty State */}
       {dayItems.length === 0 && (
-        <div className="absolute inset-0 flex items-center justify-center">
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <motion.div
-            className="text-center max-w-md"
+            className="text-center max-w-md pointer-events-auto"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
           >
@@ -340,6 +477,8 @@ export function PlanningMap() {
         {selectedMarker && (
           <MarkerPopup
             item={dayItems.find((i) => i.id === selectedMarker)!}
+            routeData={routeData}
+            itemIndex={dayItems.findIndex((i) => i.id === selectedMarker)}
             onClose={() => setSelectedMarker(null)}
           />
         )}
@@ -349,145 +488,89 @@ export function PlanningMap() {
 }
 
 // ============================================================================
-// Map Marker - Vintage Pin Style
+// Create Custom Marker Element
 // ============================================================================
 
-interface MapMarkerProps {
-  item: PlannedItem;
-  index: number;
-  total: number;
-  isSelected: boolean;
-  onClick: () => void;
-}
+function createMarkerElement(
+  item: PlannedItem,
+  index: number,
+  onClick: () => void
+): HTMLDivElement {
+  const el = document.createElement('div');
+  el.className = 'custom-marker';
+  el.style.cssText = 'cursor: pointer; transform-origin: bottom center;';
 
-function MapMarker({ item, index, total, isSelected, onClick }: MapMarkerProps) {
-  const colors = SLOT_MARKER_COLORS[item.slot];
-  const position = getSimulatedPosition(item, index, total);
+  const colors = SLOT_COLORS[item.slot];
   const icon = CATEGORY_ICONS[item.place.category] || '📍';
 
-  return (
-    <motion.button
-      initial={{ scale: 0, y: 40 }}
-      animate={{ scale: 1, y: 0 }}
-      transition={{
-        delay: index * 0.1,
-        type: 'spring',
-        stiffness: 300,
-        damping: 20
-      }}
-      onClick={onClick}
-      className="absolute transform -translate-x-1/2 -translate-y-full group"
-      style={{ left: `${position.x}%`, top: `${position.y}%` }}
-    >
-      <div className={`relative flex flex-col items-center ${isSelected ? 'z-30' : 'z-10'}`}>
-        {/* Pin Body - Vintage Rounded Rectangle */}
-        <div className="relative">
-          <motion.div
-            className={`
-              flex items-center justify-center
-              w-14 h-14 rounded-2xl
-              ${colors.bg}
-              border-3 ${colors.border}
-              shadow-xl ${isSelected ? colors.glow : ''}
-              transition-all duration-300
-            `}
-            whileHover={{ scale: 1.15, rotate: 5 }}
-            style={{
-              boxShadow: `0 8px 20px rgba(0,0,0,0.2), 0 0 0 4px rgba(255,255,255,0.8)`,
-            }}
-          >
-            <span className="text-2xl drop-shadow-md">{icon}</span>
-          </motion.div>
+  el.innerHTML = `
+    <div class="flex flex-col items-center transition-transform hover:scale-110" style="filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3));">
+      <!-- Pin Body -->
+      <div class="relative flex items-center justify-center w-14 h-14 rounded-2xl border-3 shadow-xl"
+           style="background: linear-gradient(135deg, ${colors.primary} 0%, ${colors.light} 100%);
+                  border-color: ${colors.primary};
+                  box-shadow: 0 8px 20px rgba(${colors.rgb}, 0.4), 0 0 0 4px rgba(255,255,255,0.9);">
+        <span style="font-size: 24px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));">${icon}</span>
 
-          {/* Pin Shadow */}
-          <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-12 h-3 bg-black/20 blur-md rounded-full" />
-        </div>
-
-        {/* Pin Stem */}
-        <div
-          className={`
-            w-1.5 h-8 rounded-full
-            ${colors.bg}
-            ${colors.border}
-            shadow-md
-          `}
-          style={{
-            background: colors.line,
-            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-          }}
-        />
-
-        {/* Pin Point */}
-        <div
-          className="w-3 h-3 rounded-full -mt-1"
-          style={{
-            background: colors.line,
-            boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-          }}
-        />
-
-        {/* Order Badge - Vintage Stamp Style */}
-        <div className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-gradient-to-br from-rui-white to-rui-grey-2 shadow-lg border-2 border-rui-accent/40 flex items-center justify-center">
-          <span className="text-xs font-bold text-rui-black">{index + 1}</span>
-        </div>
-
-        {/* Pulse for Selected */}
-        {isSelected && (
-          <motion.div
-            animate={{ scale: [1, 1.6], opacity: [0.8, 0] }}
-            transition={{ duration: 1.5, repeat: Infinity }}
-            className="absolute top-0 left-0 right-0 bottom-8 rounded-2xl"
-            style={{
-              background: colors.line,
-              opacity: 0.3,
-            }}
-          />
-        )}
-
-        {/* Name Label on Hover */}
-        <div
-          className="
-            absolute left-1/2 -translate-x-1/2 -bottom-12
-            px-3 py-1.5 bg-rui-black/90 text-white text-body-3 rounded-lg
-            whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity
-            pointer-events-none shadow-lg font-medium
-          "
-        >
-          {item.place.name}
+        <!-- Order Badge -->
+        <div class="absolute -top-2 -right-2 w-7 h-7 rounded-full flex items-center justify-center"
+             style="background: linear-gradient(135deg, #fff 0%, #f5f0e8 100%);
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+                    border: 2px solid rgba(196, 88, 48, 0.4);">
+          <span style="font-size: 12px; font-weight: 700; color: #2C2417;">${index + 1}</span>
         </div>
       </div>
-    </motion.button>
-  );
+
+      <!-- Pin Stem -->
+      <div style="width: 6px; height: 32px; background: ${colors.primary}; border-radius: 3px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);"></div>
+
+      <!-- Pin Point -->
+      <div style="width: 12px; height: 12px; background: ${colors.primary}; border-radius: 50%; margin-top: -4px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"></div>
+    </div>
+  `;
+
+  el.addEventListener('click', (e) => {
+    e.stopPropagation();
+    onClick();
+  });
+
+  return el;
 }
 
 // ============================================================================
-// Marker Popup - Vintage Card
+// Marker Popup
 // ============================================================================
 
 interface MarkerPopupProps {
   item: PlannedItem;
+  routeData: Array<{ distance: number; duration: number }>;
+  itemIndex: number;
   onClose: () => void;
 }
 
-function MarkerPopup({ item, onClose }: MarkerPopupProps) {
+function MarkerPopup({ item, routeData, itemIndex, onClose }: MarkerPopupProps) {
   const { place, slot } = item;
-  const colors = SLOT_MARKER_COLORS[slot];
+  const colors = SLOT_COLORS[slot];
   const icon = CATEGORY_ICONS[place.category] || '📍';
+  const legData = routeData[itemIndex - 1]; // Route to this marker from previous
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 40, scale: 0.9 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 40, scale: 0.9 }}
-      className="absolute bottom-6 left-6 right-6 z-40"
+      className="absolute bottom-6 left-6 right-6 z-40 pointer-events-auto"
     >
       <div className="bg-gradient-to-br from-rui-white to-rui-cream rounded-2xl shadow-rui-4 border-2 border-rui-accent/30 overflow-hidden">
         {/* Colored Top Bar */}
-        <div className={`h-2 ${colors.bg}`} />
+        <div className="h-2" style={{ background: colors.primary }} />
 
         <div className="p-5">
           <div className="flex items-start gap-4">
-            <div className={`flex items-center justify-center w-14 h-14 rounded-xl ${colors.bg} shadow-md`}>
+            <div
+              className="flex items-center justify-center w-14 h-14 rounded-xl shadow-md"
+              style={{ background: `linear-gradient(135deg, ${colors.primary}, ${colors.light})` }}
+            >
               <span className="text-3xl">{icon}</span>
             </div>
             <div className="flex-1 min-w-0">
@@ -505,6 +588,25 @@ function MarkerPopup({ item, onClose }: MarkerPopupProps) {
               <X className="w-5 h-5" />
             </button>
           </div>
+
+          {/* Walking Info */}
+          {legData && (
+            <div className="mt-4 p-3 bg-rui-grey-2/50 rounded-xl border border-rui-grey-10">
+              <div className="flex items-center gap-2 text-body-3 text-rui-grey-60 mb-1">
+                <Navigation className="w-3.5 h-3.5" />
+                <span className="font-semibold text-rui-black">Walking from previous stop:</span>
+              </div>
+              <div className="flex items-center gap-4 text-body-2">
+                <span className="text-rui-black font-semibold">
+                  {formatDistance(legData.distance)}
+                </span>
+                <span className="text-rui-grey-50">·</span>
+                <span className="text-rui-black font-semibold">
+                  {formatDuration(legData.duration)}
+                </span>
+              </div>
+            </div>
+          )}
 
           {place.rating && (
             <div className="mt-4 flex items-center gap-4 text-body-2">
@@ -535,15 +637,21 @@ function MarkerPopup({ item, onClose }: MarkerPopupProps) {
 // Helper Functions
 // ============================================================================
 
-function getSimulatedPosition(_item: PlannedItem, index: number, total: number): { x: number; y: number } {
-  // Create an elegant spiral pattern
-  const angle = (index / Math.max(total, 1)) * Math.PI * 2 - Math.PI / 2;
-  const radius = 18 + (index % 4) * 7;
+function formatDistance(meters: number): string {
+  if (meters < 1000) {
+    return `${Math.round(meters)}m`;
+  }
+  return `${(meters / 1000).toFixed(1)}km`;
+}
 
-  return {
-    x: 50 + Math.cos(angle) * radius,
-    y: 50 + Math.sin(angle) * radius,
-  };
+function formatDuration(seconds: number): string {
+  const mins = Math.round(seconds / 60);
+  if (mins < 60) {
+    return `${mins} min`;
+  }
+  const hours = Math.floor(mins / 60);
+  const remainingMins = mins % 60;
+  return `${hours}h ${remainingMins}m`;
 }
 
 export default PlanningMap;
