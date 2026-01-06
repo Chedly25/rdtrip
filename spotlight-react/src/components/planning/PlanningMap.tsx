@@ -91,17 +91,34 @@ export function PlanningMap() {
 
   // Initialize map
   useEffect(() => {
-    if (!mapContainer.current || map.current) return;
+    console.log('🗺️ Map init useEffect triggered', {
+      hasContainer: !!mapContainer.current,
+      hasExistingMap: !!map.current,
+      hasCurrentDay: !!currentDay,
+      hasToken: !!mapboxgl.accessToken,
+    });
+
+    if (!mapContainer.current) {
+      console.error('❌ Map container ref is null');
+      return;
+    }
+
+    if (map.current) {
+      console.log('ℹ️ Map already initialized, skipping');
+      return;
+    }
 
     // Verify Mapbox token
     if (!mapboxgl.accessToken) {
-      console.error('Mapbox token is not set. Map will not load.');
+      console.error('❌ Mapbox token is not set. Map will not load.');
       return;
     }
 
     const initialCenter = currentDay?.city.coordinates
       ? [currentDay.city.coordinates.lng, currentDay.city.coordinates.lat]
       : [-9.1393, 38.7223]; // Lisbon default
+
+    console.log('🚀 Initializing Mapbox map with center:', initialCenter);
 
     try {
       map.current = new mapboxgl.Map({
@@ -111,6 +128,8 @@ export function PlanningMap() {
         zoom: 13,
         attributionControl: false,
       });
+
+      console.log('✅ Mapbox Map object created');
 
       // Custom attribution
       map.current.addControl(
@@ -122,18 +141,19 @@ export function PlanningMap() {
       );
 
       map.current.on('load', () => {
-        console.log('Mapbox map loaded successfully');
+        console.log('✅ Mapbox map loaded successfully');
         setMapLoaded(true);
       });
 
       map.current.on('error', (e) => {
-        console.error('Mapbox error:', e);
+        console.error('❌ Mapbox error:', e);
       });
     } catch (error) {
-      console.error('Error initializing Mapbox map:', error);
+      console.error('❌ Error initializing Mapbox map:', error);
     }
 
     return () => {
+      console.log('🧹 Cleaning up map');
       markers.current.forEach(marker => marker.remove());
       markers.current = [];
       map.current?.remove();
