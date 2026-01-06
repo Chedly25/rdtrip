@@ -28,7 +28,7 @@ import {
   Moon,
   Check,
 } from 'lucide-react';
-import { haversineDistance, CATEGORY_ICONS } from '../../utils/planningEnrichment';
+import { haversineDistance } from '../../utils/planningEnrichment';
 import type { EnrichedPlace, Slot } from '../../types/planning';
 
 // ============================================================================
@@ -124,9 +124,6 @@ export function EnhancedAIPickCard({
             : `${distance.toFixed(1)} km away`,
     };
   }, [anchorLocation, place]);
-
-  // Get category icon
-  const categoryIcon = CATEGORY_ICONS[place.category] || '📍';
 
   // Handle add action
   const handleAdd = async (slot: Slot) => {
@@ -224,7 +221,7 @@ export function EnhancedAIPickCard({
                 </div>
               ) : (
                 <div className="w-20 h-20 rounded-xl bg-gradient-to-br from-rui-grey-10 to-rui-grey-20 flex items-center justify-center flex-shrink-0">
-                  <span className="text-3xl">{categoryIcon}</span>
+                  <MapPin className="w-8 h-8 text-rui-grey-50" />
                 </div>
               )}
 

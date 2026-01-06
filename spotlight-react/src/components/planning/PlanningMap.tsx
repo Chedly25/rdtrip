@@ -20,7 +20,6 @@ import {
   Navigation,
 } from 'lucide-react';
 import { usePlanningStore } from '../../stores/planningStore';
-import { CATEGORY_ICONS } from '../../utils/planningEnrichment';
 import type { Slot, PlannedItem } from '../../types/planning';
 
 // Mapbox token
@@ -599,7 +598,6 @@ function createMarkerElement(
   el.style.cssText = 'cursor: pointer; transform-origin: bottom center; position: relative; z-index: ' + (100 + index);
 
   const colors = SLOT_COLORS[item.slot];
-  const icon = CATEGORY_ICONS[item.place.category] || '📍';
 
   // Get photo URL from Google Places API
   const photoUrl = item.place.photos && item.place.photos.length > 0
@@ -629,7 +627,6 @@ function createMarkerElement(
             <img src="${photoUrl}"
                  alt="${item.place.name}"
                  crossorigin="anonymous"
-                 onerror="this.parentElement.parentElement.parentElement.innerHTML = '${icon.replace(/'/g, "\\'")}';"
                  style="width: 100%; height: 100%; object-fit: cover; opacity: 0.95;" />
 
             <!-- Vintage Vignette -->
@@ -649,14 +646,6 @@ function createMarkerElement(
             <span style="font-size: 15px; font-weight: 800; color: #FFFBF5;
                         text-shadow: 0 1px 2px rgba(0,0,0,0.3); font-family: 'Fraunces', serif;">${index + 1}</span>
           </div>
-
-          <!-- Category Icon Badge -->
-          <div class="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-8 h-8 rounded-full flex items-center justify-center"
-               style="background: linear-gradient(135deg, ${colors.primary} 0%, ${colors.light} 100%);
-                      box-shadow: 0 4px 12px rgba(${colors.rgb}, 0.5), 0 0 0 3px rgba(255,255,255,0.95);
-                      border: 2px solid rgba(255,255,255,0.3);">
-            <span style="font-size: 14px;">${icon}</span>
-          </div>
         </div>
 
         <!-- Pin Stem -->
@@ -673,11 +662,11 @@ function createMarkerElement(
       </div>
     `;
   } else {
-    // Icon-based marker (fallback)
+    // Simple numbered marker (fallback when no photo)
     el.innerHTML = `
       <div class="flex flex-col items-center transition-all hover:scale-110 hover:-translate-y-1"
            style="filter: drop-shadow(0 6px 20px rgba(0,0,0,0.35));">
-        <!-- Pin Body with Icon -->
+        <!-- Pin Body with Number -->
         <div class="relative flex items-center justify-center w-16 h-16 rounded-2xl"
              style="background: linear-gradient(135deg, ${colors.primary} 0%, ${colors.light} 100%);
                     box-shadow:
@@ -686,18 +675,8 @@ function createMarkerElement(
                       inset 0 -4px 8px rgba(0,0,0,0.1),
                       inset 0 2px 4px rgba(255,255,255,0.3);
                     border: 3px solid rgba(255,255,255,0.3);">
-          <span style="font-size: 28px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));">${icon}</span>
-
-          <!-- Order Badge -->
-          <div class="absolute -top-3 -right-3 w-10 h-10 rounded-full flex items-center justify-center"
-               style="background: radial-gradient(circle at 30% 30%, ${colors.light} 0%, ${colors.primary} 100%);
-                      box-shadow:
-                        0 4px 12px rgba(${colors.rgb}, 0.6),
-                        0 0 0 3px rgba(255,255,255,0.95);
-                      border: 2px solid rgba(255,255,255,0.4);">
-            <span style="font-size: 15px; font-weight: 800; color: #FFFBF5;
-                        text-shadow: 0 1px 2px rgba(0,0,0,0.3); font-family: 'Fraunces', serif;">${index + 1}</span>
-          </div>
+          <span style="font-size: 24px; font-weight: 800; color: #FFFBF5;
+                      text-shadow: 0 2px 4px rgba(0,0,0,0.3); font-family: 'Fraunces', serif;">${index + 1}</span>
         </div>
 
         <!-- Pin Stem -->
@@ -737,7 +716,7 @@ interface MarkerPopupProps {
 function MarkerPopup({ item, routeData, itemIndex, onClose }: MarkerPopupProps) {
   const { place, slot } = item;
   const colors = SLOT_COLORS[slot];
-  const icon = CATEGORY_ICONS[place.category] || '📍';
+  const photoUrl = place.photos && place.photos.length > 0 ? place.photos[0].url : null;
   const legData = routeData[itemIndex - 1]; // Route to this marker from previous
 
   return (
@@ -753,12 +732,34 @@ function MarkerPopup({ item, routeData, itemIndex, onClose }: MarkerPopupProps) 
 
         <div className="p-5">
           <div className="flex items-start gap-4">
-            <div
-              className="flex items-center justify-center w-14 h-14 rounded-xl shadow-md"
-              style={{ background: `linear-gradient(135deg, ${colors.primary}, ${colors.light})` }}
-            >
-              <span className="text-3xl">{icon}</span>
-            </div>
+            {/* Photo Thumbnail or Icon */}
+            {photoUrl ? (
+              <div className="w-14 h-14 rounded-xl overflow-hidden shadow-md border-2 border-white">
+                <img
+                  src={photoUrl}
+                  alt={place.name}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                    const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                    if (fallback) fallback.style.display = 'flex';
+                  }}
+                />
+                <div
+                  className="w-full h-full items-center justify-center"
+                  style={{ display: 'none', background: `linear-gradient(135deg, ${colors.primary}, ${colors.light})` }}
+                >
+                  <MapPin className="w-6 h-6 text-white" />
+                </div>
+              </div>
+            ) : (
+              <div
+                className="flex items-center justify-center w-14 h-14 rounded-xl shadow-md"
+                style={{ background: `linear-gradient(135deg, ${colors.primary}, ${colors.light})` }}
+              >
+                <MapPin className="w-6 h-6 text-white" />
+              </div>
+            )}
             <div className="flex-1 min-w-0">
               <h4 className="font-display text-xl text-rui-black font-semibold truncate leading-tight">
                 {place.name}

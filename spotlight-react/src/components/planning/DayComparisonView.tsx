@@ -23,9 +23,10 @@ import {
   Check,
   Gem,
   GripVertical,
+  MapPin,
 } from 'lucide-react';
 import { usePlanningStore } from '../../stores/planningStore';
-import { haversineDistance, CATEGORY_ICONS } from '../../utils/planningEnrichment';
+import { haversineDistance } from '../../utils/planningEnrichment';
 import type { Slot, PlannedItem, DayPlan } from '../../types/planning';
 
 // ============================================================================
@@ -579,7 +580,7 @@ interface CompactItemCardProps {
 }
 
 function CompactItemCard({ item, onDragStart, onDragEnd, isDragging }: CompactItemCardProps) {
-  const categoryIcon = CATEGORY_ICONS[item.place.category] || '📍';
+  const photoUrl = item.place.photos && item.place.photos.length > 0 ? item.place.photos[0].url : null;
 
   return (
     <motion.div
@@ -597,7 +598,28 @@ function CompactItemCard({ item, onDragStart, onDragEnd, isDragging }: CompactIt
     >
       <GripVertical className="w-3.5 h-3.5 text-rui-grey-30 flex-shrink-0" />
 
-      <span className="text-lg flex-shrink-0">{categoryIcon}</span>
+      {/* Photo Thumbnail or Icon */}
+      {photoUrl ? (
+        <div className="w-8 h-8 rounded overflow-hidden shadow-sm border border-slate-200 flex-shrink-0">
+          <img
+            src={photoUrl}
+            alt={item.place.name}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+              const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+              if (fallback) fallback.style.display = 'flex';
+            }}
+          />
+          <div className="w-full h-full items-center justify-center bg-slate-100" style={{ display: 'none' }}>
+            <MapPin className="w-4 h-4 text-slate-500" />
+          </div>
+        </div>
+      ) : (
+        <div className="w-8 h-8 rounded bg-slate-100 flex items-center justify-center flex-shrink-0">
+          <MapPin className="w-4 h-4 text-slate-500" />
+        </div>
+      )}
 
       <div className="flex-1 min-w-0">
         <p className="text-body-3 font-medium text-rui-grey-70 truncate">

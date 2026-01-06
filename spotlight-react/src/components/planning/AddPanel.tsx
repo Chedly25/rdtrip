@@ -23,7 +23,6 @@ import {
   enrichPlace,
   haversineDistance,
   formatPriceLevel,
-  CATEGORY_ICONS,
 } from '../../utils/planningEnrichment';
 import type { EnrichedPlace, Slot, PlaceCategory, FilterState } from '../../types/planning';
 
@@ -380,7 +379,7 @@ interface AIPickCardProps {
 }
 
 function AIPickCard({ place, reason, onAdd }: AIPickCardProps) {
-  const icon = CATEGORY_ICONS[place.category] || '📍';
+  const photoUrl = place.photos && place.photos.length > 0 ? place.photos[0].url : null;
   const priceDisplay = formatPriceLevel(place.price_level);
 
   return (
@@ -391,7 +390,28 @@ function AIPickCard({ place, reason, onAdd }: AIPickCardProps) {
       transition={{ delay: 0.1 }}
     >
       <div className="flex items-start gap-3 mb-4">
-        <span className="text-3xl flex-shrink-0">{icon}</span>
+        {/* Photo Thumbnail or Icon */}
+        {photoUrl ? (
+          <div className="w-12 h-12 rounded-lg overflow-hidden shadow-sm border border-amber-200 flex-shrink-0">
+            <img
+              src={photoUrl}
+              alt={place.name}
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+                const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+                if (fallback) fallback.style.display = 'flex';
+              }}
+            />
+            <div className="w-full h-full items-center justify-center bg-amber-100" style={{ display: 'none' }}>
+              <MapPin className="w-5 h-5 text-amber-600" />
+            </div>
+          </div>
+        ) : (
+          <div className="w-12 h-12 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
+            <MapPin className="w-5 h-5 text-amber-600" />
+          </div>
+        )}
         <div className="flex-1 min-w-0">
           <h4 className="font-display text-xl text-rui-black font-semibold leading-tight">
             {place.name}
@@ -439,7 +459,7 @@ interface PlaceCardProps {
 }
 
 function PlaceCard({ place, anchor, onAdd }: PlaceCardProps) {
-  const icon = CATEGORY_ICONS[place.category] || '📍';
+  const photoUrl = place.photos && place.photos.length > 0 ? place.photos[0].url : null;
   const priceDisplay = formatPriceLevel(place.price_level);
 
   let distanceDisplay = '';
@@ -459,7 +479,28 @@ function PlaceCard({ place, anchor, onAdd }: PlaceCardProps) {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
     >
-      <span className="text-2xl flex-shrink-0">{icon}</span>
+      {/* Photo Thumbnail or Icon */}
+      {photoUrl ? (
+        <div className="w-10 h-10 rounded-lg overflow-hidden shadow-sm border border-slate-200 flex-shrink-0">
+          <img
+            src={photoUrl}
+            alt={place.name}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+              const fallback = e.currentTarget.nextElementSibling as HTMLElement;
+              if (fallback) fallback.style.display = 'flex';
+            }}
+          />
+          <div className="w-full h-full items-center justify-center bg-slate-100" style={{ display: 'none' }}>
+            <MapPin className="w-4 h-4 text-slate-500" />
+          </div>
+        </div>
+      ) : (
+        <div className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
+          <MapPin className="w-4 h-4 text-slate-500" />
+        </div>
+      )}
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">

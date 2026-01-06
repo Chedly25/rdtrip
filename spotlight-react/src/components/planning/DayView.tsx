@@ -13,6 +13,7 @@
 
 import { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Sun, CloudSun, Sunset, Moon } from 'lucide-react';
 import { usePlanningStore } from '../../stores/planningStore';
 import { SlotContainer, DaySummary } from './SlotContainer';
 import type { Slot, PlannedItem } from '../../types/planning';
@@ -199,20 +200,20 @@ const SLOT_COLORS: Record<Slot, { empty: string; filled: string }> = {
   night: { empty: 'bg-indigo-100', filled: 'bg-indigo-400' },
 };
 
-const SLOT_ICONS: Record<Slot, string> = {
-  morning: '☀️',
-  afternoon: '🌤️',
-  evening: '🌅',
-  night: '🌙',
+const SLOT_ICONS: Record<Slot, React.ReactNode> = {
+  morning: <Sun className="w-3 h-3" />,
+  afternoon: <CloudSun className="w-3 h-3" />,
+  evening: <Sunset className="w-3 h-3" />,
+  night: <Moon className="w-3 h-3" />,
 };
 
 function SlotIndicator({ slot, count }: SlotIndicatorProps) {
   const colors = SLOT_COLORS[slot];
-  const icon = SLOT_ICONS[slot];
+  const Icon = SLOT_ICONS[slot];
 
   return (
     <div className="flex items-center gap-1">
-      <span className="text-xs">{icon}</span>
+      {Icon}
       <div
         className={`
           w-6 h-2 rounded-full

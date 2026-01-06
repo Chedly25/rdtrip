@@ -24,9 +24,12 @@ import {
   Clock,
   ExternalLink,
   MessageSquare,
+  MapPin,
+  User,
+  Car,
 } from 'lucide-react';
 import { usePlanningStore } from '../../stores/planningStore';
-import { formatPriceLevel, CATEGORY_ICONS } from '../../utils/planningEnrichment';
+import { formatPriceLevel } from '../../utils/planningEnrichment';
 import type { PlannedItem } from '../../types/planning';
 
 // ============================================================================
@@ -61,7 +64,6 @@ export function PlannedItemCard({
   const menuRef = useRef<HTMLDivElement>(null);
 
   const { place } = item;
-  const categoryIcon = CATEGORY_ICONS[place.category] || '📍';
   const priceDisplay = formatPriceLevel(place.price_level);
   const durationDisplay = formatDuration(place.estimated_duration_mins);
 
@@ -110,9 +112,28 @@ export function PlannedItemCard({
             <GripVertical className="w-4 h-4" />
           </div>
 
-          {/* Icon */}
-          <div className="flex-shrink-0 text-xl" role="img" aria-label={place.category}>
-            {categoryIcon}
+          {/* Photo Thumbnail */}
+          <div className="flex-shrink-0">
+            {place.photos && place.photos.length > 0 && place.photos[0].url ? (
+              <div className="w-10 h-10 rounded-lg overflow-hidden bg-slate-100 border border-slate-200">
+                <img
+                  src={place.photos[0].url}
+                  alt={place.name}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                    e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                  }}
+                />
+                <div className="hidden w-full h-full flex items-center justify-center">
+                  <MapPin className="w-4 h-4 text-slate-400" />
+                </div>
+              </div>
+            ) : (
+              <div className="w-10 h-10 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center">
+                <MapPin className="w-4 h-4 text-slate-400" />
+              </div>
+            )}
           </div>
 
           {/* Content */}
@@ -302,13 +323,14 @@ interface TravelIndicatorProps {
 
 export function TravelIndicator({ mins, km }: TravelIndicatorProps) {
   const mode = mins <= 15 ? 'walk' : 'drive';
+  const Icon = mode === 'walk' ? User : Car;
 
   return (
     <div className="flex items-center justify-center py-1.5">
       <div className="flex items-center gap-1.5 text-xs text-slate-500">
         <div className="w-px h-3 bg-slate-300" />
         <span className="flex items-center gap-1">
-          <span className="text-sm">{mode === 'walk' ? '🚶' : '🚗'}</span>
+          <Icon className="w-3.5 h-3.5" />
           {mins} min
           {km !== undefined && <span className="text-slate-400">· {km.toFixed(1)} km</span>}
         </span>

@@ -7,7 +7,7 @@
 
 import { useMemo, useCallback } from 'react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
-import { Plus, Sun, CloudSun, Sunset, Moon, Coffee, UtensilsCrossed, Wine, Music } from 'lucide-react';
+import { Plus, Sun, CloudSun, Sunset, Moon, Coffee, UtensilsCrossed, Wine, Music, Landmark, ShoppingBag, Palmtree, Building2, Martini, User as UserIcon, Clock } from 'lucide-react';
 import { usePlanningStore } from '../../stores/planningStore';
 import { PlannedItemCard } from './PlannedItemCard';
 import { estimateWalkingTime, haversineDistance } from '../../utils/planningEnrichment';
@@ -272,22 +272,22 @@ function EmptySlotState({ slot, style, onAdd }: EmptySlotStateProps) {
     morning: [
       { icon: <Coffee className="w-3.5 h-3.5" />, label: 'Coffee & pastries' },
       { icon: <Sun className="w-3.5 h-3.5" />, label: 'Museum visit' },
-      { icon: '🏛️', label: 'Historic site' },
+      { icon: <Landmark className="w-3.5 h-3.5" />, label: 'Historic site' },
     ],
     afternoon: [
       { icon: <UtensilsCrossed className="w-3.5 h-3.5" />, label: 'Lunch spot' },
-      { icon: '🛍️', label: 'Local shopping' },
-      { icon: '🏖️', label: 'Beach time' },
+      { icon: <ShoppingBag className="w-3.5 h-3.5" />, label: 'Local shopping' },
+      { icon: <Palmtree className="w-3.5 h-3.5" />, label: 'Beach time' },
     ],
     evening: [
       { icon: <Sunset className="w-3.5 h-3.5" />, label: 'Sunset view' },
       { icon: <Wine className="w-3.5 h-3.5" />, label: 'Dinner reservation' },
-      { icon: '🌆', label: 'City overlook' },
+      { icon: <Building2 className="w-3.5 h-3.5" />, label: 'City overlook' },
     ],
     night: [
       { icon: <Music className="w-3.5 h-3.5" />, label: 'Live music' },
-      { icon: '🍸', label: 'Cocktail bar' },
-      { icon: '🌙', label: 'Night walk' },
+      { icon: <Martini className="w-3.5 h-3.5" />, label: 'Cocktail bar' },
+      { icon: <UserIcon className="w-3.5 h-3.5" />, label: 'Night walk' },
     ],
   };
 
@@ -314,11 +314,7 @@ function EmptySlotState({ slot, style, onAdd }: EmptySlotStateProps) {
             key={index}
             className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-100 text-slate-600 text-xs"
           >
-            {typeof suggestion.icon === 'string' ? (
-              <span>{suggestion.icon}</span>
-            ) : (
-              suggestion.icon
-            )}
+            {suggestion.icon}
             {suggestion.label}
           </span>
         ))}
@@ -386,7 +382,7 @@ export function DaySummary({ dayIndex }: DaySummaryProps) {
     >
       <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-body-3">
         <div className="flex items-center gap-2 text-rui-grey-60">
-          <span className="text-base">⏱</span>
+          <Clock className="w-4 h-4" />
           <span className="font-medium">{formatDuration(totalDuration)}</span>
           <span className="text-rui-grey-40">of activities</span>
         </div>
@@ -394,7 +390,7 @@ export function DaySummary({ dayIndex }: DaySummaryProps) {
         <div className="w-px h-4 bg-rui-grey-20" />
 
         <div className="flex items-center gap-2 text-rui-grey-60">
-          <span className="text-base">🚶</span>
+          <UserIcon className="w-4 h-4" />
           <span className="font-medium">{totalWalkingKm.toFixed(1)} km</span>
           <span className="text-rui-grey-40">walking</span>
         </div>
