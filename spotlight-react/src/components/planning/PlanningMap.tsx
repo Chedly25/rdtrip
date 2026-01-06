@@ -603,8 +603,10 @@ function createMarkerElement(
 
   // Get photo URL from Google Places API
   const photoUrl = item.place.photos && item.place.photos.length > 0
-    ? item.place.photos[0]
+    ? item.place.photos[0].url
     : null;
+
+  console.log(`📸 Photo for ${item.place.name}:`, photoUrl || 'No photo');
 
   // Create marker with photo or icon
   if (photoUrl) {
@@ -626,6 +628,8 @@ function createMarkerElement(
             <!-- Photo -->
             <img src="${photoUrl}"
                  alt="${item.place.name}"
+                 crossorigin="anonymous"
+                 onerror="this.parentElement.parentElement.parentElement.innerHTML = '${icon.replace(/'/g, "\\'")}';"
                  style="width: 100%; height: 100%; object-fit: cover; opacity: 0.95;" />
 
             <!-- Vintage Vignette -->
