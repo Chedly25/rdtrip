@@ -26,6 +26,13 @@ import type { Slot, PlannedItem } from '../../types/planning';
 // Mapbox token
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN || '';
 
+// Debug: Log token status (not the actual token for security)
+if (!mapboxgl.accessToken) {
+  console.error('❌ VITE_MAPBOX_TOKEN is not set in environment variables');
+} else {
+  console.log('✓ Mapbox token loaded:', mapboxgl.accessToken.substring(0, 10) + '...');
+}
+
 // ============================================================================
 // Slot Colors - Vintage Travel Palette
 // ============================================================================
@@ -86,30 +93,45 @@ export function PlanningMap() {
   useEffect(() => {
     if (!mapContainer.current || map.current) return;
 
+    // Verify Mapbox token
+    if (!mapboxgl.accessToken) {
+      console.error('Mapbox token is not set. Map will not load.');
+      return;
+    }
+
     const initialCenter = currentDay?.city.coordinates
       ? [currentDay.city.coordinates.lng, currentDay.city.coordinates.lat]
       : [-9.1393, 38.7223]; // Lisbon default
 
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/outdoors-v12', // Warm, vintage-friendly style
-      center: initialCenter as [number, number],
-      zoom: 13,
-      attributionControl: false,
-    });
+    try {
+      map.current = new mapboxgl.Map({
+        container: mapContainer.current,
+        style: 'mapbox://styles/mapbox/outdoors-v12', // Warm, vintage-friendly style
+        center: initialCenter as [number, number],
+        zoom: 13,
+        attributionControl: false,
+      });
 
-    // Custom attribution
-    map.current.addControl(
-      new mapboxgl.AttributionControl({
-        compact: true,
-        customAttribution: '© Mapbox',
-      }),
-      'bottom-left'
-    );
+      // Custom attribution
+      map.current.addControl(
+        new mapboxgl.AttributionControl({
+          compact: true,
+          customAttribution: '© Mapbox',
+        }),
+        'bottom-left'
+      );
 
-    map.current.on('load', () => {
-      setMapLoaded(true);
-    });
+      map.current.on('load', () => {
+        console.log('Mapbox map loaded successfully');
+        setMapLoaded(true);
+      });
+
+      map.current.on('error', (e) => {
+        console.error('Mapbox error:', e);
+      });
+    } catch (error) {
+      console.error('Error initializing Mapbox map:', error);
+    }
 
     return () => {
       markers.current.forEach(marker => marker.remove());
