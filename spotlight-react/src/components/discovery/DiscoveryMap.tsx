@@ -45,7 +45,7 @@ export function DiscoveryMap({
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/light-v11',
+      style: 'mapbox://styles/mapbox/streets-v12',
       center: [2.3522, 48.8566], // Default to Paris
       zoom: 5,
       pitch: 0,

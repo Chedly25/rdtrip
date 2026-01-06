@@ -44,6 +44,8 @@ export interface DiscoveryPlace {
   id: string;
   name: string;
   type: PlaceType;
+  /** Geographic coordinates */
+  coordinates?: { lat: number; lng: number };
   /** Rating out of 5 */
   rating?: number;
   /** Number of reviews */

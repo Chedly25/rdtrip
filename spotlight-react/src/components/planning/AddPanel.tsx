@@ -83,9 +83,10 @@ export function AddPanel() {
       rating: place.rating,
       user_ratings_total: place.reviewCount,
       price_level: place.priceLevel,
-      geometry: currentCity.coordinates
-        ? { location: { lat: currentCity.coordinates.lat, lng: currentCity.coordinates.lng } }
+      geometry: place.coordinates
+        ? { location: { lat: place.coordinates.lat, lng: place.coordinates.lng } }
         : undefined,
+      photos: place.photoUrl ? [{ url: place.photoUrl }] : undefined,
     }));
   }, [route, cityName]);
 
