@@ -185,15 +185,24 @@ export function PlanningMap() {
 
   // Update markers and routes when items change
   useEffect(() => {
-    if (!map.current || !mapLoaded || !dayItems.length) return;
+    if (!map.current || !mapLoaded) return;
+
+    console.log('🎯 Creating markers for', dayItems.length, 'activities');
 
     // Clear existing markers
     markers.current.forEach(marker => marker.remove());
     markers.current = [];
 
+    if (!dayItems.length) {
+      console.log('⚠️ No activities to display');
+      return;
+    }
+
     // Add new markers
     dayItems.forEach((item, index) => {
       const coords = item.place.geometry.location;
+      console.log(`📍 Creating marker ${index + 1} for ${item.place.name} at`, coords);
+
       const el = createMarkerElement(item, index, () => setSelectedMarker(item.id));
 
       const marker = new mapboxgl.Marker({ element: el, anchor: 'bottom' })
@@ -202,6 +211,8 @@ export function PlanningMap() {
 
       markers.current.push(marker);
     });
+
+    console.log('✅ Created', markers.current.length, 'markers on map');
 
     // Fit bounds to show all markers
     if (dayItems.length > 0) {
@@ -212,14 +223,15 @@ export function PlanningMap() {
       });
 
       map.current.fitBounds(bounds, {
-        padding: { top: 100, bottom: 100, left: 100, right: 100 },
-        maxZoom: 15,
+        padding: { top: 120, bottom: 120, left: 120, right: 120 },
+        maxZoom: 14,
         duration: 1000,
       });
     }
 
     // Fetch and display routes
     if (dayItems.length > 1) {
+      console.log('🛤️ Fetching routes between', dayItems.length, 'points');
       fetchRoutes(dayItems);
     }
   }, [dayItems, mapLoaded]);
@@ -232,12 +244,16 @@ export function PlanningMap() {
       `${item.place.geometry.location.lng},${item.place.geometry.location.lat}`
     ).join(';');
 
+    console.log('🗺️ Fetching route for coordinates:', coordinates);
+
     try {
       const response = await fetch(
         `https://api.mapbox.com/directions/v5/mapbox/walking/${coordinates}?` +
         `geometries=geojson&overview=full&steps=true&access_token=${mapboxgl.accessToken}`
       );
       const data = await response.json();
+
+      console.log('📍 Route response:', data);
 
       // Check if map still exists after async operation
       if (!map.current) return;
@@ -250,6 +266,11 @@ export function PlanningMap() {
           distance: leg.distance, // meters
           duration: leg.duration, // seconds
         }));
+
+        console.log('🚶 Route legs:', legs.map((leg: { distance: number; duration: number }, i: number) =>
+          `Segment ${i + 1}: ${(leg.distance / 1000).toFixed(2)}km, ${Math.round(leg.duration / 60)} min`
+        ).join(' | '));
+
         setRouteData(legs);
 
         // Add route to map
@@ -575,36 +596,120 @@ function createMarkerElement(
 ): HTMLDivElement {
   const el = document.createElement('div');
   el.className = 'custom-marker';
-  el.style.cssText = 'cursor: pointer; transform-origin: bottom center;';
+  el.style.cssText = 'cursor: pointer; transform-origin: bottom center; position: relative; z-index: ' + (100 + index);
 
   const colors = SLOT_COLORS[item.slot];
   const icon = CATEGORY_ICONS[item.place.category] || '📍';
 
-  el.innerHTML = `
-    <div class="flex flex-col items-center transition-transform hover:scale-110" style="filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3));">
-      <!-- Pin Body -->
-      <div class="relative flex items-center justify-center w-14 h-14 rounded-2xl border-3 shadow-xl"
-           style="background: linear-gradient(135deg, ${colors.primary} 0%, ${colors.light} 100%);
-                  border-color: ${colors.primary};
-                  box-shadow: 0 8px 20px rgba(${colors.rgb}, 0.4), 0 0 0 4px rgba(255,255,255,0.9);">
-        <span style="font-size: 24px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));">${icon}</span>
+  // Get photo URL from Google Places API
+  const photoUrl = item.place.photos && item.place.photos.length > 0
+    ? item.place.photos[0]
+    : null;
 
-        <!-- Order Badge -->
-        <div class="absolute -top-2 -right-2 w-7 h-7 rounded-full flex items-center justify-center"
-             style="background: linear-gradient(135deg, #fff 0%, #f5f0e8 100%);
-                    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-                    border: 2px solid rgba(196, 88, 48, 0.4);">
-          <span style="font-size: 12px; font-weight: 700; color: #2C2417;">${index + 1}</span>
+  // Create marker with photo or icon
+  if (photoUrl) {
+    // Photo-enhanced marker
+    el.innerHTML = `
+      <div class="flex flex-col items-center transition-all hover:scale-110 hover:-translate-y-1"
+           style="filter: drop-shadow(0 6px 20px rgba(0,0,0,0.35));">
+        <!-- Photo Container with Vintage Frame -->
+        <div class="relative" style="perspective: 1000px;">
+          <!-- Vintage Paper Frame -->
+          <div class="relative w-20 h-20 rounded-xl overflow-hidden"
+               style="background: linear-gradient(135deg, #FFFBF5 0%, #F5F0E8 100%);
+                      border: 3px solid ${colors.primary};
+                      box-shadow:
+                        0 10px 30px rgba(${colors.rgb}, 0.5),
+                        0 0 0 5px rgba(255,255,255,0.95),
+                        inset 0 -2px 8px rgba(0,0,0,0.1);
+                      transform: rotateX(2deg);">
+            <!-- Photo -->
+            <img src="${photoUrl}"
+                 alt="${item.place.name}"
+                 style="width: 100%; height: 100%; object-fit: cover; opacity: 0.95;" />
+
+            <!-- Vintage Vignette -->
+            <div style="position: absolute; inset: 0;
+                        background: radial-gradient(circle at center, transparent 40%, rgba(44, 36, 23, 0.15) 100%);
+                        pointer-events: none;"></div>
+          </div>
+
+          <!-- Order Badge - Vintage Wax Seal Style -->
+          <div class="absolute -top-3 -right-3 w-10 h-10 rounded-full flex items-center justify-center"
+               style="background: radial-gradient(circle at 30% 30%, ${colors.light} 0%, ${colors.primary} 100%);
+                      box-shadow:
+                        0 4px 12px rgba(${colors.rgb}, 0.6),
+                        0 0 0 3px rgba(255,255,255,0.95),
+                        inset 0 2px 4px rgba(255,255,255,0.3);
+                      border: 2px solid rgba(255,255,255,0.4);">
+            <span style="font-size: 15px; font-weight: 800; color: #FFFBF5;
+                        text-shadow: 0 1px 2px rgba(0,0,0,0.3); font-family: 'Fraunces', serif;">${index + 1}</span>
+          </div>
+
+          <!-- Category Icon Badge -->
+          <div class="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-8 h-8 rounded-full flex items-center justify-center"
+               style="background: linear-gradient(135deg, ${colors.primary} 0%, ${colors.light} 100%);
+                      box-shadow: 0 4px 12px rgba(${colors.rgb}, 0.5), 0 0 0 3px rgba(255,255,255,0.95);
+                      border: 2px solid rgba(255,255,255,0.3);">
+            <span style="font-size: 14px;">${icon}</span>
+          </div>
         </div>
+
+        <!-- Pin Stem -->
+        <div style="width: 8px; height: 28px; margin-top: 4px;
+                    background: linear-gradient(180deg, ${colors.primary} 0%, ${colors.primary} 100%);
+                    border-radius: 4px;
+                    box-shadow: 0 3px 10px rgba(${colors.rgb}, 0.4), inset 0 1px 2px rgba(255,255,255,0.2);"></div>
+
+        <!-- Pin Point -->
+        <div style="width: 14px; height: 14px;
+                    background: radial-gradient(circle at 30% 30%, ${colors.light} 0%, ${colors.primary} 100%);
+                    border-radius: 50%; margin-top: -3px;
+                    box-shadow: 0 3px 8px rgba(0,0,0,0.3), inset 0 1px 2px rgba(255,255,255,0.3);"></div>
       </div>
+    `;
+  } else {
+    // Icon-based marker (fallback)
+    el.innerHTML = `
+      <div class="flex flex-col items-center transition-all hover:scale-110 hover:-translate-y-1"
+           style="filter: drop-shadow(0 6px 20px rgba(0,0,0,0.35));">
+        <!-- Pin Body with Icon -->
+        <div class="relative flex items-center justify-center w-16 h-16 rounded-2xl"
+             style="background: linear-gradient(135deg, ${colors.primary} 0%, ${colors.light} 100%);
+                    box-shadow:
+                      0 10px 30px rgba(${colors.rgb}, 0.5),
+                      0 0 0 5px rgba(255,255,255,0.95),
+                      inset 0 -4px 8px rgba(0,0,0,0.1),
+                      inset 0 2px 4px rgba(255,255,255,0.3);
+                    border: 3px solid rgba(255,255,255,0.3);">
+          <span style="font-size: 28px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));">${icon}</span>
 
-      <!-- Pin Stem -->
-      <div style="width: 6px; height: 32px; background: ${colors.primary}; border-radius: 3px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);"></div>
+          <!-- Order Badge -->
+          <div class="absolute -top-3 -right-3 w-10 h-10 rounded-full flex items-center justify-center"
+               style="background: radial-gradient(circle at 30% 30%, ${colors.light} 0%, ${colors.primary} 100%);
+                      box-shadow:
+                        0 4px 12px rgba(${colors.rgb}, 0.6),
+                        0 0 0 3px rgba(255,255,255,0.95);
+                      border: 2px solid rgba(255,255,255,0.4);">
+            <span style="font-size: 15px; font-weight: 800; color: #FFFBF5;
+                        text-shadow: 0 1px 2px rgba(0,0,0,0.3); font-family: 'Fraunces', serif;">${index + 1}</span>
+          </div>
+        </div>
 
-      <!-- Pin Point -->
-      <div style="width: 12px; height: 12px; background: ${colors.primary}; border-radius: 50%; margin-top: -4px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"></div>
-    </div>
-  `;
+        <!-- Pin Stem -->
+        <div style="width: 8px; height: 28px; margin-top: 4px;
+                    background: linear-gradient(180deg, ${colors.primary} 0%, ${colors.primary} 100%);
+                    border-radius: 4px;
+                    box-shadow: 0 3px 10px rgba(${colors.rgb}, 0.4);"></div>
+
+        <!-- Pin Point -->
+        <div style="width: 14px; height: 14px;
+                    background: radial-gradient(circle at 30% 30%, ${colors.light} 0%, ${colors.primary} 100%);
+                    border-radius: 50%; margin-top: -3px;
+                    box-shadow: 0 3px 8px rgba(0,0,0,0.3);"></div>
+      </div>
+    `;
+  }
 
   el.addEventListener('click', (e) => {
     e.stopPropagation();
