@@ -79,8 +79,6 @@ export function PlanningMode() {
 
   // Initialize plan from discovery data
   useEffect(() => {
-    if (tripPlan) return;
-
     if (route && tripSummary) {
       const selectedCities = getSelectedCities();
       if (selectedCities.length >= 2) {
@@ -93,6 +91,9 @@ export function PlanningMode() {
         }));
 
         const routeId = searchParams.get('routeId') || `plan-${Date.now()}`;
+
+        // Only skip initialization if plan exists AND matches the current route
+        if (tripPlan && tripPlan.route_id === routeId) return;
 
         let startDate: Date;
         if (tripSummary.startDate instanceof Date) {
