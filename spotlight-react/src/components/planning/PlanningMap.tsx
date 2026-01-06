@@ -162,7 +162,7 @@ export function PlanningMap() {
 
   // Fetch walking routes from Mapbox Directions API
   const fetchRoutes = async (items: PlannedItem[]) => {
-    if (!map.current) return;
+    if (!map.current || !mapLoaded) return;
 
     const coordinates = items.map(item =>
       `${item.place.geometry.location.lng},${item.place.geometry.location.lat}`
@@ -174,6 +174,9 @@ export function PlanningMap() {
         `geometries=geojson&overview=full&steps=true&access_token=${mapboxgl.accessToken}`
       );
       const data = await response.json();
+
+      // Check if map still exists after async operation
+      if (!map.current) return;
 
       if (data.routes && data.routes[0]) {
         const route = data.routes[0];
@@ -192,21 +195,27 @@ export function PlanningMap() {
           geometry: route.geometry,
         };
 
+        // Check again before manipulating map
+        if (!map.current) return;
+
         // Remove existing route layers
-        if (map.current!.getSource('route')) {
-          map.current!.removeLayer('route');
-          map.current!.removeLayer('route-outline');
-          map.current!.removeSource('route');
+        if (map.current.getSource('route')) {
+          if (map.current.getLayer('route')) map.current.removeLayer('route');
+          if (map.current.getLayer('route-outline')) map.current.removeLayer('route-outline');
+          map.current.removeSource('route');
         }
 
+        // Check again before adding new layers
+        if (!map.current) return;
+
         // Add route source
-        map.current!.addSource('route', {
+        map.current.addSource('route', {
           type: 'geojson',
           data: routeGeoJSON as any,
         });
 
         // Add route outline (darker)
-        map.current!.addLayer({
+        map.current.addLayer({
           id: 'route-outline',
           type: 'line',
           source: 'route',
@@ -222,7 +231,7 @@ export function PlanningMap() {
         });
 
         // Add route line (terracotta)
-        map.current!.addLayer({
+        map.current.addLayer({
           id: 'route',
           type: 'line',
           source: 'route',
