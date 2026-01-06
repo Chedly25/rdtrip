@@ -89,7 +89,7 @@ export function PlanningMap() {
   const currentDay = getCurrentDay();
   const dayItems = getDayItems(currentDayIndex);
 
-  // Initialize map
+  // Initialize map - only once on mount
   useEffect(() => {
     console.log('🗺️ Map init useEffect triggered', {
       hasContainer: !!mapContainer.current,
@@ -153,13 +153,26 @@ export function PlanningMap() {
     }
 
     return () => {
-      console.log('🧹 Cleaning up map');
+      console.log('🧹 Cleaning up map on unmount');
       markers.current.forEach(marker => marker.remove());
       markers.current = [];
       map.current?.remove();
       map.current = null;
+      setMapLoaded(false);
     };
-  }, [currentDay]);
+  }, []); // Empty deps - only run once on mount
+
+  // Update map center when day changes
+  useEffect(() => {
+    if (!map.current || !mapLoaded || !currentDay?.city.coordinates) return;
+
+    console.log('📍 Updating map center for new day');
+    map.current.flyTo({
+      center: [currentDay.city.coordinates.lng, currentDay.city.coordinates.lat],
+      zoom: 13,
+      duration: 1000,
+    });
+  }, [currentDayIndex, mapLoaded]);
 
   // Update markers and routes when items change
   useEffect(() => {
