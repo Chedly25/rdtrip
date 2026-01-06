@@ -90,11 +90,14 @@ export function PlanningMode() {
           nights: city.nights || city.suggestedNights || 1,
         }));
 
-        const routeId = searchParams.get('routeId') || `plan-${Date.now()}`;
+        // Determine routeId: prefer URL param, then existing plan's ID, then generate new
+        const urlRouteId = searchParams.get('routeId');
+        const routeId = urlRouteId || (tripPlan?.route_id) || `plan-${Date.now()}`;
 
         // Only skip initialization if plan exists AND matches the current route
         if (tripPlan && tripPlan.route_id === routeId) return;
 
+        // If we have a different route ID in URL, or no plan exists, initialize
         let startDate: Date;
         if (tripSummary.startDate instanceof Date) {
           startDate = tripSummary.startDate;
