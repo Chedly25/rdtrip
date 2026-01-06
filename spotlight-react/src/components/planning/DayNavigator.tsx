@@ -71,24 +71,24 @@ export function DayNavigator() {
   const canGoNext = currentDayIndex < days.length - 1;
 
   return (
-    <div className="bg-rui-white border-b border-rui-grey-10">
+    <div className="bg-white border-b border-slate-200">
       {/* Desktop View - Full width with arrows */}
-      <div className="hidden lg:flex items-center justify-between px-6 py-4">
+      <div className="hidden lg:flex items-center justify-between px-6 py-3">
         {/* Previous Button */}
         <button
           onClick={prevDay}
           disabled={!canGoPrev}
           className={`
-            flex items-center justify-center w-10 h-10 rounded-full
-            transition-all duration-200
+            flex items-center justify-center w-8 h-8 rounded
+            transition-all duration-150
             ${canGoPrev
-              ? 'bg-rui-grey-5 hover:bg-rui-grey-10 text-rui-black cursor-pointer'
-              : 'text-rui-grey-30 cursor-not-allowed'
+              ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer'
+              : 'text-slate-300 cursor-not-allowed'
             }
           `}
           aria-label="Previous day"
         >
-          <ChevronLeft className="w-5 h-5" />
+          <ChevronLeft className="w-4 h-4" />
         </button>
 
         {/* Day Info Center */}
@@ -102,17 +102,17 @@ export function DayNavigator() {
             className="flex flex-col items-center"
           >
             <div className="flex items-center gap-3">
-              <span className="font-display text-2xl text-rui-black">
+              <span className="text-xl font-semibold text-slate-900">
                 Day {currentDayIndex + 1}
               </span>
-              <span className="text-rui-grey-40">·</span>
-              <span className="text-rui-grey-50 text-body-1">
+              <span className="text-slate-400">·</span>
+              <span className="text-slate-600 text-sm">
                 {formatDate(currentDay.date)}
               </span>
             </div>
-            <div className="flex items-center gap-1.5 mt-1">
-              <MapPin className="w-3.5 h-3.5 text-rui-accent" />
-              <span className="text-emphasis-2 text-rui-accent uppercase tracking-wide">
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <MapPin className="w-3.5 h-3.5 text-teal-600" />
+              <span className="text-xs text-teal-600 uppercase tracking-wide font-medium">
                 {currentDay.city.name}
               </span>
             </div>
@@ -124,16 +124,16 @@ export function DayNavigator() {
           onClick={nextDay}
           disabled={!canGoNext}
           className={`
-            flex items-center justify-center w-10 h-10 rounded-full
-            transition-all duration-200
+            flex items-center justify-center w-8 h-8 rounded
+            transition-all duration-150
             ${canGoNext
-              ? 'bg-rui-grey-5 hover:bg-rui-grey-10 text-rui-black cursor-pointer'
-              : 'text-rui-grey-30 cursor-not-allowed'
+              ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer'
+              : 'text-slate-300 cursor-not-allowed'
             }
           `}
           aria-label="Next day"
         >
-          <ChevronRight className="w-5 h-5" />
+          <ChevronRight className="w-4 h-4" />
         </button>
       </div>
 

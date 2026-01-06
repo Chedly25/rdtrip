@@ -14,7 +14,7 @@ import { estimateWalkingTime, haversineDistance } from '../../utils/planningEnri
 import type { Slot, PlannedItem } from '../../types/planning';
 
 // ============================================================================
-// Slot Configuration - Premium Travel Journal Theme
+// Slot Configuration - Clean Professional Design
 // ============================================================================
 
 const SLOT_STYLES: Record<Slot, {
@@ -22,60 +22,55 @@ const SLOT_STYLES: Record<Slot, {
   icon: React.ReactNode;
   accentIcon: React.ReactNode;
   hours: string;
-  bgGradient: string;
+  bgColor: string;
   borderColor: string;
   accentColor: string;
   textColor: string;
   iconColor: string;
-  stampColor: string;
 }> = {
   morning: {
     label: 'Morning',
-    icon: <Sun className="w-5 h-5" strokeWidth={2} />,
-    accentIcon: <Coffee className="w-4 h-4" />,
+    icon: <Sun className="w-4 h-4" strokeWidth={1.5} />,
+    accentIcon: <Coffee className="w-3.5 h-3.5" />,
     hours: '08:00 — 12:00',
-    bgGradient: 'from-amber-50/90 via-orange-50/60 to-amber-50/40',
-    borderColor: 'border-amber-300/40',
-    accentColor: 'bg-gradient-to-br from-amber-500 to-orange-500',
-    textColor: 'text-amber-900',
-    iconColor: 'text-amber-600',
-    stampColor: 'text-amber-400/30',
+    bgColor: 'bg-slate-50/50',
+    borderColor: 'border-slate-200/60',
+    accentColor: 'bg-teal-500',
+    textColor: 'text-slate-700',
+    iconColor: 'text-slate-500',
   },
   afternoon: {
     label: 'Afternoon',
-    icon: <CloudSun className="w-5 h-5" strokeWidth={2} />,
-    accentIcon: <UtensilsCrossed className="w-4 h-4" />,
+    icon: <CloudSun className="w-4 h-4" strokeWidth={1.5} />,
+    accentIcon: <UtensilsCrossed className="w-3.5 h-3.5" />,
     hours: '12:00 — 18:00',
-    bgGradient: 'from-orange-50/90 via-rose-50/60 to-orange-50/40',
-    borderColor: 'border-orange-300/40',
-    accentColor: 'bg-gradient-to-br from-orange-500 to-rose-500',
-    textColor: 'text-orange-900',
-    iconColor: 'text-orange-600',
-    stampColor: 'text-orange-400/30',
+    bgColor: 'bg-slate-50/50',
+    borderColor: 'border-slate-200/60',
+    accentColor: 'bg-blue-500',
+    textColor: 'text-slate-700',
+    iconColor: 'text-slate-500',
   },
   evening: {
     label: 'Evening',
-    icon: <Sunset className="w-5 h-5" strokeWidth={2} />,
-    accentIcon: <Wine className="w-4 h-4" />,
+    icon: <Sunset className="w-4 h-4" strokeWidth={1.5} />,
+    accentIcon: <Wine className="w-3.5 h-3.5" />,
     hours: '18:00 — 22:00',
-    bgGradient: 'from-rose-50/90 via-pink-50/60 to-rose-50/40',
-    borderColor: 'border-rose-300/40',
-    accentColor: 'bg-gradient-to-br from-rose-500 to-pink-500',
-    textColor: 'text-rose-900',
-    iconColor: 'text-rose-600',
-    stampColor: 'text-rose-400/30',
+    bgColor: 'bg-slate-50/50',
+    borderColor: 'border-slate-200/60',
+    accentColor: 'bg-indigo-500',
+    textColor: 'text-slate-700',
+    iconColor: 'text-slate-500',
   },
   night: {
     label: 'Night',
-    icon: <Moon className="w-5 h-5" strokeWidth={2} />,
-    accentIcon: <Music className="w-4 h-4" />,
+    icon: <Moon className="w-4 h-4" strokeWidth={1.5} />,
+    accentIcon: <Music className="w-3.5 h-3.5" />,
     hours: '22:00 — 02:00',
-    bgGradient: 'from-indigo-50/90 via-purple-50/60 to-indigo-50/40',
-    borderColor: 'border-indigo-300/40',
-    accentColor: 'bg-gradient-to-br from-indigo-500 to-purple-500',
-    textColor: 'text-indigo-900',
-    iconColor: 'text-indigo-600',
-    stampColor: 'text-indigo-400/30',
+    bgColor: 'bg-slate-50/50',
+    borderColor: 'border-slate-200/60',
+    accentColor: 'bg-slate-600',
+    textColor: 'text-slate-700',
+    iconColor: 'text-slate-500',
   },
 };
 
@@ -155,46 +150,32 @@ export function SlotContainer({ slot, dayIndex, previousSlotLastItem }: SlotCont
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: 0.05 }}
     >
-      {/* Decorative journal corner */}
-      <div className="absolute -top-1 -right-1 w-8 h-8 pointer-events-none">
-        <svg viewBox="0 0 32 32" className={style.stampColor} fill="currentColor">
-          <path d="M0 0 L32 0 L0 32 Z" />
-        </svg>
-      </div>
-
       <div
         className={`
           relative overflow-hidden
-          rounded-2xl border-2 ${style.borderColor}
-          bg-gradient-to-br ${style.bgGradient}
-          shadow-rui-2
-          transition-all duration-500
-          hover:shadow-rui-3
+          rounded-lg border ${style.borderColor}
+          ${style.bgColor}
+          transition-all duration-200
         `}
       >
-        {/* Subtle paper texture */}
-        <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZmlsdGVyIGlkPSJub2lzZSI+PGZlVHVyYnVsZW5jZSB0eXBlPSJmcmFjdGFsTm9pc2UiIGJhc2VGcmVxdWVuY3k9IjAuOSIgbnVtT2N0YXZlcz0iNCIvPjwvZmlsdGVyPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbHRlcj0idXJsKCNub2lzZSkiIG9wYWNpdHk9IjAuNSIvPjwvc3ZnPg==')]" />
-
-        {/* Header - Journal page header style */}
-        <div className="relative px-5 py-4 bg-white/40 backdrop-blur-sm border-b-2 border-inherit">
+        {/* Header - Clean, minimal design */}
+        <div className="relative px-4 py-3 bg-white border-b border-slate-200/60">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              {/* Icon Badge */}
-              <div className={`
-                flex items-center justify-center w-10 h-10 rounded-xl
-                ${style.accentColor} shadow-md
-              `}>
-                <span className="text-white">
-                  {style.icon}
-                </span>
-              </div>
+            <div className="flex items-center gap-2.5">
+              {/* Icon - subtle color indicator */}
+              <div className={`w-1 h-6 rounded-full ${style.accentColor}`} />
 
               {/* Label & Time */}
               <div>
-                <h3 className={`font-display text-lg font-semibold ${style.textColor} tracking-tight`}>
-                  {style.label}
-                </h3>
-                <p className="text-[11px] uppercase tracking-widest text-rui-grey-50 font-medium">
+                <div className="flex items-center gap-2">
+                  <span className={`${style.iconColor}`}>
+                    {style.icon}
+                  </span>
+                  <h3 className={`text-sm font-semibold ${style.textColor}`}>
+                    {style.label}
+                  </h3>
+                </div>
+                <p className="text-xs text-slate-500 mt-0.5">
                   {style.hours}
                 </p>
               </div>
@@ -203,17 +184,12 @@ export function SlotContainer({ slot, dayIndex, previousSlotLastItem }: SlotCont
             {/* Duration Badge */}
             {totalDuration > 0 && (
               <motion.div
-                className={`
-                  px-3 py-1.5 rounded-lg
-                  bg-white/60 backdrop-blur-sm
-                  border ${style.borderColor}
-                  ${style.textColor}
-                `}
-                initial={{ scale: 0.9, opacity: 0 }}
+                className="px-2.5 py-1 rounded-md bg-slate-100 text-slate-600"
+                initial={{ scale: 0.95, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                transition={{ delay: 0.2 }}
+                transition={{ delay: 0.1 }}
               >
-                <span className="text-[11px] font-semibold uppercase tracking-wider">
+                <span className="text-xs font-medium">
                   {formatDuration(totalDuration)}
                 </span>
               </motion.div>
@@ -258,25 +234,22 @@ export function SlotContainer({ slot, dayIndex, previousSlotLastItem }: SlotCont
 
           {/* Add Another Button */}
           {!isEmpty && (
-            <motion.button
+            <button
               onClick={() => openAddPanel(slot, dayIndex)}
-              className={`
-                w-full mt-4 py-3.5 rounded-xl
-                bg-white/50 backdrop-blur-sm
-                border-2 border-dashed ${style.borderColor}
+              className="
+                w-full mt-3 py-2 rounded-md
+                bg-white
+                border border-dashed border-slate-300
                 flex items-center justify-center gap-2
-                ${style.textColor}
-                text-body-2 font-semibold
-                transition-all duration-300
-                hover:bg-white/80 hover:border-solid hover:shadow-md
-                hover:scale-[1.02]
-              `}
-              whileHover={{ y: -1 }}
-              whileTap={{ scale: 0.98 }}
+                text-slate-600
+                text-sm font-medium
+                transition-all duration-150
+                hover:bg-slate-50 hover:border-slate-400
+              "
             >
-              <Plus className="w-4 h-4" strokeWidth={2.5} />
-              Add more to {style.label.toLowerCase()}
-            </motion.button>
+              <Plus className="w-4 h-4" strokeWidth={1.5} />
+              Add more
+            </button>
           )}
         </div>
       </div>
@@ -320,48 +293,26 @@ function EmptySlotState({ slot, style, onAdd }: EmptySlotStateProps) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-      className="py-8 text-center"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
+      className="py-6 text-center"
     >
-      {/* Large decorative icon */}
-      <motion.div
-        className={`
-          inline-flex items-center justify-center
-          w-16 h-16 rounded-2xl
-          bg-white/60 backdrop-blur-sm
-          ${style.iconColor}
-          mb-4 shadow-md
-        `}
-        initial={{ scale: 0.8, rotate: -10 }}
-        animate={{ scale: 1, rotate: 0 }}
-        transition={{ delay: 0.1, type: 'spring', stiffness: 200 }}
-      >
+      {/* Simple icon */}
+      <div className={`inline-flex items-center justify-center mb-3 ${style.iconColor}`}>
         {style.icon}
-      </motion.div>
+      </div>
 
-      <p className="text-body-2 text-rui-grey-50 font-medium mb-5">
-        Your {style.label.toLowerCase()} is wide open
+      <p className="text-sm text-slate-600 mb-4">
+        No activities planned for {style.label.toLowerCase()}
       </p>
 
-      {/* Suggestion chips */}
-      <div className="flex flex-wrap justify-center gap-2 mb-6">
+      {/* Suggestion chips - minimal */}
+      <div className="flex flex-wrap justify-center gap-1.5 mb-5">
         {suggestions[slot].map((suggestion, index) => (
-          <motion.span
+          <span
             key={index}
-            className={`
-              inline-flex items-center gap-1.5
-              px-3 py-2 rounded-full
-              bg-white/70 backdrop-blur-sm
-              border ${style.borderColor}
-              ${style.textColor}
-              text-[11px] font-medium
-              shadow-sm
-            `}
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.15 + index * 0.05 }}
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-100 text-slate-600 text-xs"
           >
             {typeof suggestion.icon === 'string' ? (
               <span>{suggestion.icon}</span>
@@ -369,31 +320,25 @@ function EmptySlotState({ slot, style, onAdd }: EmptySlotStateProps) {
               suggestion.icon
             )}
             {suggestion.label}
-          </motion.span>
+          </span>
         ))}
       </div>
 
       {/* Add button */}
-      <motion.button
+      <button
         onClick={onAdd}
         className={`
-          inline-flex items-center gap-2 px-6 py-3
-          rounded-xl
+          inline-flex items-center gap-2 px-4 py-2
+          rounded-md
           ${style.accentColor} text-white
-          text-body-2 font-semibold
-          shadow-md
-          transition-all duration-300
-          hover:shadow-lg hover:scale-105
+          text-sm font-medium
+          transition-all duration-150
+          hover:opacity-90
         `}
-        whileHover={{ y: -2 }}
-        whileTap={{ scale: 0.95 }}
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
       >
-        <Plus className="w-4 h-4" strokeWidth={2.5} />
-        Start planning {style.label.toLowerCase()}
-      </motion.button>
+        <Plus className="w-4 h-4" strokeWidth={2} />
+        Add activities
+      </button>
     </motion.div>
   );
 }
